@@ -58,9 +58,10 @@ a { color: var(--info) }
 /* ---------- hlavička */
 header.top { background: var(--graphite); color: #f1efe8; padding-top: env(safe-area-inset-top, 0px) }
 header.top .wrap { padding-block: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px }
-.brand { display: flex; align-items: center; gap: 12px; font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #c9c6bd; white-space: nowrap }
-.brand .logo-chip { background: #fff; border-radius: 10px; padding: 6px 12px; display: flex; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,.25) }
-.brand img { height: 46px; width: auto; display: block }
+.brand { display: flex; align-items: center; gap: 14px; white-space: nowrap }
+.brand img { height: 48px; width: auto; display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)) }
+.brand-sub { border-left: 1px solid rgba(218,185,103,.45); padding-left: 14px; font-family: var(--display); font-weight: 600; font-size: 10.5px;
+  line-height: 1.35; letter-spacing: .22em; text-transform: uppercase; color: #cfc9b8 }
 .login-logo { height: 80px; width: auto; justify-self: center; margin-bottom: 4px }
 .theme-btn { font-size: 15px; line-height: 1; padding: 5px 9px !important }
 nav.tabs { display: flex; gap: 4px; flex-wrap: wrap }
@@ -187,8 +188,8 @@ tr:last-child td { border-bottom: 0 }
   .tbl-wrap.sch { display: none }
   .sch-cards { display: grid; gap: 8px }
   .user .email { display: none }
-  .brand img { height: 38px }
-  .brand > span { display: none }
+  .brand img { height: 40px }
+  .brand-sub { display: none }
   .history div { grid-template-columns: 1fr }
 }
 
@@ -215,8 +216,21 @@ tr:last-child td { border-bottom: 0 }
 @media (prefers-reduced-motion: reduce) { .bell.ring { animation: none } }
 
 /* ---------- prevzaté inzeráty */
-.pill.taken { background: var(--graphite); color: #f1efe8; display: inline-flex; align-items: center; gap: 5px; padding-left: 3px }
-.card.taken { border-left: 4px solid var(--info) }
+/* prevzatý inzerát – výrazný pás cez celú šírku karty */
+:root { --claim: #34506f; --claim-ink: #ffffff; --claim-tint: #eef2f7 }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --claim: #3d5f86; --claim-tint: #1c2430 } }
+:root[data-theme="dark"] { --claim: #3d5f86; --claim-tint: #1c2430 }
+.card.taken { border: 2px solid var(--claim); background: var(--claim-tint) }
+.card.taken .work { background: transparent }
+.card.taken .thumb { filter: grayscale(.55) opacity(.85) }
+.card.mine { border: 2px solid var(--gold-strong); box-shadow: none }
+.claim-bar { display: flex; align-items: center; gap: 10px; padding: 7px 12px; font-size: 13px; letter-spacing: .04em; flex-wrap: wrap }
+.claim-bar .av { box-shadow: 0 0 0 2px rgba(255,255,255,.85) }
+.claim-text { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap }
+.claim-text small { font-size: 12px; letter-spacing: 0; opacity: .85 }
+.claim-other { background: var(--claim); color: var(--claim-ink) }
+.claim-mine { background: var(--gold-strong); color: #1f1b12 }
+.claim-lock { margin-left: auto; font-size: 12px; letter-spacing: 0; font-weight: 600; background: rgba(255,255,255,.16); padding: 2px 9px; border-radius: 999px }
 .marks .due { color: var(--bad); font-weight: 700 }
 
 /* ---------- pripomienky */

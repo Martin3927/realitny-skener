@@ -169,7 +169,7 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<img class="login-logo" src="logo.png?v=202610171733" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
+      '<img class="login-logo" src="logo.png?v=202610171804" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -188,7 +188,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610171733" alt="Alpha Reality">' +
+      '<img class="login-logo" src="logo.png?v=202610171804" alt="Alpha Reality">' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" required></label>' +
@@ -317,7 +317,7 @@
     if (admin()) tabs.push(["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<div class="brand"><span class="logo-chip"><img src="logo.png?v=202610171733" alt="Alpha Reality"></span><span>skener</span></div>' +
+      '<div class="brand"><img src="logo.png?v=202610171804" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>";
       }).join("") + "</nav>" +
@@ -536,12 +536,15 @@
 
     var mojePrip = mojeAktivne().filter(function (x) { return x.inzerat_id === z.id; });
     var h = '<article class="card' + (o && o.podhodnotene ? " under" : "") + (moj ? " mine" : maj ? " taken" : "") + '" data-id="' + esc(z.id) + '">' +
+      (maj ? '<div class="claim-bar ' + (moj ? "claim-mine" : "claim-other") + '">' + avatar(maj, 26) +
+        '<span class="claim-text">' + (moj ? "<b>VÁŠ INZERÁT</b>" : "PREVZAL <b>" + esc(meno(maj).toUpperCase()) + "</b>") +
+        (p.prevzate ? '<small>od ' + datum(p.prevzate) + "</small>" : "") + "</span>" +
+        (!moj ? '<span class="claim-lock">Nevolajte – rieši ho kolega</span>' : "") + "</div>" : "") +
       '<div class="row">' + foto + '<div class="body">' +
       '<a class="title" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(z.nazov) + "</a>" +
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
       (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + "<span>v skeneri " + ago(z.prvy_krat) + "</span></div>" +
-      '<div class="pills">' + (maj ? '<span class="pill taken">' + avatar(maj, 16) + (moj ? "Váš inzerát" : "Prevzal " + esc(meno(maj))) + "</span>" : "") +
-      (nove ? '<span class="pill new">Nové</span>' : "") + (!z.aktivny ? '<span class="pill gone">Už nie je na portáli</span>' : "") +
+      '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") + (!z.aktivny ? '<span class="pill gone">Už nie je na portáli</span>' : "") +
       '<span class="pill ' + pr[1] + '" title="' + esc(z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
       (o && o.podhodnotene ? '<span class="pill priv">Pod cenou</span>' : "") +
       (znizena ? '<span class="pill priv">Znížená cena z ' + eur(hist[hist.length - 2][1]) + "</span>" : "") + "</div>" +
