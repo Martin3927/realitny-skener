@@ -264,7 +264,7 @@
     if (admin()) tabs.push(["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<div class="brand"><img src="logo.png" alt="Alpha Reality"><span>skener</span></div>' +
+      '<div class="brand"><span class="logo-chip"><img src="logo.png" alt="Alpha Reality"></span><span>skener</span></div>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>";
       }).join("") + "</nav>" +
