@@ -24,7 +24,7 @@
   var S = {
     user: null, me: null, makleri: [], mById: {}, inz: [], prev: {}, odh: {}, canUnder: false, meta: {},
     sch: [], hist: {}, open: {}, tab: "inzeraty", shown: 100, schEdit: null, delConfirm: null, pwdOpen: false,
-    prip: [], zvonOpen: false, pripForm: null, ohlasene: {},
+    prip: [], zvonOpen: false, pripForm: null, ohlasene: {}, ozn: {}, hesla: {}, hesloEdit: null,
     obce: [], lastInzLoad: 0, newUser: null,
     f: { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy" },
     sf: { q: "", makler: "", typ: "" },
@@ -157,6 +157,24 @@
     popisTemy();
   }
 
+  // ------------------------------------------------------------ oko pri hesle
+  function pridajOko(root) {
+    (root || document).querySelectorAll('input[type="password"]:not([data-oko])').forEach(function (inp) {
+      inp.setAttribute("data-oko", "1");
+      var w = document.createElement("span"); w.className = "pw-wrap";
+      inp.parentNode.insertBefore(w, inp); w.appendChild(inp);
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "pw-eye"; b.setAttribute("aria-label", "Zobraziť heslo"); b.textContent = "👁";
+      b.onclick = function () {
+        var skryte = inp.type === "password";
+        inp.type = skryte ? "text" : "password";
+        b.setAttribute("aria-label", skryte ? "Skryť heslo" : "Zobraziť heslo");
+        b.classList.toggle("on", skryte);
+      };
+      w.appendChild(b);
+    });
+  }
+
   // ------------------------------------------------------------ štart a prihlásenie
   async function start() {
     var ses = (await sb.auth.getSession()).data.session;
@@ -169,12 +187,13 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<img class="login-logo" src="logo.png?v=202610171804" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
+      '<img class="login-logo" src="logo.png?v=202610171820" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
       '<button class="btn primary wide" type="submit">Prihlásiť sa</button>' +
       "<p>Účet vám vytvorí administrátor. Ak ste zabudli heslo, požiadajte ho o nové.</p></form></div>";
+    pridajOko($("#f-login"));
     $("#f-login").addEventListener("submit", async function (e) {
       e.preventDefault();
       var btn = e.target.querySelector("button"); btn.disabled = true; $("#l-err").textContent = "";
@@ -188,13 +207,14 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610171804" alt="Alpha Reality">' +
+      '<img class="login-logo" src="logo.png?v=202610171820" alt="Alpha Reality">' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" required></label>' +
       '<label class="field"><span>Heslo (aspoň 8 znakov)</span><input type="password" id="p-heslo" minlength="8" autocomplete="new-password" required></label>' +
       '<div class="error" id="p-err"></div>' +
       '<button class="btn primary wide" type="submit">Vytvoriť účet administrátora</button></form></div>';
+    pridajOko($("#f-prve"));
     $("#f-prve").addEventListener("submit", async function (e) {
       e.preventDefault();
       var btn = e.target.querySelector("button"); btn.disabled = true;
@@ -267,6 +287,12 @@
     var rows = await vsetkyRiadky("odhady", "*", "inzerat_id");
     rows.forEach(function (o) { S.odh[o.inzerat_id] = o; });
   }
+  async function nacitajOznacenia() {
+    var rows = await vsetkyRiadky("oznacenia", "*", "inzerat_id");
+    var o = {}; rows.forEach(function (x) { if (x.predajca_typ) o[x.inzerat_id] = x; }); S.ozn = o;
+  }
+  // typ predajcu: ručné označenie má prednosť pred odhadom skenera
+  function ptyp(z) { var o = S.ozn[z.id]; return o ? o.predajca_typ : z.predajca_typ; }
   async function nacitajSchrankovanie() {
     var rows = await vsetkyRiadky("schrankovanie", "*", "id");
     S.sch = rows.sort(function (a, b) { return String(b.vytvorene).localeCompare(String(a.vytvorene)); });
@@ -293,14 +319,14 @@
   async function nacitajVsetko() {
     await nacitajMaklerov();
     var meta = sb.from("stav_skenera").select("meta, upravene").maybeSingle().then(function (r) { S.meta = (r.data && r.data.meta) || {}; });
-    await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), meta]);
+    await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), meta]);
   }
   var obnovuje = false;
   async function obnov() {
     if (obnovuje || !S.me) return;
     obnovuje = true;
     try {
-      var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky()];
+      var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia()];
       if (Date.now() - S.lastInzLoad > 10 * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
       await Promise.all(uloha);
       if (!S.me.aktivny) return odhlasit();
@@ -317,7 +343,7 @@
     if (admin()) tabs.push(["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<div class="brand"><img src="logo.png?v=202610171804" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
+      '<div class="brand"><img src="logo.png?v=202610171820" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>";
       }).join("") + "</nav>" +
@@ -369,6 +395,7 @@
       '<label class="field"><span>Nové heslo (aspoň 8 znakov)</span><input type="password" id="pw1" minlength="8" autocomplete="new-password" required></label>' +
       '<label class="field"><span>Zopakujte heslo</span><input type="password" id="pw2" minlength="8" autocomplete="new-password" required></label></div>' +
       '<div class="form-actions"><button class="btn primary" type="submit">Uložiť heslo</button><button class="btn ghost" type="button" id="pw-x">Zrušiť</button></div></form>';
+    pridajOko(el);
     $("#pw-x").onclick = function () { S.pwdOpen = false; vykresliHeslo(); };
     $("#f-pwd").addEventListener("submit", async function (e) {
       e.preventDefault();
@@ -445,7 +472,7 @@
     var el = $("#stats"); if (!el) return;
     var vid = viditelne(), den = Date.now() - 864e5;
     var akt = vid.filter(function (z) { return z.aktivny; });
-    var sukr = akt.filter(function (z) { return z.predajca_typ !== "rk"; });
+    var sukr = akt.filter(function (z) { return ptyp(z) !== "rk"; });
     var sukrVolne = sukr.filter(function (z) { return !(S.prev[z.id] && S.prev[z.id].makler_id); }).length;
     var moje = vid.filter(function (z) { return S.prev[z.id] && S.prev[z.id].makler_id === S.me.id; }).length;
     var nove = akt.filter(function (z) { return new Date(z.prvy_krat).getTime() > den; }).length;
@@ -467,14 +494,15 @@
     function pridaj(k) { pocty[k] = (pocty[k] || 0) + 1; }
     var out = zaklad.filter(function (z) {
       var p = S.prev[z.id], maj = p && p.makler_id;
-      var okP = f.predajca === "vsetci" || (f.predajca === "sukr" ? z.predajca_typ !== "rk" : z.predajca_typ === "rk");
+      var pt = ptyp(z);
+      var okP = f.predajca === "vsetci" || (f.predajca === "sukr" ? pt !== "rk" : pt === "rk");
       var okPr = f.praca === "vsetky" || (f.praca === "volne" && !maj) || (f.praca === "moje" && maj === me) || (f.praca === "prevzate" && maj);
       var okIne = (!f.typ || z.typ === f.typ) &&
         (!f.okres || (f.okres.indexOf("o:") === 0 ? z.okres === f.okres.slice(2) : z.obec === f.okres)) &&
         (!lim || new Date(z.prvy_krat).getTime() >= lim) &&
         (!f.under || (S.odh[z.id] && S.odh[z.id].podhodnotene)) &&
         (!q || z._t.indexOf(q) >= 0);
-      if (okIne && okPr) { pridaj("predajca:vsetci"); pridaj(z.predajca_typ !== "rk" ? "predajca:sukr" : "predajca:rk"); }
+      if (okIne && okPr) { pridaj("predajca:vsetci"); pridaj(pt !== "rk" ? "predajca:sukr" : "predajca:rk"); }
       if (okIne && okP) { if (!maj) pridaj("praca:volne"); if (maj === me) pridaj("praca:moje"); if (maj) pridaj("praca:prevzate"); }
       return okP && okPr && okIne;
     });
@@ -516,7 +544,7 @@
   function karta(z) {
     var p = S.prev[z.id] || null, maj = p && p.makler_id, moj = maj === S.me.id;
     var mozeUpravit = moj || admin() || !maj;
-    var pr = PRED[z.predajca_typ] || ["?", "rk"];
+    var ozn = S.ozn[z.id], pr = PRED[ptyp(z)] || ["?", "rk"];
     var o = S.canUnder ? S.odh[z.id] : null;
     var nove = Date.now() - new Date(z.prvy_krat).getTime() < 864e5;
     var hist = z.historia_cien || [];
@@ -545,7 +573,8 @@
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
       (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + "<span>v skeneri " + ago(z.prvy_krat) + "</span></div>" +
       '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") + (!z.aktivny ? '<span class="pill gone">Už nie je na portáli</span>' : "") +
-      '<span class="pill ' + pr[1] + '" title="' + esc(z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
+      '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
+      (ozn ? '<span class="pill rk">Označil ' + esc(meno(ozn.oznacil)) + "</span>" : "") +
       (o && o.podhodnotene ? '<span class="pill priv">Pod cenou</span>' : "") +
       (znizena ? '<span class="pill priv">Znížená cena z ' + eur(hist[hist.length - 2][1]) + "</span>" : "") + "</div>" +
       '<div class="links">' + odkazy + "</div></div>" +
@@ -567,6 +596,8 @@
         '<button class="btn' + (p && p.email ? " on" : "") + '" type="button" data-act="email">' + (p && p.email ? "✓ Email poslaný" : "Email poslaný") + "</button>";
     }
     h += '<button class="btn ghost" type="button" data-act="zvon" title="Nastaviť pripomienku">🔔 Pripomenúť</button>';
+    if (ozn && ozn.predajca_typ === "rk") h += '<button class="btn ghost" type="button" data-act="oznac-zrus" title="Vrátiť rozpoznanie skenera">Nie je RK</button>';
+    else if (ptyp(z) !== "rk") h += '<button class="btn ghost" type="button" data-act="oznac-rk" title="Presunúť medzi realitné kancelárie">Je to RK</button>';
     h += '<button class="btn ghost" type="button" data-act="hist">História</button>';
     if (maj && (moj || admin())) h += '<button class="btn ghost" type="button" data-act="uvolnit">Uvoľniť</button>';
     if (admin()) {
@@ -645,6 +676,14 @@
       return akcia(id, async function () { await rpc("oznacit_kontakt", { p_inzerat: id, p_typ: act, p_stav: stav }); });
     }
     if (act === "zvon") { S.open[id] = S.open[id] === "zvon" ? null : "zvon"; return prekresliKartu(id); }
+    if (act === "oznac-rk" || act === "oznac-zrus") {
+      try {
+        await rpc("oznacit_predajcu", { p_inzerat: id, p_typ: act === "oznac-rk" ? "rk" : null });
+        await nacitajOznacenia();
+        toast(act === "oznac-rk" ? "Označené ako realitná kancelária – presunuté mimo súkromných." : "Označenie zrušené.");
+      } catch (err) { toast(chybaText(err), true); }
+      vykresliStaty(); return vykresliZoznam();
+    }
     if (act === "hovor") { S.open[id] = S.open[id] === "hovor" ? null : "hovor"; prekresliKartu(id); var s = document.querySelector('.card[data-id="' + CSS.escape(id) + '"] select[name="vysledok"]'); if (s) s.focus(); return; }
     if (act === "zavriet") { S.open[id] = null; return prekresliKartu(id); }
     if (act === "hist") {
@@ -680,7 +719,7 @@
     var sf = S.sf;
     $("#filters").innerHTML = '<div class="filters"><div class="wrap">' +
       '<button class="btn primary" type="button" id="sch-novy">+ Pridať záznam</button>' +
-      '<input type="search" id="sq" placeholder="Hľadať v lokalite, telefóne, poznámkach…" aria-label="Hľadať" value="' + esc(sf.q) + '">' +
+      '<input type="search" id="sq" placeholder="Hľadať: meno, telefón, adresa, poznámka, cena…" aria-label="Hľadať" value="' + esc(sf.q) + '">' +
       '<select id="s-makler" aria-label="Maklér"><option value="">Všetci makléri</option><option value="__moje">Moje</option>' +
       S.makleri.map(function (m) { return '<option value="' + m.id + '">' + esc(m.meno || m.email) + "</option>"; }).join("") + "</select>" +
       '<select id="s-typ" aria-label="Druh"><option value="">Všetky druhy</option>' +
@@ -697,7 +736,8 @@
   function formSch(r) {
     var mozeMaklera = admin();
     return '<form class="box" id="f-sch"><h3>' + (r.id ? "Upraviť záznam" : "Nový záznam") + "</h3><div class=\"form-grid\">" +
-      '<label class="field"><span>Lokalita *</span><input type="text" id="sch-lokalita" list="dl-obce" required value="' + esc(r.lokalita || "") + '" placeholder="napr. Smižany, Hutnícka 12"></label>' +
+      '<label class="field"><span>Lokalita / adresa *</span><input type="text" id="sch-lokalita" list="dl-obce" required value="' + esc(r.lokalita || "") + '" placeholder="napr. Smižany, Hutnícka 12"></label>' +
+      '<label class="field"><span>Meno a priezvisko</span><input type="text" id="sch-kontakt" value="' + esc(r.kontakt || "") + '" placeholder="majiteľ / kontaktná osoba"></label>' +
       '<label class="field"><span>Druh nehnuteľnosti</span><select id="sch-typ">' +
       Object.keys(TYP).map(function (k) { return '<option value="' + k + '"' + (r.typ === k ? " selected" : "") + ">" + TYP[k] + "</option>"; }).join("") + "</select></label>" +
       '<label class="field"><span>Cena (€)</span><input type="number" id="sch-cena" min="0" step="100" inputmode="numeric" value="' + (r.cena == null ? "" : r.cena) + '"></label>' +
@@ -713,6 +753,18 @@
       '<div class="form-actions"><button class="btn primary" type="submit">Uložiť</button><button class="btn ghost" type="button" id="sch-x">Zrušiť</button></div></form>';
   }
 
+  // hľadanie cez všetky údaje; telefón sa porovnáva bez medzier a predvoľby (+421 / 0)
+  function cisloTel(t) { return String(t || "").replace(/\D/g, "").replace(/^00421|^421/, "0"); }
+  function schZhoda(r, q) {
+    var text = norm([r.lokalita, r.kontakt, r.telefon, r.poznamky, r.stav, TYP[r.typ], r.cena, meno(r.makler_id), datum(r.vytvorene)].join(" "));
+    var slova = q.split(/\s+/).filter(Boolean);
+    var tel = cisloTel(r.telefon);
+    return slova.every(function (w) {
+      if (text.indexOf(w) >= 0) return true;
+      var d = cisloTel(w);
+      return d.length >= 3 && tel.indexOf(d) >= 0;
+    });
+  }
   function vykresliSchrankovanie() {
     var el = $("#obsah"); if (!el) return;
     var sf = S.sf, q = norm(sf.q).trim();
@@ -720,7 +772,7 @@
       if (sf.makler === "__moje" && r.makler_id !== S.me.id) return false;
       if (sf.makler && sf.makler !== "__moje" && r.makler_id !== sf.makler) return false;
       if (sf.typ && r.typ !== sf.typ) return false;
-      if (q && norm([r.lokalita, r.telefon, r.poznamky, r.stav, meno(r.makler_id)].join(" ")).indexOf(q) < 0) return false;
+      if (q && !schZhoda(r, q)) return false;
       return true;
     });
     function moze(r) { return admin() || r.makler_id === S.me.id; }
@@ -737,16 +789,16 @@
     if (!rows.length) {
       h += '<div class="empty">' + (S.sch.length ? "Nič nezodpovedá filtrom." : "Zatiaľ tu nie je žiadny záznam. Pridajte prvý tlačidlom „+ Pridať záznam“.") + "</div>";
     } else {
-      h += '<div class="tbl-wrap sch"><table><thead><tr><th>Dátum</th><th>Lokalita</th><th>Druh</th><th>Cena</th><th>Telefón</th><th>Stav</th><th>Poznámky</th><th>Maklér</th><th></th></tr></thead><tbody>' +
+      h += '<div class="tbl-wrap sch"><table><thead><tr><th>Dátum</th><th>Lokalita / adresa</th><th>Meno</th><th>Druh</th><th>Cena</th><th>Telefón</th><th>Stav</th><th>Poznámky</th><th>Maklér</th><th></th></tr></thead><tbody>' +
         rows.map(function (r) {
-          return "<tr><td>" + datum(r.vytvorene) + "</td><td>" + esc(r.lokalita) + "</td><td>" + esc(TYP[r.typ] || r.typ || "") + '</td><td class="num">' + (r.cena ? eur(r.cena) : "") +
+          return "<tr><td>" + datum(r.vytvorene) + "</td><td>" + esc(r.lokalita) + "</td><td>" + esc(r.kontakt || "") + "</td><td>" + esc(TYP[r.typ] || r.typ || "") + '</td><td class="num">' + (r.cena ? eur(r.cena) : "") +
             '</td><td style="white-space:nowrap">' + tel(r.telefon) + "</td><td>" + esc(r.stav || "") + "</td><td>" + esc(r.poznamky || "") + "</td><td>" + esc(meno(r.makler_id)) +
             '</td><td style="white-space:nowrap">' + tlacidla(r) + "</td></tr>";
         }).join("") + "</tbody></table></div>";
       h += '<div class="sch-cards">' + rows.map(function (r) {
         return '<div class="sch-card"><div class="top"><span>' + esc(r.lokalita) + "</span><span>" + (r.cena ? eur(r.cena) : "") + "</span></div>" +
           '<div class="meta"><span>' + esc(TYP[r.typ] || "") + "</span>" + (r.stav ? "<span>" + esc(r.stav) + "</span>" : "") + "<span>" + esc(meno(r.makler_id)) + "</span><span>" + datum(r.vytvorene) + "</span></div>" +
-          (r.telefon ? "<div>" + tel(r.telefon) + "</div>" : "") + (r.poznamky ? "<div>" + esc(r.poznamky) + "</div>" : "") +
+          (r.kontakt || r.telefon ? "<div>" + (r.kontakt ? "<b>" + esc(r.kontakt) + "</b> " : "") + tel(r.telefon) + "</div>" : "") + (r.poznamky ? "<div>" + esc(r.poznamky) + "</div>" : "") +
           (moze(r) ? '<div class="form-actions">' + tlacidla(r) + "</div>" : "") + "</div>";
       }).join("") + "</div>";
     }
@@ -762,6 +814,7 @@
             p_id: S.schEdit.id, p_lokalita: $("#sch-lokalita").value, p_typ: $("#sch-typ").value,
             p_cena: cena === "" ? null : Math.round(Number(cena)), p_telefon: $("#sch-tel").value, p_stav: $("#sch-stav").value,
             p_poznamky: $("#sch-pozn").value, p_makler: $("#sch-makler") ? $("#sch-makler").value : null,
+            p_kontakt: $("#sch-kontakt").value,
           });
           toast(S.schEdit.id ? "Záznam je upravený." : "Záznam je pridaný.");
           S.schEdit = null; await nacitajSchrankovanie();
@@ -786,6 +839,17 @@
   });
 
   // ------------------------------------------------------------ MAKLÉRI (admin)
+  function bunkaHeslo(m) {
+    if (S.hesloEdit === m.id) {
+      return '<span class="heslo-edit"><input type="text" data-heslo-nove value="' + noveHeslo() + '" minlength="8" aria-label="Nové heslo" autocomplete="off">' +
+        '<button class="btn primary" type="button" data-m-act="heslo-uloz">Nastaviť</button><button class="btn ghost" type="button" data-m-act="heslo-zrus">✕</button></span>';
+    }
+    // heslo sa nikde neukladá čitateľne – ukážeme len to, ktoré ste práve nastavili (do obnovenia stránky)
+    var h = S.hesla[m.id], obsah;
+    if (h) obsah = '<span class="heslo-val" data-heslo="' + esc(h) + '">••••••••</span> <button class="btn ghost pw-show" type="button" data-m-act="heslo-ukaz" aria-label="Zobraziť heslo">👁</button>';
+    else obsah = '<span class="meta">zašifrované</span>';
+    return '<span class="heslo-cell">' + obsah + ' <button class="btn ghost" type="button" data-m-act="heslo">Zmeniť</button></span>';
+  }
   function vykresliMaklerov() {
     var el = $("#obsah"); if (!el || !admin()) return;
     var prevzate = {}, hovory = {};
@@ -802,18 +866,20 @@
       '<button class="btn ghost" type="button" data-foto="avatar:muz"><span class="av mini">' + SVG_MUZ + '</span> Muž</button>' +
       '<button class="btn ghost" type="button" data-foto="">Bez fotky</button></div></div></div>' +
       '<div class="form-actions"><button class="btn primary" type="submit">Vytvoriť účet</button></div>' +
-      (S.newUser ? '<div class="note">Účet je vytvorený. Pošlite maklérovi: <b>' + esc(location.origin + location.pathname) + "</b> · email <b>" + esc(S.newUser.email) +
+      (S.newUser ? '<div class="note">' + (S.newUser.zmena ? "Heslo je zmenené." : "Účet je vytvorený.") + ' Pošlite maklérovi: <b>' + esc(location.origin + location.pathname) + "</b> · email <b>" + esc(S.newUser.email) +
         "</b> · heslo <b>" + esc(S.newUser.heslo) + '</b> <button class="btn" type="button" id="n-copy">Kopírovať</button></div>' : "") + "</form>";
-    h += '<div class="tbl-wrap"><table><thead><tr><th>Fotka</th><th>Meno</th><th>Email</th><th>Rola</th><th>Aktívny</th><th>Vidí podhodnotené</th><th>Prevzaté</th><th></th></tr></thead><tbody>' +
-      S.makleri.map(function (m) {
+    h += '<div class="mk-list">' + S.makleri.map(function (m) {
         var ja = m.id === S.me.id;
-        return '<tr data-m="' + m.id + '"><td class="foto-td">' + fotoVolba("makler", m.id) + '</td><td><input type="text" data-f="meno" value="' + esc(m.meno) + '" aria-label="Meno"></td><td>' + esc(m.email || "") + "</td>" +
-          '<td><select data-f="rola"' + (ja ? " disabled" : "") + '><option value="makler"' + (m.rola === "makler" ? " selected" : "") + '>Maklér</option><option value="admin"' + (m.rola === "admin" ? " selected" : "") + ">Administrátor</option></select></td>" +
-          '<td><label class="toggle"><input type="checkbox" data-f="aktivny"' + (m.aktivny ? " checked" : "") + (ja ? " disabled" : "") + "> áno</label></td>" +
-          '<td><label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> áno</label></td>" +
-          '<td class="num">' + (prevzate[m.id] || 0) + "</td>" +
-          '<td style="white-space:nowrap"><button class="btn" type="button" data-m-act="ulozit">Uložiť</button> <button class="btn ghost" type="button" data-m-act="heslo">Nové heslo</button></td></tr>';
-      }).join("") + "</tbody></table></div>" +
+        return '<div class="mk-card" data-m="' + m.id + '">' +
+          '<div class="mk-foto">' + fotoVolba("makler", m.id) + "</div>" +
+          '<div class="mk-hlavne"><input type="text" data-f="meno" value="' + esc(m.meno) + '" aria-label="Meno"><div class="meta">' + esc(m.email || "") +
+          " · prevzatých " + (prevzate[m.id] || 0) + "</div></div>" +
+          '<div class="mk-prava"><select data-f="rola"' + (ja ? " disabled" : "") + ' aria-label="Rola"><option value="makler"' + (m.rola === "makler" ? " selected" : "") + '>Maklér</option><option value="admin"' + (m.rola === "admin" ? " selected" : "") + ">Administrátor</option></select>" +
+          '<label class="toggle"><input type="checkbox" data-f="aktivny"' + (m.aktivny ? " checked" : "") + (ja ? " disabled" : "") + "> Aktívny</label>" +
+          '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label></div>" +
+          '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
+          '<div class="mk-akcie"><button class="btn" type="button" data-m-act="ulozit">Uložiť</button></div></div>';
+      }).join("") + "</div>" +
       '<p class="meta">Administrátor vidí podhodnotené ponuky vždy. Maklérom ich zapnete v stĺpci „Vidí podhodnotené“. Deaktivovaný maklér sa neprihlási a nič nevidí; jeho prevzaté inzeráty mu ostanú, kým ich nepresuniete.</p>';
     el.innerHTML = h;
     vykresliNahladNoveho();
@@ -829,7 +895,7 @@
         var nov = await funkcia({ akcia: "vytvorit", meno: $("#n-meno").value, email: email, heslo: heslo, rola: $("#n-rola").value });
         if (S.novyFoto) await rpc("nastavit_foto", { p_id: nov.id, p_foto: S.novyFoto });
         S.novyFoto = null;
-        S.newUser = { email: email, heslo: heslo };
+        S.newUser = { email: email, heslo: heslo }; S.hesla[nov.id] = heslo;
         await nacitajMaklerov(); toast("Účet je vytvorený.");
       } catch (err) { toast(chybaText(err), true); btn.disabled = false; return; }
       vykresliMaklerov();
@@ -839,7 +905,7 @@
   document.addEventListener("click", async function (e) {
     var b = e.target.closest("#obsah [data-m-act]");
     if (!b) return;
-    var tr = b.closest("tr"), id = tr.dataset.m, m = S.mById[id];
+    var tr = b.closest("[data-m]"), id = tr.dataset.m, m = S.mById[id];
     if (b.dataset.mAct === "ulozit") {
       try {
         await rpc("upravit_maklera", {
@@ -850,13 +916,23 @@
       } catch (err) { toast(chybaText(err), true); }
       vykresliMaklerov();
     }
-    if (b.dataset.mAct === "heslo") {
-      var nove = noveHeslo();
+    if (b.dataset.mAct === "heslo") { S.hesloEdit = id; vykresliMaklerov(); var i = document.querySelector("[data-heslo-nove]"); if (i) i.select(); }
+    if (b.dataset.mAct === "heslo-zrus") { S.hesloEdit = null; vykresliMaklerov(); }
+    if (b.dataset.mAct === "heslo-ukaz") {
+      var v = tr.querySelector(".heslo-val"), skryte = v.textContent.indexOf("•") === 0;
+      v.textContent = skryte ? v.dataset.heslo : "••••••••";
+      b.classList.toggle("on", skryte);
+    }
+    if (b.dataset.mAct === "heslo-uloz") {
+      var nove = tr.querySelector("[data-heslo-nove]").value.trim();
+      if (nove.length < 8) return toast("Heslo musí mať aspoň 8 znakov.", true);
+      b.disabled = true;
       try {
         await funkcia({ akcia: "heslo", id: id, heslo: nove });
-        S.newUser = { email: m.email, heslo: nove }; toast("Heslo je zmenené.");
-      } catch (err) { toast(chybaText(err), true); }
-      vykresliMaklerov(); window.scrollTo({ top: 0, behavior: "smooth" });
+        S.hesloEdit = null; S.newUser = { email: m.email, heslo: nove, zmena: true }; S.hesla[id] = nove;
+        toast("Heslo pre " + (m.meno || m.email) + " je zmenené.");
+      } catch (err) { toast(chybaText(err), true); b.disabled = false; return; }
+      vykresliMaklerov();
     }
   });
 
