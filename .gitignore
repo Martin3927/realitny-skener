@@ -3,6 +3,5 @@ vystup/
 *.log
 app/config.local.js
 app/config.template.js
-docs/
 data.json
 dashboard_obsah.html
