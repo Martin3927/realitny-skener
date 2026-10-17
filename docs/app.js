@@ -102,6 +102,29 @@
     return s;
   }
 
+  // ------------------------------------------------------------ svetlý / tmavý režim
+  var TEMA_KEY = "alpha-skener-tema";
+  function jeTmava() {
+    var t = document.documentElement.dataset.theme;
+    if (t) return t === "dark";
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function popisTemy() {
+    var b = $("#tema-btn"); if (!b) return;
+    var tmava = jeTmava();
+    b.textContent = tmava ? "☀" : "☾";
+    b.title = tmava ? "Prepnúť na svetlý režim" : "Prepnúť na tmavý režim";
+    b.setAttribute("aria-label", b.title);
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.content = tmava ? "#0f1114" : "#2b2f36";
+  }
+  function prepniTemu() {
+    var nova = jeTmava() ? "light" : "dark";
+    document.documentElement.dataset.theme = nova;
+    try { localStorage.setItem(TEMA_KEY, nova); } catch (e) { /* nevadí */ }
+    popisTemy();
+  }
+
   // ------------------------------------------------------------ štart a prihlásenie
   async function start() {
     var ses = (await sb.auth.getSession()).data.session;
@@ -114,7 +137,7 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<h1>ALPHA <span>REALITY</span> · skener</h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
+      '<img class="login-logo" src="logo.png" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -133,7 +156,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<h1>ALPHA <span>REALITY</span> · skener</h1>' +
+      '<img class="login-logo" src="logo.png" alt="Alpha Reality">' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" required></label>' +
@@ -241,11 +264,12 @@
     if (admin()) tabs.push(["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<div class="brand">ALPHA <span>REALITY</span></div>' +
+      '<div class="brand"><img src="logo.png" alt="Alpha Reality"><span>skener</span></div>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>";
       }).join("") + "</nav>" +
       '<div class="user"><span class="email">' + esc(S.me.meno || S.me.email) + (admin() ? " · admin" : "") + "</span>" +
+      '<button type="button" class="theme-btn" data-act="tema" id="tema-btn"></button>' +
       '<button type="button" data-act="heslo-moje">Heslo</button><button type="button" data-act="odhlasit">Odhlásiť</button></div>' +
       "</div>" + (S.tab === "inzeraty" ? '<div class="wrap stats" id="stats"></div>' : "") + "</header>" +
       '<div id="filters"></div><main><div class="wrap"><div id="pwd"></div><div id="obsah"></div></div></main>' +
@@ -256,10 +280,12 @@
       var a = e.target.closest("[data-act]");
       if (!a) return;
       if (a.dataset.act === "odhlasit") odhlasit();
+      if (a.dataset.act === "tema") prepniTemu();
       if (a.dataset.act === "heslo-moje") { S.pwdOpen = !S.pwdOpen; vykresliHeslo(); }
       if (a.dataset.act === "preset") predvolba(a.dataset.v);
     });
     vykresliHeslo();
+    popisTemy();
     if (S.tab === "inzeraty") vykresliFiltreInz();
     else if (S.tab === "schrankovanie") vykresliFiltreSch();
     else $("#filters").innerHTML = "";
