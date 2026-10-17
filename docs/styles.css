@@ -39,6 +39,7 @@
 }
 
 * { box-sizing: border-box }
+[hidden] { display: none !important }
 html, body { margin: 0 }
 body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; -webkit-text-size-adjust: 100% }
 button, input, select, textarea { font: inherit; color: inherit }
@@ -189,4 +190,49 @@ tr:last-child td { border-bottom: 0 }
   .brand img { height: 38px }
   .brand > span { display: none }
   .history div { grid-template-columns: 1fr }
+}
+
+/* ---------- avatary maklérov */
+.av { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden; flex: none;
+  background: var(--gold-soft); color: var(--gold); font-family: var(--display); font-weight: 700; vertical-align: middle; line-height: 1 }
+.av img, .av svg { width: 100%; height: 100%; object-fit: cover; display: block }
+.av.mini { width: 18px; height: 18px }
+.foto-volba { display: flex; gap: 12px; align-items: center; flex-wrap: wrap }
+.foto-btns { display: flex; gap: 6px; flex-wrap: wrap }
+.foto-btns .btn { display: inline-flex; align-items: center; gap: 6px }
+.foto-volba.kompakt { gap: 8px; flex-wrap: nowrap }
+.foto-volba.kompakt select { font-size: 12.5px; padding: 5px 6px }
+.h-row { display: inline-flex; gap: 6px; align-items: flex-start }
+
+/* ---------- hlavička: zvonček a profil */
+.me-btn { display: inline-flex !important; align-items: center; gap: 8px; border: 0 !important; padding: 2px 6px 2px 2px !important; border-radius: 999px !important }
+.me-btn:hover { background: rgba(255,255,255,.08) }
+.bell { position: relative; font-size: 16px; line-height: 1; padding: 5px 9px !important }
+.bell.ring { border-color: var(--gold-strong) !important; animation: zvon 2.4s ease-in-out infinite }
+.badge { position: absolute; top: -6px; right: -6px; background: #e0533b; color: #fff; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px;
+  border-radius: 9px; display: grid; place-items: center; padding: 0 4px; font-family: var(--body) }
+@keyframes zvon { 0%, 88%, 100% { transform: rotate(0) } 91% { transform: rotate(-14deg) } 94% { transform: rotate(12deg) } 97% { transform: rotate(-6deg) } }
+@media (prefers-reduced-motion: reduce) { .bell.ring { animation: none } }
+
+/* ---------- prevzaté inzeráty */
+.pill.taken { background: var(--graphite); color: #f1efe8; display: inline-flex; align-items: center; gap: 5px; padding-left: 3px }
+.card.taken { border-left: 4px solid var(--info) }
+.marks .due { color: var(--bad); font-weight: 700 }
+
+/* ---------- pripomienky */
+.zvon-box h4 { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+.zvon-hlava { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap }
+.prip { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2) }
+.prip.due { border-color: var(--bad); background: var(--bad-soft) }
+.prip-cas { font-weight: 700; font-variant-numeric: tabular-nums }
+.prip-text { min-width: 0; overflow-wrap: anywhere }
+.prip-akcie { display: flex; gap: 6px; flex-wrap: wrap }
+.prip-form { display: grid; gap: 10px; padding: 12px; border: 1px dashed var(--gold); border-radius: 8px; background: var(--surface) }
+.prip-form h4 { margin: 0 }
+.rychle { display: flex; gap: 6px; flex-wrap: wrap }
+.rychle .btn { padding: 5px 9px; font-size: 12.5px }
+input[type="datetime-local"] { font-size: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; color: var(--ink) }
+@media (max-width: 760px) {
+  .prip { grid-template-columns: 1fr }
+  .me-btn .email { display: none }
 }
