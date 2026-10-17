@@ -187,8 +187,8 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<img class="login-logo" src="logo.png?v=202610171820" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
-      '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" required></label>' +
+      '<img class="login-logo" src="logo.png?v=202610171957" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
+      '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
       '<button class="btn primary wide" type="submit">Prihlásiť sa</button>' +
@@ -197,9 +197,16 @@
     $("#f-login").addEventListener("submit", async function (e) {
       e.preventDefault();
       var btn = e.target.querySelector("button"); btn.disabled = true; $("#l-err").textContent = "";
-      var r = await sb.auth.signInWithPassword({ email: $("#l-email").value.trim(), password: $("#l-heslo").value });
+      var email = $("#l-email").value.trim().toLowerCase(), heslo = $("#l-heslo").value;
+      var r = await sb.auth.signInWithPassword({ email: email, password: heslo });
+      // mobilné klávesnice niekedy pridajú medzeru na koniec – skúsime aj bez nej
+      if (r.error && heslo !== heslo.trim()) r = await sb.auth.signInWithPassword({ email: email, password: heslo.trim() });
       btn.disabled = false;
-      if (r.error) { $("#l-err").textContent = chybaText(r.error); return; }
+      if (r.error) {
+        $("#l-err").textContent = /Invalid login credentials/i.test(r.error.message || "") ?
+          "Nesprávny email alebo heslo. Ťuknite na 👁 a skontrolujte heslo – veľké a malé písmená, prípadne zámenu y a z na klávesnici." : chybaText(r.error);
+        return;
+      }
       poPrihlaseni(r.data.user);
     });
   }
@@ -207,10 +214,10 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610171820" alt="Alpha Reality">' +
+      '<img class="login-logo" src="logo.png?v=202610171957" alt="Alpha Reality">' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
-      '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" required></label>' +
+      '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo (aspoň 8 znakov)</span><input type="password" id="p-heslo" minlength="8" autocomplete="new-password" required></label>' +
       '<div class="error" id="p-err"></div>' +
       '<button class="btn primary wide" type="submit">Vytvoriť účet administrátora</button></form></div>';
@@ -343,7 +350,7 @@
     if (admin()) tabs.push(["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<div class="brand"><img src="logo.png?v=202610171820" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
+      '<div class="brand"><img src="logo.png?v=202610171957" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>";
       }).join("") + "</nav>" +
@@ -856,7 +863,7 @@
     Object.values(S.prev).forEach(function (p) { if (p.makler_id) prevzate[p.makler_id] = (prevzate[p.makler_id] || 0) + 1; });
     var h = '<form class="box" id="f-novy"><h3>Pridať makléra</h3><div class="form-grid">' +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="n-meno" required></label>' +
-      '<label class="field"><span>Email (prihlasovacie meno)</span><input type="email" id="n-email" required autocomplete="off"></label>' +
+      '<label class="field"><span>Email (prihlasovacie meno)</span><input type="email" id="n-email" required autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></label>' +
       '<label class="field"><span>Heslo</span><input type="text" id="n-heslo" minlength="8" required autocomplete="off" value="' + noveHeslo() + '"></label>' +
       '<label class="field"><span>Rola</span><select id="n-rola"><option value="makler">Maklér</option><option value="admin">Administrátor</option></select></label>' +
       "</div>" +
