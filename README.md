@@ -18,7 +18,7 @@ Sleduje Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality.sk v okresoch **Spiš
 ## Ako to beží
 | Časť | Kde | Cena |
 |---|---|---|
-| Stránka pre maklérov (`app/`) | GitHub Pages, adresa skener.alphareality.sk | zadarmo |
+| Stránka pre maklérov (`docs/`) | GitHub Pages, adresa skener.alphareality.sk | zadarmo |
 | Databáza, prihlásenia, práva (`supabase/`) | Supabase (EÚ – Frankfurt) | zadarmo |
 | Kontrola portálov (`skener.py`) | GitHub Actions, každých 30 min 6:00–22:30, v noci plná kontrola | zadarmo |
 

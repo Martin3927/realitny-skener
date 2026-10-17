@@ -37,8 +37,10 @@ jobs:
 
       - name: Kontrola portálov
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          # adresa a verejný kľúč databázy (nie sú tajné – práva stráži databáza)
+          SUPABASE_URL: https://uwxziqapghlyktwpipjd.supabase.co
+          SUPABASE_KEY: sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf
+          # tajný kľúč skenera – nastavuje sa v Settings → Secrets and variables → Actions
           SKENER_KLUC: ${{ secrets.SKENER_KLUC }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -46,7 +48,7 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+          DASHBOARD_URL: https://skener.alphareality.sk/
         run: |
           if [ "${{ github.event.schedule }}" = "17 1 * * *" ] || [ "${{ inputs.plny }}" = "true" ]; then
             python skener.py --plny
