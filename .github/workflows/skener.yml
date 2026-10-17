@@ -1,11 +1,8 @@
 name: Realitný skener
 
 on:
-  schedule:
-    # každých 30 minút od 6:00 do 22:30 (slovenský čas)
-    - cron: "*/30 4-20 * * *"
-    # plná kontrola v noci
-    - cron: "17 1 * * *"
+  # Spúšťa ju presne o :00 a :30 (6:00–22:30) a v noci o 3:00 databáza Supabase (pg_cron).
+  # Ručne: Actions → Realitný skener → Run workflow.
   workflow_dispatch:
     inputs:
       plny:
@@ -50,7 +47,7 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           DASHBOARD_URL: https://martin3927.github.io/realitny-skener/
         run: |
-          if [ "${{ github.event.schedule }}" = "17 1 * * *" ] || [ "${{ inputs.plny }}" = "true" ]; then
+          if [ "${{ inputs.plny }}" = "true" ]; then
             python skener.py --plny
           else
             python skener.py
