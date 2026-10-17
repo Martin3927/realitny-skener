@@ -1,0 +1,55 @@
+name: Realitný skener
+
+on:
+  schedule:
+    # každých 30 minút od 6:00 do 22:30 (slovenský čas)
+    - cron: "*/30 4-20 * * *"
+    # plná kontrola v noci
+    - cron: "17 1 * * *"
+  workflow_dispatch:
+    inputs:
+      plny:
+        description: "Prejsť všetky strany (plná kontrola)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skener
+  cancel-in-progress: false
+
+jobs:
+  skenuj:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Inštalácia
+        run: pip install -r requirements.txt
+
+      - name: Kontrola portálov
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SKENER_KLUC: ${{ secrets.SKENER_KLUC }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+        run: |
+          if [ "${{ github.event.schedule }}" = "17 1 * * *" ] || [ "${{ inputs.plny }}" = "true" ]; then
+            python skener.py --plny
+          else
+            python skener.py
+          fi

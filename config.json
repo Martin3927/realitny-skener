@@ -1,0 +1,20 @@
+{
+  "okresy": ["Spišská Nová Ves", "Levoča"],
+  "typy": ["byt", "dom", "pozemok", "chata", "garaz"],
+  "portaly": ["bazos", "nehnutelnosti", "reality", "topreality"],
+
+  "podhodnotene_o_percent": 15,
+  "podhodnotene_o_percent_podla_typu": {"byt": 15, "dom": 30, "chata": 30, "pozemok": 35, "garaz": 25},
+  "min_porovnatelnych": 5,
+
+  "email": {
+    "prijemcovia": ["augustinak@alphareality.sk"],
+    "posielat_sukromne": true,
+    "posielat_podhodnotene_aj_od_rk": true,
+    "posielat_znizenie_ceny_sukromnych": true
+  },
+
+  "stranok_pri_beznej_kontrole": 3,
+  "pauza_medzi_poziadavkami_s": 1.0,
+  "dni_kym_inzerat_zmizne": 3
+}
