@@ -48,7 +48,7 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          DASHBOARD_URL: https://skener.alphareality.sk/
+          DASHBOARD_URL: https://martin3927.github.io/realitny-skener/
         run: |
           if [ "${{ github.event.schedule }}" = "17 1 * * *" ] || [ "${{ inputs.plny }}" = "true" ]; then
             python skener.py --plny
