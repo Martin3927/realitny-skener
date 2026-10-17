@@ -2,6 +2,8 @@
 // Beží v Supabase s administrátorským kľúčom; volajúceho overuje sama.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+const PRVY_ADMIN = "augustinak@alphareality.sk";
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -50,6 +52,10 @@ Deno.serve(async (req) => {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return odpoved(400, { chyba: "Zadajte platný email." });
     if (heslo.length < 8) return odpoved(400, { chyba: "Heslo musí mať aspoň 8 znakov." });
     if (!meno) return odpoved(400, { chyba: "Zadajte meno makléra." });
+    // prvý (administrátorský) účet si môže založiť len majiteľ kancelárie
+    if (prveSpustenie && email !== PRVY_ADMIN) {
+      return odpoved(403, { chyba: "Účet administrátora sa dá vytvoriť len pre email " + PRVY_ADMIN + "." });
+    }
 
     const { data, error } = await admin.auth.admin.createUser({
       email, password: heslo, email_confirm: true, user_metadata: { meno },
