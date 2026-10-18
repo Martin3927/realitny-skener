@@ -35,7 +35,7 @@
     obce: [], lastInzLoad: 0, newUser: null,
     f: { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", stav: "aktivne" },
     arch: {}, tel: {}, telZdroj: {},
-    sf: { q: "", makler: "", typ: "" }, chat: [], chatMax: 0, nehnObd: "aktualne", vykonObd: "tento_tyzden", vykon: null, smsEdit: null,
+    sf: { q: "", makler: "", typ: "" }, chat: [], chatMax: 0, nehnObd: "aktivne", vykonObd: "tento_tyzden", vykon: null, smsEdit: null,
   };
   try {
     var ul = JSON.parse(localStorage.getItem(KEY) || "null");
@@ -278,7 +278,7 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610182000" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
+      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610182100" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -305,7 +305,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610182000" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
+      '<img class="login-logo" src="logo.png?v=202610182100" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -770,7 +770,7 @@
     if (admin()) tabs.push(["vykon", "Výkon"], ["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610182000" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
+      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610182100" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] +
           (t[0] === "chat" ? ' <span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
@@ -1638,7 +1638,7 @@
     var dlazdice = [
       ["inzeraty", "skener", "Realitný skener", "Súkromné inzeráty z Bazoša, Nehnuteľností, Reality.sk a TopReality", nf.format(volne) + " voľných súkromných", nove ? nove + (nove === 1 ? " nový" : nove <= 4 ? " nové" : " nových") + " za 24 h" : "", moje ? "Moje: " + moje : ""],
       ["schrankovanie", "sch", "Schránkovanie", "Majitelia z letákov a schránok – kontakty, stav, poznámky", nf.format(sch) + (sch === 1 ? " záznam" : sch >= 2 && sch <= 4 ? " záznamy" : " záznamov"), "", ""],
-      ["nehnutelnosti", "nehn", "Nehnuteľnosti", "Ponuka kancelárie – pridávanie, fotky, majiteľ a zmluva", S.ponuky ? S.ponuky.filter(function (x) { return skupinaStavu(x.stav) === "aktualne"; }).length + " aktuálnych ponúk" : "Ponuka kancelárie", "", ""],
+      ["nehnutelnosti", "nehn", "Nehnuteľnosti", "Ponuka kancelárie – pridávanie, fotky, majiteľ a zmluva", S.ponuky ? S.ponuky.filter(function (x) { return skupinaStavu(x.stav) === "aktivne"; }).length + " aktívnych ponúk" : "Ponuka kancelárie", "", ""],
       ["chat", "chat", "Chat", "Správy pre celý tím", neprec ? neprec + (neprec === 1 ? " neprečítaná správa" : neprec <= 4 ? " neprečítané správy" : " neprečítaných správ") : "Všetko prečítané", "", ""],
       ["zvon", "zvon", "Pripomienky", "Komu a kedy zavolať, upozornenia na zníženie ceny", prip ? prip + " čaká na vás" : pripVsetky ? pripVsetky + " naplánovaných" : "Nič nečaká", "", ""],
       ["profil", "profil", "Môj profil", "Fotka, text SMS, heslo, skener na ploche mobilu", "", "", ""],
@@ -1788,8 +1788,8 @@
   });
 
   // ------------------------------------------------------------ NEHNUTEĽNOSTI (ponuka kancelárie)
-  var KATEGORIE = [["byty", "Byty", "🏢"], ["domy", "Domy", "🏠"], ["chaty", "Chaty a chalupy", "🏡"], ["pozemky", "Pozemky", "🌳"],
-    ["priestory", "Priestory", "🏬"], ["objekty", "Objekty", "🏭"], ["garaze", "Garáže", "🚗"]];
+  var KATEGORIE = [["byty", "Byt", "🏢"], ["domy", "Dom", "🏠"], ["chaty", "Chata / chalupa", "🏡"], ["pozemky", "Pozemok", "🌳"],
+    ["priestory", "Priestor", "🏬"], ["objekty", "Objekt", "🏭"], ["garaze", "Garáž", "🚗"]];
   var TYPY = {
     byty: ["Garsónka", "1-izbový byt", "2-izbový byt", "3-izbový byt", "4-izbový byt", "5 a viac izbový byt", "Mezonet", "Apartmán", "Loft", "Iný byt"],
     domy: ["Rodinný dom", "Vila", "Bungalov", "Dvojdom", "Radový dom", "Mobilný / modulový dom", "Rekreačný dom", "Zrub", "Farma / usadlosť", "Iný dom"],
@@ -1847,7 +1847,7 @@
     if (p.typ_ceny === "dohodou" || p.typ_ceny === "na vyžiadanie") return p.cena ? eur(p.cena) + " · " + p.typ_ceny : p.typ_ceny.charAt(0).toUpperCase() + p.typ_ceny.slice(1);
     return p.cena ? eur(p.cena) + (p.typ_ceny && p.typ_ceny !== "za nehnuteľnosť" ? " " + p.typ_ceny : "") : "cena neuvedená";
   }
-  function skupinaStavu(st) { return st === "predane" || st === "neaktivne" ? "neaktualne" : st === "archiv" ? "archiv" : "aktualne"; }
+  function skupinaStavu(st) { return st === "predane" || st === "neaktivne" ? "neaktivne" : st === "archiv" ? "archiv" : st === "koncept" ? "koncepty" : "aktivne"; }
 
   // ---------- zoznam
   function vykresliNehnutelnosti() {
@@ -1855,9 +1855,10 @@
     if (S.ponukaEdit) return vykresliFormularPonuky();
     if (S.ponukaDetail) return vykresliDetailPonuky();
     if (!S.ponuky) { el.innerHTML = '<div class="box"><div class="meta">Načítavam ponuky…</div></div>'; nacitajPonuky().then(vykresliNehnutelnosti, function (e) { toast(chybaText(e), true); S.ponuky = []; vykresliNehnutelnosti(); }); return; }
-    var OBD = [["aktualne", "Aktuálne"], ["neaktualne", "Neaktuálne"], ["archiv", "Archivované"]];
-    var poc = { aktualne: 0, neaktualne: 0, archiv: 0 };
+    var poc = { aktivne: 0, neaktivne: 0, koncepty: 0, archiv: 0 };
     S.ponuky.forEach(function (p) { poc[skupinaStavu(p.stav)]++; });
+    if (!poc[S.nehnObd] && S.nehnObd === "koncepty") S.nehnObd = "aktivne";
+    var OBD = [["aktivne", "Aktívne"], ["neaktivne", "Neaktívne"]].concat(poc.koncepty ? [["koncepty", "Koncepty"]] : []).concat([["archiv", "Archív"]]);
     var q = norm(S.ponukyQ || "");
     var zoz = S.ponuky.filter(function (p) {
       return skupinaStavu(p.stav) === S.nehnObd && (!q || norm([p.nazov, p.obec, p.okres, p.typ, p.cislo, meno(p.makler_id)].join(" ")).indexOf(q) >= 0);
@@ -1872,7 +1873,7 @@
       }).join("") + '</div><input type="search" id="ponuky-q" placeholder="Hľadať: obec, názov, maklér, číslo…" value="' + esc(S.ponukyQ || "") + '"></div>';
     if (!zoz.length) {
       h += '<div class="prazdne"><span class="dl-ikona velka">' + ikona("nehn") + "</span><b>" +
-        (q ? "Nič sa nenašlo" : ({ aktualne: "Zatiaľ žiadne aktuálne ponuky", neaktualne: "Žiadne neaktuálne ponuky", archiv: "Archív je prázdny" })[S.nehnObd]) + "</b>" +
+        (q ? "Nič sa nenašlo" : ({ aktivne: "Zatiaľ žiadne aktívne ponuky", neaktivne: "Žiadne neaktívne ponuky", koncepty: "Žiadne koncepty", archiv: "Archív je prázdny" })[S.nehnObd] || "Žiadne ponuky") + "</b>" +
         '<span class="meta">Novú ponuku pridáte tlačidlom „Pridať ponuku“ alebo priamo zo skenera pri získanom inzeráte („➕ Do ponuky“).</span></div>';
     } else {
       h += '<div class="ponuky-grid">' + zoz.map(function (p) {
@@ -1932,7 +1933,7 @@
     if (window.LOKALITY) return Promise.resolve();
     if (S.lokalityP) return S.lokalityP;
     S.lokalityP = new Promise(function (ok, chyba) {
-      var sc = document.createElement("script"); sc.src = "lokality.js?v=202610182000"; sc.onload = ok; sc.onerror = function () { chyba(new Error("Zoznam obcí sa nepodarilo načítať.")); };
+      var sc = document.createElement("script"); sc.src = "lokality.js?v=202610182100"; sc.onload = ok; sc.onerror = function () { chyba(new Error("Zoznam obcí sa nepodarilo načítať.")); };
       document.head.appendChild(sc);
     });
     return S.lokalityP;
@@ -2002,7 +2003,7 @@
         (admin() ? '<label class="field"><span>Zodpovedný maklér</span><select data-p="makler_id">' + S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) {
           return '<option value="' + m.id + '"' + (p.makler_id === m.id ? " selected" : "") + ">" + esc(m.meno || m.email) + "</option>";
         }).join("") + "</select></label>" : "") +
-        text1("Interné číslo ponuky", "cislo", p.cislo, { ph: "napr. AR-2026-015" }) + "</div>";
+        text1("Interné číslo ponuky", "cislo", p.cislo, { ph: "pridelí sa automaticky" }) + "</div>";
     }
     if (k === "lokalita") {
       h += '<label class="field"><span>Obec alebo mestská časť</span><div class="lok-hladat"><input type="search" id="lok-q" autocomplete="off" placeholder="Začnite písať, napr. Smižany…" value="' + esc(p.obec ? (p.cast_obce ? p.cast_obce + " (" + p.obec + ")" : p.obec) : "") + '"><div class="lok-navrhy" id="lok-navrhy" hidden></div></div></label>' +
@@ -2119,6 +2120,10 @@
     });
     el.querySelectorAll("[data-krok]").forEach(function (b) { b.onclick = function () { E.krok = Number(b.dataset.krok); ulozKoncept(); vykresliFormularPonuky(); window.scrollTo(0, 0); }; });
     el.querySelectorAll("[data-pf]").forEach(function (b) { b.onclick = function () { akciaFormulara(b.dataset.pf, b); }; });
+    var ci = el.querySelector('[data-p="cislo"]');
+    if (ci && !p.cislo) rpc("navrh_cisla_ponuky", { p_makler: p.makler_id || S.me.id }).then(function (c) { if (c && document.body.contains(ci)) ci.placeholder = "pridelí sa automaticky: " + c; }, function () {});
+    var mk = el.querySelector('select[data-p="makler_id"]');
+    if (mk && ci) mk.addEventListener("change", function () { if (!p.cislo || E.cisloAuto) rpc("navrh_cisla_ponuky", { p_makler: mk.value }).then(function (c) { ci.placeholder = "pridelí sa automaticky: " + c; }, function () {}); });
     if (KROKY[E.krok][0] === "lokalita") napojLokalitu();
     if (KROKY[E.krok][0] === "fotky") napojFotky();
     if (KROKY[E.krok][0] === "interne") napojDokumenty();
@@ -2205,6 +2210,16 @@
       if (!document.body.contains(el)) return;
       var ma = p.lat && p.lon, stred = ma ? [p.lat, p.lon] : [48.67, 19.7];
       var mapa = L.map(el, { scrollWheelZoom: false }).setView(stred, ma ? 14 : 7);
+      // priblíženie: tlačidlá +/−, dvojklik, dva prsty na mobile alebo Ctrl + koliesko myši
+      var tip = document.createElement("div"); tip.className = "mapa-tip"; tip.textContent = "Na priblíženie mapy podržte Ctrl a otáčajte kolieskom"; el.appendChild(tip);
+      var tipT;
+      el.addEventListener("wheel", function (e) {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault(); tip.classList.remove("viditelny");
+          var bod = mapa.mouseEventToContainerPoint(e);
+          mapa.setZoomAround(bod, mapa.getZoom() + (e.deltaY < 0 ? 1 : -1));
+        } else { tip.classList.add("viditelny"); clearTimeout(tipT); tipT = setTimeout(function () { tip.classList.remove("viditelny"); }, 1400); }
+      }, { passive: false });
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(mapa);
       if (idEl) { if (ma) L.marker(stred).addTo(mapa); return; }
       var mk = ma ? L.marker(stred, { draggable: true }).addTo(mapa) : null;

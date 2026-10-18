@@ -813,3 +813,7 @@ a.brand:hover img { filter: drop-shadow(0 0 8px rgba(218,185,103,.55)); transfor
 .pd-interne h4 { margin: 0 0 6px }
 .zle-text { color: var(--bad) }
 @media (max-width: 860px) { .pd-grid { grid-template-columns: 1fr } }
+.pf-mapa { position: relative }
+.mapa-tip { position: absolute; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(15,17,20,.45); color: #fff; font-weight: 600; font-size: 15px; text-align: center; padding: 16px;
+  opacity: 0; pointer-events: none; transition: opacity .2s ease }
+.mapa-tip.viditelny { opacity: 1 }
