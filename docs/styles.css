@@ -702,3 +702,114 @@ a.brand:hover img { filter: drop-shadow(0 0 8px rgba(218,185,103,.55)); transfor
 .hero-prianie { margin-top: 4px; font-size: 17px; font-weight: 600; color: #f3d98b; line-height: 1.4 }
 [data-anim] .hero-prianie { animation: vstup .45s .15s ease-out both }
 @media (max-width: 640px) { .hero-prianie { font-size: 15px } }
+
+/* ---------- nehnuteľnosti: zoznam */
+.nehn-filtre { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 12px 0 }
+.nehn-filtre input { flex: 1 1 240px; min-width: 0 }
+.koncept-pozn { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px }
+.ponuky-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px }
+.ponuka-karta { display: flex; flex-direction: column; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; padding: 0; cursor: pointer; font: inherit; color: var(--ink);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease }
+.ponuka-karta:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(20,22,26,.1); border-color: var(--gold-strong) }
+.pk-foto { position: relative; aspect-ratio: 4 / 3; background: var(--gold-soft); display: grid; place-items: center; overflow: hidden }
+.pk-foto img { width: 100%; height: 100%; object-fit: cover; display: block }
+.pk-bez { font-size: 48px }
+.pk-stav { position: absolute; left: 10px; top: 10px }
+.pk-exk { position: absolute; right: 10px; top: 10px; background: var(--gold-strong); color: #1f2a37; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px }
+.pk-telo { display: grid; gap: 3px; padding: 10px 12px 12px }
+.pk-tr { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em }
+.pk-telo b { font-size: 15px; line-height: 1.3 }
+.pk-cena { font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--gold) }
+.pk-makler { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 4px }
+.chip.maybe { background: var(--warn-soft); color: var(--warn) }
+.chip.na { background: var(--surface-2); color: var(--muted) }
+[data-anim] .ponuka-karta { animation: vstup .4s ease-out both }
+
+/* ---------- nehnuteľnosti: formulár */
+.pf-hlava { display: flex; align-items: center; gap: 12px; flex-wrap: wrap }
+.pf-hlava h3 { margin: 0; flex: 1 }
+.pf-uplnost { display: flex; align-items: center; gap: 8px; min-width: 150px }
+.pf-uplnost span { position: relative; flex: 1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden }
+.pf-uplnost span::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--u); background: linear-gradient(90deg, var(--gold-strong), var(--good)); border-radius: 999px; transition: width .4s ease }
+.pf-uplnost b { font-size: 13px; font-variant-numeric: tabular-nums }
+.pf-kroky { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 0; margin: 14px 0 }
+.pf-kroky button { width: 100%; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 13px; cursor: pointer; color: var(--muted); text-align: left }
+.pf-kroky button span { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-weight: 700; color: var(--ink) }
+.pf-kroky button[aria-current] { border-color: var(--gold-strong); color: var(--ink); font-weight: 700; background: var(--gold-soft) }
+.pf-kroky button[aria-current] span { background: var(--gold-strong); color: #1f2a37 }
+.pf-telo h4 { margin: 18px 0 8px }
+.pf-tr { margin-bottom: 4px }
+.pf-kategorie { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px }
+.pf-kat { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; cursor: pointer; font: inherit; font-weight: 600; color: var(--ink) }
+.pf-kat span { font-size: 28px }
+.pf-kat[aria-pressed="true"] { border-color: var(--gold-strong); background: var(--gold-soft); box-shadow: 0 0 0 2px var(--gold-soft) }
+.cipy { display: flex; flex-wrap: wrap; gap: 6px }
+.cip { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer }
+.cip[aria-pressed="true"] { background: var(--gold-soft); border-color: var(--gold-strong); font-weight: 600 }
+.pf-prepinace { display: flex; gap: 18px; flex-wrap: wrap; margin: 12px 0 }
+.lok-hladat { position: relative }
+.lok-hladat input { width: 100% }
+.lok-navrhy { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.15); max-height: 340px; overflow: auto }
+.lok-navrhy[hidden] { display: none }
+.lok-navrhy button { display: grid; gap: 1px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 9px 12px; font: inherit; cursor: pointer; color: var(--ink) }
+.lok-navrhy button:hover { background: var(--gold-soft) }
+.lok-nic { padding: 10px 12px }
+.lok-vybrane { margin: 8px 0; padding: 8px 12px; background: var(--good-soft); border-radius: 10px; font-size: 14px }
+.lok-rucne { margin: 8px 0; font-size: 14px } .lok-rucne summary { cursor: pointer; color: var(--muted) }
+.pf-mapa { height: 300px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); margin: 6px 0 4px; z-index: 0 }
+.pf-fotky-hlava, .pf-text-hlava { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap }
+.pf-foto-btns { display: flex; gap: 8px; flex-wrap: wrap }
+.pf-drop { border: 2px dashed var(--line); border-radius: 14px; padding: 12px; margin: 8px 0; transition: border-color .15s ease, background-color .15s ease }
+.pf-drop.nad { border-color: var(--gold-strong); background: var(--gold-soft) }
+.pf-drop-text { text-align: center; color: var(--muted); padding: 30px 10px }
+.pf-fotky { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px }
+.pf-foto { position: relative; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; background: var(--surface-2); cursor: grab }
+.pf-foto.taha { opacity: .4 }
+.pf-foto img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none }
+.pf-titul { position: absolute; left: 6px; top: 6px; background: var(--gold-strong); color: #1f2a37; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px }
+.pf-var { position: absolute; right: 6px; top: 6px; font-size: 14px }
+.pf-foto-akcie { position: absolute; inset: auto 0 0 0; display: flex; justify-content: center; gap: 2px; padding: 4px; background: linear-gradient(transparent, rgba(0,0,0,.6)) }
+.pf-foto-akcie button { border: 0; background: rgba(255,255,255,.9); border-radius: 6px; width: 28px; height: 26px; cursor: pointer; font-size: 12px; color: #23272e }
+.pf-nahravanie { text-align: center; padding: 8px; color: var(--gold); font-weight: 600 }
+.pf-nahravanie[hidden] { display: none }
+.provizia { display: flex; gap: 6px; align-items: center } .provizia input { flex: 1; min-width: 0 }
+.pf-dok { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.pf-int-pozn { margin-bottom: 4px }
+.pf-kontrola ul { margin: 0; padding-left: 18px } .pf-kontrola li { margin: 2px 0 }
+.pf-ok { color: var(--good); font-weight: 700 }
+.pf-pata { position: sticky; bottom: 0; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin: 18px -16px -16px; padding: 12px 16px; background: var(--surface); border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; z-index: 5 }
+.pf-pata .btn[data-pf="spat"] { margin-right: auto }
+@media (max-width: 760px) {
+  .pf-kroky { grid-template-columns: repeat(5, minmax(0, 1fr)) }
+  .pf-kroky button { flex-direction: column; font-size: 10.5px; padding: 6px 2px; text-align: center; gap: 3px }
+  .pf-uplnost { width: 100% }
+}
+
+/* ---------- nehnuteľnosti: detail */
+.pd-hlava { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px }
+.pd-akcie { display: flex; gap: 8px; align-items: center }
+.pd-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px }
+.pd-hlavna { position: relative; aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: var(--surface-2) }
+.pd-hlavna img { width: 100%; height: 100%; object-fit: cover; display: block }
+.pd-sip { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.85); font-size: 24px; cursor: pointer; color: #23272e }
+.pd-sip.l { left: 10px } .pd-sip.r { right: 10px }
+.pd-poc { position: absolute; right: 10px; bottom: 10px; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; border-radius: 999px; padding: 2px 8px }
+.pd-nahlady { display: flex; gap: 6px; overflow-x: auto; margin-top: 6px; padding-bottom: 4px }
+.pd-nahlady button { flex: none; width: 76px; aspect-ratio: 4 / 3; border: 2px solid transparent; border-radius: 8px; overflow: hidden; padding: 0; cursor: pointer; background: none }
+.pd-nahlady button[aria-current] { border-color: var(--gold-strong) }
+.pd-nahlady img { width: 100%; height: 100%; object-fit: cover; display: block }
+.pd-bez { aspect-ratio: 4 / 3; display: grid; place-items: center; background: var(--surface-2); border-radius: 14px; color: var(--muted) }
+.pd-cipy { display: flex; gap: 6px; flex-wrap: wrap }
+.pd-info h2 { font-family: var(--display); font-size: 24px; margin: 8px 0 4px; line-height: 1.25 }
+.pd-lok { color: var(--muted) }
+.pd-cena { font-family: var(--display); font-weight: 800; font-size: 26px; color: var(--gold); margin: 8px 0 2px }
+.pd-makler { display: flex; align-items: center; gap: 8px; margin: 10px 0 }
+.pd-par { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 8px 0; font-size: 14px }
+.pd-par dt { color: var(--muted) } .pd-par dd { margin: 0; font-weight: 600 }
+.pd-intro { font-size: 16px; font-weight: 600; margin: 16px 0 6px }
+.pd-popis { white-space: pre-line; line-height: 1.6 }
+.pd-odkazy { display: flex; gap: 8px; margin: 12px 0 }
+.pd-interne { background: var(--gold-soft); border-radius: 14px; padding: 12px 16px; margin: 16px 0 }
+.pd-interne h4 { margin: 0 0 6px }
+.zle-text { color: var(--bad) }
+@media (max-width: 860px) { .pd-grid { grid-template-columns: 1fr } }
