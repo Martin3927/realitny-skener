@@ -278,7 +278,7 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610181900" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
+      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610181930" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -305,7 +305,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610181900" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
+      '<img class="login-logo" src="logo.png?v=202610181930" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -768,7 +768,7 @@
     if (admin()) tabs.push(["vykon", "Výkon"], ["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610181900" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
+      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610181930" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] +
           (t[0] === "chat" ? ' <span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
@@ -1647,6 +1647,7 @@
       '<section class="hero' + (mojeO.length ? " oslava" : "") + '"><div class="hero-hlava"><span class="hero-foto">' + avatar(S.me.id, 76) + "</span>" +
       '<div class="hero-text"><div class="hero-dnes">' + esc(dnes.charAt(0).toUpperCase() + dnes.slice(1)) + (meninyDnes.length ? ' · meniny má <b>' + esc(meninyDnes.join(", ")) + "</b>" : "") + "</div>" +
       "<h2>Ahoj" + (krstne ? ", " + esc(krstne) : "") + ' <span class="mava" aria-hidden="true">👋</span></h2>' +
+      '<div class="hero-prianie">' + esc(prianieDna(S.me)) + "</div>" +
       mojaOslava.map(function (t) { return '<div class="hero-oslava">' + esc(t) + "</div>"; }).join("") + "</div>" +
       (kruhy ? '<div class="hero-ciel"><div class="hero-ciel-n">Môj cieľ – ' + esc(new Date().toLocaleDateString("sk-SK", { month: "long" })) + '</div><div class="kruhy">' + kruhy + "</div></div>" : "") + "</div>" +
       (veta ? '<figure class="hero-veta"><blockquote>' + esc(veta) + "</blockquote>" +
@@ -1674,6 +1675,61 @@
       var uz = false; try { uz = localStorage.getItem(kl); localStorage.setItem(kl, "1"); } catch (e2) { /* bez úložiska */ }
       if (!uz) setTimeout(function () { konfety({ pocet: 220 }); }, 500);
     }
+  }
+  // ---------- pozdrav podľa dňa v týždni, sviatkov a významných dní
+  function velkaNoc(rok) {
+    var a = rok % 19, b = Math.floor(rok / 100), c = rok % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    var h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    var mes = Math.floor((h + l - 7 * m + 114) / 31), den = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(rok, mes - 1, den);
+  }
+  function nNedela(rok, mesiac, n) { var d = new Date(rok, mesiac, 1); d.setDate(1 + (7 - d.getDay()) % 7 + 7 * (n - 1)); return d; }
+  function prianieDna(m) {
+    var d = new Date(); d.setHours(0, 0, 0, 0);
+    var md = (d.getMonth() + 1) + "-" + d.getDate(), rok = d.getFullYear(), zena = rodMaklera(m) === "zena";
+    function rovnaky(x) { return x.getMonth() === d.getMonth() && x.getDate() === d.getDate(); }
+    var vn = velkaNoc(rok), vp = new Date(vn), vpon = new Date(vn); vp.setDate(vn.getDate() - 2); vpon.setDate(vn.getDate() + 1);
+    // sviatky – celé prianie
+    var SVIATKY = {
+      "1-1": "Šťastný nový rok! Nech je plný úspešných obchodov 🥂",
+      "1-6": "Pekný sviatok Troch kráľov ti prajem 👑",
+      "5-1": "Pekný Sviatok práce ti prajem – dnes si oddýchni 🌸",
+      "5-8": "Dnes je Deň víťazstva nad fašizmom. Pekný deň ti prajem.",
+      "7-5": "Pekný sviatok sv. Cyrila a Metoda ti prajem.",
+      "8-29": "Dnes je výročie SNP. Pekný deň ti prajem.",
+      "9-1": "Dnes je Deň Ústavy SR. Pekný deň ti prajem.",
+      "9-15": "Pokojný sviatok Sedembolestnej Panny Márie ti prajem.",
+      "11-1": "Pokojný Sviatok všetkých svätých ti prajem 🕯️",
+      "11-2": "Dnes je Pamiatka zosnulých. Pokojný deň ti prajem 🕯️",
+      "11-17": "Dnes je Deň boja za slobodu a demokraciu. Pekný deň ti prajem.",
+      "12-24": "Krásny Štedrý deň a pokojné Vianoce ti prajem! 🎄",
+      "12-25": "Pokojné a požehnané Vianoce ti prajem! 🎄",
+      "12-26": "Pokojné vianočné sviatky ti prajem! 🎄",
+      "12-31": "Pekného Silvestra a šťastný vstup do nového roka! 🥂",
+      "2-14": "Pekný Valentín ti prajem! ❤️",
+    };
+    if (rovnaky(vp)) return "Pokojný Veľký piatok ti prajem.";
+    if (rovnaky(vn) || rovnaky(vpon)) return "Krásnu a pokojnú Veľkú noc ti prajem! 🐣";
+    if (md === "3-8") return zena ? "Všetko najlepšie k MDŽ! 🌷" : "Pekný deň ti prajem – a dnes nezabudni na kvety, je MDŽ 🌷";
+    if (SVIATKY[md]) return SVIATKY[md];
+    // dni v týždni – tri varianty, striedajú sa každý týždeň
+    var DNI = [
+      ["Príjemnú nedeľu ti prajem.", "Pokojnú nedeľu ti prajem – zajtra ideme na to!", "Krásnu nedeľu ti prajem."],
+      ["Pekný pondelok ti prajem!", "Úspešný štart do týždňa ti prajem!", "Krásny pondelok – nech je tento týždeň plný dobrých obchodov."],
+      ["Úspešný utorok ti prajem!", "Pekný utorok ti prajem.", "Prajem ti utorok plný dobrých telefonátov."],
+      ["Peknú stredu ti prajem – sme v polovici týždňa!", "Úspešnú stredu ti prajem.", "Krásnu stredu – polovica týždňa je za nami!"],
+      ["Príjemný štvrtok ti prajem.", "Úspešný štvrtok ti prajem!", "Pekný štvrtok – víkend sa už blíži."],
+      ["Krásny piatok ti prajem – víkend už klope na dvere!", "Úspešný piatok a pekný víkend ti prajem!", "Pekný piatok – dotiahni týždeň a užij si víkend."],
+      ["Pohodovú sobotu ti prajem.", "Peknú sobotu ti prajem – nezabudni si aj oddýchnuť.", "Krásnu sobotu ti prajem."],
+    ];
+    var tyzden = Math.floor((d - new Date(rok, 0, 1)) / (7 * 864e5));
+    var t = DNI[d.getDay()][tyzden % 3];
+    // významné dni – doplnok
+    if (rovnaky(nNedela(rok, 4, 2))) t += " Dnes je Deň matiek – nezabudni na mamu 💐";
+    else if (rovnaky(nNedela(rok, 5, 3))) t += " Dnes je Deň otcov 👔";
+    else if (md === "6-1") t += " Dnes je Deň detí 🎈";
+    else if (md === "12-6") t += " Je Mikuláš – snáď ti niečo nechal v čižme 🎅";
+    return t;
   }
   function mojDenHtml() {
     var koniecDna = new Date(); koniecDna.setHours(23, 59, 59, 999);

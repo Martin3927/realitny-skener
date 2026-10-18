@@ -699,3 +699,6 @@ a.brand:hover img { filter: drop-shadow(0 0 8px rgba(218,185,103,.55)); transfor
 .chip-obec button { border: 0; background: none; cursor: pointer; font-size: 16px; line-height: 1; color: var(--muted); padding: 0 6px }
 .obce-pridat { display: flex; gap: 8px; max-width: 420px }
 .obce-pridat input { flex: 1 }
+.hero-prianie { margin-top: 4px; font-size: 17px; font-weight: 600; color: #f3d98b; line-height: 1.4 }
+[data-anim] .hero-prianie { animation: vstup .45s .15s ease-out both }
+@media (max-width: 640px) { .hero-prianie { font-size: 15px } }
