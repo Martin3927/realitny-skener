@@ -89,15 +89,96 @@
       r.onload = function () {
         var img = new Image();
         img.onerror = function () { chyba(new Error("Obrázok sa nepodarilo otvoriť.")); };
-        img.onload = function () {
-          var c = document.createElement("canvas"), v = 256, k = Math.min(img.width, img.height);
-          c.width = v; c.height = v;
-          c.getContext("2d").drawImage(img, (img.width - k) / 2, (img.height - k) / 2, k, k, 0, 0, v, v);
-          ok(c.toDataURL("image/jpeg", 0.85));
-        };
+        img.onload = function () { orezFoto(img).then(ok, chyba); };
         img.src = r.result;
       };
       r.readAsDataURL(subor);
+    });
+  }
+  // okno na orezanie fotky: posúvanie ťahaním (aj prstom), zoom posuvníkom, kolieskom alebo dvoma prstami
+  function orezFoto(img) {
+    return new Promise(function (ok) {
+      var O = 260, VYST = 320;
+      var zaklad = Math.max(O / img.width, O / img.height), zoom = 1, x = 0, y = 0;
+      var o = document.createElement("div"); o.className = "orez-var";
+      o.innerHTML = '<div class="orez-karta" role="dialog" aria-label="Upraviť fotku"><h3>Upraviť fotku</h3>' +
+        '<p class="meta">Posuňte fotku ťahaním a priblížte posuvníkom, aby bola tvár v strede kruhu.</p>' +
+        '<div class="orez-okno" tabindex="0" aria-label="Fotka – posúvajte šípkami"><img alt="" draggable="false"></div>' +
+        '<div class="orez-zoom"><span aria-hidden="true">−</span><input type="range" min="1" max="4" step="0.01" value="1" aria-label="Priblíženie"><span aria-hidden="true">+</span></div>' +
+        '<div class="orez-sipky">' + [["hore", "↑", 0, -1], ["vlavo", "←", -1, 0], ["stred", "⊙", 0, 0], ["vpravo", "→", 1, 0], ["dole", "↓", 0, 1]].map(function (a) {
+          return '<button type="button" class="btn ghost" data-posun="' + a[2] + "," + a[3] + '" aria-label="' + a[0] + '">' + a[1] + "</button>";
+        }).join("") + "</div>" +
+        '<div class="form-actions"><button class="btn primary" type="button" data-orez="ok">Uložiť fotku</button><button class="btn ghost" type="button" data-orez="x">Zrušiť</button></div></div>';
+      document.body.appendChild(o);
+      var okno = o.querySelector(".orez-okno"), im = o.querySelector("img"), rng = o.querySelector("input");
+      im.src = img.src;
+      function obmedz() {
+        var w = img.width * zaklad * zoom, h = img.height * zaklad * zoom;
+        var mx = Math.max(0, (w - O) / 2), my = Math.max(0, (h - O) / 2);
+        x = Math.min(mx, Math.max(-mx, x)); y = Math.min(my, Math.max(-my, y));
+      }
+      function kresli() {
+        obmedz();
+        var w = img.width * zaklad * zoom, h = img.height * zaklad * zoom;
+        im.style.width = w + "px"; im.style.height = h + "px";
+        im.style.transform = "translate(" + (O / 2 - w / 2 + x) + "px," + (O / 2 - h / 2 + y) + "px)";
+      }
+      function nastavZoom(z, cx, cy) {
+        var stary = zoom; zoom = Math.min(4, Math.max(1, z));
+        // priblíženie okolo bodu (prst / myš)
+        if (cx != null) { x = (x - cx) * zoom / stary + cx; y = (y - cy) * zoom / stary + cy; }
+        rng.value = zoom; kresli();
+      }
+      var body = {}, start = null;
+      okno.addEventListener("pointerdown", function (e) {
+        okno.setPointerCapture(e.pointerId); body[e.pointerId] = { x: e.clientX, y: e.clientY };
+        start = { x: x, y: y, zoom: zoom, body: JSON.parse(JSON.stringify(body)) };
+      });
+      okno.addEventListener("pointermove", function (e) {
+        if (!body[e.pointerId] || !start) return;
+        body[e.pointerId] = { x: e.clientX, y: e.clientY };
+        var ids = Object.keys(body);
+        if (ids.length >= 2 && start.body[ids[0]] && start.body[ids[1]]) {
+          var d0 = Math.hypot(start.body[ids[0]].x - start.body[ids[1]].x, start.body[ids[0]].y - start.body[ids[1]].y);
+          var d1 = Math.hypot(body[ids[0]].x - body[ids[1]].x, body[ids[0]].y - body[ids[1]].y);
+          if (d0 > 0) { zoom = Math.min(4, Math.max(1, start.zoom * d1 / d0)); rng.value = zoom; kresli(); }
+        } else if (start.body[e.pointerId]) {
+          x = start.x + (e.clientX - start.body[e.pointerId].x); y = start.y + (e.clientY - start.body[e.pointerId].y); kresli();
+        }
+      });
+      function pusti(e) { delete body[e.pointerId]; start = { x: x, y: y, zoom: zoom, body: JSON.parse(JSON.stringify(body)) }; }
+      okno.addEventListener("pointerup", pusti); okno.addEventListener("pointercancel", pusti);
+      okno.addEventListener("wheel", function (e) {
+        e.preventDefault();
+        var r = okno.getBoundingClientRect();
+        nastavZoom(zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08), e.clientX - r.left - O / 2, e.clientY - r.top - O / 2);
+      }, { passive: false });
+      okno.addEventListener("keydown", function (e) {
+        var k = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] }[e.key];
+        if (k) { e.preventDefault(); x -= k[0]; y -= k[1]; kresli(); }
+        if (e.key === "+" || e.key === "=") nastavZoom(zoom * 1.1);
+        if (e.key === "-") nastavZoom(zoom / 1.1);
+      });
+      rng.addEventListener("input", function () { nastavZoom(Number(rng.value), 0, 0); });
+      o.querySelectorAll("[data-posun]").forEach(function (b) {
+        b.onclick = function () {
+          var d = b.dataset.posun.split(",").map(Number);
+          if (!d[0] && !d[1]) { x = 0; y = 0; } else { x -= d[0] * 20; y -= d[1] * 20; }
+          kresli();
+        };
+      });
+      function zavri(v) { o.remove(); document.removeEventListener("keydown", esc2); ok(v); }
+      function esc2(e) { if (e.key === "Escape") zavri(null); }
+      document.addEventListener("keydown", esc2);
+      o.querySelector('[data-orez="x"]').onclick = function () { zavri(null); };
+      o.querySelector('[data-orez="ok"]').onclick = function () {
+        var c = document.createElement("canvas"), k = VYST / O; c.width = VYST; c.height = VYST;
+        var g = c.getContext("2d"), w = img.width * zaklad * zoom, h = img.height * zaklad * zoom;
+        g.fillStyle = "#fff"; g.fillRect(0, 0, VYST, VYST);
+        g.drawImage(img, (O / 2 - w / 2 + x) * k, (O / 2 - h / 2 + y) * k, w * k, h * k);
+        zavri(c.toDataURL("image/jpeg", 0.86));
+      };
+      kresli(); okno.focus();
     });
   }
   function admin() { return S.me && S.me.rola === "admin"; }
@@ -197,7 +278,7 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610181800" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
+      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610181830" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -224,7 +305,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610181800" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
+      '<img class="login-logo" src="logo.png?v=202610181830" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -293,6 +374,15 @@
     somTuCas = Date.now();
     rpc("som_tu", {}).catch(function () {});
   }
+  async function nacitajOsobne() {
+    var r = await sb.from("makler_osobne").select("*");
+    if (r.error) return;
+    var o = {}; r.data.forEach(function (x) { o[x.makler_id] = x; }); S.osobne = o;
+  }
+  function oslovenie(m) {
+    if (!m) return "";
+    return m.oslovenie || String(m.meno || "").trim().split(/\s+/)[0] || "";
+  }
   async function nacitajPrihlasenia() {
     if (!admin()) return;
     try {
@@ -316,6 +406,7 @@
   async function nacitajNastavenia() {
     var n = await rpc("nastavenia_aplikacie", {});
     S.odhlMin = Number(n.odhlasenie_min) || 0;
+    S.odkaz = { text: n.odkaz_text || "", zapnuty: !!n.odkaz_zapnuty, autor: n.odkaz_autor || null };
   }
   function poslednaAktivita() {
     var ls = 0;
@@ -551,7 +642,7 @@
   async function nacitajVsetko() {
     await nacitajMaklerov();
     var meta = sb.from("stav_skenera").select("meta, upravene").maybeSingle().then(function (r) { S.meta = (r.data && r.data.meta) || {}; });
-    await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), meta]);
+    await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), meta]);
   }
   var obnovuje = false;
   async function obnov() {
@@ -560,7 +651,7 @@
     try {
       var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), chatNove()];
       if (Date.now() - S.lastInzLoad > 10 * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
-      uloha.push(nacitajNastavenia().catch(function () {}), nacitajPrihlasenia());
+      uloha.push(nacitajNastavenia().catch(function () {}), nacitajPrihlasenia(), nacitajOsobne());
       somTu();
       await Promise.all(uloha);
       if (!S.me.aktivny) return odhlasit();
@@ -577,7 +668,7 @@
     if (admin()) tabs.push(["vykon", "Výkon"], ["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610181800" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
+      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610181830" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] +
           (t[0] === "chat" ? ' <span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
@@ -1266,6 +1357,12 @@
       '<select id="odhl-min" aria-label="Čas automatického odhlásenia">' + MOZNOSTI.map(function (x) {
         return '<option value="' + x[0] + '"' + (x[0] === S.odhlMin ? " selected" : "") + ">" + x[1] + "</option>";
       }).join("") + "</select></div>";
+    var ok0 = S.odkaz || { text: "", zapnuty: false };
+    h += '<form class="box odkaz-nast" id="f-odkaz"><h3>📣 Odkaz pre všetkých</h3>' +
+      '<p class="meta">Jedna veta, ktorú uvidia všetci makléri na hlavnej obrazovke – napríklad cieľ mesiaca alebo pochvala tímu.</p>' +
+      '<div class="odkaz-riadok"><input type="text" id="odkaz-text" maxlength="300" value="' + esc(ok0.text) + '" placeholder="napr. Tento mesiac ideme na 10 nových zmlúv – držím palce!">' +
+      '<label class="toggle"><input type="checkbox" id="odkaz-zap"' + (ok0.zapnuty ? " checked" : "") + "> Zobraziť</label>" +
+      '<button class="btn primary" type="submit">Uložiť</button></div></form>';
     h += '<form class="box" id="f-novy"><h3>Pridať makléra</h3><div class="form-grid">' +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="n-meno" required></label>' +
       '<label class="field"><span>Email (prihlasovacie meno)</span><input type="email" id="n-email" required autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></label>' +
@@ -1291,6 +1388,9 @@
           '<label class="toggle"><input type="checkbox" data-f="aktivny"' + (m.aktivny ? " checked" : "") + (ja ? " disabled" : "") + "> Aktívny</label>" +
           '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label></div>" +
           '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
+          '<div class="mk-osobne"><label class="field"><span>Oslovenie na hlavnej obrazovke</span><input type="text" data-f="oslovenie" maxlength="40" value="' + esc(m.oslovenie || "") + '" placeholder="' + esc(String(m.meno || "").trim().split(/\s+/)[0] || "napr. Tina") + '"></label>' +
+          '<label class="field"><span>Motivačné vety – každá na nový riadok, najviac 5 (každý deň sa ukáže iná)</span><textarea data-f="motivacia" rows="3" placeholder="napr. Každé „nie“ ťa posúva bližšie k „áno“.">' +
+          esc(((S.osobne || {})[m.id] || {}).motivacia || "") + "</textarea></label></div>" +
           '<details class="mk-sms"><summary>💬 Text SMS' + (m.sms_sablona ? "" : " <small>(pôvodný)</small>") + "</summary>" +
           '<div class="mk-sms-text">' + esc(m.sms_sablona || SMS_ZAKLAD) + '</div><div class="meta">Ukážka: ' + esc(vyplnSms(m.sms_sablona, ukazkaInzeratu(), m)) + "</div></details>" +
           '<div class="mk-akcie"><button class="btn" type="button" data-m-act="ulozit">Uložiť</button></div></div>';
@@ -1298,6 +1398,13 @@
       '<p class="meta">Administrátor vidí podhodnotené ponuky vždy. Maklérom ich zapnete v stĺpci „Vidí podhodnotené“. Deaktivovaný maklér sa neprihlási a nič nevidí. Prevzatý inzerát sa automaticky uvoľní, ak sa pri ňom 2 dni nič nezapíše (nie pri budúcej pripomienke, dohodnutom stretnutí alebo získanom do ponuky) – maklérovi príde upozornenie do zvončeka aj emailom.</p>';
     el.innerHTML = h;
     vykresliNahladNoveho();
+    $("#f-odkaz").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var t = $("#odkaz-text").value, z = $("#odkaz-zap").checked;
+      if (z && !t.trim()) return toast("Napíšte text odkazu.", true);
+      try { await rpc("nastavit_odkaz", { p_text: t, p_zapnuty: z }); await nacitajNastavenia(); toast(z ? "Odkaz sa zobrazuje všetkým." : "Odkaz je uložený a skrytý."); }
+      catch (err) { toast(chybaText(err), true); }
+    });
     $("#odhl-min").onchange = async function () {
       var v = Number(this.value);
       try { await rpc("nastavit_odhlasenie", { p_min: v }); S.odhlMin = v; zaznamenajAktivitu(true); tikOdpocet(); toast(v ? "Automatické odhlásenie: po " + this.options[this.selectedIndex].text + " nečinnosti." : "Automatické odhlásenie je vypnuté."); }
@@ -1346,7 +1453,12 @@
     var sch = S.sch.filter(function (r) { return !r.zmazane; }).length;
     var prip = splatne().length, pripVsetky = mojeAktivne().length;
     var neprec = pocetNeprecitanych();
-    var krstne = String(S.me.meno || "").trim().split(/\s+/)[0] || "";
+    var krstne = oslovenie(S.me);
+    var mot = ((S.osobne || {})[S.me.id] || {}).motivacia || "", vety = mot.split("\n").filter(function (x) { return x.trim(); });
+    var dnesIdx = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+    var veta = vety.length ? vety[dnesIdx % vety.length] : "";
+    var autorVety = ((S.osobne || {})[S.me.id] || {}).autor;
+    var odkaz = S.odkaz && S.odkaz.zapnuty && S.odkaz.text ? S.odkaz : null;
     var dnes = new Date().toLocaleDateString("sk-SK", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     var dlazdice = [
       ["inzeraty", "skener", "Realitný skener", "Súkromné inzeráty z Bazoša, Nehnuteľností, Reality.sk a TopReality", nf.format(volne) + " voľných súkromných", nove ? nove + (nove === 1 ? " nový" : nove <= 4 ? " nové" : " nových") + " za 24 h" : "", moje ? "Moje: " + moje : ""],
@@ -1360,8 +1472,12 @@
       dlazdice.push(["vykon", "vykon", "Výkon maklérov", "Hovory, SMS, výsledky a grafy – len pre vás", "", "", ""]);
       dlazdice.push(["makleri", "makleri", "Makléri", "Účty, práva, heslá a texty SMS", S.makleri.filter(function (m) { return m.aktivny; }).length + " aktívnych", "", ""]);
     }
-    el.innerHTML = '<div class="domov"><div class="domov-hlava"><div><h2>Dobrý deň' + (krstne ? ", " + esc(krstne) : "") + '</h2><div class="meta">' + esc(dnes.charAt(0).toUpperCase() + dnes.slice(1)) + "</div></div>" +
+    el.innerHTML = '<div class="domov"><div class="domov-hlava"><div><h2>Ahoj' + (krstne ? ", " + esc(krstne) : "") + ' <span class="mava" aria-hidden="true">👋</span></h2><div class="meta">' + esc(dnes.charAt(0).toUpperCase() + dnes.slice(1)) + "</div></div>" +
       '<div class="domov-znak">Realitný <span>týpek</span></div></div>' +
+      (odkaz ? '<div class="odkaz-vsetci"><span class="odkaz-ikona" aria-hidden="true">📣</span><div><b>' + esc(odkaz.text) + "</b>" +
+        (odkaz.autor && S.mById[odkaz.autor] ? '<small>' + esc(S.mById[odkaz.autor].meno) + "</small>" : "") + "</div></div>" : "") +
+      (veta ? '<figure class="motivacia"><blockquote>' + esc(veta) + "</blockquote>" +
+        (autorVety && S.mById[autorVety] && autorVety !== S.me.id ? "<figcaption>— " + esc(oslovenie(S.mById[autorVety])) + "</figcaption>" : "") + "</figure>" : "") +
       '<div class="dlazdice">' + dlazdice.map(function (d) {
         var upozorni = (d[0] === "chat" && neprec) || (d[0] === "zvon" && prip);
         return '<button type="button" class="dlazdica' + (upozorni ? " upozorni" : "") + '" data-domov="' + d[0] + '">' +
@@ -1442,7 +1558,7 @@
       new Date(m.vytvorene) - new Date(predosla.vytvorene) < 5 * 60000 && !h;
     var cas = new Date(m.vytvorene).toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" });
     return h + '<div class="sprava' + (ja ? " ja" : "") + (spojit ? " spojena" : "") + '" data-sprava="' + m.id + '">' +
-      (!ja ? '<span class="sprava-av">' + (spojit ? "" : avatar(m.makler_id, 30)) + "</span>" : "") +
+      (!ja ? '<span class="sprava-av">' + (spojit ? "" : avatar(m.makler_id, 36)) + "</span>" : "") +
       '<div class="sprava-telo">' + (!ja && !spojit ? '<div class="sprava-meno">' + esc(meno(m.makler_id)) + "</div>" : "") +
       '<div class="bublina' + (m.zmazane ? " zmazana" : "") + '">' + (m.zmazane ? "Správa bola zmazaná" : textSpravy(m.text)) +
       '<span class="sprava-cas">' + cas + "</span></div></div>" +
@@ -1681,6 +1797,12 @@
           p_id: id, p_meno: tr.querySelector('[data-f="meno"]').value, p_rola: tr.querySelector('[data-f="rola"]').value,
           p_aktivny: tr.querySelector('[data-f="aktivny"]').checked, p_vidi_podhodnotene: tr.querySelector('[data-f="vidi"]').checked,
         });
+        var osl = tr.querySelector('[data-f="oslovenie"]').value, mot = tr.querySelector('[data-f="motivacia"]').value;
+        if (osl !== (m.oslovenie || "") || mot !== (((S.osobne || {})[id] || {}).motivacia || "")) {
+          if (mot.split("\n").filter(function (x) { return x.trim(); }).length > 5) toast("Uložím prvých 5 viet.", true);
+          await rpc("upravit_osobne", { p_id: id, p_oslovenie: osl, p_motivacia: mot });
+          await nacitajOsobne();
+        }
         var rod = tr.querySelector('[data-f="pohlavie"]').value;
         if (rod !== m.pohlavie) await rpc("nastavit_pohlavie", { p_id: id, p_pohlavie: rod });
         await nacitajMaklerov(); toast("Uložené.");
@@ -1892,7 +2014,9 @@
     var inp = e.target.closest("[data-foto-subor]");
     if (!inp || !inp.files[0]) return;
     var box = inp.closest("[data-foto-kde]");
-    spracujFoto(inp.files[0]).then(function (url) {
+    var subor = inp.files[0]; inp.value = "";
+    spracujFoto(subor).then(function (url) {
+      if (!url) return;
       if (box.dataset.fotoKde === "novy") { S.novyFoto = url; vykresliNahladNoveho(); return; }
       return nastavFoto(box.dataset.fotoId, url);
     }).catch(function (err) { toast(chybaText(err), true); });
