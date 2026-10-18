@@ -1,4 +1,5 @@
-// Odošle emaily k pripomienkam, ktorým nastal čas.
+// Odošle emaily k pripomienkam, ktorým nastal čas (aj automatické uvoľnenie a zníženú cenu),
+// a v pondelok ráno týždenný prehľad výkonu maklérov administrátorom.
 // Volá ju databáza každú minútu (pg_cron); chránená tajným kľúčom v hlavičke x-kluc.
 // Email: Brevo (BREVO_API_KEY) alebo SMTP cez port 465 (SMTP_HOST, SMTP_USER, SMTP_PASS).
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -38,6 +39,63 @@ async function posli(komu: string, predmet: string, html: string) {
   await t.sendMail({ from: `"${odMeno}" <${od}>`, to: komu, subject: predmet, html });
 }
 
+const DRUH: Record<string, [string, string]> = {
+  pripomienka: ["🔔", "Pripomienka"],
+  uvolnenie: ["🔓", "Inzerát sa uvoľnil"],
+  cena: ["📉", "Znížená cena"],
+};
+
+const VYSLEDKY = ["Nedvíha", "Volať neskôr", "Nemá záujem o RK", "Predáva cez inú RK", "Už predané",
+  "Záujem – stretnutie dohodnuté", "Získaný do ponuky", "Iné"];
+
+function datumSk(iso: string) {
+  return new Date(iso).toLocaleDateString("sk-SK", { timeZone: "Europe/Bratislava", day: "numeric", month: "numeric", year: "numeric" });
+}
+
+// týždenný prehľad výkonu maklérov – posiela sa aktívnym administrátorom
+// deno-lint-ignore no-explicit-any
+async function tyzdennyPrehlad(db: any) {
+  const { data: v, error } = await db.rpc("_vykon_minuly_tyzden");
+  if (error) return { ok: false, chyba: error.message };
+  // deno-lint-ignore no-explicit-any
+  const riadky = (v.makleri as any[]).filter((m) => m.aktivny || m.hovory || m.prevzate || m.sms || m.emaily);
+  const sum = (k: string) => riadky.reduce((a, m) => a + Number(m[k] || 0), 0);
+  const td = 'style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center"';
+  const th = 'style="padding:6px 8px;border-bottom:2px solid #dab967;text-align:center;font-size:12px;color:#666"';
+  const vysl = (o: Record<string, number>) =>
+    VYSLEDKY.filter((k) => o[k]).map((k) => `${esc(k)}: <b>${o[k]}</b>`).join("<br>") || "–";
+  const tab = `<table style="border-collapse:collapse;width:100%;font-size:14px">
+    <tr><th style="padding:6px 8px;border-bottom:2px solid #dab967;text-align:left;font-size:12px;color:#666">Maklér</th><th ${th}>Prevzal</th><th ${th}>Hovory</th><th ${th}>SMS</th><th ${th}>Email</th>
+    <th ${th}>Uvoľnil</th><th ${th}>Uvoľnené automaticky</th><th ${th}>Schránkovanie</th><th ${th}>Drží teraz</th></tr>
+    ${riadky.map((m) => `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee"><b>${esc(m.meno)}</b></td>
+      <td ${td}>${m.prevzate}</td><td ${td}><b>${m.hovory}</b></td><td ${td}>${m.sms}</td><td ${td}>${m.emaily}</td>
+      <td ${td}>${m.uvolnene}</td><td ${m.auto_uvolnene ? 'style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center;color:#b3261e;font-weight:700"' : td}>${m.auto_uvolnene}</td>
+      <td ${td}>${m.schrankovanie}</td><td ${td}>${m.drzi}</td></tr>`).join("")}
+    <tr><td style="padding:6px 8px"><b>Spolu</b></td><td ${td}><b>${sum("prevzate")}</b></td><td ${td}><b>${sum("hovory")}</b></td>
+      <td ${td}><b>${sum("sms")}</b></td><td ${td}><b>${sum("emaily")}</b></td><td ${td}><b>${sum("uvolnene")}</b></td>
+      <td ${td}><b>${sum("auto_uvolnene")}</b></td><td ${td}><b>${sum("schrankovanie")}</b></td><td ${td}><b>${sum("drzi")}</b></td></tr></table>`;
+  const vysledky = riadky.filter((m) => m.hovory).map((m) =>
+    `<p style="margin:10px 0 0"><b>${esc(m.meno)}</b><br><span style="font-size:13px">${vysl(m.vysledky)}</span></p>`).join("");
+  const doDen = new Date(new Date(v.do).getTime() - 864e5).toISOString();
+  const obdobie = datumSk(v.od) + " – " + datumSk(doDen);
+  const html = `<div style="font-family:Arial,sans-serif;max-width:720px;color:#23272e">
+    <div style="border-bottom:3px solid #dab967;padding-bottom:8px;font-size:18px"><b>📊 Týždenný prehľad maklérov</b>
+    <span style="color:#888;font-size:14px"> · ${esc(obdobie)}</span></div>
+    <p style="margin:14px 0">Nových súkromných inzerátov za týždeň: <b>${v.nove_sukromne}</b></p>${tab}
+    ${vysledky ? `<h3 style="font-size:15px;margin:22px 0 0">Výsledky hovorov</h3>${vysledky}` : ""}
+    <p style="margin:22px 0"><a href="${esc(APP_URL)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Otvoriť skener</a></p>
+    <p style="color:#999;font-size:12px">Realitný skener Alpha Reality · posiela sa každý pondelok ráno len administrátorom</p></div>`;
+  const { data: admini } = await db.from("makleri").select("email").eq("rola", "admin").eq("aktivny", true);
+  let odoslane = 0;
+  const chyby: string[] = [];
+  for (const a of admini ?? []) {
+    if (!a.email) continue;
+    try { await posli(a.email, "📊 Týždenný prehľad maklérov · " + obdobie, html); odoslane++; }
+    catch (e) { chyby.push(String((e as Error).message || e)); }
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
+}
+
 async function sha256(t: string) {
   const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
   return Array.from(new Uint8Array(h)).map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -56,13 +114,16 @@ Deno.serve(async (req) => {
   if (!Deno.env.get("BREVO_API_KEY") && !Deno.env.get("SMTP_HOST")) {
     return Response.json({ ok: true, odoslane: 0, info: "email nie je nastavený" });
   }
+  let telo: { prehlad?: boolean } = {};
+  try { telo = await req.json(); } catch { /* prázdne telo */ }
+  if (telo.prehlad) return Response.json(await tyzdennyPrehlad(db));
 
   // zaberieme pripomienky (aby sa ten istý email neposlal dvakrát)
   const { data: rows, error } = await db.from("pripomienky")
     .update({ email_odoslany: new Date().toISOString() })
     .is("hotovo", null).is("zrusena", null).is("email_odoslany", null)
     .lte("cas", new Date().toISOString())
-    .select("id, makler_id, inzerat_id, schrankovanie_id, cas, poznamka");
+    .select("id, makler_id, inzerat_id, schrankovanie_id, cas, poznamka, druh");
   if (error) return Response.json({ ok: false, chyba: error.message }, { status: 500 });
 
   let odoslane = 0;
@@ -82,13 +143,15 @@ Deno.serve(async (req) => {
         const { data: s } = await db.from("schrankovanie").select("lokalita, telefon, typ").eq("id", p.schrankovanie_id).maybeSingle();
         if (s) suvis = `<p style="margin:14px 0 0"><b>Schránkovanie:</b> ${esc(s.lokalita)}${s.telefon ? " · tel. " + esc(s.telefon) : ""}</p>`;
       }
+      const [ikona, nazov] = DRUH[p.druh as string] || DRUH.pripomienka;
       const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#23272e">
-        <div style="border-bottom:3px solid #dab967;padding-bottom:8px;font-size:18px"><b>🔔 Pripomienka</b>
+        <div style="border-bottom:3px solid #dab967;padding-bottom:8px;font-size:18px"><b>${ikona} ${nazov}</b>
         <span style="color:#888;font-size:14px"> · ${esc(casSk(p.cas))}</span></div>
         <p style="font-size:16px;margin:16px 0 0">${esc(p.poznamka || "Pripomienka bez poznámky")}</p>${suvis}
         <p style="margin:22px 0"><a href="${esc(APP_URL)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Otvoriť skener</a></p>
         <p style="color:#999;font-size:12px">Realitný skener Alpha Reality</p></div>`;
-      await posli(m.email, "🔔 Pripomienka: " + (p.poznamka || "skener").slice(0, 80), html);
+      const predmet = p.druh && p.druh !== "pripomienka" ? ikona + " " + String(p.poznamka).slice(0, 110) : ikona + " " + nazov + ": " + (p.poznamka || "skener").slice(0, 80);
+      await posli(m.email, predmet, html);
       odoslane++;
     } catch (e) {
       await db.from("pripomienky").update({ email_chyba: String((e as Error).message || e).slice(0, 300) }).eq("id", p.id);

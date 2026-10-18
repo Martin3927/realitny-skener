@@ -294,3 +294,42 @@ a.tel:hover { color: var(--gold) }
 .btn-link:hover { color: var(--ink) }
 .detail .d-tel { font-size: 15px; margin: 6px 0 }
 .detail .d-tel small { color: var(--muted); font-size: 12px }
+/* SMS */
+.btn.sms-btn { text-decoration: none; background: var(--good-soft); color: var(--good); border-color: transparent; font-weight: 700 }
+.btn.sms-btn:hover { filter: brightness(.97) }
+.sms-polia { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 }
+.sms-polia .btn { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 4px 8px }
+.sms-polia small { font-family: inherit; color: var(--muted) }
+.sms-nahlad { margin: 8px 0 0 }
+#sms-nahlad { background: var(--good-soft); color: var(--ink); border-radius: 14px 14px 14px 4px; padding: 10px 12px; margin: 4px 0; font-size: 14px; line-height: 1.45; max-width: 520px }
+.mk-sms { flex-basis: 100%; font-size: 13px }
+.mk-sms summary { cursor: pointer; color: var(--muted) }
+.mk-sms-text { white-space: pre-line; background: var(--surface-2); border-radius: 8px; padding: 8px 10px; margin: 6px 0 4px }
+/* odpočet automatického uvoľnenia */
+.marks .wait { color: var(--gold); font-weight: 600 }
+/* výkon maklérov */
+.vykon-hlava { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap }
+.vykon-hlava h3 { margin: 0 }
+.vykon-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0 }
+.vykon-sum div { background: var(--surface-2); border-radius: 10px; padding: 10px 12px }
+.vykon-sum b { display: block; font-size: 24px }
+.vykon-sum small { color: var(--muted) }
+.vykon-tbl th { font-size: 12px; color: var(--muted) }
+.vykon-tbl td.num { text-align: center; font-variant-numeric: tabular-nums }
+.vykon-tbl td.num.zle { color: var(--bad); font-weight: 700 }
+.vykon-tbl td.num.dobre { color: var(--good); font-weight: 700 }
+.vykon-tbl tr.ma-vysl td { border-bottom: 0 }
+.vykon-tbl tr.vysl-riadok td { padding-top: 0 }
+.vykon-tbl .d-block { display: block; font-weight: 400 }
+.vykon-tbl th { white-space: normal; vertical-align: bottom }
+.vykon-tbl tr.spolu td { border-bottom: 0; background: var(--surface-2) }
+.chip { display: inline-block; font-size: 12px; background: var(--surface-2); border-radius: 999px; padding: 2px 8px; margin: 0 4px 4px 0; white-space: nowrap }
+.chip.won { background: var(--good-soft); color: var(--good) }
+.chip.lost { background: var(--bad-soft); color: var(--bad) }
+.box.vykon { min-width: 0; max-width: 100%; overflow: hidden }
+.vykon .seg { flex-wrap: wrap; max-width: 100% }
+.vykon .tbl-wrap { max-width: 100% }
+@media (max-width: 640px) {
+  .vykon-sum { grid-template-columns: 1fr 1fr }
+  .vykon .seg button { flex: 1 1 auto }
+}
