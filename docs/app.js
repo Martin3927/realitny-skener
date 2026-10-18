@@ -189,13 +189,15 @@
     if (ses) return poPrihlaseni(ses.user);
     var prve = false;
     try { prve = await rpc("je_prve_spustenie", {}); } catch (e) { /* zobrazíme prihlásenie */ }
-    prve ? obrazovkaPrve() : obrazovkaLogin();
+    var sprava = null;
+    try { sprava = sessionStorage.getItem("typek-odhlaseny"); sessionStorage.removeItem("typek-odhlaseny"); } catch (e) { /* bez správy */ }
+    prve ? obrazovkaPrve() : obrazovkaLogin(sprava);
   }
 
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<img class="login-logo" src="logo.png?v=202610181730" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
+      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610181800" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -222,7 +224,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610181730" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
+      '<img class="login-logo" src="logo.png?v=202610181800" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -251,11 +253,18 @@
       return obrazovkaLogin(r.data && !r.data.aktivny ? "Váš účet je deaktivovaný. Kontaktujte administrátora." : "Účet sa nenašiel. Kontaktujte administrátora.");
     }
     S.me = r.data;
+    try { await nacitajNastavenia(); } catch (e) { /* predvolené */ }
+    // aplikácia bola zatvorená dlhšie, ako je čas odhlásenia → odhlásime
+    var posl = poslednaAktivita();
+    if (S.odhlMin > 0 && posl && Date.now() - posl > S.odhlMin * 60000) return odhlasitPreNecinnost();
+    zaznamenajAktivitu(true);
     S.tab = tabZAdresy() || "domov";
     history.replaceState({ tab: S.tab }, "", "#" + S.tab);
     try { await nacitajVsetko(); } catch (e) { toast(chybaText(e), true); }
     vykresli();
     setInterval(obnov, 60000);
+    spustiOdpocet();
+    somTu();
     setInterval(function () { if (S.tab === "chat" && !document.hidden) chatNove(); }, 5000);
     document.addEventListener("visibilitychange", function () { if (!document.hidden) obnov(); });
   }
@@ -274,6 +283,107 @@
       (instalacia ? '<p class="meta">Skener sa bude otvárať ako aplikácia, bez hľadania odkazu.</p><button class="btn primary" type="button" id="plocha-btn">Pridať na plochu</button>' :
         ios ? '<p class="meta">V Safari ťuknite dole na <b>Zdieľať</b> (štvorček so šípkou) → <b>Pridať na plochu</b> → <b>Pridať</b>.</p>' :
         '<p class="meta">V Chrome ťuknite vpravo hore na <b>⋮</b> → <b>Pridať na plochu</b> (alebo <b>Inštalovať aplikáciu</b>).</p>') + "</div>";
+  }
+
+  // ---------- posledné prihlásenie a aktivita
+  var somTuCas = 0;
+  function somTu() {
+    // oznámime aktivitu len ak maklér niečo robil v posledných 5 minútach a stránka je otvorená
+    if (!S.me || document.hidden || Date.now() - poslednaAktivita() > 5 * 60000 || Date.now() - somTuCas < 2 * 60000) return;
+    somTuCas = Date.now();
+    rpc("som_tu", {}).catch(function () {});
+  }
+  async function nacitajPrihlasenia() {
+    if (!admin()) return;
+    try {
+      var r = await rpc("prihlasenia_maklerov", {}), o = {};
+      r.forEach(function (x) { o[x.id] = x; }); S.prihl = o;
+    } catch (e) { /* nič */ }
+  }
+  function onlineStav(id) {
+    var x = (S.prihl || {})[id] || {};
+    var akt = x.aktivny ? new Date(x.aktivny).getTime() : 0;
+    var online = akt && Date.now() - akt < 4 * 60000;
+    return {
+      online: online,
+      html: (online ? '<span class="online">online</span>' : x.aktivny ? "aktívny " + ago(x.aktivny) : "zatiaľ neaktívny") +
+        (x.prihlaseny ? " · prihlásený " + datum(x.prihlaseny, true) : " · ešte sa neprihlásil"),
+    };
+  }
+
+  // ---------- automatické odhlásenie pri nečinnosti
+  var KLUC_AKT = "typek-aktivita", aktPamat = 0, aktZapis = 0;
+  async function nacitajNastavenia() {
+    var n = await rpc("nastavenia_aplikacie", {});
+    S.odhlMin = Number(n.odhlasenie_min) || 0;
+  }
+  function poslednaAktivita() {
+    var ls = 0;
+    try { ls = Number(localStorage.getItem(KLUC_AKT)) || 0; } catch (e) { /* bez úložiska */ }
+    return Math.max(ls, aktPamat);
+  }
+  function zaznamenajAktivitu(hned) {
+    aktPamat = Date.now();
+    if (hned || aktPamat - aktZapis > 5000) {
+      aktZapis = aktPamat;
+      try { localStorage.setItem(KLUC_AKT, String(aktPamat)); } catch (e) { /* bez úložiska */ }
+    }
+    if (S.odhlVaruje) skryVarovanie();
+  }
+  ["pointerdown", "keydown", "wheel", "touchstart", "scroll"].forEach(function (ev) {
+    window.addEventListener(ev, function () { if (S.me) zaznamenajAktivitu(); }, { passive: true, capture: true });
+  });
+  var pohybT = 0;
+  window.addEventListener("mousemove", function () { if (S.me && Date.now() - pohybT > 2000) { pohybT = Date.now(); zaznamenajAktivitu(); } }, { passive: true });
+  function formatOdpocet(ms) {
+    var s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+    return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(ss).padStart(2, "0");
+  }
+  function tikOdpocet() {
+    if (!S.me) return;
+    var el = $("#odhl"), cas = $("#odhl-cas");
+    if (!S.odhlMin) { if (el) el.hidden = true; skryVarovanie(); return; }
+    var zostava = S.odhlMin * 60000 - (Date.now() - poslednaAktivita());
+    if (el) { el.hidden = false; cas.textContent = formatOdpocet(zostava); el.classList.toggle("malo", zostava < 5 * 60000); }
+    if (zostava <= 0) return odhlasitPreNecinnost();
+    if (zostava <= 60000) ukazVarovanie(zostava); else if (S.odhlVaruje) skryVarovanie();
+  }
+  function spustiOdpocet() {
+    tikOdpocet();
+    setInterval(tikOdpocet, 1000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) tikOdpocet(); });
+  }
+  function ukazVarovanie(zostava) {
+    var o = $("#odhl-var");
+    if (!o) {
+      o = document.createElement("div"); o.id = "odhl-var"; o.className = "odhl-var";
+      o.innerHTML = '<div class="odhl-karta" role="alertdialog" aria-labelledby="odhl-nadpis">' +
+        '<svg class="odhl-kruh" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="podklad"/><circle cx="60" cy="60" r="52" class="postup" id="odhl-postup"/></svg>' +
+        '<div class="odhl-cislo" id="odhl-cislo"></div>' +
+        '<h3 id="odhl-nadpis">Ste tu ešte?</h3><p class="meta">Pre nečinnosť vás o chvíľu odhlásime, aby sa k vašim údajom nikto nedostal.</p>' +
+        '<button class="btn primary wide" type="button" id="odhl-zostat">Zostať prihlásený</button></div>';
+      document.body.appendChild(o);
+      $("#odhl-zostat").onclick = function () { zaznamenajAktivitu(true); };
+    }
+    S.odhlVaruje = true;
+    var sek = Math.max(0, Math.ceil(zostava / 1000));
+    $("#odhl-cislo").textContent = sek;
+    $("#odhl-postup").style.strokeDashoffset = String(326.7 * (1 - sek / 60));
+  }
+  function skryVarovanie() {
+    S.odhlVaruje = false;
+    var o = $("#odhl-var"); if (o) o.remove();
+  }
+  async function odhlasitPreNecinnost() {
+    var min = S.odhlMin;
+    S.me = null;
+    try {
+      sessionStorage.setItem("typek-odhlaseny", "Boli ste automaticky odhlásený po " + (min >= 60 && min % 60 === 0 ? min / 60 + (min === 60 ? " hodine" : " hodinách") : min + " minútach") + " nečinnosti. Prihláste sa znova.");
+      localStorage.removeItem(KLUC_AKT);
+    } catch (e) { /* bez úložiska */ }
+    await sb.auth.signOut().catch(function () {});
+    history.replaceState(null, "", location.pathname);
+    location.reload();
   }
 
   // ---------- navigácia: každá sekcia je krok v histórii prehliadača (funguje tlačidlo Späť)
@@ -441,7 +551,7 @@
   async function nacitajVsetko() {
     await nacitajMaklerov();
     var meta = sb.from("stav_skenera").select("meta, upravene").maybeSingle().then(function (r) { S.meta = (r.data && r.data.meta) || {}; });
-    await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), nacitajChat(), meta]);
+    await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), meta]);
   }
   var obnovuje = false;
   async function obnov() {
@@ -450,6 +560,8 @@
     try {
       var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), chatNove()];
       if (Date.now() - S.lastInzLoad > 10 * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
+      uloha.push(nacitajNastavenia().catch(function () {}), nacitajPrihlasenia());
+      somTu();
       await Promise.all(uloha);
       if (!S.me.aktivny) return odhlasit();
       prekresliObsah();
@@ -465,12 +577,13 @@
     if (admin()) tabs.push(["vykon", "Výkon"], ["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610181730" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
+      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610181800" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] +
           (t[0] === "chat" ? ' <span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
       }).join("") + "</nav>" +
       '<div class="user">' +
+      '<span class="odhl" id="odhl" hidden title="Automatické odhlásenie pri nečinnosti – odpočet sa vynuluje pri každej vašej aktivite">⏱ <b id="odhl-cas"></b></span>' +
       '<button type="button" class="bell" data-act="zvoncek" id="zvon-btn" aria-label="Pripomienky">🔔<span class="badge" id="zvon-n" hidden></span></button>' +
       '<button type="button" class="me-btn" data-act="profil" title="Môj profil">' + avatar(S.me.id, 28) + '<span class="email">' + esc(S.me.meno || S.me.email) + (admin() ? " · admin" : "") + "</span></button>" +
       '<button type="button" class="theme-btn" data-act="tema" id="tema-btn"></button>' +
@@ -485,6 +598,7 @@
       if (!a) return;
       if (a.dataset.act === "odhlasit") odhlasit();
       if (a.dataset.act === "tema") prepniTemu();
+      if (a.dataset.act === "profil" || a.dataset.act === "zvoncek") animPanel();
       if (a.dataset.act === "profil") { S.pwdOpen = !S.pwdOpen; vykresliHeslo(); if (S.pwdOpen) window.scrollTo({ top: 0, behavior: "smooth" }); }
       if (a.dataset.act === "zvoncek") { S.zvonOpen = !S.zvonOpen; S.pripForm = null; vykresliZvoncek(); if (S.zvonOpen) window.scrollTo({ top: 0, behavior: "smooth" }); }
       if (a.dataset.act === "preset") predvolba(a.dataset.v);
@@ -494,6 +608,9 @@
     popisTemy();
     popisZvoncek();
     popisChat();
+    tikOdpocet();
+    document.body.setAttribute("data-anim", "");
+    clearTimeout(S.animT); S.animT = setTimeout(function () { document.body.removeAttribute("data-anim"); }, 1200);
     if (S.tab === "inzeraty") vykresliFiltreInz();
     else if (S.tab === "schrankovanie") vykresliFiltreSch();
     else $("#filters").innerHTML = "";
@@ -679,6 +796,7 @@
       h += '<button class="stat" type="button" data-act="preset" data-v="under"><b>' + nf.format(under) + "</b><small>Podhodnotené</small></button>";
     }
     el.innerHTML = h;
+    if (document.body.hasAttribute("data-anim")) animujCisla(el);
   }
 
   function filtruj() {
@@ -917,6 +1035,7 @@
     var b = e.target.closest("#obsah .card [data-act]");
     if (!b || b.tagName === "SELECT") return;
     var id = b.closest(".card").dataset.id, act = b.dataset.act, p = S.prev[id];
+    if (["zvon", "detail", "hovor", "hist", "tel"].indexOf(act) >= 0 && S.open[id] !== act) animPanel();
     if (act === "prevziat") return akcia(id, async function () { await rpc("prevziat", { p_inzerat: id }); toast("Inzerát je váš."); });
     if (act === "uvolnit") return akcia(id, async function () { await rpc("uvolnit", { p_inzerat: id }); toast("Inzerát je znova voľný."); });
     if (act === "sms" || act === "email") {
@@ -1141,7 +1260,13 @@
     var el = $("#obsah"); if (!el || !admin()) return;
     var prevzate = {}, hovory = {};
     Object.values(S.prev).forEach(function (p) { if (p.makler_id) prevzate[p.makler_id] = (prevzate[p.makler_id] || 0) + 1; });
-    var h = '<form class="box" id="f-novy"><h3>Pridať makléra</h3><div class="form-grid">' +
+    var MOZNOSTI = [[0, "Vypnuté"], [15, "15 minút"], [30, "30 minút"], [60, "1 hodina"], [120, "2 hodiny"], [240, "4 hodiny"], [480, "8 hodín"]];
+    if (S.odhlMin && !MOZNOSTI.some(function (x) { return x[0] === S.odhlMin; })) MOZNOSTI.push([S.odhlMin, S.odhlMin + " minút"]);
+    var h = '<div class="box odhl-nast"><div><h3>⏱ Automatické odhlásenie</h3><p class="meta">Maklér, ktorý nič nerobí, sa po nastavenom čase odhlási. Minútu pred odhlásením ho upozorníme. Platí pre všetkých vrátane vás.</p></div>' +
+      '<select id="odhl-min" aria-label="Čas automatického odhlásenia">' + MOZNOSTI.map(function (x) {
+        return '<option value="' + x[0] + '"' + (x[0] === S.odhlMin ? " selected" : "") + ">" + x[1] + "</option>";
+      }).join("") + "</select></div>";
+    h += '<form class="box" id="f-novy"><h3>Pridať makléra</h3><div class="form-grid">' +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="n-meno" required></label>' +
       '<label class="field"><span>Email (prihlasovacie meno)</span><input type="email" id="n-email" required autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></label>' +
       '<label class="field"><span>Heslo</span><input type="text" id="n-heslo" minlength="8" required autocomplete="off" value="' + noveHeslo() + '"></label>' +
@@ -1160,7 +1285,7 @@
         return '<div class="mk-card" data-m="' + m.id + '">' +
           '<div class="mk-foto">' + fotoVolba("makler", m.id) + "</div>" +
           '<div class="mk-hlavne"><input type="text" data-f="meno" value="' + esc(m.meno) + '" aria-label="Meno"><div class="meta">' + esc(m.email || "") +
-          " · prevzatých " + (prevzate[m.id] || 0) + "</div></div>" +
+          " · prevzatých " + (prevzate[m.id] || 0) + '</div><div class="meta mk-online">' + onlineStav(m.id).html + "</div></div>" +
           '<div class="mk-prava"><select data-f="pohlavie" aria-label="Rod (pre text SMS)"><option value="muz"' + (rodMaklera(m) === "muz" ? " selected" : "") + '>Muž</option><option value="zena"' + (rodMaklera(m) === "zena" ? " selected" : "") + ">Žena</option></select>" +
           '<select data-f="rola"' + (ja ? " disabled" : "") + ' aria-label="Rola"><option value="makler"' + (m.rola === "makler" ? " selected" : "") + '>Maklér</option><option value="admin"' + (m.rola === "admin" ? " selected" : "") + ">Administrátor</option></select>" +
           '<label class="toggle"><input type="checkbox" data-f="aktivny"' + (m.aktivny ? " checked" : "") + (ja ? " disabled" : "") + "> Aktívny</label>" +
@@ -1173,6 +1298,11 @@
       '<p class="meta">Administrátor vidí podhodnotené ponuky vždy. Maklérom ich zapnete v stĺpci „Vidí podhodnotené“. Deaktivovaný maklér sa neprihlási a nič nevidí. Prevzatý inzerát sa automaticky uvoľní, ak sa pri ňom 2 dni nič nezapíše (nie pri budúcej pripomienke, dohodnutom stretnutí alebo získanom do ponuky) – maklérovi príde upozornenie do zvončeka aj emailom.</p>';
     el.innerHTML = h;
     vykresliNahladNoveho();
+    $("#odhl-min").onchange = async function () {
+      var v = Number(this.value);
+      try { await rpc("nastavit_odhlasenie", { p_min: v }); S.odhlMin = v; zaznamenajAktivitu(true); tikOdpocet(); toast(v ? "Automatické odhlásenie: po " + this.options[this.selectedIndex].text + " nečinnosti." : "Automatické odhlásenie je vypnuté."); }
+      catch (err) { toast(chybaText(err), true); }
+    };
     if ($("#n-copy")) $("#n-copy").onclick = function () {
       var t = "Skener Alpha Reality: " + location.origin + location.pathname + "\nEmail: " + S.newUser.email + "\nHeslo: " + S.newUser.heslo;
       navigator.clipboard.writeText(t).then(function () { toast("Skopírované."); }, function () { toast("Kopírovanie nefunguje – označte text ručne.", true); });
@@ -1353,7 +1483,7 @@
     var dole = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
     var start = S.chat.length - nove.length;
     var html = nove.map(function (m, i) { return htmlSpravy(m, S.chat[start + i - 1]); }).join("");
-    box.insertAdjacentHTML("beforeend", html);
+    box.insertAdjacentHTML("beforeend", html.replace(/class="sprava/g, 'class="nova sprava'));
     if (dole || nove.some(function (m) { return m.makler_id === S.me.id; })) box.scrollTop = box.scrollHeight;
   }
   document.addEventListener("click", async function (e) {
@@ -1380,6 +1510,7 @@
     return [pon, zajtra];
   }
   async function nacitajVykon() {
+    S.vykonAnim = true;
     var r = rozsahObdobia(S.vykonObd);
     S.vykonNacitava = true; S.vykon = null; vykresliVykon();
     try { S.vykon = await rpc("vykon_maklerov", { p_od: r[0].toISOString(), p_do: r[1].toISOString() }); }
@@ -1413,7 +1544,8 @@
           return '<span class="chip ' + (VYSLEDOK_TRIEDA[k] || "") + '">' + esc(k) + " <b>" + m.vysledky[k] + "</b></span>";
         }).join("");
         return '<tr' + (chips ? ' class="ma-vysl"' : "") + '><td><span class="h-row">' + avatar(m.id, 24) + "<span><b>" + esc(m.meno) + "</b>" +
-          '<small class="meta d-block">' + (m.posledna ? "naposledy " + datum(m.posledna, true) : "bez aktivity") + "</small></span></span></td>" + stlpce.map(function (c) {
+          '<small class="meta d-block">' + (m.posledna ? "posledný zápis " + datum(m.posledna, true) : "bez zápisu") + "</small>" +
+          '<small class="meta d-block">' + onlineStav(m.id).html + "</small></span></span></td>" + stlpce.map(function (c) {
           var x = c[0] === "uspech" ? uspech(m) : m[c[0]];
           return '<td class="num' + (c[0] === "auto_uvolnene" && x ? " zle" : c[0] === "uspech" && x ? " dobre" : "") + '">' + x + "</td>";
         }).join("") + "</tr>" +
@@ -1423,7 +1555,26 @@
         return '<td class="num"><b>' + (c[0] === "uspech" ? riadky.reduce(function (a, m) { return a + uspech(m); }, 0) : sucet(c[0])) + "</b></td>";
       }).join("") + "</tr></tbody></table></div></div>";
     el.innerHTML = h;
+    if (S.vykonAnim) { S.vykonAnim = false; animujCisla(el); var g = el.querySelector(".grafy"); if (g) g.classList.add("rast"); }
     napojVykon();
+  }
+  function animPanel() {
+    document.body.setAttribute("data-anim-panel", "");
+    clearTimeout(S.animPT); S.animPT = setTimeout(function () { document.body.removeAttribute("data-anim-panel"); }, 600);
+  }
+  // čísla „nabehnú“ od nuly
+  function animujCisla(root) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    root.querySelectorAll(".stat b, .vykon-sum b").forEach(function (b) {
+      var ciel = Number(String(b.textContent).replace(/\s/g, "").replace(/\u00a0/g, ""));
+      if (!isFinite(ciel) || ciel < 2) return;
+      var t0 = performance.now(), d = 700;
+      (function krok(t) {
+        var p = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - p, 3);
+        b.textContent = nf.format(Math.round(ciel * e));
+        if (p < 1) requestAnimationFrame(krok);
+      })(t0);
+    });
   }
   var TYPY_KONTAKTU = [["hovory", "Hovory", "s1"], ["sms", "SMS", "s2"], ["emaily", "Email", "s3"]];
   function legendaKontaktov() {

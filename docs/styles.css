@@ -470,3 +470,80 @@ a.brand:focus-visible { outline: 2px solid var(--gold-strong); outline-offset: 4
   .user .email { display: none }
   .tabs button { padding-inline: 9px }
 }
+
+/* ---------- online stav maklérov */
+.online { color: var(--good); font-weight: 700 }
+.online::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); margin-right: 5px; vertical-align: 1px; box-shadow: 0 0 0 0 var(--good); animation: pulz 2s ease-out infinite }
+@keyframes pulz { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 60%, transparent) } 70%, 100% { box-shadow: 0 0 0 6px transparent } }
+.mk-online { font-size: 12px }
+
+/* ---------- automatické odhlásenie */
+.odhl { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #cfc9b8; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; padding: 4px 8px; font-variant-numeric: tabular-nums; white-space: nowrap }
+.odhl b { font-weight: 600; color: #fff; min-width: 34px; text-align: right }
+.odhl.malo { border-color: var(--gold-strong); color: var(--gold-strong) }
+.odhl.malo b { color: var(--gold-strong) }
+.odhl[hidden] { display: none }
+.odhl-nast { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap }
+.odhl-nast h3 { margin: 0 0 4px }
+.odhl-nast p { margin: 0; max-width: 620px }
+.odhl-nast select { min-width: 180px }
+.odhl-var { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: rgba(15, 17, 20, .55); backdrop-filter: blur(4px); animation: fadeIn .25s ease-out }
+.odhl-karta { position: relative; width: min(360px, 100%); background: var(--surface); border-radius: 18px; padding: 26px 22px 20px; text-align: center; display: grid; gap: 10px; justify-items: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35); animation: vstupZoom .35s cubic-bezier(.2,.8,.2,1) }
+.odhl-karta h3 { margin: 4px 0 0; font-size: 20px }
+.odhl-karta p { margin: 0 }
+.odhl-kruh { width: 120px; height: 120px; transform: rotate(-90deg) }
+.odhl-kruh circle { fill: none; stroke-width: 8 }
+.odhl-kruh .podklad { stroke: var(--line) }
+.odhl-kruh .postup { stroke: var(--gold-strong); stroke-linecap: round; stroke-dasharray: 326.7; transition: stroke-dashoffset 1s linear }
+.odhl-cislo { position: absolute; top: 26px; width: 120px; height: 120px; display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 40px; font-variant-numeric: tabular-nums }
+
+/* ---------- animácie (jemné; vypnú sa pri „obmedziť pohyb“ v systéme) */
+@keyframes vstup { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none } }
+@keyframes vstupZoom { from { opacity: 0; transform: scale(.94) translateY(8px) } to { opacity: 1; transform: none } }
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes pop { 0% { transform: scale(.4); opacity: 0 } 70% { transform: scale(1.15); opacity: 1 } 100% { transform: scale(1) } }
+@keyframes rastY { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+@keyframes rastX { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes lesk { from { transform: translateX(-120%) skewX(-20deg) } to { transform: translateX(260%) skewX(-20deg) } }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 14px) } to { opacity: 1; transform: translate(-50%, 0) } }
+
+[data-anim] #obsah > * { animation: vstup .35s ease-out both }
+[data-anim] .dlazdica { animation: vstup .45s cubic-bezier(.2,.7,.3,1) both }
+[data-anim] .dlazdica:nth-child(2) { animation-delay: .04s } [data-anim] .dlazdica:nth-child(3) { animation-delay: .08s }
+[data-anim] .dlazdica:nth-child(4) { animation-delay: .12s } [data-anim] .dlazdica:nth-child(5) { animation-delay: .16s }
+[data-anim] .dlazdica:nth-child(6) { animation-delay: .2s } [data-anim] .dlazdica:nth-child(7) { animation-delay: .24s }
+[data-anim] .dlazdica:nth-child(8) { animation-delay: .28s }
+[data-anim] .domov-hlava { animation: vstup .4s ease-out both }
+[data-anim] .stat { animation: vstup .4s ease-out both }
+[data-anim] .stat:nth-child(2) { animation-delay: .05s } [data-anim] .stat:nth-child(3) { animation-delay: .1s }
+[data-anim] .stat:nth-child(4) { animation-delay: .15s } [data-anim] .stat:nth-child(5) { animation-delay: .2s }
+[data-anim] .card:nth-child(-n+8) { animation: vstup .4s ease-out both }
+[data-anim] .card:nth-child(2) { animation-delay: .04s } [data-anim] .card:nth-child(3) { animation-delay: .08s }
+[data-anim] .card:nth-child(4) { animation-delay: .12s } [data-anim] .card:nth-child(5) { animation-delay: .16s }
+[data-anim] .card:nth-child(6) { animation-delay: .2s } [data-anim] .card:nth-child(7) { animation-delay: .24s }
+[data-anim] .card:nth-child(8) { animation-delay: .28s }
+.grafy.rast .gs-stack { transform-origin: bottom; animation: rastY .7s cubic-bezier(.2,.8,.2,1) both }
+.grafy.rast .gs-den:nth-child(3n+2) .gs-stack { animation-delay: .04s }
+.grafy.rast .gs-den:nth-child(3n) .gs-stack { animation-delay: .08s }
+.grafy.rast .gm-stack { transform-origin: left; animation: rastX .7s cubic-bezier(.2,.8,.2,1) both }
+.grafy.rast .gs-val, .grafy.rast .gm-val { animation: fadeIn .4s .5s both }
+.sprava.nova { animation: vstup .3s ease-out both }
+.tab-n:not([hidden]), .dl-bod, .badge:not([hidden]) { animation: pop .35s ease-out }
+#toast:not([hidden]) { animation: toastIn .25s ease-out }
+.login-box { animation: vstupZoom .5s cubic-bezier(.2,.8,.2,1) both }
+.lesk { position: relative; display: block; overflow: hidden; justify-self: center; border-radius: 6px }
+.lesk::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent); animation: lesk 1.4s .4s ease-in-out both; pointer-events: none }
+.lesk .login-logo { margin-bottom: 0 }
+.brand img { transition: filter .25s ease, transform .25s ease }
+a.brand:hover img { filter: drop-shadow(0 0 8px rgba(218,185,103,.55)); transform: scale(1.03) }
+.btn { transition: transform .08s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease }
+.btn:active:not([disabled]) { transform: scale(.97) }
+.dl-ikona { transition: transform .25s cubic-bezier(.2,.8,.2,1), background-color .2s ease, color .2s ease }
+.dlazdica:hover .dl-ikona { transform: rotate(-6deg) scale(1.08); background: var(--gold-strong); color: #1f2a37 }
+.card { transition: box-shadow .2s ease, transform .2s ease }
+.card:hover { box-shadow: 0 6px 18px rgba(20, 22, 26, .08) }
+[data-anim-panel] .panel, [data-anim-panel] .zvon-box, [data-anim-panel] #pwd .box { animation: vstup .28s ease-out both }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important }
+}
