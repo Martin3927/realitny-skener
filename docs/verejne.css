@@ -1,0 +1,124 @@
+/* Verejné stránky ponúk – pre klientov a majiteľov. Svetlé, čisté, zlatá z loga Alpha Reality. */
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --ink: #1f2329; --muted: #686c73; --line: #e6e2d8;
+  --gold: #a8862f; --gold-strong: #dab967; --gold-soft: #f4ecd9; --graphite: #24282e;
+  --good: #1a8a4a; --good-soft: #e1f3e8; --bad: #b4462b; --bad-soft: #f8e6e0; --wa: #1fa855;
+  --display: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", "Segoe UI", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171b; --surface: #1f2228; --ink: #eceae4; --muted: #a3a5a9; --line: #33373e;
+    --gold: #dab967; --gold-soft: #3a3324; --graphite: #0e1013; --good: #4cc483; --good-soft: #1d3428; --bad: #ef8a6d; --bad-soft: #3b2420;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171b; --surface: #1f2228; --ink: #eceae4; --muted: #a3a5a9; --line: #33373e;
+  --gold: #dab967; --gold-soft: #3a3324; --graphite: #0e1013; --good: #4cc483; --good-soft: #1d3428; --bad: #ef8a6d; --bad-soft: #3b2420;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { margin: 0 }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; -webkit-text-size-adjust: 100% }
+a { color: var(--gold) }
+button { font: inherit; color: inherit }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px }
+.v-wrap { max-width: 1160px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-left, 0px)) }
+
+.v-top { background: var(--graphite); color: #f1efe8 }
+.v-top .v-wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px }
+.v-top img { height: 38px; width: auto; display: block }
+.v-top .v-top-t { font-size: 13px; color: #c9c5bb; text-align: right }
+.v-top .v-top-t a { color: #f1efe8; text-decoration: none; font-weight: 600 }
+
+.v-stav { margin: 16px 0 0; padding: 10px 14px; border-radius: 10px; font-weight: 700; text-align: center }
+.v-stav.rez { background: var(--gold-soft); color: var(--gold) }
+.v-stav.pred { background: var(--bad-soft); color: var(--bad) }
+.v-stav.nahlad { background: #e8edf3; color: #446587 }
+
+.v-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; padding: 20px 0 48px; align-items: start }
+.v-main { min-width: 0; display: grid; gap: 22px }
+.v-side { position: sticky; top: 16px; display: grid; gap: 14px }
+
+.v-gal { background: var(--surface); border-radius: 14px; overflow: hidden; border: 1px solid var(--line) }
+.v-gal-hl { position: relative; aspect-ratio: 3 / 2; background: #11131600; background: var(--gold-soft); cursor: zoom-in }
+.v-gal-hl img { width: 100%; height: 100%; object-fit: cover; display: block }
+.v-gal-bez { aspect-ratio: 3 / 2; display: grid; place-items: center; font-size: 64px; background: var(--gold-soft) }
+.v-sip { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(20,22,26,.55); color: #fff; font-size: 26px; line-height: 1; cursor: pointer }
+.v-sip.l { left: 12px } .v-sip.r { right: 12px }
+.v-poc { position: absolute; left: 12px; bottom: 12px; background: rgba(20,22,26,.65); color: #fff; font-size: 13px; padding: 3px 10px; border-radius: 999px }
+.v-nahlady { display: flex; gap: 6px; padding: 8px; overflow-x: auto; scrollbar-width: thin }
+.v-nahlady button { flex: 0 0 auto; width: 92px; aspect-ratio: 4 / 3; padding: 0; border: 2px solid transparent; border-radius: 6px; overflow: hidden; cursor: pointer; background: none }
+.v-nahlady button[aria-current="true"] { border-color: var(--gold-strong) }
+.v-nahlady img { width: 100%; height: 100%; object-fit: cover; display: block }
+
+.v-box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px }
+.v-box h2 { font-family: var(--display); font-size: 18px; margin: 0 0 12px }
+.v-tr { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600 }
+h1.v-nazov { font-family: var(--display); font-size: clamp(22px, 3.2vw, 30px); line-height: 1.2; margin: 6px 0 6px; overflow-wrap: anywhere }
+.v-lok { color: var(--muted) }
+.v-cena { font-family: var(--display); font-weight: 800; font-size: clamp(24px, 3.4vw, 32px); color: var(--gold); margin-top: 12px; font-variant-numeric: tabular-nums }
+.v-cena small { display: block; font-family: var(--body); font-weight: 500; font-size: 14px; color: var(--muted) }
+.v-cipy { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px }
+.v-cip { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--gold-soft); color: var(--gold) }
+.v-kluc { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 16px }
+.v-kluc div { background: var(--bg); border-radius: 10px; padding: 10px 12px }
+.v-kluc b { display: block; font-family: var(--display); font-size: 18px }
+.v-kluc span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em }
+.v-par { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; margin: 0 }
+.v-par div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line) }
+.v-par dt { color: var(--muted) } .v-par dd { margin: 0; font-weight: 600; text-align: right }
+.v-intro { font-size: 17px; font-weight: 500; margin: 0 0 12px }
+.v-popis { white-space: pre-wrap; overflow-wrap: anywhere }
+.v-vyb { display: flex; flex-wrap: wrap; gap: 6px }
+.v-vyb span { font-size: 14px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg) }
+.v-vyb span::before { content: "✓ "; color: var(--good); font-weight: 700 }
+.v-odkazy { display: flex; flex-wrap: wrap; gap: 8px }
+.v-mapa { height: 340px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); position: relative; z-index: 0 }
+
+.v-mk { display: grid; gap: 14px }
+.v-mk-hl { display: flex; align-items: center; gap: 12px }
+.v-mk-hl b { display: block; font-size: 17px }
+.v-mk-hl small { color: var(--muted) }
+.v-av { border-radius: 50%; object-fit: cover; flex: 0 0 auto; display: inline-grid; place-items: center }
+.v-av-ini { background: var(--gold-soft); color: var(--gold); font-family: var(--display); font-weight: 700 }
+.v-btns { display: grid; gap: 8px }
+.v-btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font-weight: 600; text-decoration: none; cursor: pointer; text-align: center }
+.v-btn:hover { border-color: var(--gold-strong) }
+.v-btn.zlate { background: var(--gold-strong); border-color: var(--gold-strong); color: #1f1b12 }
+.v-btn.wa { background: var(--wa); border-color: var(--wa); color: #fff }
+.v-btns.dva { grid-template-columns: 1fr 1fr }
+.v-cislo { font-size: 13px; color: var(--muted); text-align: center }
+
+.v-mob-lista { display: none }
+.v-pata { color: var(--muted); font-size: 13px; padding: 24px 0 40px; border-top: 1px solid var(--line); text-align: center }
+.v-pata a { color: inherit }
+.v-nic { padding: 80px 16px; text-align: center; color: var(--muted) }
+.v-nic b { display: block; font-family: var(--display); font-size: 20px; color: var(--ink); margin-bottom: 6px }
+
+.v-lb { position: fixed; inset: 0; z-index: 100; background: rgba(8,9,11,.94); display: grid; place-items: center }
+.v-lb img { max-width: 96vw; max-height: 88vh; object-fit: contain }
+.v-lb .v-sip { width: 52px; height: 52px }
+.v-lb .v-zavriet { position: absolute; top: 14px; right: 14px; width: 46px; height: 46px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 24px; cursor: pointer }
+.v-lb .v-poc { bottom: 18px; left: 50%; transform: translateX(-50%) }
+
+.v-toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--graphite); color: #fff; padding: 10px 18px; border-radius: 10px; z-index: 200; font-weight: 600 }
+
+@media (max-width: 860px) {
+  .v-grid { grid-template-columns: minmax(0, 1fr); padding-bottom: 96px }
+  .v-side { position: static }
+  .v-par { grid-template-columns: minmax(0, 1fr) }
+  .v-gal { border-radius: 0; border-left: 0; border-right: 0; margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px))) }
+  .v-mob-lista { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; padding: 10px max(12px, env(safe-area-inset-left, 0px)) calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 18px rgba(0,0,0,.08) }
+  .v-mob-lista .v-btn { min-height: 46px; padding: 8px }
+  .v-mapa { height: 260px }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .v-btn { transition: border-color .15s, transform .1s }
+  .v-btn:active { transform: scale(.98) }
+}

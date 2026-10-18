@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#24282e">
+<title>Report pre majiteľa · Alpha Reality</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="verejne.css?v=202610190000">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<style>
+.r-wrap { max-width: 860px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-left, 0px)) 48px; display: grid; gap: 18px }
+.r-hl { display: flex; gap: 16px; align-items: center }
+.r-hl img.r-f { width: 132px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; flex: 0 0 auto }
+.r-hl h1 { font-family: var(--display); font-size: clamp(20px, 3vw, 26px); margin: 2px 0; line-height: 1.2 }
+.r-pozdrav { font-size: 17px; margin: 0 }
+.r-staty { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px }
+.r-stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px }
+.r-stat b { display: block; font-family: var(--display); font-size: 28px; color: var(--gold); font-variant-numeric: tabular-nums }
+.r-stat span { font-size: 13px; color: var(--muted) }
+.r-obh { display: grid; gap: 0; margin: 0; padding: 0; list-style: none }
+.r-obh li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line) }
+.r-obh li:last-child { border-bottom: 0 }
+.r-obh .r-d { color: var(--muted); font-size: 14px }
+.r-vys { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); margin-bottom: 3px }
+.r-vys.zaujem, .r-vys.ponuka { background: var(--good-soft); color: var(--good) }
+.r-vys.nezaujem, .r-vys.nedostavil { background: var(--bad-soft); color: var(--bad) }
+.r-cena { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 15px }
+.r-pozn { font-size: 13px; color: var(--muted) }
+@media (max-width: 640px) { .r-staty { grid-template-columns: repeat(2, minmax(0, 1fr)) } .r-hl img.r-f { width: 96px } .r-obh li { grid-template-columns: minmax(0, 1fr); gap: 2px } }
+</style>
+</head>
+<body>
+<header class="v-top"><div class="v-wrap">
+  <a href="https://www.alphareality.sk/" title="Alpha Reality"><img src="logo.png" alt="Alpha Reality"></a>
+  <div class="v-top-t">Report pre majiteľa</div>
+</div></header>
+<main class="r-wrap" id="obsah"><div class="v-nic">Načítavam report…</div></main>
+<footer class="v-wrap v-pata">© Alpha Reality s.r.o. · Tento odkaz je určený len pre majiteľa nehnuteľnosti – nezdieľajte ho, prosím.</footer>
+<script src="config.js?v=202610182100"></script>
+<script src="verejne.js?v=202610190000"></script>
+<script>
+(function () {
+  var T = window.TYPEK, esc = T.esc, tok = T.param("t");
+  var VYS = { naplanovana: "Naplánovaná", zaujem: "Záujem", zvazuje: "Zvažuje", nezaujem: "Bez záujmu", ponuka: "Dal ponuku", nedostavil: "Nedostavil sa" };
+  function tvar(n, a, b, c) { return n === 1 ? a : n >= 2 && n <= 4 ? b : c; }
+  function dni(n) { return n === 1 ? "deň" : n >= 2 && n <= 4 ? "dni" : "dní"; }
+  function vykresli(R) {
+    var p = R.ponuka, m = p.makler || {}, F = p.fotky || [], O = R.obhliadky || [], t = Date.now();
+    var minule = O.filter(function (o) { return new Date(o.cas).getTime() <= t; }), buduce = O.filter(function (o) { return new Date(o.cas).getTime() > t; });
+    var tyzden = minule.filter(function (o) { return new Date(o.cas).getTime() > t - 7 * 864e5; }).length;
+    var hc = R.historia_cien || [];
+    var tel = T.telOdkaz(m.telefon);
+    document.getElementById("obsah").innerHTML =
+      '<p class="r-pozdrav">Dobrý deň' + (R.majitel ? ", " + esc(R.majitel) : "") + ". Tu je aktuálny prehľad o predaji vašej nehnuteľnosti.</p>" +
+      '<section class="v-box r-hl">' + (F[0] ? '<img class="r-f" src="' + esc(T.fotkaUrl(F[0])) + '" alt="">' : "") +
+      '<div><div class="v-tr">' + (p.transakcia === "prenajom" ? "Prenájom" : "Predaj") + (p.cislo ? " · č. " + esc(p.cislo) : "") + "</div><h1>" + esc(T.nazov(p)) + '</h1><div class="v-lok">📍 ' + esc(T.lokalita(p)) + "</div>" +
+      '<div class="r-cena"><b>' + esc(R.cena ? T.eur(R.cena) : T.cena(p)) + "</b><span class=\"r-pozn\">v ponuke " + R.dni_v_ponuke + " " + dni(R.dni_v_ponuke) +
+      (p.stav === "rezervovane" ? " · rezervované" : p.stav === "predane" ? " · predané" : "") + "</span></div>" +
+      '<a href="' + esc(T.verejnyOdkaz(p.id)) + '&amp;nahlad=1" target="_blank" rel="noopener">Zobraziť ponuku tak, ako ju vidia klienti →</a></div></section>' +
+      '<div class="r-staty">' +
+      '<div class="r-stat"><b>' + tyzden + "</b><span>" + tvar(tyzden, "obhliadka", "obhliadky", "obhliadok") + " za posledný týždeň</span></div>" +
+      '<div class="r-stat"><b>' + minule.length + "</b><span>" + tvar(minule.length, "obhliadka", "obhliadky", "obhliadok") + " spolu</span></div>" +
+      '<div class="r-stat"><b>' + T.nf.format(R.zobrazenia_7 || 0) + "</b><span>" + tvar(R.zobrazenia_7 || 0, "zobrazenie", "zobrazenia", "zobrazení") + " ponuky za týždeň" + (R.zobrazenia ? " (spolu " + T.nf.format(R.zobrazenia) + ")" : "") + "</span></div>" +
+      '<div class="r-stat"><b>' + (R.zaujemcovia || 0) + "</b><span>" + tvar(R.zaujemcovia || 0, "klient v našej databáze hľadá", "klienti v našej databáze hľadajú", "klientov v našej databáze hľadá") + " podobnú nehnuteľnosť</span></div></div>" +
+      (buduce.length ? '<section class="v-box"><h2>Naplánované obhliadky</h2><ul class="r-obh">' + buduce.map(function (o) {
+        return '<li><span class="r-d">' + esc(T.datum(o.cas, true)) + "</span><span>Záujemca " + esc(o.klient || "") + "</span></li>";
+      }).join("") + "</ul></section>" : "") +
+      '<section class="v-box"><h2>Obhliadky a spätná väzba</h2>' + (minule.length ? '<ul class="r-obh">' + minule.map(function (o) {
+        return '<li><span class="r-d">' + esc(T.datum(o.cas)) + "</span><span>" + (o.vysledok && VYS[o.vysledok] ? '<span class="r-vys ' + esc(o.vysledok) + '">' + VYS[o.vysledok] + "</span><br>" : "") +
+          (o.spatna_vazba ? esc(o.spatna_vazba) : '<span class="r-pozn">Bez spätnej väzby.</span>') + "</span></li>";
+      }).join("") + "</ul>" : '<p class="r-pozn">Zatiaľ neprebehla žiadna obhliadka. Ponuku aktívne ponúkame klientom a na portáloch.</p>') + "</section>" +
+      (hc.length > 1 ? '<section class="v-box"><h2>Vývoj ceny</h2><p class="r-cena">' + hc.map(function (x) { return esc(T.datum(x[0])) + " – <b>" + esc(T.eur(x[1])) + "</b>"; }).join(" → ") + "</p></section>" : "") +
+      '<section class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno || "Alpha Reality") + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · Alpha Reality</small></div></div>" +
+      '<div class="v-btns dva">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Zavolať</a>' : "") + (m.email ? '<a class="v-btn" href="mailto:' + esc(m.email) + '">✉️ Napísať</a>' : "") + "</div></section>" +
+      '<p class="r-pozn">Report sa aktualizuje priebežne · stav k ' + esc(T.datum(R.vygenerovane, true)) + ". Zobrazenia sa počítajú na stránke ponuky Alpha Reality (nie na portáloch).</p>";
+  }
+  if (!tok) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Neplatný odkaz</b>Odkaz na report nie je úplný.</div>'; return; }
+  T.rpc("report_majitela", { p_token: tok }).then(function (R) {
+    if (!R) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Report nie je dostupný</b>Odkaz je neplatný alebo už neaktívny. Kontaktujte svojho makléra.</div>'; return; }
+    vykresli(R);
+  }).catch(function (e) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Report sa nepodarilo načítať</b>' + esc(e.message || e) + "</div>"; });
+})();
+</script>
+</body>
+</html>

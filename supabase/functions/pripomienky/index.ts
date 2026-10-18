@@ -43,7 +43,48 @@ const DRUH: Record<string, [string, string]> = {
   pripomienka: ["🔔", "Pripomienka"],
   uvolnenie: ["🔓", "Inzerát sa uvoľnil"],
   cena: ["📉", "Znížená cena"],
+  zmluva: ["📝", "Končí zmluva"],
+  zhoda: ["🎯", "Ponuka pre vášho klienta"],
+  obhliadka: ["🗝️", "Obhliadka"],
 };
+const WEB_URL = APP_URL.replace(/\/?$/, "/");
+
+// týždenný report majiteľom (len ponuky so zapnutým reportom a emailom majiteľa)
+// deno-lint-ignore no-explicit-any
+async function reportyMajitelom(db: any) {
+  const { data: zoz, error } = await db.rpc("_reporty_na_odoslanie");
+  if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const r of (zoz as any[]) ?? []) {
+    try {
+      const { data: rep } = await db.rpc("report_majitela", { p_token: r.token });
+      if (!rep) continue;
+      const { data: m } = await db.from("makleri").select("meno, email, telefon").eq("id", r.makler_id).maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const obh = (rep.obhliadky as any[]) || [];
+      const tyzden = obh.filter((o) => new Date(o.cas).getTime() > Date.now() - 7 * 864e5 && new Date(o.cas).getTime() <= Date.now()).length;
+      const odkaz = WEB_URL + "report.html?t=" + encodeURIComponent(r.token);
+      const riadok = (k: string, v: unknown) => `<tr><td style="padding:6px 0;color:#666">${esc(k)}</td><td style="padding:6px 0;text-align:right"><b>${esc(v)}</b></td></tr>`;
+      const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#23272e">
+        <div style="border-bottom:3px solid #dab967;padding-bottom:8px;font-size:18px"><b>📊 Týždenný report k vašej nehnuteľnosti</b></div>
+        <p style="font-size:15px;margin:16px 0 4px">Dobrý deň${r.majitel ? ", " + esc(r.majitel) : ""},</p>
+        <p style="margin:0 0 12px">posielame prehľad o ponuke <b>${esc(r.nazov)}</b>.</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          ${riadok("Obhliadky za posledný týždeň", tyzden)}${riadok("Obhliadky spolu", obh.length)}
+          ${riadok("Zobrazenia ponuky za týždeň", rep.zobrazenia_7)}${riadok("Klienti, ktorí hľadajú podobnú nehnuteľnosť", rep.zaujemcovia)}
+          ${riadok("Dní v ponuke", rep.dni_v_ponuke)}</table>
+        <p style="margin:22px 0"><a href="${esc(odkaz)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Zobraziť celý report</a></p>
+        <p style="margin:0">${m ? "S pozdravom<br><b>" + esc(m.meno) + "</b>, Alpha Reality" + (m.telefon ? "<br>" + esc(m.telefon) : "") + (m.email ? "<br>" + esc(m.email) : "") : ""}</p>
+        <p style="color:#999;font-size:12px;margin-top:20px">Tento email dostávate, pretože predávate nehnuteľnosť cez Alpha Reality. Ak ho nechcete dostávať, dajte vedieť svojmu maklérovi.</p></div>`;
+      await posli(r.email, "📊 Report k ponuke: " + String(r.nazov).slice(0, 80), html);
+      await db.from("nehnutelnosti_interne").update({ report_odoslany: new Date().toISOString() }).eq("nehnutelnost_id", r.id);
+      odoslane++;
+    } catch (e) { chyby.push(String((e as Error).message || e)); }
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
+}
 
 const VYSLEDKY = ["Nedvíha", "Volať neskôr", "Nemá záujem o RK", "Predáva cez inú RK", "Už predané",
   "Záujem – stretnutie dohodnuté", "Získaný do ponuky", "Iné"];
@@ -114,16 +155,17 @@ Deno.serve(async (req) => {
   if (!Deno.env.get("BREVO_API_KEY") && !Deno.env.get("SMTP_HOST")) {
     return Response.json({ ok: true, odoslane: 0, info: "email nie je nastavený" });
   }
-  let telo: { prehlad?: boolean } = {};
+  let telo: { prehlad?: boolean; reporty?: boolean } = {};
   try { telo = await req.json(); } catch { /* prázdne telo */ }
   if (telo.prehlad) return Response.json(await tyzdennyPrehlad(db));
+  if (telo.reporty) return Response.json(await reportyMajitelom(db));
 
   // zaberieme pripomienky (aby sa ten istý email neposlal dvakrát)
   const { data: rows, error } = await db.from("pripomienky")
     .update({ email_odoslany: new Date().toISOString() })
     .is("hotovo", null).is("zrusena", null).is("email_odoslany", null)
     .lte("cas", new Date().toISOString())
-    .select("id, makler_id, inzerat_id, schrankovanie_id, cas, poznamka, druh");
+    .select("id, makler_id, inzerat_id, schrankovanie_id, nehnutelnost_id, cas, poznamka, druh");
   if (error) return Response.json({ ok: false, chyba: error.message }, { status: 500 });
 
   let odoslane = 0;
@@ -143,12 +185,19 @@ Deno.serve(async (req) => {
         const { data: s } = await db.from("schrankovanie").select("lokalita, telefon, typ").eq("id", p.schrankovanie_id).maybeSingle();
         if (s) suvis = `<p style="margin:14px 0 0"><b>Schránkovanie:</b> ${esc(s.lokalita)}${s.telefon ? " · tel. " + esc(s.telefon) : ""}</p>`;
       }
+      if (p.nehnutelnost_id) {
+        const { data: n } = await db.from("nehnutelnosti").select("id, nazov, typ, obec, cena, cislo").eq("id", p.nehnutelnost_id).maybeSingle();
+        if (n) {
+          suvis = `<p style="margin:14px 0 0"><b>Ponuka:</b> <a href="${esc(WEB_URL + "ponuka.html?id=" + n.id)}">${esc(n.nazov || [n.typ, n.obec].filter(Boolean).join(", "))}</a>` +
+            `${n.cislo ? " · č. " + esc(n.cislo) : ""}${n.cena ? " · " + Number(n.cena).toLocaleString("sk-SK") + " €" : ""}</p>`;
+        }
+      }
       const [ikona, nazov] = DRUH[p.druh as string] || DRUH.pripomienka;
       const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#23272e">
         <div style="border-bottom:3px solid #dab967;padding-bottom:8px;font-size:18px"><b>${ikona} ${nazov}</b>
         <span style="color:#888;font-size:14px"> · ${esc(casSk(p.cas))}</span></div>
         <p style="font-size:16px;margin:16px 0 0">${esc(p.poznamka || "Pripomienka bez poznámky")}</p>${suvis}
-        <p style="margin:22px 0"><a href="${esc(APP_URL)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Otvoriť skener</a></p>
+        <p style="margin:22px 0"><a href="${esc(APP_URL)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Otvoriť Realitného týpka</a></p>
         <p style="color:#999;font-size:12px">Realitný týpek · Alpha Reality</p></div>`;
       const predmet = p.druh && p.druh !== "pripomienka" ? ikona + " " + String(p.poznamka).slice(0, 110) : ikona + " " + nazov + ": " + (p.poznamka || "skener").slice(0, 80);
       await posli(m.email, predmet, html);

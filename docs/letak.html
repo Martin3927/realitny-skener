@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="sk" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Leták · Alpha Reality</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<style>
+/* Leták A4 na výšku: tlač alebo uloženie do PDF cez dialóg tlače */
+:root { --ink: #1f2329; --muted: #6a6e74; --line: #e3dfd4; --gold: #a8862f; --gold-strong: #dab967; --gold-soft: #f4ecd9; --graphite: #24282e;
+  --display: "Montserrat", "Helvetica Neue", Arial, sans-serif; --body: "Public Sans", "Segoe UI", Arial, sans-serif; color-scheme: light }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { margin: 0; background: #d9d6ce; color: var(--ink); font-family: var(--body) }
+.lista { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; padding: 12px 16px; background: var(--graphite); color: #f1efe8; font-size: 14px }
+.lista button { font: inherit; font-weight: 700; border: 0; border-radius: 8px; padding: 10px 18px; background: var(--gold-strong); color: #1f1b12; cursor: pointer }
+.lista label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer }
+.lista input { accent-color: var(--gold-strong); width: 18px; height: 18px }
+.lista small { color: #bdb9b0; width: 100%; text-align: center }
+.strana-obal { padding: 24px 12px 48px; overflow-x: auto }
+.strana { width: 210mm; height: 297mm; margin: 0 auto; background: #fff; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.18) }
+.hl { background: var(--graphite); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 7mm 12mm; flex: 0 0 auto }
+.hl img { height: 13mm; display: block }
+.hl .tr { font-family: var(--display); font-weight: 800; font-size: 16pt; letter-spacing: .14em; color: var(--gold-strong); text-transform: uppercase }
+.foto { flex: 0 0 auto; height: 98mm; background: var(--gold-soft) center / cover no-repeat; position: relative }
+.foto .stitok { position: absolute; left: 12mm; bottom: 6mm; background: var(--gold-strong); color: #1f1b12; font-family: var(--display); font-weight: 800; font-size: 11pt; letter-spacing: .08em; padding: 2mm 5mm; text-transform: uppercase }
+.male { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; padding: 2mm 0 0; flex: 0 0 auto }
+.male div { height: 30mm; background: var(--gold-soft) center / cover no-repeat }
+.telo { padding: 7mm 12mm 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 4mm; min-height: 0 }
+h1 { font-family: var(--display); font-size: 21pt; line-height: 1.15; margin: 0; overflow-wrap: anywhere }
+.lok { color: var(--muted); font-size: 11pt; margin-top: 1.5mm }
+.riadok { display: flex; align-items: flex-end; justify-content: space-between; gap: 8mm }
+.cena { font-family: var(--display); font-weight: 800; font-size: 25pt; color: var(--gold); white-space: nowrap; font-variant-numeric: tabular-nums }
+.cena small { display: block; font-family: var(--body); font-size: 9.5pt; font-weight: 500; color: var(--muted); text-align: right }
+.kluc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm }
+.kluc div { border-top: 1.2mm solid var(--gold-strong); background: #f7f5ef; padding: 2.5mm 3mm }
+.kluc b { display: block; font-family: var(--display); font-size: 13pt; line-height: 1.2 }
+.kluc span { font-size: 8pt; color: var(--muted); text-transform: uppercase; letter-spacing: .06em }
+.text { font-size: 10.5pt; line-height: 1.5; white-space: pre-wrap; overflow: hidden; flex: 1 1 auto; min-height: 0; display: -webkit-box; -webkit-box-orient: vertical }
+.vyb { display: flex; flex-wrap: wrap; gap: 1.5mm 4mm; font-size: 10pt }
+.vyb span::before { content: "✓ "; color: var(--gold); font-weight: 700 }
+.pata { flex: 0 0 auto; display: flex; align-items: center; gap: 6mm; padding: 6mm 12mm; margin-top: 4mm; border-top: 0.6mm solid var(--line) }
+.mk { display: flex; align-items: center; gap: 4mm; flex: 1 1 auto; min-width: 0 }
+.mk img, .mk .ini { width: 22mm; height: 22mm; border-radius: 50%; object-fit: cover; flex: 0 0 auto }
+.mk .ini { display: grid; place-items: center; background: var(--gold-soft); color: var(--gold); font-family: var(--display); font-weight: 800; font-size: 16pt }
+.mk b { display: block; font-family: var(--display); font-size: 14pt }
+.mk .kont { font-size: 11pt; line-height: 1.45 }
+.mk .kont strong { font-size: 13pt }
+.qr { flex: 0 0 auto; text-align: center; font-size: 8pt; color: var(--muted) }
+.qr svg { width: 27mm; height: 27mm; display: block; margin: 0 auto 1mm }
+.cislo { font-size: 8.5pt; color: var(--muted) }
+.web { background: var(--graphite); color: #d8d4ca; text-align: center; font-size: 9pt; padding: 2.5mm; letter-spacing: .05em; flex: 0 0 auto }
+.nic { padding: 80px 20px; text-align: center; font-size: 18px; color: #444 }
+@page { size: A4 portrait; margin: 0 }
+@media print {
+  html, body { background: #fff }
+  .lista { display: none }
+  .strana-obal { padding: 0 }
+  .strana { box-shadow: none; margin: 0 }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact }
+}
+</style>
+</head>
+<body>
+<div class="lista" id="lista" hidden>
+  <button type="button" id="tlac">🖨 Tlačiť / Uložiť ako PDF</button>
+  <label><input type="checkbox" id="o-cena" checked> Cena</label>
+  <label><input type="checkbox" id="o-male" checked> Ďalšie fotky</label>
+  <label><input type="checkbox" id="o-qr" checked> QR kód</label>
+  <small>Pri ukladaní do PDF zvoľte v tlači „Uložiť ako PDF“, veľkosť A4 a zapnite „Grafika pozadia“.</small>
+</div>
+<div class="strana-obal"><div class="strana" id="strana"><div class="nic">Pripravujem leták…</div></div></div>
+<script src="config.js?v=202610182100"></script>
+<script src="supabase.min.js"></script>
+<script src="verejne.js?v=202610190000"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+  var T = window.TYPEK, esc = T.esc, id = Number(T.param("id")), P = null;
+  var o = { cena: true, male: true, qr: true };
+  function bg(f) { return f ? ' style="background-image:url(\'' + esc(T.fotkaUrl(f)).replace(/'/g, "%27") + '\')"' : ""; }
+  function qrSvg(text) {
+    if (!window.qrcode) return "";
+    var q = qrcode(0, "M"); q.addData(text); q.make();
+    return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  }
+  function text(p) {
+    var t = (p.intro ? p.intro + "\n\n" : "") + (p.popis || "");
+    t = t.replace(/\n{3,}/g, "\n\n").trim();
+    var max = o.male ? 620 : 900;
+    if (t.length > max) { t = t.slice(0, max); t = t.slice(0, Math.max(t.lastIndexOf(". "), t.lastIndexOf("\n"), max - 80) + 1).trim() + " …"; }
+    return t;
+  }
+  function vykresli() {
+    var p = P, F = p.fotky || [], m = p.makler || {};
+    var kluc = [];
+    if (p.plocha_uzitkova) kluc.push([T.nf.format(p.plocha_uzitkova) + " m²", "úžitková plocha"]);
+    if (p.plocha_pozemku) kluc.push([T.nf.format(p.plocha_pozemku) + " m²", "pozemok"]);
+    if (p.izby) kluc.push([p.izby, p.izby === 1 ? "izba" : p.izby <= 4 ? "izby" : "izieb"]);
+    if (p.poschodie !== null && p.poschodie !== undefined && p.poschodie !== "") kluc.push([Number(p.poschodie) === 0 ? "prízemie" : p.poschodie + "." + (p.pocet_podlazi ? " z " + p.pocet_podlazi : ""), "poschodie"]);
+    if (p.stav_objektu) kluc.push([p.stav_objektu, "stav"]);
+    if (p.energ_certifikat) kluc.push([p.energ_certifikat, "energ. certifikát"]);
+    if (p.rok_vystavby) kluc.push([p.rok_vystavby, "rok výstavby"]);
+    kluc = kluc.slice(0, 4);
+    var ini = String(m.meno || "AR").split(/\s+/).map(function (x) { return x.charAt(0); }).slice(0, 2).join("").toUpperCase();
+    var stitok = p.stav === "rezervovane" ? "Rezervované" : p.exkluzivne ? "Exkluzívne" : (p.specialne || [])[0] || "";
+    var url = T.verejnyOdkaz(p.id);
+    document.title = "Leták – " + T.nazov(p) + " · Alpha Reality";
+    document.getElementById("strana").innerHTML =
+      '<div class="hl"><img src="logo.png" alt="Alpha Reality"><span class="tr">' + (p.transakcia === "prenajom" ? "Na prenájom" : "Na predaj") + "</span></div>" +
+      '<div class="foto"' + bg(F[0]) + ">" + (stitok ? '<span class="stitok">' + esc(stitok) + "</span>" : "") + "</div>" +
+      (o.male && F.length > 1 ? '<div class="male">' + [F[1], F[2], F[3]].map(function (f) { return "<div" + bg(f || F[1]) + "></div>"; }).join("") + "</div>" : "") +
+      '<div class="telo"><div class="riadok"><div><h1>' + esc(T.nazov(p)) + '</h1><div class="lok">📍 ' + esc(T.lokalita(p)) + "</div></div>" +
+      (o.cena ? '<div class="cena">' + esc(T.cena(p)) + (T.cenaM2(p) ? "<small>" + esc(T.cenaM2(p)) + "</small>" : "") + "</div>" : "") + "</div>" +
+      (kluc.length ? '<div class="kluc">' + kluc.map(function (k) { return "<div><b>" + esc(k[0]) + "</b><span>" + esc(k[1]) + "</span></div>"; }).join("") + "</div>" : "") +
+      '<div class="text">' + esc(text(p)) + "</div>" +
+      ((p.vybavenie || []).length ? '<div class="vyb">' + p.vybavenie.slice(0, 10).map(function (v) { return "<span>" + esc(v) + "</span>"; }).join("") + "</div>" : "") + "</div>" +
+      '<div class="pata"><div class="mk">' + (m.foto ? '<img src="' + esc(m.foto) + '" alt="">' : '<span class="ini">' + esc(ini) + "</span>") +
+      '<div class="kont"><b>' + esc(m.meno || "Alpha Reality") + "</b>" + (m.telefon ? "<strong>" + esc(m.telefon) + "</strong><br>" : "") + (m.email ? esc(m.email) : "") +
+      (p.cislo ? '<div class="cislo">Číslo ponuky: ' + esc(p.cislo) + "</div>" : "") + "</div></div>" +
+      (o.qr ? '<div class="qr">' + qrSvg(url) + "Viac fotiek a detaily</div>" : "") + "</div>" +
+      '<div class="web">ALPHA REALITY · REALITNÁ KANCELÁRIA · WWW.ALPHAREALITY.SK</div>';
+    orezText();
+  }
+  // text končí celým riadkom (žiadny useknutý riadok na spodku)
+  function orezText() {
+    var t = document.querySelector(".text"); if (!t) return;
+    t.style.height = ""; t.style.flex = "1 1 auto";
+    var lh = parseFloat(getComputedStyle(t).lineHeight) || 16, n = Math.max(0, Math.floor(t.clientHeight / lh));
+    t.style.flex = "0 0 auto"; t.style.height = n * lh + "px"; t.style.webkitLineClamp = String(n);
+    t.hidden = n < 1;
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (P) orezText(); });
+  ["cena", "male", "qr"].forEach(function (k) { document.getElementById("o-" + k).onchange = function () { o[k] = this.checked; vykresli(); }; });
+  document.getElementById("tlac").onclick = function () { window.print(); };
+  if (!id) { document.getElementById("strana").innerHTML = '<div class="nic">V odkaze chýba číslo ponuky.</div>'; return; }
+  T.rpc("verejna_ponuka", { p_id: id }).then(function (p) {
+    if (!p) { document.getElementById("strana").innerHTML = '<div class="nic">Ponuka nie je dostupná.</div>'; return; }
+    P = p; document.getElementById("lista").hidden = false; vykresli();
+  }).catch(function (e) { document.getElementById("strana").innerHTML = '<div class="nic">Leták sa nepodarilo pripraviť: ' + esc(e.message || e) + "</div>"; });
+})();
+</script>
+</body>
+</html>

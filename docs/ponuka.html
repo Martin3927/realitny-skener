@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#24282e">
+<title>Ponuka nehnuteľnosti · Alpha Reality</title>
+<meta name="description" content="Nehnuteľnosť v ponuke realitnej kancelárie Alpha Reality – Spišská Nová Ves a Levoča.">
+<meta property="og:title" content="Nehnuteľnosť v ponuke · Alpha Reality">
+<meta property="og:image" content="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="verejne.css?v=202610190000">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+</head>
+<body>
+<header class="v-top"><div class="v-wrap">
+  <a href="https://www.alphareality.sk/" title="Alpha Reality"><img src="logo.png" alt="Alpha Reality"></a>
+  <div class="v-top-t">Realitná kancelária<br><a href="https://www.alphareality.sk/">www.alphareality.sk</a></div>
+</div></header>
+<main class="v-wrap" id="obsah"><div class="v-nic">Načítavam ponuku…</div></main>
+<footer class="v-wrap v-pata">© Alpha Reality s.r.o. · Spišská Nová Ves a Levoča · <a href="https://www.alphareality.sk/">www.alphareality.sk</a></footer>
+<script src="config.js?v=202610182100"></script>
+<script src="supabase.min.js"></script>
+<script src="verejne.js?v=202610190000"></script>
+<script>
+(function () {
+  var T = window.TYPEK, esc = T.esc, id = Number(T.param("id")), P = null, g = 0;
+  var KAT = { byty: "🏢", domy: "🏠", chaty: "🏡", pozemky: "🌳", priestory: "🏬", objekty: "🏭", garaze: "🚗" };
+  function toast(t) { var d = document.createElement("div"); d.className = "v-toast"; d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 2200); }
+  function zdielat() {
+    var url = location.href.split("#")[0];
+    if (navigator.share) { navigator.share({ title: T.nazov(P), text: T.nazov(P) + " – " + T.cena(P), url: url }).catch(function () {}); return; }
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast("Odkaz je skopírovaný."); }, function () { prompt("Skopírujte odkaz:", url); });
+  }
+  function galeria() {
+    var F = P.fotky || [];
+    if (!F.length) return '<div class="v-gal"><div class="v-gal-bez">' + (KAT[P.kategoria] || "🏠") + "</div></div>";
+    return '<div class="v-gal"><div class="v-gal-hl" id="gal-hl"><img src="' + esc(T.fotkaUrl(F[g])) + '" alt="' + esc(T.nazov(P)) + ' – fotka ' + (g + 1) + '">' +
+      (F.length > 1 ? '<button class="v-sip l" type="button" data-g="-1" aria-label="Predchádzajúca fotka">‹</button><button class="v-sip r" type="button" data-g="1" aria-label="Ďalšia fotka">›</button>' : "") +
+      '<span class="v-poc">' + (g + 1) + " / " + F.length + "</span></div>" +
+      (F.length > 1 ? '<div class="v-nahlady">' + F.map(function (f, n) {
+        return '<button type="button" data-gi="' + n + '"' + (n === g ? ' aria-current="true"' : "") + ' aria-label="Fotka ' + (n + 1) + '"><img loading="lazy" src="' + esc(T.fotkaUrl(f)) + '" alt=""></button>';
+      }).join("") + "</div>" : "") + "</div>";
+  }
+  function makler() {
+    var m = P.makler || {};
+    var tel = T.telOdkaz(m.telefon), sprava = "Dobrý deň, mám záujem o ponuku: " + T.nazov(P) + (P.cislo ? " (č. " + P.cislo + ")" : "") + " " + location.href.split("#")[0];
+    return '<div class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno || "Alpha Reality") + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · Alpha Reality</small></div></div>" +
+      '<div class="v-btns">' +
+      (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 ' + esc(m.telefon) + "</a>" : "") +
+      (tel ? '<div class="v-btns dva"><a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(m.telefon)) + "?text=" + encodeURIComponent(sprava) + '" target="_blank" rel="noopener">WhatsApp</a>' +
+        '<a class="v-btn" href="sms:' + esc(tel) + "?&body=" + encodeURIComponent(sprava) + '">💬 SMS</a></div>' : "") +
+      (m.email ? '<a class="v-btn" href="mailto:' + esc(m.email) + "?subject=" + encodeURIComponent("Záujem o ponuku " + (P.cislo || T.nazov(P))) + "&body=" + encodeURIComponent(sprava) + '">✉️ Napísať email</a>' : "") +
+      '<button class="v-btn" type="button" data-zdielat>🔗 Zdieľať ponuku</button></div>' +
+      (P.cislo ? '<div class="v-cislo">Číslo ponuky: <b>' + esc(P.cislo) + "</b></div>" : "") + "</div>";
+  }
+  function vykresli() {
+    var par = T.parametre(P), m2 = T.cenaM2(P);
+    var kluc = [];
+    if (P.plocha_uzitkova) kluc.push([T.nf.format(P.plocha_uzitkova) + " m²", "plocha"]);
+    if (P.plocha_pozemku) kluc.push([T.nf.format(P.plocha_pozemku) + " m²", "pozemok"]);
+    if (P.izby) kluc.push([P.izby, P.izby === 1 ? "izba" : P.izby <= 4 ? "izby" : "izieb"]);
+    if (P.stav_objektu) kluc.push([P.stav_objektu, "stav"]);
+    var stav = P.stav === "rezervovane" ? '<div class="v-stav rez">Rezervované</div>' : P.stav === "predane" ? '<div class="v-stav pred">' + (P.transakcia === "prenajom" ? "Prenajaté" : "Predané") + "</div>" :
+      P.stav !== "aktivne" ? '<div class="v-stav nahlad">Náhľad – ponuka zatiaľ nie je zverejnená</div>' : "";
+    var mk = P.makler || {}, tel = T.telOdkaz(mk.telefon);
+    document.title = T.nazov(P) + " · Alpha Reality";
+    var d = document.querySelector('meta[name="description"]'); if (d) d.content = (P.intro || T.nazov(P) + " – " + T.cena(P)).slice(0, 160);
+    document.getElementById("obsah").innerHTML = stav + '<div class="v-grid"><div class="v-main">' + galeria() +
+      '<section class="v-box"><div class="v-tr">' + (P.transakcia === "prenajom" ? "Prenájom" : "Predaj") + (P.typ ? " · " + esc(P.typ) : "") + "</div>" +
+      '<h1 class="v-nazov">' + esc(T.nazov(P)) + '</h1><div class="v-lok">📍 ' + esc(T.lokalita(P)) + "</div>" +
+      '<div class="v-cena">' + esc(T.cena(P)) + (m2 || P.text_k_cene ? "<small>" + esc([m2, P.text_k_cene].filter(Boolean).join(" · ")) + "</small>" : "") + "</div>" +
+      ((P.exkluzivne || (P.specialne || []).length) ? '<div class="v-cipy">' + (P.exkluzivne ? '<span class="v-cip">Exkluzívne</span>' : "") + (P.specialne || []).filter(function (s) { return s !== "Exkluzívne"; }).map(function (s) { return '<span class="v-cip">' + esc(s) + "</span>"; }).join("") + "</div>" : "") +
+      (kluc.length ? '<div class="v-kluc">' + kluc.map(function (k) { return "<div><b>" + esc(k[0]) + "</b><span>" + esc(k[1]) + "</span></div>"; }).join("") + "</div>" : "") + "</section>" +
+      (P.intro || P.popis ? '<section class="v-box"><h2>Popis</h2>' + (P.intro ? '<p class="v-intro">' + esc(P.intro) + "</p>" : "") + (P.popis ? '<div class="v-popis">' + esc(P.popis) + "</div>" : "") + "</section>" : "") +
+      (par.length ? '<section class="v-box"><h2>Parametre</h2><dl class="v-par">' + par.map(function (x) { return "<div><dt>" + esc(x[0]) + "</dt><dd>" + esc(x[1]) + "</dd></div>"; }).join("") + "</dl></section>" : "") +
+      ((P.vybavenie || []).length ? '<section class="v-box"><h2>Vybavenie a siete</h2><div class="v-vyb">' + P.vybavenie.map(function (v) { return "<span>" + esc(v) + "</span>"; }).join("") + "</div></section>" : "") +
+      (P.virtualna_prehliadka || P.video ? '<section class="v-box"><h2>Prehliadka</h2><div class="v-odkazy">' +
+        (P.virtualna_prehliadka ? '<a class="v-btn" href="' + esc(P.virtualna_prehliadka) + '" target="_blank" rel="noopener">🧭 Virtuálna prehliadka 3D</a>' : "") +
+        (P.video ? '<a class="v-btn" href="' + esc(P.video) + '" target="_blank" rel="noopener">▶️ Video</a>' : "") + "</div></section>" : "") +
+      (P.lat && P.lon ? '<section class="v-box"><h2>Poloha</h2><div class="v-mapa" id="mapa"></div><p class="v-lok" style="margin:8px 0 0;font-size:14px">Poloha je orientačná.</p></section>' : "") +
+      '</div><aside class="v-side">' + makler() + "</aside></div>" +
+      '<div class="v-mob-lista">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Volať</a><a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(mk.telefon)) + '" target="_blank" rel="noopener">WhatsApp</a>' :
+        '<a class="v-btn zlate" href="mailto:' + esc(mk.email || "") + '">✉️ Napísať</a><span></span>') + '<button class="v-btn" type="button" data-zdielat>🔗 Zdieľať</button></div>';
+    napoj();
+  }
+  function lightbox() {
+    var F = P.fotky || []; if (!F.length) return;
+    var lb = document.createElement("div"); lb.className = "v-lb"; lb.setAttribute("role", "dialog"); lb.setAttribute("aria-label", "Fotky");
+    function kresli() {
+      lb.innerHTML = '<img src="' + esc(T.fotkaUrl(F[g])) + '" alt=""><button class="v-zavriet" type="button" aria-label="Zavrieť">✕</button>' +
+        (F.length > 1 ? '<button class="v-sip l" type="button" data-lb="-1" aria-label="Predchádzajúca">‹</button><button class="v-sip r" type="button" data-lb="1" aria-label="Ďalšia">›</button>' : "") +
+        '<span class="v-poc">' + (g + 1) + " / " + F.length + "</span>";
+    }
+    function posun(k) { g = (g + k + F.length) % F.length; kresli(); }
+    function zavri() { lb.remove(); document.removeEventListener("keydown", kl); vykresli(); }
+    function kl(e) { if (e.key === "Escape") zavri(); if (e.key === "ArrowRight") posun(1); if (e.key === "ArrowLeft") posun(-1); }
+    lb.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-lb]"); if (b) { posun(Number(b.dataset.lb)); return; }
+      if (e.target.closest(".v-zavriet") || e.target === lb) zavri();
+    });
+    var x0 = null;
+    lb.addEventListener("touchstart", function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    lb.addEventListener("touchend", function (e) { if (x0 == null) return; var dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) posun(dx < 0 ? 1 : -1); x0 = null; });
+    document.addEventListener("keydown", kl);
+    kresli(); document.body.appendChild(lb);
+  }
+  function napoj() {
+    document.querySelectorAll("[data-zdielat]").forEach(function (b) { b.onclick = zdielat; });
+    document.querySelectorAll("[data-g]").forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); g = (g + Number(b.dataset.g) + P.fotky.length) % P.fotky.length; vykresli(); }; });
+    document.querySelectorAll("[data-gi]").forEach(function (b) { b.onclick = function () { g = Number(b.dataset.gi); vykresli(); }; });
+    var hl = document.getElementById("gal-hl"); if (hl) hl.addEventListener("click", function (e) { if (!e.target.closest(".v-sip")) lightbox(); });
+    var mapa = document.getElementById("mapa");
+    if (mapa) nacitajLeaflet().then(function () {
+      var m = L.map(mapa, { scrollWheelZoom: false }).setView([P.lat, P.lon], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(m);
+      L.circle([P.lat, P.lon], { radius: 180, color: "#a8862f", fillColor: "#dab967", fillOpacity: .3, weight: 2 }).addTo(m);
+    }, function () { mapa.innerHTML = '<div class="v-nic">Mapa nie je dostupná.</div>'; });
+  }
+  function nacitajLeaflet() {
+    if (window.L) return Promise.resolve();
+    return new Promise(function (ok, chyba) {
+      var c = document.createElement("link"); c.rel = "stylesheet"; c.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(c);
+      var s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"; s.onload = ok; s.onerror = chyba; document.head.appendChild(s);
+    });
+  }
+  if (!id) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Ponuka nenájdená</b>V odkaze chýba číslo ponuky.</div>'; return; }
+  T.rpc("verejna_ponuka", { p_id: id }).then(function (p) {
+    if (!p) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Ponuka už nie je dostupná</b>Pozrite si ďalšie ponuky na <a href="https://www.alphareality.sk/">www.alphareality.sk</a>.</div>'; return; }
+    P = p; vykresli();
+    if (!T.param("nahlad")) T.rpc("zaznamenat_zobrazenie", { p_id: id }).catch(function () {});
+  }).catch(function (e) {
+    document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Ponuku sa nepodarilo načítať</b>' + esc(e.message || e) + "</div>";
+  });
+})();
+</script>
+</body>
+</html>
