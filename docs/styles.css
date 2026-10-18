@@ -587,3 +587,115 @@ a.brand:hover img { filter: drop-shadow(0 0 8px rgba(218,185,103,.55)); transfor
 .orez-sipky [aria-label=hore] { grid-area: h } .orez-sipky [aria-label=vlavo] { grid-area: l } .orez-sipky [aria-label=stred] { grid-area: s }
 .orez-sipky [aria-label=vpravo] { grid-area: p } .orez-sipky [aria-label=dole] { grid-area: d }
 .orez-karta .form-actions { justify-content: center; width: 100% }
+
+/* ---------- hlavná obrazovka: hero s pozdravom */
+.hero { position: relative; overflow: hidden; border-radius: 20px; padding: 22px 22px 18px; margin: 4px 0 14px; color: #f4efe2;
+  background: radial-gradient(120% 140% at 100% 0%, rgba(218,185,103,.35) 0%, rgba(218,185,103,0) 55%), linear-gradient(135deg, #23272e 0%, #2f343c 60%, #3a3324 100%);
+  box-shadow: 0 10px 30px rgba(20, 22, 26, .18) }
+.hero::after { content: ""; position: absolute; right: -60px; bottom: -80px; width: 260px; height: 260px; border-radius: 50%; border: 36px solid rgba(218,185,103,.08); pointer-events: none }
+.hero.oslava { background: radial-gradient(120% 140% at 100% 0%, rgba(232,123,164,.35) 0%, rgba(232,123,164,0) 55%), linear-gradient(135deg, #2b2330 0%, #3a2f3c 55%, #4a3a24 100%) }
+.hero-hlava { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; position: relative; z-index: 1 }
+.hero-foto .av { box-shadow: 0 0 0 3px #dab967, 0 0 0 7px rgba(218,185,103,.25); font-size: 26px !important }
+.hero-text { flex: 1 1 260px; min-width: 0 }
+.hero-dnes { font-size: 13px; color: #cfc9b8 }
+.hero-dnes b { color: #f3d98b }
+.hero h2 { font-family: var(--display); font-size: 34px; margin: 2px 0 0; line-height: 1.15; color: #fff; letter-spacing: .01em }
+.hero-oslava { display: inline-block; margin-top: 8px; background: rgba(255,255,255,.12); border: 1px solid rgba(243,217,139,.5); color: #fff4d6; border-radius: 999px; padding: 5px 14px; font-weight: 700; font-size: 14px }
+.hero-ciel { display: grid; gap: 6px; justify-items: center }
+.hero-ciel-n { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #cfc9b8 }
+.kruhy { display: flex; gap: 14px }
+.kruh { position: relative; width: 78px; display: grid; justify-items: center; gap: 2px }
+.kruh svg { width: 72px; height: 72px; transform: rotate(-90deg) }
+.kruh circle { fill: none; stroke-width: 7 }
+.kruh .k-pod { stroke: rgba(255,255,255,.14) }
+.kruh .k-post { stroke: #dab967; stroke-linecap: round; transition: stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1) }
+.kruh.splnene .k-post { stroke: #4cc483 }
+[data-anim] .kruh .k-post { animation: kruhNabeh 1.1s .3s cubic-bezier(.2,.8,.2,1) both }
+@keyframes kruhNabeh { from { stroke-dashoffset: var(--obvod) } }
+.k-text { position: absolute; top: 0; width: 72px; height: 72px; display: grid; place-content: center; text-align: center; line-height: 1.05 }
+.k-text b { font-family: var(--display); font-size: 20px; color: #fff }
+.k-text small { font-size: 10px; color: #cfc9b8 }
+.kruh > span { font-size: 11px; color: #cfc9b8 }
+.hero-veta { position: relative; z-index: 1; margin: 16px 0 0; padding: 14px 16px 10px 48px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); border-radius: 14px }
+.hero-veta::before { content: "“"; position: absolute; left: 12px; top: -2px; font-family: Georgia, serif; font-size: 56px; line-height: 1; color: #dab967 }
+.hero-veta blockquote { margin: 0; font-size: 18px; line-height: 1.5; font-style: italic; color: #fff }
+.hero-veta figcaption { margin-top: 2px; font-size: 12px; color: #cfc9b8 }
+.hero-znak { position: absolute; right: 18px; top: 14px; font-family: var(--display); font-weight: 800; font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: rgba(255,255,255,.35); z-index: 1 }
+.hero-znak span { color: rgba(218,185,103,.7) }
+[data-anim] .hero { animation: vstupZoom .5s cubic-bezier(.2,.8,.2,1) both }
+[data-anim] .hero-veta { animation: vstup .5s .25s ease-out both }
+@media (max-width: 640px) {
+  .hero { padding: 18px 16px 14px; border-radius: 16px }
+  .hero h2 { font-size: 27px }
+  .hero-znak { display: none }
+  .hero-veta blockquote { font-size: 16px }
+  .hero-ciel { width: 100%; justify-items: start }
+}
+
+/* ---------- reakcie */
+.reakcie { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px }
+.reakcia { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer;
+  transition: transform .12s ease, background-color .15s ease, border-color .15s ease }
+.reakcia:hover { transform: translateY(-2px) scale(1.06) }
+.reakcia:active { transform: scale(.94) }
+.reakcia .re-e { font-size: 17px; line-height: 1 }
+.reakcia .re-n { font-weight: 700; font-size: 12px }
+.reakcia .re-t { font-weight: 700; font-size: 12px }
+.reakcia[aria-pressed="true"] { background: var(--gold-soft); border-color: var(--gold-strong) }
+.reakcia.five { border-style: dashed }
+.reakcia.five[aria-pressed="true"] { border-style: solid }
+.hero .reakcia { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: #fff }
+.hero .reakcia[aria-pressed="true"] { background: rgba(218,185,103,.3); border-color: #dab967 }
+.letiace { position: fixed; z-index: 120; font-size: 24px; pointer-events: none; animation: letiace 1.4s ease-out both }
+@keyframes letiace { 0% { transform: translate(0, 0) scale(.6); opacity: 0 } 15% { opacity: 1; transform: translate(0, -10px) scale(1.2) } 100% { transform: translate(var(--dx), -140px) scale(.9); opacity: 0 } }
+.konfety { position: fixed; inset: 0; z-index: 130; pointer-events: none }
+
+/* ---------- odkaz pre všetkých, oslavy ostatných */
+.odkaz-telo { min-width: 0; flex: 1 }
+.oslavy-ini { display: grid; gap: 8px; margin: 0 0 12px }
+.oslava-riadok { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: linear-gradient(90deg, rgba(232,123,164,.14), var(--surface)); border: 1px solid color-mix(in srgb, #e87ba4 45%, var(--line)); border-radius: 14px; padding: 10px 14px }
+.oslava-riadok > span:not(.av) { flex: 1 1 200px; font-size: 15px }
+[data-anim] .oslava-riadok { animation: vstup .45s .15s ease-out both }
+
+/* ---------- Môj deň */
+.moj-den { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px 12px; margin: 0 0 14px }
+.moj-den h3 { margin: 0 0 10px; font-family: var(--display); font-size: 16px }
+.md-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+.md-stlpec { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+.md-hlava { display: flex; align-items: center; gap: 6px; font-size: 14px }
+.md-stlpec ul { margin: 2px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 13px }
+.md-stlpec li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.md-stlpec time { font-weight: 700; color: var(--gold); margin-right: 4px }
+.md-stlpec p { margin: 2px 0 0; font-size: 13px }
+.md-cislo { font-family: var(--display); font-size: 22px; color: var(--gold) }
+.md-stlpec .btn-link { margin-top: auto; align-self: flex-start; color: var(--gold); font-weight: 600; text-decoration: none }
+[data-anim] .moj-den { animation: vstup .45s .2s ease-out both }
+@media (max-width: 760px) { .md-grid { grid-template-columns: 1fr } }
+
+/* ---------- chat: systémové správy */
+.sprava-sys { align-self: center; max-width: min(560px, 92%); margin: 10px 0 4px; text-align: center; background: linear-gradient(135deg, var(--gold-soft), var(--surface)); border: 1px solid var(--gold-strong);
+  border-radius: 14px; padding: 8px 14px; font-size: 14px; line-height: 1.45 }
+.sprava-sys.uspech { background: linear-gradient(135deg, var(--good-soft), var(--surface)); border-color: var(--good) }
+.sprava-sys time { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px }
+
+/* ---------- pochvala */
+.pochvala-var { position: fixed; inset: 0; z-index: 105; display: grid; place-items: center; padding: 16px; background: rgba(15,17,20,.55); backdrop-filter: blur(4px); animation: fadeIn .25s ease-out }
+.pochvala-karta { width: min(400px, 100%); background: var(--surface); border-radius: 20px; padding: 26px 22px 20px; text-align: center; display: grid; gap: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  border-top: 5px solid var(--gold-strong); animation: vstupZoom .4s cubic-bezier(.2,.8,.2,1) }
+.pochvala-hviezda { font-size: 54px; line-height: 1; animation: hviezda 1.2s ease-out both }
+@keyframes hviezda { 0% { transform: scale(0) rotate(-90deg) } 60% { transform: scale(1.25) rotate(10deg) } 100% { transform: scale(1) rotate(0) } }
+.pochvala-karta h3 { margin: 0; font-size: 20px }
+.pochvala-text { margin: 0; font-size: 17px; line-height: 1.5 }
+.pochvala-podpis { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: 13px }
+
+/* ---------- makléri: dátumy, ciele, pochvala, obce */
+.mk-datumy { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px }
+.mk-pochvala { grid-column: 1 / -1; display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; background: var(--gold-soft); border-radius: 10px; padding: 10px }
+.mk-pochvala textarea { flex: 1 1 280px }
+.mk-reakcie { display: block; margin-top: 4px }
+@media (max-width: 900px) { .mk-datumy { grid-template-columns: 1fr 1fr } }
+.obce-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 }
+.chip-obec { display: inline-flex; align-items: center; gap: 4px; background: var(--gold-soft); border-radius: 999px; padding: 3px 4px 3px 12px; font-size: 13px; font-weight: 600 }
+.chip-obec button { border: 0; background: none; cursor: pointer; font-size: 16px; line-height: 1; color: var(--muted); padding: 0 6px }
+.obce-pridat { display: flex; gap: 8px; max-width: 420px }
+.obce-pridat input { flex: 1 }
