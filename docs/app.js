@@ -26,7 +26,8 @@
     sch: [], hist: {}, open: {}, tab: "inzeraty", shown: 100, schEdit: null, delConfirm: null, pwdOpen: false,
     prip: [], zvonOpen: false, pripForm: null, ohlasene: {}, ozn: {}, hesla: {}, hesloEdit: null,
     obce: [], lastInzLoad: 0, newUser: null,
-    f: { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy" },
+    f: { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", stav: "aktivne" },
+    arch: {},
     sf: { q: "", makler: "", typ: "" },
   };
   try {
@@ -187,7 +188,7 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<img class="login-logo" src="logo.png?v=202610171957" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
+      '<img class="login-logo" src="logo.png?v=202610180932" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -214,7 +215,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610171957" alt="Alpha Reality">' +
+      '<img class="login-logo" src="logo.png?v=202610180932" alt="Alpha Reality">' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -350,7 +351,7 @@
     if (admin()) tabs.push(["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<div class="brand"><img src="logo.png?v=202610171957" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
+      '<div class="brand"><img src="logo.png?v=202610180932" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>";
       }).join("") + "</nav>" +
@@ -430,6 +431,7 @@
       '<select id="f-okres" aria-label="Okres alebo obec"><option value="">Oba okresy</option>' +
       '<option value="o:Spišská Nová Ves">Okres Spišská Nová Ves</option><option value="o:Levoča">Okres Levoča</option>' +
       '<optgroup label="Obec">' + S.obce.map(function (o) { return '<option value="' + esc(o[0]) + '">' + esc(o[0]) + " (" + o[1] + ")</option>"; }).join("") + "</optgroup></select>" +
+      '<select id="f-stav" aria-label="Stav inzerátu"><option value="aktivne">Aktívne na portáloch</option><option value="zmiznute">Zmiznuté z portálov (archív)</option><option value="vsetky">Aktívne aj zmiznuté</option></select>' +
       '<select id="f-novost" aria-label="Kedy pribudli"><option value="">Kedykoľvek</option><option value="1">Nové za 24 h</option>' +
       '<option value="3">Nové za 3 dni</option><option value="7">Nové za 7 dní</option><option value="30">Nové za 30 dní</option></select>' +
       (S.canUnder ? '<label class="chk"><input type="checkbox" id="f-under"' + (f.under ? " checked" : "") + "> Len podhodnotené</label>" : "") +
@@ -439,7 +441,7 @@
       "</div></div>";
     if (!S.canUnder) { f.under = false; if (f.sort === "under") f.sort = "novy"; }
     $("#f-okres").value = f.okres; if ($("#f-okres").value !== f.okres) f.okres = "";
-    $("#f-novost").value = f.novost; $("#f-sort").value = f.sort;
+    $("#f-novost").value = f.novost; $("#f-sort").value = f.sort; $("#f-stav").value = f.stav || "aktivne";
     var fl = $("#filters");
     fl.addEventListener("click", function (e) {
       var b = e.target.closest(".seg button"); if (!b) return;
@@ -453,6 +455,7 @@
     $("#q").addEventListener("input", function () { var v = this.value; clearTimeout(t); t = setTimeout(function () { f.q = v; S.shown = 100; vykresliZoznam(); }, 150); });
     $("#f-okres").onchange = function () { f.okres = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
     $("#f-novost").onchange = function () { f.novost = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
+    $("#f-stav").onchange = function () { f.stav = this.value; S.shown = 100; ulozFiltre(); vykresliStaty(); vykresliZoznam(); };
     $("#f-sort").onchange = function () { f.sort = this.value; ulozFiltre(); vykresliZoznam(); };
     if ($("#f-under")) $("#f-under").onchange = function () { f.under = this.checked; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
   }
@@ -467,8 +470,11 @@
   }
 
   function viditelne() {
-    // aktívne inzeráty + neaktívne, s ktorými niekto pracuje
+    // stav: aktívne (+ zmiznuté, s ktorými niekto pracuje) / len zmiznuté z portálov / všetky
+    var stav = S.f.stav || "aktivne";
     return S.inz.filter(function (z) {
+      if (stav === "vsetky") return true;
+      if (stav === "zmiznute") return !z.aktivny;
       if (z.aktivny) return true;
       var p = S.prev[z.id];
       return p && (p.makler_id || p.pocet_hovorov > 0);
@@ -579,7 +585,7 @@
       '<a class="title" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(z.nazov) + "</a>" +
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
       (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + "<span>v skeneri " + ago(z.prvy_krat) + "</span></div>" +
-      '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") + (!z.aktivny ? '<span class="pill gone">Už nie je na portáli</span>' : "") +
+      '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
       '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
       (ozn ? '<span class="pill rk">Označil ' + esc(meno(ozn.oznacil)) + "</span>" : "") +
       (o && o.podhodnotene ? '<span class="pill priv">Pod cenou</span>' : "") +
@@ -605,6 +611,7 @@
     h += '<button class="btn ghost" type="button" data-act="zvon" title="Nastaviť pripomienku">🔔 Pripomenúť</button>';
     if (ozn && ozn.predajca_typ === "rk") h += '<button class="btn ghost" type="button" data-act="oznac-zrus" title="Vrátiť rozpoznanie skenera">Nie je RK</button>';
     else if (ptyp(z) !== "rk") h += '<button class="btn ghost" type="button" data-act="oznac-rk" title="Presunúť medzi realitné kancelárie">Je to RK</button>';
+    h += '<button class="btn ghost" type="button" data-act="detail">Detail</button>';
     h += '<button class="btn ghost" type="button" data-act="hist">História</button>';
     if (maj && (moj || admin())) h += '<button class="btn ghost" type="button" data-act="uvolnit">Uvoľniť</button>';
     if (admin()) {
@@ -620,6 +627,7 @@
 
     var otv = S.open[z.id];
     if (otv === "zvon") h += '<div class="panel">' + formPripomienka({ inzerat_id: z.id }) + "</div>";
+    if (otv === "detail") h += detailPanel(z);
     if (otv === "hovor" && mozeUpravit) {
       h += '<form class="panel" data-form="hovor"><h4>Ako dopadol hovor</h4><div class="form-grid">' +
         '<label class="field"><span>Výsledok</span><select name="vysledok" required><option value="">Vyberte…</option>' +
@@ -636,6 +644,30 @@
         }).join("") + "</div>") + (hist.length > 1 ? '<h4>Vývoj ceny</h4><div class="meta">' + hist.map(function (x) { return datum(x[0]) + ": " + eur(x[1]); }).join(" → ") + "</div>" : "") + "</div>";
     }
     return h + "</article>";
+  }
+
+  function fotoUrl(cesta) { return CFG.supabaseUrl + "/storage/v1/object/public/archiv/" + cesta; }
+  function detailPanel(z) {
+    var h = '<div class="panel detail">';
+    if (!(z.id in S.arch)) return h + '<div class="meta">Načítavam uložené údaje…</div></div>';
+    var a = S.arch[z.id], hist = z.historia_cien || [];
+    var fotky = a ? (a.fotky.length ? a.fotky.map(fotoUrl) : z.aktivny ? a.fotky_portal.slice(0, 8) : []) : [];
+    h += '<div class="meta">V skeneri od ' + datum(z.prvy_krat, true) + " · " + (z.aktivny ? "na portáli aktívny" : "<b>z portálu zmizol</b>, naposledy videný " + datum(z.naposledy)) +
+      (a ? " · uložené " + datum(a.ulozene) + (a.fotky.length ? " s " + a.fotky.length + " fotkami" : "") : "") + "</div>";
+    if (fotky.length) h += '<div class="d-fotky">' + fotky.map(function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img loading="lazy" referrerpolicy="no-referrer" src="' + esc(u) + '" alt=""></a>'; }).join("") + "</div>";
+    var par = a && a.parametre ? a.parametre : {}, riadky = [];
+    if (Array.isArray(par.vlastnosti)) riadky = par.vlastnosti.slice();
+    Object.keys(par).forEach(function (k) {
+      var v = par[k];
+      if (k === "vlastnosti" || v == null || v === "" || typeof v === "object" || typeof v === "boolean") return;
+      riadky.push(k.charAt(0).toUpperCase() + k.slice(1) + ": " + v);
+    });
+    if (riadky.length) h += '<div class="d-par">' + riadky.map(function (r) { return "<span>" + esc(r) + "</span>"; }).join("") + "</div>";
+    var popis = (a && a.popis) || z.popis;
+    if (popis) h += '<div class="d-popis">' + esc(popis) + "</div>";
+    if (!a) h += '<div class="meta">Celý popis a fotky skener ešte neuložil – urobí to pri najbližšej kontrole portálov.</div>';
+    if (hist.length > 1) h += '<div class="meta">Vývoj ceny: ' + hist.map(function (x) { return datum(x[0]) + " " + eur(x[1]); }).join(" → ") + "</div>";
+    return h + "</div>";
   }
 
   function popisAktivity(x) {
@@ -683,6 +715,16 @@
       return akcia(id, async function () { await rpc("oznacit_kontakt", { p_inzerat: id, p_typ: act, p_stav: stav }); });
     }
     if (act === "zvon") { S.open[id] = S.open[id] === "zvon" ? null : "zvon"; return prekresliKartu(id); }
+    if (act === "detail") {
+      if (S.open[id] === "detail") { S.open[id] = null; return prekresliKartu(id); }
+      S.open[id] = "detail"; prekresliKartu(id);
+      if (!(id in S.arch)) {
+        var ra = await sb.from("archiv").select("*").eq("inzerat_id", id).maybeSingle();
+        S.arch[id] = ra.data || null;
+        prekresliKartu(id);
+      }
+      return;
+    }
     if (act === "oznac-rk" || act === "oznac-zrus") {
       try {
         await rpc("oznacit_predajcu", { p_inzerat: id, p_typ: act === "oznac-rk" ? "rk" : null });

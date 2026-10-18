@@ -980,6 +980,130 @@ def posli_email(predmet, html):
         return False
 
 
+# ---------------------------------------------------------------- ARCHÍV (popis + fotky, ostanú aj po zmazaní inzerátu)
+
+def _fotka_b64(url):
+    """Stiahne fotku, zmenší na max. 1000 px a vráti JPEG v base64 (alebo None)."""
+    import base64, io
+    try:
+        r = SESSION.get(url, timeout=30)
+        if r.status_code != 200 or len(r.content) < 2000:
+            return None
+        from PIL import Image
+        im = Image.open(io.BytesIO(r.content)).convert("RGB")
+        im.thumbnail((900, 900))
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=72, optimize=True)
+        return base64.b64encode(buf.getvalue()).decode()
+    except Exception:  # noqa
+        return None
+
+
+def archiv_bazos(url):
+    h = get(url)
+    if not h:
+        return None
+    s = BeautifulSoup(h, "html.parser")
+    popis = s.select_one("div.popisdetail")
+    pid = re.search(r"/inzerat/(\d+)/", url).group(1)
+    cisla = sorted({int(n) for n in re.findall(r"https://www\.bazos\.sk/img/(\d+)/\d+/" + pid + r"\.jpg", h)})
+    fotky = [f"https://www.bazos.sk/img/{n}/{pid[-3:]}/{pid}.jpg" for n in cisla]
+    par = {}
+    lv = s.select_one(".listadvlevo")
+    if lv:
+        t = lv.get_text("\n", strip=True).split("\n")
+        for i, x in enumerate(t):
+            if x.endswith(":") and i + 1 < len(t) and "zobraz" not in t[i + 1]:
+                par[x.rstrip(":")] = t[i + 1]
+    return {"popis": popis.get_text("\n", strip=True) if popis else None, "parametre": par, "fotky_portal": fotky}
+
+
+def archiv_nehnutelnosti(inzerat_id):
+    ad_id = inzerat_id.split(":", 1)[1]
+    h = get(f"https://www.nehnutelnosti.sk/detail/{ad_id}/x")
+    if not h:
+        return None
+    d = flight_data(h)
+    dec = json.JSONDecoder()
+    obj = None
+    for m in re.finditer(r'\{"id":"' + re.escape(ad_id) + '"', d):
+        try:
+            o, _ = dec.raw_decode(d, m.start())
+            if "parameters" in o and "media" in o:
+                obj = o
+                break
+        except json.JSONDecodeError:
+            continue
+    if not obj:
+        return None
+    popis = obj.get("description") or ""
+    ref = re.fullmatch(r"\$([0-9a-f]+)", popis)
+    if ref:
+        m = re.search(r"(?:^|\n)" + ref.group(1) + r":T([0-9a-f]+),", d)
+        popis = d[m.end():].encode("utf-8")[:int(m.group(1), 16)].decode("utf-8", "ignore") if m else ""
+    par = dict(obj.get("parameters") or {})
+    par.pop("price", None)
+    par["lokalita"] = (obj.get("location") or {}).get("name")
+    adv = obj.get("advertiser") or {}
+    par["predajca"] = adv.get("name")
+    fotky = [f.get("mediumUrl") or f.get("largeUrl") for f in ((obj.get("media") or {}).get("photos") or [])]
+    return {"popis": popis or None, "parametre": par, "fotky_portal": [f for f in fotky if f]}
+
+
+def archiv_topreality(url, pid):
+    h = get(url)
+    if not h:
+        return None
+    s = BeautifulSoup(h, "html.parser")
+    popis = s.select_one(".description")
+    par = {"vlastnosti": [re.sub(r"\s+", " ", li.get_text(" ", strip=True)).replace(" m 2", " m²")
+                          for li in s.select(".properties li")][:25]}
+    cisla = sorted({int(n) for n in re.findall(r"/topfoto/t/\d+/" + pid + r"-(\d+)-\d+\.jpg", h)})
+    fotky = [f"https://www.topreality.sk/topfoto/t/{pid[:3]}/{pid}-{n}-18.jpg" for n in cisla]
+    return {"popis": popis.get_text("\n", strip=True) if popis else None, "parametre": par, "fotky_portal": fotky}
+
+
+def archivuj(plny):
+    """Uloží popis a fotky inzerátov, ktoré ešte nie sú v archíve (najprv súkromné a rozpracované)."""
+    if not POUZI_DB:
+        return
+    zoznam = _rpc("skener_na_archiv", p_kluc=SKENER_KLUC, p_pocet=150 if plny else 40) or []
+    if not zoznam:
+        return
+    start, hotovo, fotiek = time.time(), 0, 0
+    for z in zoznam:
+        if time.time() - start > (20 if plny else 7) * 60:
+            break
+        try:
+            if z["id"].startswith("bazos:"):
+                a = archiv_bazos(z["url"])
+            elif z["id"].startswith("un:"):
+                a = archiv_nehnutelnosti(z["id"])
+            elif z["id"].startswith("topreality:"):
+                a = archiv_topreality(z["url"], z["id"].split(":", 1)[1])
+            else:
+                a = None
+            if not a:
+                continue
+            telo = {"inzerat_id": z["id"], **a, "fotky": []}
+            if z.get("fotky"):
+                for u in a["fotky_portal"][:8]:
+                    f = _fotka_b64(u)
+                    if f:
+                        telo["fotky"].append(f)
+                    time.sleep(0.3)
+            r = requests.post(f"{DB_URL}/functions/v1/archiv", json=telo, timeout=120,
+                              headers={"apikey": DB_KEY, "Authorization": f"Bearer {DB_KEY}", "x-kluc": SKENER_KLUC})
+            if r.status_code == 200:
+                hotovo += 1
+                fotiek += r.json().get("fotky", 0)
+            else:
+                log(f"  ! archív {z['id']}: {r.status_code} {r.text[:150]}")
+        except Exception as e:  # noqa
+            log(f"  ! archív {z['id']}: {e}")
+    log(f"Archív: uložených {hotovo} inzerátov, {fotiek} fotiek")
+
+
 # ---------------------------------------------------------------- hlavný beh
 
 def main():
@@ -1141,6 +1265,11 @@ def main():
     if prvy_beh:
         meta["spusteny"] = NOW_ISO
     uloz_stav(stav)
+
+    try:
+        archivuj(plny)
+    except Exception as e:  # noqa – archív nesmie zastaviť upozornenia
+        log(f"! archív zlyhal: {e}")
 
     if "--bez-emailu" in args:
         posli = False

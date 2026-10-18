@@ -278,3 +278,10 @@ input[type="datetime-local"] { font-size: 14px; background: var(--surface); bord
   .mk-card { grid-template-columns: auto minmax(0, 1fr); }
   .mk-prava, .mk-heslo, .mk-akcie { grid-column: 1 / -1 }
 }
+
+/* ---------- detail inzerátu (archív) */
+.detail .d-fotky { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px }
+.detail .d-fotky img { height: 120px; width: auto; border-radius: 6px; display: block; background: var(--gold-soft) }
+.detail .d-par { display: flex; flex-wrap: wrap; gap: 6px }
+.detail .d-par span { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12.5px }
+.detail .d-popis { white-space: pre-line; font-size: 14px; line-height: 1.55; max-height: 320px; overflow: auto; background: var(--surface-2); border-radius: 8px; padding: 10px 12px }
