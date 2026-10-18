@@ -195,7 +195,7 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<img class="login-logo" src="logo.png?v=202610181700" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
+      '<img class="login-logo" src="logo.png?v=202610181730" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -222,7 +222,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610181700" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
+      '<img class="login-logo" src="logo.png?v=202610181730" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -251,7 +251,8 @@
       return obrazovkaLogin(r.data && !r.data.aktivny ? "Váš účet je deaktivovaný. Kontaktujte administrátora." : "Účet sa nenašiel. Kontaktujte administrátora.");
     }
     S.me = r.data;
-    S.tab = "domov";
+    S.tab = tabZAdresy() || "domov";
+    history.replaceState({ tab: S.tab }, "", "#" + S.tab);
     try { await nacitajVsetko(); } catch (e) { toast(chybaText(e), true); }
     vykresli();
     setInterval(obnov, 60000);
@@ -275,7 +276,33 @@
         '<p class="meta">V Chrome ťuknite vpravo hore na <b>⋮</b> → <b>Pridať na plochu</b> (alebo <b>Inštalovať aplikáciu</b>).</p>') + "</div>";
   }
 
-  async function odhlasit() { await sb.auth.signOut(); location.reload(); }
+  // ---------- navigácia: každá sekcia je krok v histórii prehliadača (funguje tlačidlo Späť)
+  var TABY = ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "chat", "vykon", "makleri"];
+  function tabPovoleny(t) { return TABY.indexOf(t) >= 0 && (admin() || (t !== "vykon" && t !== "makleri")); }
+  function tabZAdresy() {
+    var t = decodeURIComponent(location.hash.replace(/^#/, "")).split("/")[0];
+    return S.me && tabPovoleny(t) ? t : null;
+  }
+  function prejdi(tab, jeden) {
+    if (!tabPovoleny(tab)) tab = "domov";
+    if (tab === S.tab && !jeden && !S.jedenId) { window.scrollTo(0, 0); return; }
+    S.tab = tab; S.jedenId = jeden || null; S.shown = 100;
+    if (tab === "vykon") S.vykon = null;
+    ulozFiltre();
+    history.pushState({ tab: tab, jeden: S.jedenId }, "", "#" + tab);
+    vykresli(); window.scrollTo(0, 0);
+  }
+  window.addEventListener("popstate", function (e) {
+    if (!S.me) return;
+    var st = e.state || { tab: tabZAdresy() || "domov" };
+    S.tab = tabPovoleny(st.tab) ? st.tab : "domov";
+    S.jedenId = st.jeden || null; S.shown = 100;
+    if (S.tab === "vykon") S.vykon = null;
+    S.pwdOpen = false; S.zvonOpen = false;
+    vykresli(); window.scrollTo(0, 0);
+  });
+
+  async function odhlasit() { await sb.auth.signOut(); history.replaceState(null, "", location.pathname); location.reload(); }
 
   // ------------------------------------------------------------ dáta
   async function vsetkyRiadky(tabulka, stlpce, poradie, uprav) {
@@ -438,7 +465,7 @@
     if (admin()) tabs.push(["vykon", "Výkon"], ["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610181700" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
+      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610181730" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] +
           (t[0] === "chat" ? ' <span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
@@ -453,7 +480,7 @@
       '<footer><div class="wrap" id="foot"></div></footer>';
     $("header.top").addEventListener("click", function (e) {
       var t = e.target.closest("[data-tab]");
-      if (t) { e.preventDefault(); S.tab = t.dataset.tab; S.shown = 100; if (S.tab === "vykon") S.vykon = null; ulozFiltre(); vykresli(); window.scrollTo(0, 0); return; }
+      if (t) { e.preventDefault(); prejdi(t.dataset.tab); return; }
       var a = e.target.closest("[data-act]");
       if (!a) return;
       if (a.dataset.act === "odhlasit") odhlasit();
@@ -696,7 +723,7 @@
     if (out.length > S.shown) h += '<button class="btn more" type="button" id="more">Zobraziť ďalšie (zostáva ' + nf.format(out.length - S.shown) + ")</button>";
     el.innerHTML = h;
     if ($("#more")) $("#more").onclick = function () { S.shown += 100; vykresliZoznam(); };
-    if ($("#vsetky-inz")) $("#vsetky-inz").onclick = function () { S.jedenId = null; vykresliZoznam(); };
+    if ($("#vsetky-inz")) $("#vsetky-inz").onclick = function () { S.jedenId = null; history.replaceState({ tab: "inzeraty" }, "", "#inzeraty"); vykresliZoznam(); };
   }
 
   function stavPrace(p) {
@@ -1219,7 +1246,7 @@
     var k = d.dataset.domov;
     if (k === "zvon") { S.zvonOpen = true; S.pripForm = null; vykresliZvoncek(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     if (k === "profil") { S.pwdOpen = true; vykresliHeslo(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
-    S.tab = k; S.shown = 100; if (k === "vykon") S.vykon = null; ulozFiltre(); vykresli(); window.scrollTo(0, 0);
+    prejdi(k);
   });
 
   // ------------------------------------------------------------ NEHNUTEĽNOSTI (ponuka kancelárie)
@@ -1649,8 +1676,8 @@
     var li = e.target.closest("[data-prip-inz]");
     if (li) {
       e.preventDefault();
-      S.jedenId = li.dataset.pripInz;
-      if (S.tab !== "inzeraty") { S.tab = "inzeraty"; vykresli(); } else vykresliZoznam();
+      S.zvonOpen = false;
+      prejdi("inzeraty", li.dataset.pripInz);
       return;
     }
     var ls = e.target.closest("[data-prip-sch]");
@@ -1658,7 +1685,8 @@
       e.preventDefault();
       var r = S.sch.find(function (x) { return x.id === Number(ls.dataset.pripSch); });
       S.sf.q = r ? r.lokalita : ""; S.sf.makler = ""; S.sf.typ = "";
-      S.tab = "schrankovanie"; vykresli();
+      S.zvonOpen = false;
+      prejdi("schrankovanie");
       return;
     }
     var b = e.target.closest("[data-prip-act]");
