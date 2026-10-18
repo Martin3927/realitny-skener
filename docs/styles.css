@@ -22,6 +22,8 @@
   --body: "Public Sans", "Segoe UI", Arial, sans-serif;
   color-scheme: light;
 }
+/* farby grafov – svetlý režim */
+:root { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a }
 /* tmavý režim: podľa systému, alebo ručne prepínačom v hlavičke (data-theme) */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -29,9 +31,11 @@
     --gold: #dab967; --gold-soft: #3a3324; --graphite: #0f1114;
     --good: #4cc483; --good-soft: #1d3428; --warn: #e3b54a; --warn-soft: #3a3020; --bad: #ef8a6d; --bad-soft: #3b2420;
     --info: #94b3d3; --info-soft: #253041; color-scheme: dark;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
   }
 }
 :root[data-theme="dark"] {
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
     --bg: #17191d; --surface: #20232a; --surface-2: #1b1e23; --ink: #ecebe6; --muted: #a2a4a8; --line: #33373f;
     --gold: #dab967; --gold-soft: #3a3324; --graphite: #0f1114;
     --good: #4cc483; --good-soft: #1d3428; --warn: #e3b54a; --warn-soft: #3a3020; --bad: #ef8a6d; --bad-soft: #3b2420;
@@ -189,7 +193,7 @@ tr:last-child td { border-bottom: 0 }
   .sch-cards { display: grid; gap: 8px }
   .user .email { display: none }
   .brand img { height: 40px }
-  .brand-sub { display: none }
+  .brand-sub { font-size: 9px; padding-left: 10px; letter-spacing: .18em }
   .history div { grid-template-columns: 1fr }
 }
 
@@ -332,4 +336,61 @@ a.tel:hover { color: var(--gold) }
 @media (max-width: 640px) {
   .vykon-sum { grid-template-columns: 1fr 1fr }
   .vykon .seg button { flex: 1 1 auto }
+}
+
+/* prekrytie textu SMS v karte makléra */
+.mk-sms { grid-column: 1 / -1 }
+/* blikajúci kurzor mimo políčok */
+body { caret-color: transparent }
+input, textarea, select, [contenteditable="true"] { caret-color: auto }
+.brand, .brand-sub, .login-logo { user-select: none; -webkit-user-select: none }
+/* názov aplikácie a pätička */
+.login-nazov { text-align: center; font-size: 22px !important; letter-spacing: .04em !important; margin-top: -4px !important }
+.login-nazov span { color: var(--gold) }
+.login-box .prava { text-align: center; font-size: 12px; margin-top: 4px }
+#foot p { margin: 0 0 6px }
+#foot .prava { color: var(--muted); font-size: 12px }
+.sms-rod { margin: 8px 0 }
+.sms-rod .seg { margin-top: 4px }
+
+/* grafy výkonu */
+.grafy { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 4px 0 16px }
+.graf { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0 }
+.graf-siroky { grid-column: 1 / -1 }
+.graf-hlava { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 10px }
+.graf-hlava h4, .graf-nadpis { margin: 0; font-size: 14px }
+.graf-nadpis { margin: 4px 0 8px }
+.graf-legenda { display: flex; gap: 12px; font-size: 12px; color: var(--muted) }
+.graf-legenda span, .graf-tip span { display: inline-flex; align-items: center; gap: 5px }
+.graf-legenda i, .graf-tip i { width: 10px; height: 10px; border-radius: 3px; display: inline-block }
+i.s1 { background: var(--s1) } i.s2 { background: var(--s2) } i.s3 { background: var(--s3) }
+.gs { display: grid; grid-template-columns: auto 1fr; gap: 6px; height: 190px }
+.gs-os { display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: var(--muted); text-align: right; transform: translateY(-6px); padding-bottom: 0 }
+.gs-os span:last-child { transform: translateY(6px) }
+.gs-plocha { position: relative; border-bottom: 1px solid var(--muted) }
+.gs-mriezka { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none }
+.gs-mriezka i { border-top: 1px dashed var(--line); display: block }
+.gs-mriezka i:last-child { border: 0 }
+.gs-stlpce { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 2px }
+.gs-den { flex: 1 1 0; height: 100%; display: flex; align-items: flex-end; justify-content: center; position: relative; cursor: default; outline: none }
+.gs-den:hover, .gs-den.aktivny { background: color-mix(in srgb, var(--ink) 5%, transparent) }
+.gs-stack { width: min(70%, 34px); display: flex; flex-direction: column-reverse; gap: 2px; border-radius: 4px 4px 0 0; overflow: hidden; min-height: 0 }
+.gs-stack i { display: block; min-height: 2px }
+.gs-val { position: absolute; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--ink); margin-bottom: 2px; font-weight: 600 }
+.gs-x { display: flex; gap: 2px; margin-left: 34px; font-size: 11px; color: var(--muted); line-height: 1.2; margin-top: 4px }
+.gs-x span { flex: 1 1 0; text-align: center; white-space: nowrap; overflow: visible }
+.gm { display: grid; gap: 6px }
+.gm-riadok { display: grid; grid-template-columns: minmax(90px, 38%) 1fr; gap: 10px; align-items: center; font-size: 13px; padding: 2px 4px; border-radius: 6px; outline: none }
+.gm-riadok:hover, .gm-riadok.aktivny { background: color-mix(in srgb, var(--ink) 5%, transparent) }
+.gm-meno { overflow-wrap: anywhere; line-height: 1.25 }
+.gm-pruh { display: flex; align-items: center; gap: 6px; min-width: 0 }
+.gm-stack { display: flex; gap: 2px; height: 14px; border-radius: 0 4px 4px 0; overflow: hidden; min-width: 0 }
+.gm-stack i { display: block; min-width: 2px }
+.gm-val { font-size: 12px; font-variant-numeric: tabular-nums }
+.graf-tip { position: absolute; z-index: 50; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.18); font-size: 12px; display: grid; gap: 3px; pointer-events: none; min-width: 120px }
+.graf-tip[hidden] { display: none }
+@media (max-width: 760px) {
+  .grafy { grid-template-columns: 1fr }
+  .gs { height: 160px }
 }

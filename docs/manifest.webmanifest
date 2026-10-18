@@ -1,7 +1,7 @@
 {
-  "name": "Realitný skener Alpha Reality",
-  "short_name": "Skener",
-  "description": "Súkromné inzeráty v okresoch Spišská Nová Ves a Levoča pre maklérov Alpha Reality",
+  "name": "Realitný týpek · Alpha Reality",
+  "short_name": "Týpek",
+  "description": "Realitný skener – súkromné inzeráty v okresoch Spišská Nová Ves a Levoča pre maklérov Alpha Reality",
   "lang": "sk",
   "start_url": "./",
   "scope": "./",

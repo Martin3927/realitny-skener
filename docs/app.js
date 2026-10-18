@@ -21,11 +21,12 @@
   var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉" };
   // výsledky hovoru, pri ktorých sa inzerát automaticky neuvoľní
   var CHRANENE_VYSLEDKY = ["Záujem – stretnutie dohodnuté", "Získaný do ponuky"];
-  var SMS_ZAKLAD = "Dobrý deň, volám sa {makler} z realitnej kancelárie Alpha Reality. Všimli sme si Váš inzerát – {nehnutelnost}, {lokalita}. " +
+  var SMS_ZAKLAD = "Dobrý deň, volám sa {makler} z realitnej kancelárie Alpha Reality. {Všimol|Všimla} som si Váš inzerát – {nehnutelnost}, {lokalita}. " +
     "Máme klientov, ktorí hľadajú nehnuteľnosť práve v tejto lokalite. Môžem Vám zavolať? Ďakujem.";
-  var SMS_POLIA = [["{makler}", "vaše meno"], ["{nehnutelnost}", "napr. 3-izbový byt"], ["{lokalita}", "obec"], ["{cena}", "cena z inzerátu"], ["{portal}", "portál"]];
+  var SMS_POLIA = [["{Videl|Videla}", "podľa rodu: muž | žena"], ["{makler}", "vaše meno"], ["{nehnutelnost}", "napr. 3-izbový byt"], ["{lokalita}", "obec"], ["{cena}", "cena z inzerátu"], ["{portal}", "portál"]];
   var STAVY_NEHN = ["Pôvodný stav", "Čiastočná rekonštrukcia", "Kompletná rekonštrukcia", "Novostavba", "Rozostavaná", "Na zbúranie"];
   var KEY = "alpha-skener-app-v1";
+  var PRAVA = '<p class="prava">© ' + new Date().getFullYear() + " Realitný týpek · Všetky práva vyhradené Alpha Reality s.r.o.</p>";
 
   var S = {
     user: null, me: null, makleri: [], mById: {}, inz: [], prev: {}, odh: {}, canUnder: false, meta: {},
@@ -194,12 +195,12 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<img class="login-logo" src="logo.png?v=202610181500" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
+      '<img class="login-logo" src="logo.png?v=202610181600" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
       '<button class="btn primary wide" type="submit">Prihlásiť sa</button>' +
-      "<p>Účet vám vytvorí administrátor. Ak ste zabudli heslo, požiadajte ho o nové.</p></form></div>";
+      "<p>Účet vám vytvorí administrátor. Ak ste zabudli heslo, požiadajte ho o nové.</p>" + PRAVA + "</form></div>";
     pridajOko($("#f-login"));
     $("#f-login").addEventListener("submit", async function (e) {
       e.preventDefault();
@@ -221,7 +222,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610181500" alt="Alpha Reality">' +
+      '<img class="login-logo" src="logo.png?v=202610181600" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -349,8 +350,19 @@
     if (z.plocha && z.typ === "pozemok") t += " " + nf.format(z.plocha) + " m²";
     return t;
   }
+  // rod makléra: nastavený ručne, inak podľa avatara alebo mena (priezvisko na -á, krstné meno na -a)
+  function rodMaklera(m) {
+    if (!m) return "muz";
+    if (m.pohlavie) return m.pohlavie;
+    if (m.foto === "avatar:zena") return "zena";
+    if (m.foto === "avatar:muz") return "muz";
+    var slova = String(m.meno || "").trim().split(/\s+/), posl = slova[slova.length - 1] || "";
+    return /á$/i.test(posl) || (slova.length === 1 && /a$/i.test(posl)) ? "zena" : "muz";
+  }
   function vyplnSms(sablona, z, m) {
+    var zena = rodMaklera(m) === "zena";
     return String(sablona || SMS_ZAKLAD)
+      .replace(/\{([^{}|]*)\|([^{}|]*)\}/g, function (_, muz, zen) { return zena ? zen : muz; })
       .replace(/\{makler\}/g, (m && (m.meno || m.email)) || "")
       .replace(/\{nehnutelnost\}/g, popisNehn(z))
       .replace(/\{lokalita\}/g, z.obec || (z.okres ? "okres " + z.okres : ""))
@@ -421,11 +433,11 @@
 
   // ------------------------------------------------------------ kostra stránky
   function vykresli() {
-    var tabs = [["inzeraty", "Inzeráty"], ["schrankovanie", "Schránkovanie"]];
+    var tabs = [["inzeraty", "Realitný skener"], ["schrankovanie", "Schránkovanie"]];
     if (admin()) tabs.push(["vykon", "Výkon"], ["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<div class="brand"><img src="logo.png?v=202610181500" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
+      '<div class="brand"><img src="logo.png?v=202610181600" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></div>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>";
       }).join("") + "</nav>" +
@@ -464,7 +476,8 @@
     else if (S.tab === "makleri") vykresliMaklerov();
     else if (S.tab === "vykon") vykresliVykon();
     var m = S.meta || {};
-    $("#foot").textContent = (m.posledna_kontrola ? "Posledná kontrola portálov " + datum(m.posledna_kontrola, true) + ". " : "") +
+    $("#foot").innerHTML = '<p class="foot-info"></p>' + PRAVA;
+    $("#foot .foot-info").textContent = (m.posledna_kontrola ? "Posledná kontrola portálov " + datum(m.posledna_kontrola, true) + ". " : "") +
       "Sleduje Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality.sk v okresoch Spišská Nová Ves a Levoča." +
       (m.chyby && m.chyby.length ? " Pri poslednej kontrole sa nepodarilo načítať: " + m.chyby.join("; ") : "");
   }
@@ -475,7 +488,10 @@
   function formSms() {
     var text = S.me.sms_sablona || SMS_ZAKLAD;
     return '<form class="box" id="f-sms"><h3>💬 Text mojej SMS</h3>' +
-      '<p class="meta">Tento text sa vloží do SMS po ťuknutí na „Poslať SMS“ pri inzeráte. Kúsky v zložených zátvorkách sa doplnia za údaje z inzerátu – kliknutím ich vložíte do textu.</p>' +
+      '<p class="meta">Tento text sa vloží do SMS po ťuknutí na „Poslať SMS“ pri inzeráte. Kúsky v zložených zátvorkách sa doplnia za údaje z inzerátu – kliknutím ich vložíte do textu. ' +
+      'Slovo v tvare <b>{Videl|Videla}</b> sa doplní podľa rodu: prvé pre muža, druhé pre ženu.</p>' +
+      '<div class="field sms-rod"><span>Som</span><div class="seg" role="group">' +
+      [["muz", "Muž"], ["zena", "Žena"]].map(function (x) { return '<button type="button" data-rod="' + x[0] + '" aria-pressed="' + (rodMaklera(S.me) === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div></div>" +
       '<div class="sms-polia">' + SMS_POLIA.map(function (x) { return '<button type="button" class="btn ghost" data-sms-pole="' + x[0] + '">' + x[0] + " <small>" + x[1] + "</small></button>"; }).join("") + "</div>" +
       '<label class="field"><span>Text SMS</span><textarea id="sms-text" rows="4" maxlength="700">' + esc(text) + "</textarea></label>" +
       '<div class="sms-nahlad"><span class="meta">Ukážka pre inzerát:</span><div id="sms-nahlad"></div><small class="meta" id="sms-dlzka"></small></div>' +
@@ -499,6 +515,16 @@
       };
     });
     $("#sms-zaklad").onclick = function () { t.value = SMS_ZAKLAD; obnovNahladSms(); };
+    f.querySelectorAll("[data-rod]").forEach(function (b) {
+      b.onclick = async function () {
+        try {
+          await rpc("nastavit_pohlavie", { p_id: S.me.id, p_pohlavie: b.dataset.rod });
+          S.me.pohlavie = b.dataset.rod; await nacitajMaklerov();
+          f.querySelectorAll("[data-rod]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+          obnovNahladSms();
+        } catch (err) { toast(chybaText(err), true); }
+      };
+    });
     f.addEventListener("submit", async function (e) {
       e.preventDefault();
       var v = t.value.trim() === SMS_ZAKLAD ? "" : t.value;
@@ -1102,7 +1128,8 @@
           '<div class="mk-foto">' + fotoVolba("makler", m.id) + "</div>" +
           '<div class="mk-hlavne"><input type="text" data-f="meno" value="' + esc(m.meno) + '" aria-label="Meno"><div class="meta">' + esc(m.email || "") +
           " · prevzatých " + (prevzate[m.id] || 0) + "</div></div>" +
-          '<div class="mk-prava"><select data-f="rola"' + (ja ? " disabled" : "") + ' aria-label="Rola"><option value="makler"' + (m.rola === "makler" ? " selected" : "") + '>Maklér</option><option value="admin"' + (m.rola === "admin" ? " selected" : "") + ">Administrátor</option></select>" +
+          '<div class="mk-prava"><select data-f="pohlavie" aria-label="Rod (pre text SMS)"><option value="muz"' + (rodMaklera(m) === "muz" ? " selected" : "") + '>Muž</option><option value="zena"' + (rodMaklera(m) === "zena" ? " selected" : "") + ">Žena</option></select>" +
+          '<select data-f="rola"' + (ja ? " disabled" : "") + ' aria-label="Rola"><option value="makler"' + (m.rola === "makler" ? " selected" : "") + '>Maklér</option><option value="admin"' + (m.rola === "admin" ? " selected" : "") + ">Administrátor</option></select>" +
           '<label class="toggle"><input type="checkbox" data-f="aktivny"' + (m.aktivny ? " checked" : "") + (ja ? " disabled" : "") + "> Aktívny</label>" +
           '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label></div>" +
           '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
@@ -1171,7 +1198,8 @@
       "<div><b>" + sucet("hovory") + "</b><small>hovorov spolu</small></div>" +
       "<div><b>" + riadky.reduce(function (a, m) { return a + uspech(m); }, 0) + "</b><small>stretnutí / získaných</small></div>" +
       "<div><b>" + sucet("auto_uvolnene") + "</b><small>uvoľnených automaticky</small></div></div>";
-    h += '<div class="tbl-wrap"><table class="tbl vykon-tbl"><thead><tr><th>Maklér</th>' + stlpce.map(function (c) { return "<th>" + c[1] + "</th>"; }).join("") + "</tr></thead><tbody>" +
+    h += grafyVykonu(v, riadky, r);
+    h += '<h4 class="graf-nadpis">Tabuľka</h4><div class="tbl-wrap"><table class="tbl vykon-tbl"><thead><tr><th>Maklér</th>' + stlpce.map(function (c) { return "<th>" + c[1] + "</th>"; }).join("") + "</tr></thead><tbody>" +
       riadky.map(function (m) {
         var chips = VYSLEDKY.filter(function (k) { return m.vysledky[k]; }).map(function (k) {
           return '<span class="chip ' + (VYSLEDOK_TRIEDA[k] || "") + '">' + esc(k) + " <b>" + m.vysledky[k] + "</b></span>";
@@ -1189,6 +1217,94 @@
     el.innerHTML = h;
     napojVykon();
   }
+  var TYPY_KONTAKTU = [["hovory", "Hovory", "s1"], ["sms", "SMS", "s2"], ["emaily", "Email", "s3"]];
+  function legendaKontaktov() {
+    return '<div class="graf-legenda">' + TYPY_KONTAKTU.map(function (t) { return '<span><i class="' + t[2] + '"></i>' + t[1] + "</span>"; }).join("") + "</div>";
+  }
+  function tipKontaktov(nadpis, o) {
+    return "<b>" + esc(nadpis) + "</b>" + TYPY_KONTAKTU.map(function (t) { return '<span><i class="' + t[2] + '"></i>' + t[1] + " <b>" + (o[t[0]] || 0) + "</b></span>"; }).join("") +
+      "<span>Spolu <b>" + ((o.hovory || 0) + (o.sms || 0) + (o.emaily || 0)) + "</b></span>";
+  }
+  function pekneMax(x) {
+    if (x <= 4) return 4;
+    if (x <= 10) return Math.ceil(x / 2) * 2;
+    var k = Math.pow(10, Math.floor(Math.log10(x))) / 2;
+    return Math.ceil(x / (2 * k)) * 2 * k;
+  }
+  function grafyVykonu(v, riadky, r) {
+    // 1) kontakty po dňoch – skladané stĺpce
+    var poDnoch = {}; (v.dni || []).forEach(function (d) { poDnoch[d.den] = d; });
+    var dni = [], d = new Date(r[0]), dnes = new Date(); dnes.setHours(23, 59, 59, 999);
+    var koniec = new Date(Math.min(r[1].getTime(), dnes.getTime() + 1));
+    while (d < koniec && dni.length < 62) {
+      var k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      dni.push({ k: k, d: new Date(d), o: poDnoch[k] || {} }); d.setDate(d.getDate() + 1);
+    }
+    function spolu(o) { return (o.hovory || 0) + (o.sms || 0) + (o.emaily || 0); }
+    var maxD = pekneMax(Math.max.apply(null, dni.map(function (x) { return spolu(x.o); }).concat([1])));
+    var popisy = dni.length <= 14;
+    var DNI_T = ["ne", "po", "ut", "st", "št", "pi", "so"];
+    var h = '<div class="grafy"><div class="graf graf-siroky"><div class="graf-hlava"><h4>Kontakty po dňoch</h4>' + legendaKontaktov() + "</div>" +
+      '<div class="gs"><div class="gs-os"><span>' + maxD + "</span><span>" + maxD / 2 + "</span><span>0</span></div>" +
+      '<div class="gs-plocha"><div class="gs-mriezka"><i></i><i></i><i></i></div><div class="gs-stlpce">' +
+      dni.map(function (x) {
+        var t = spolu(x.o), nadpis = DNI_T[x.d.getDay()] + " " + x.d.getDate() + ". " + (x.d.getMonth() + 1) + ".";
+        return '<div class="gs-den" data-tip="' + esc(tipKontaktov(nadpis, x.o)) + '" tabindex="-1">' +
+          '<div class="gs-stack" style="height:' + (t / maxD * 100) + '%">' +
+          TYPY_KONTAKTU.map(function (tt) { var n = x.o[tt[0]] || 0; return n ? '<i class="' + tt[2] + '" style="flex-grow:' + n + '"></i>' : ""; }).join("") + "</div>" +
+          (popisy && t ? '<b class="gs-val" style="bottom:' + (t / maxD * 100) + '%">' + t + "</b>" : "") + "</div>";
+      }).join("") + "</div></div></div>" +
+      '<div class="gs-x">' + dni.map(function (x, i) {
+        var ukaz = popisy || x.d.getDay() === 1 || i === 0;
+        return "<span>" + (ukaz ? (popisy ? DNI_T[x.d.getDay()] + "<br>" : "") + x.d.getDate() + "." : "") + "</span>";
+      }).join("") + "</div></div>";
+
+    // 2) kontakty podľa makléra – vodorovné skladané pruhy
+    var maxM = Math.max.apply(null, riadky.map(spolu).concat([1]));
+    h += '<div class="graf"><div class="graf-hlava"><h4>Kontakty podľa makléra</h4>' + legendaKontaktov() + "</div>" +
+      '<div class="gm">' + riadky.slice().sort(function (a, b) { return spolu(b) - spolu(a); }).map(function (m) {
+        var t = spolu(m);
+        return '<div class="gm-riadok" data-tip="' + esc(tipKontaktov(m.meno, m)) + '" tabindex="-1"><span class="gm-meno">' + esc(m.meno) + "</span>" +
+          '<span class="gm-pruh"><span class="gm-stack" style="width:' + (t / maxM * 100) + '%">' +
+          TYPY_KONTAKTU.map(function (tt) { var n = m[tt[0]] || 0; return n ? '<i class="' + tt[2] + '" style="flex-grow:' + n + '"></i>' : ""; }).join("") +
+          '</span><b class="gm-val">' + t + "</b></span></div>";
+      }).join("") + "</div></div>";
+
+    // 3) výsledky hovorov – všetci makléri spolu
+    var vys = {}; riadky.forEach(function (m) { Object.keys(m.vysledky || {}).forEach(function (k) { vys[k] = (vys[k] || 0) + m.vysledky[k]; }); });
+    var polozky = VYSLEDKY.filter(function (k) { return vys[k]; }), maxV = Math.max.apply(null, polozky.map(function (k) { return vys[k]; }).concat([1]));
+    var spoluV = polozky.reduce(function (a, k) { return a + vys[k]; }, 0);
+    h += '<div class="graf"><div class="graf-hlava"><h4>Výsledky hovorov</h4><span class="meta">' + spoluV + " hovorov</span></div>" +
+      (polozky.length ? '<div class="gm">' + polozky.map(function (k) {
+        return '<div class="gm-riadok" data-tip="' + esc("<b>" + esc(k) + "</b><span>" + vys[k] + " z " + spoluV + " hovorov (" + Math.round(vys[k] / spoluV * 100) + " %)</span>") + '" tabindex="-1">' +
+          '<span class="gm-meno">' + esc(k) + '</span><span class="gm-pruh"><span class="gm-stack" style="width:' + (vys[k] / maxV * 100) + '%"><i class="s1" style="flex-grow:1"></i></span>' +
+          '<b class="gm-val">' + vys[k] + "</b></span></div>";
+      }).join("") + "</div>" : '<div class="meta">V tomto období nie je zapísaný žiadny hovor.</div>') + "</div></div>";
+    return h;
+  }
+  // bublina s údajmi pri grafe (myš aj dotyk)
+  (function () {
+    var tip = null;
+    function ukaz(el, x, y) {
+      if (!tip) { tip = document.createElement("div"); tip.className = "graf-tip"; document.body.appendChild(tip); }
+      tip.innerHTML = el.dataset.tip; tip.hidden = false;
+      var w = tip.offsetWidth, hh = tip.offsetHeight;
+      tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x - w / 2)) + "px";
+      tip.style.top = Math.max(8, y - hh - 14) + window.scrollY + "px";
+      document.querySelectorAll(".graf .aktivny").forEach(function (a) { a.classList.remove("aktivny"); });
+      el.classList.add("aktivny");
+    }
+    function skry() { if (tip) tip.hidden = true; document.querySelectorAll(".graf .aktivny").forEach(function (a) { a.classList.remove("aktivny"); }); }
+    document.addEventListener("pointermove", function (e) {
+      var el = e.target.closest && e.target.closest(".graf [data-tip]");
+      if (el) ukaz(el, e.clientX, e.clientY); else if (e.pointerType === "mouse") skry();
+    });
+    document.addEventListener("pointerdown", function (e) {
+      var el = e.target.closest && e.target.closest(".graf [data-tip]");
+      if (el) ukaz(el, e.clientX, e.clientY); else skry();
+    });
+    window.addEventListener("scroll", function () { if (tip && !tip.hidden) skry(); }, { passive: true });
+  })();
   function napojVykon() {
     document.querySelectorAll("#obsah [data-obd]").forEach(function (b) {
       b.onclick = function () { S.vykonObd = b.dataset.obd; nacitajVykon(); };
@@ -1206,6 +1322,8 @@
           p_id: id, p_meno: tr.querySelector('[data-f="meno"]').value, p_rola: tr.querySelector('[data-f="rola"]').value,
           p_aktivny: tr.querySelector('[data-f="aktivny"]').checked, p_vidi_podhodnotene: tr.querySelector('[data-f="vidi"]').checked,
         });
+        var rod = tr.querySelector('[data-f="pohlavie"]').value;
+        if (rod !== m.pohlavie) await rpc("nastavit_pohlavie", { p_id: id, p_pohlavie: rod });
         await nacitajMaklerov(); toast("Uložené.");
       } catch (err) { toast(chybaText(err), true); }
       vykresliMaklerov();

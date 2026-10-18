@@ -19,7 +19,7 @@ function casSk(iso: string) {
 
 async function posli(komu: string, predmet: string, html: string) {
   const od = Deno.env.get("EMAIL_FROM") || Deno.env.get("SMTP_USER") || "";
-  const odMeno = "Realitný skener Alpha Reality";
+  const odMeno = "Realitný týpek · Alpha Reality";
   const brevo = Deno.env.get("BREVO_API_KEY");
   if (brevo) {
     const r = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -84,7 +84,7 @@ async function tyzdennyPrehlad(db: any) {
     <p style="margin:14px 0">Nových súkromných inzerátov za týždeň: <b>${v.nove_sukromne}</b></p>${tab}
     ${vysledky ? `<h3 style="font-size:15px;margin:22px 0 0">Výsledky hovorov</h3>${vysledky}` : ""}
     <p style="margin:22px 0"><a href="${esc(APP_URL)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Otvoriť skener</a></p>
-    <p style="color:#999;font-size:12px">Realitný skener Alpha Reality · posiela sa každý pondelok ráno len administrátorom</p></div>`;
+    <p style="color:#999;font-size:12px">Realitný týpek · Alpha Reality · posiela sa každý pondelok ráno len administrátorom</p></div>`;
   const { data: admini } = await db.from("makleri").select("email").eq("rola", "admin").eq("aktivny", true);
   let odoslane = 0;
   const chyby: string[] = [];
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
         <span style="color:#888;font-size:14px"> · ${esc(casSk(p.cas))}</span></div>
         <p style="font-size:16px;margin:16px 0 0">${esc(p.poznamka || "Pripomienka bez poznámky")}</p>${suvis}
         <p style="margin:22px 0"><a href="${esc(APP_URL)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Otvoriť skener</a></p>
-        <p style="color:#999;font-size:12px">Realitný skener Alpha Reality</p></div>`;
+        <p style="color:#999;font-size:12px">Realitný týpek · Alpha Reality</p></div>`;
       const predmet = p.druh && p.druh !== "pripomienka" ? ikona + " " + String(p.poznamka).slice(0, 110) : ikona + " " + nazov + ": " + (p.poznamka || "skener").slice(0, 80);
       await posli(m.email, predmet, html);
       odoslane++;
