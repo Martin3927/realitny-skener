@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
   const kluc = req.headers.get("x-kluc") || "";
   if (!n?.hodnota || !kluc || (await sha256(kluc)) !== n.hodnota) return new Response("Nepovolené", { status: 401 });
 
-  let t: { inzerat_id: string; popis?: string; parametre?: Record<string, unknown>; fotky_portal?: string[]; fotky?: string[] };
+  let t: { inzerat_id: string; popis?: string; parametre?: Record<string, unknown>; fotky_portal?: string[]; fotky?: string[]; telefon?: string };
   try { t = await req.json(); } catch { return Response.json({ ok: false, chyba: "neplatné dáta" }, { status: 400 }); }
   if (!t.inzerat_id) return Response.json({ ok: false, chyba: "chýba inzerat_id" }, { status: 400 });
 
@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     ulozene: new Date().toISOString(),
   };
   if (cesty.length) zaznam.fotky = cesty;
+  if (t.telefon) zaznam.telefon = String(t.telefon).slice(0, 60);
   const { error } = await db.from("archiv").upsert(zaznam);
   if (error) return Response.json({ ok: false, chyba: error.message }, { status: 500 });
   return Response.json({ ok: true, fotky: cesty.length });

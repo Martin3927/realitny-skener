@@ -999,6 +999,26 @@ def _fotka_b64(url):
         return None
 
 
+_TEL_MOBIL = re.compile(r"(?<![\d])(?:(?:\+|00)\s*421[\s/.-]*|0)\s*(9\d{2})[\s/.-]*(\d{3})[\s/.-]*(\d{3})(?![\d])")
+_TEL_PEVNA = re.compile(r"(?<![\d])(?:(?:\+|00)\s*421[\s/.-]*|0)([2-5]\d)[\s/.-]*(\d{3})[\s.-]?(\d{2})[\s.-]?(\d{2})(?![\d])")
+
+
+def najdi_telefon(text):
+    """Telefónne čísla, ktoré predajca napísal do textu inzerátu (napr. „volajte 0905 123 456“)."""
+    if not text:
+        return None
+    cisla = []
+    for m in _TEL_MOBIL.finditer(text):
+        c = f"0{m.group(1)} {m.group(2)} {m.group(3)}"
+        if c not in cisla:
+            cisla.append(c)
+    for m in _TEL_PEVNA.finditer(text):
+        c = f"0{m.group(1)}/{m.group(2)} {m.group(3)}{m.group(4)}"
+        if c not in cisla:
+            cisla.append(c)
+    return ", ".join(cisla[:2]) or None
+
+
 def archiv_bazos(url):
     h = get(url)
     if not h:
@@ -1086,6 +1106,8 @@ def archivuj(plny):
             if not a:
                 continue
             telo = {"inzerat_id": z["id"], **a, "fotky": []}
+            if z.get("sukromny"):
+                telo["telefon"] = najdi_telefon((a.get("popis") or "") + "\n" + json.dumps(a.get("parametre") or {}, ensure_ascii=False))
             if z.get("fotky"):
                 for u in a["fotky_portal"][:8]:
                     f = _fotka_b64(u)

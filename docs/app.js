@@ -27,7 +27,7 @@
     prip: [], zvonOpen: false, pripForm: null, ohlasene: {}, ozn: {}, hesla: {}, hesloEdit: null,
     obce: [], lastInzLoad: 0, newUser: null,
     f: { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", stav: "aktivne" },
-    arch: {},
+    arch: {}, tel: {}, telZdroj: {},
     sf: { q: "", makler: "", typ: "" },
   };
   try {
@@ -188,7 +188,7 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<img class="login-logo" src="logo.png?v=202610180932" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
+      '<img class="login-logo" src="logo.png?v=202610181400" alt="Alpha Reality"><p>Realitný skener – prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -215,7 +215,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610180932" alt="Alpha Reality">' +
+      '<img class="login-logo" src="logo.png?v=202610181400" alt="Alpha Reality">' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -299,6 +299,27 @@
     var rows = await vsetkyRiadky("oznacenia", "*", "inzerat_id");
     var o = {}; rows.forEach(function (x) { if (x.predajca_typ) o[x.inzerat_id] = x; }); S.ozn = o;
   }
+  // telefóny pri súkromných inzerátoch: číslo zadané maklérom má prednosť pred číslom z textu inzerátu
+  async function nacitajTelefony() {
+    var zText = await vsetkyRiadky("archiv", "inzerat_id, telefon", "inzerat_id", function (q) { return q.not("telefon", "is", null); });
+    var ruc = await vsetkyRiadky("telefony", "*", "inzerat_id");
+    var t = {};
+    zText.forEach(function (x) { if (x.telefon) t[x.inzerat_id] = { telefon: x.telefon, zdroj: "text" }; });
+    ruc.forEach(function (x) { t[x.inzerat_id] = x.telefon ? { telefon: x.telefon, zdroj: "makler", zadal: x.zadal, zadane: x.zadane } : null; });
+    Object.keys(t).forEach(function (k) { if (!t[k]) delete t[k]; });
+    S.tel = t;
+  }
+  // čísla bez medzier a s predvoľbou +421 prevedenou na 0 (aby sa dalo hľadať v oboch tvaroch)
+  function telCifry(t) {
+    return String(t).split(",").map(function (c) { return c.replace(/\D/g, "").replace(/^(00)?421/, "0"); }).join("|");
+  }
+  function telefon(z) { return ptyp(z) !== "rk" ? S.tel[z.id] || null : null; }
+  function telOdkaz(cislo) {
+    return String(cislo).split(/\s*,\s*/).map(function (c) {
+      var d = c.replace(/[^\d+]/g, "");
+      return '<a class="tel" href="tel:' + esc(d) + '">' + esc(c) + "</a>";
+    }).join(", ");
+  }
   // typ predajcu: ručné označenie má prednosť pred odhadom skenera
   function ptyp(z) { var o = S.ozn[z.id]; return o ? o.predajca_typ : z.predajca_typ; }
   async function nacitajSchrankovanie() {
@@ -327,14 +348,14 @@
   async function nacitajVsetko() {
     await nacitajMaklerov();
     var meta = sb.from("stav_skenera").select("meta, upravene").maybeSingle().then(function (r) { S.meta = (r.data && r.data.meta) || {}; });
-    await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), meta]);
+    await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), meta]);
   }
   var obnovuje = false;
   async function obnov() {
     if (obnovuje || !S.me) return;
     obnovuje = true;
     try {
-      var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia()];
+      var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony()];
       if (Date.now() - S.lastInzLoad > 10 * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
       await Promise.all(uloha);
       if (!S.me.aktivny) return odhlasit();
@@ -351,7 +372,7 @@
     if (admin()) tabs.push(["makleri", "Makléri"]);
     $("#app").innerHTML =
       '<header class="top"><div class="wrap">' +
-      '<div class="brand"><img src="logo.png?v=202610180932" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
+      '<div class="brand"><img src="logo.png?v=202610181400" alt="Alpha Reality"><span class="brand-sub">Realitný<br>skener</span></div>' +
       '<nav class="tabs" aria-label="Sekcie">' + tabs.map(function (t) {
         return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] + "</button>";
       }).join("") + "</nav>" +
@@ -501,7 +522,7 @@
   }
 
   function filtruj() {
-    var f = S.f, q = norm(f.q).trim(), lim = f.novost ? Date.now() - Number(f.novost) * 864e5 : 0, me = S.me.id;
+    var f = S.f, q = norm(f.q).trim(), qd = /\d/.test(q) ? telCifry(q) : "", lim = f.novost ? Date.now() - Number(f.novost) * 864e5 : 0, me = S.me.id;
     var zaklad = viditelne(), pocty = {};
     if (S.jedenId) return { out: S.inz.filter(function (z) { return z.id === S.jedenId; }), pocty: pocty };
     function pridaj(k) { pocty[k] = (pocty[k] || 0) + 1; }
@@ -514,7 +535,7 @@
         (!f.okres || (f.okres.indexOf("o:") === 0 ? z.okres === f.okres.slice(2) : z.obec === f.okres)) &&
         (!lim || new Date(z.prvy_krat).getTime() >= lim) &&
         (!f.under || (S.odh[z.id] && S.odh[z.id].podhodnotene)) &&
-        (!q || z._t.indexOf(q) >= 0);
+        (!q || z._t.indexOf(q) >= 0 || (qd.length >= 4 && S.tel[z.id] && telCifry(S.tel[z.id].telefon).indexOf(qd) >= 0));
       if (okIne && okPr) { pridaj("predajca:vsetci"); pridaj(pt !== "rk" ? "predajca:sukr" : "predajca:rk"); }
       if (okIne && okP) { if (!maj) pridaj("praca:volne"); if (maj === me) pridaj("praca:moje"); if (maj) pridaj("praca:prevzate"); }
       return okP && okPr && okIne;
@@ -554,6 +575,23 @@
     return '<span class="status">Prevzaté, zatiaľ nevolané</span>';
   }
 
+  function telRiadok(z) {
+    if (ptyp(z) === "rk") return "";
+    var t = S.tel[z.id];
+    if (!t) return '<div class="tel-row"><button class="btn-link" type="button" data-act="tel">＋ Telefón predajcu</button></div>';
+    return '<div class="tel-row">📞 ' + telOdkaz(t.telefon) +
+      '<small>' + (t.zdroj === "text" ? "z textu inzerátu" : "zadal " + esc(meno(t.zadal)) + " " + datum(t.zadane)) + "</small>" +
+      '<button class="btn-link" type="button" data-act="tel">upraviť</button></div>';
+  }
+  function formTelefon(z) {
+    var t = S.tel[z.id];
+    return '<form class="panel" data-form="tel"><h4>Telefón predajcu</h4>' +
+      '<label class="field"><span>Číslo (napr. z portálu po kliknutí na „zobraziť číslo“)</span><input type="tel" name="telefon" inputmode="tel" autocomplete="off" value="' + esc(t ? t.telefon : "") + '" placeholder="0905 123 456"></label>' +
+      '<div class="form-actions"><button class="btn primary" type="submit">Uložiť</button>' +
+      (t ? '<button class="btn ghost" type="button" data-act="tel-zmaz">Vymazať číslo</button>' : "") +
+      '<button class="btn ghost" type="button" data-act="zavriet">Zrušiť</button></div>' +
+      '<small class="meta">Ukladá sa len pri súkromných inzerátoch. Ak predajca požiada, číslo vymažte.</small></form>';
+  }
   function karta(z) {
     var p = S.prev[z.id] || null, maj = p && p.makler_id, moj = maj === S.me.id;
     var mozeUpravit = moj || admin() || !maj;
@@ -585,6 +623,7 @@
       '<a class="title" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(z.nazov) + "</a>" +
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
       (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + "<span>v skeneri " + ago(z.prvy_krat) + "</span></div>" +
+      telRiadok(z) +
       '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
       '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
       (ozn ? '<span class="pill rk">Označil ' + esc(meno(ozn.oznacil)) + "</span>" : "") +
@@ -628,6 +667,7 @@
     var otv = S.open[z.id];
     if (otv === "zvon") h += '<div class="panel">' + formPripomienka({ inzerat_id: z.id }) + "</div>";
     if (otv === "detail") h += detailPanel(z);
+    if (otv === "tel" && ptyp(z) !== "rk") h += formTelefon(z);
     if (otv === "hovor" && mozeUpravit) {
       h += '<form class="panel" data-form="hovor"><h4>Ako dopadol hovor</h4><div class="form-grid">' +
         '<label class="field"><span>Výsledok</span><select name="vysledok" required><option value="">Vyberte…</option>' +
@@ -655,6 +695,8 @@
     h += '<div class="meta">V skeneri od ' + datum(z.prvy_krat, true) + " · " + (z.aktivny ? "na portáli aktívny" : "<b>z portálu zmizol</b>, naposledy videný " + datum(z.naposledy)) +
       (a ? " · uložené " + datum(a.ulozene) + (a.fotky.length ? " s " + a.fotky.length + " fotkami" : "") : "") + "</div>";
     if (fotky.length) h += '<div class="d-fotky">' + fotky.map(function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img loading="lazy" referrerpolicy="no-referrer" src="' + esc(u) + '" alt=""></a>'; }).join("") + "</div>";
+    var tt = telefon(z);
+    if (tt) h += '<div class="d-tel">📞 ' + telOdkaz(tt.telefon) + " <small>" + (tt.zdroj === "text" ? "z textu inzerátu" : "zadal " + esc(meno(tt.zadal))) + "</small></div>";
     var par = a && a.parametre ? a.parametre : {}, riadky = [];
     if (Array.isArray(par.vlastnosti)) riadky = par.vlastnosti.slice();
     Object.keys(par).forEach(function (k) {
@@ -735,6 +777,12 @@
     }
     if (act === "hovor") { S.open[id] = S.open[id] === "hovor" ? null : "hovor"; prekresliKartu(id); var s = document.querySelector('.card[data-id="' + CSS.escape(id) + '"] select[name="vysledok"]'); if (s) s.focus(); return; }
     if (act === "zavriet") { S.open[id] = null; return prekresliKartu(id); }
+    if (act === "tel") {
+      S.open[id] = S.open[id] === "tel" ? null : "tel"; prekresliKartu(id);
+      var ti = document.querySelector('.card[data-id="' + CSS.escape(id) + '"] input[name="telefon"]'); if (ti) ti.focus();
+      return;
+    }
+    if (act === "tel-zmaz") return ulozTelefon(id, "");
     if (act === "hist") {
       if (S.open[id] === "hist") { S.open[id] = null; return prekresliKartu(id); }
       S.open[id] = "hist"; delete S.hist[id]; prekresliKartu(id);
@@ -750,7 +798,25 @@
       toast(kam ? "Presunuté na: " + meno(kam) : "Inzerát je voľný.");
     });
   });
+  async function ulozTelefon(id, cislo) {
+    try {
+      await rpc("ulozit_telefon", { p_inzerat: id, p_telefon: cislo });
+      await nacitajTelefony();
+      S.open[id] = null;
+      toast(cislo ? "Telefón je uložený." : "Telefón je vymazaný.");
+    } catch (err) { toast(chybaText(err), true); }
+    prekresliKartu(id);
+  }
   document.addEventListener("submit", function (e) {
+    var ft = e.target.closest('#obsah form[data-form="tel"]');
+    if (ft) {
+      e.preventDefault();
+      var v = ft.telefon.value.trim();
+      if (!v) return ulozTelefon(ft.closest(".card").dataset.id, "");
+      if (v.replace(/\D/g, "").length < 9) return toast("Telefónne číslo musí mať aspoň 9 číslic.", true);
+      ft.querySelector('button[type="submit"]').disabled = true;
+      return ulozTelefon(ft.closest(".card").dataset.id, v);
+    }
     var f = e.target.closest('#obsah form[data-form="hovor"]');
     if (!f) return;
     e.preventDefault();

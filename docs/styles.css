@@ -285,3 +285,12 @@ input[type="datetime-local"] { font-size: 14px; background: var(--surface); bord
 .detail .d-par { display: flex; flex-wrap: wrap; gap: 6px }
 .detail .d-par span { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12.5px }
 .detail .d-popis { white-space: pre-line; font-size: 14px; line-height: 1.55; max-height: 320px; overflow: auto; background: var(--surface-2); border-radius: 8px; padding: 10px 12px }
+/* telefón predajcu */
+.tel-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; font-size: 14px }
+.tel-row small { color: var(--muted); font-size: 12px }
+a.tel { font-weight: 700; color: var(--ink); text-decoration: none; white-space: nowrap; border-bottom: 1px dashed var(--muted) }
+a.tel:hover { color: var(--gold) }
+.btn-link { background: none; border: 0; padding: 2px 0; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline }
+.btn-link:hover { color: var(--ink) }
+.detail .d-tel { font-size: 15px; margin: 6px 0 }
+.detail .d-tel small { color: var(--muted); font-size: 12px }
