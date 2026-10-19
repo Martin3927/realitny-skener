@@ -1303,3 +1303,57 @@ body.menu-otvorene { overflow: hidden }
 .vz-typek img { width: 90px; height: auto }
 .vz-typek div { display: grid; gap: 2px }
 @media (max-width: 760px) { .vz-vodoznak { grid-template-columns: minmax(0, 1fr) } }
+
+/* ---------- makléri: zoznam a detail */
+.mk-zoznam-box { gap: 10px }
+.mk-zoznam-box .nehn-akcie input[type="search"] { min-width: 220px; flex: 1 1 220px }
+.mk-riadky { display: grid; gap: 6px }
+.mk-riadok { display: grid; grid-template-columns: auto minmax(0, 2fr) minmax(0, 1.2fr) 80px 80px minmax(0, 1.3fr) auto; gap: 14px; align-items: center; width: 100%;
+  padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .1s }
+.mk-riadok:hover { border-color: var(--gold-strong); box-shadow: 0 4px 14px rgba(0,0,0,.06) }
+.mk-riadok:active { transform: scale(.995) }
+.mk-riadok.neaktivny { opacity: .6 }
+.mk-r-meno { display: grid; min-width: 0 }
+.mk-r-meno b, .mk-r-meno small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.mk-r-rola { display: flex; flex-wrap: wrap; gap: 4px }
+.chip-admin { background: var(--gold-soft); color: var(--gold); font-weight: 700 }
+.chip-off { background: var(--bad-soft); color: var(--bad) }
+.mk-r-stat { display: grid; justify-items: center; line-height: 1.15 }
+.mk-r-stat b { font-family: var(--display); font-size: 17px }
+.mk-r-stat small { color: var(--muted); font-size: 11px }
+.mk-r-online { font-size: 12.5px }
+.mk-r-upravit { color: var(--gold); font-weight: 700; font-size: 13.5px; white-space: nowrap }
+.mk-tim-nast { padding: 0 }
+.mk-tim-nast > summary { cursor: pointer; padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; list-style: none }
+.mk-tim-nast > summary::-webkit-details-marker { display: none }
+.mk-tim-nast > summary::after { content: "▾"; margin-left: auto; color: var(--muted) }
+.mk-tim-nast[open] > summary::after { content: "▴" }
+.mk-tim-nast[open] { padding-bottom: 12px }
+.mk-tim-nast > .box { margin: 0 12px 10px; box-shadow: none }
+.mk-spat { margin-bottom: 10px }
+.mk-detail-hl { display: flex; align-items: center; gap: 14px; margin: 0 0 12px }
+.mk-detail-hl h2 { margin: 0; font-family: var(--display); font-size: 22px }
+@media (max-width: 760px) {
+  .mk-riadok { grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px }
+  .mk-r-rola { grid-column: 2; grid-row: 2 }
+  .mk-r-stat, .mk-r-online { display: none }
+  .mk-r-upravit { grid-row: 1 / span 2; grid-column: 3 }
+}
+
+/* ---------- farba schémy aj v bočnom paneli, hlavičke a prihlásení */
+:root { --panel: #2b3440; --panel-2: #1a242d }
+@media (min-width: 1100px) {
+  .bocne { background: linear-gradient(180deg, var(--panel) 0%, var(--graphite) 55%, var(--panel-2) 100%); border-right: 1px solid rgb(var(--accent-rgb) / .22);
+    box-shadow: inset -1px 0 0 rgb(var(--accent-rgb) / .08) }
+  .bocne-logo { border-bottom-color: rgb(var(--accent-rgb) / .22) }
+  .bocne-logo span { color: rgb(var(--accent-rgb) / .9) }
+  .bocne-typek { border-top-color: rgb(var(--accent-rgb) / .2) }
+}
+.menu-skup-n { color: rgb(var(--accent-rgb) / .75) }
+.dl-menu { background: rgb(var(--accent-rgb) / .07); border-color: rgb(var(--accent-rgb) / .16) }
+.dl-menu:hover { background: rgb(var(--accent-rgb) / .16); border-color: rgb(var(--accent-rgb) / .55) }
+.dl-menu-ik { background: rgb(var(--accent-rgb) / .2) }
+header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graphite) 45%, var(--panel) 100%); border-bottom: 2px solid rgb(var(--accent-rgb) / .55) }
+.menu-sheet-panel { background: linear-gradient(180deg, var(--panel) 0%, var(--graphite) 70%) }
+.login { background: radial-gradient(900px 500px at 15% 10%, rgb(var(--accent-rgb) / .22), transparent 60%), radial-gradient(700px 500px at 100% 100%, rgb(var(--accent-rgb) / .12), transparent 60%), var(--graphite) }
+.btn.primary:hover { filter: brightness(1.06) }
