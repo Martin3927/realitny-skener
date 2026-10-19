@@ -922,3 +922,86 @@ pre.kod { width: 100%; margin: 0; background: var(--graphite); color: #e9e4d6; b
 .marks .odpocet b { font-variant-numeric: tabular-nums; letter-spacing: .02em }
 .marks .odpocet { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); font-weight: 600 }
 .marks .odpocet.due { background: var(--bad-soft); color: var(--bad) }
+
+/* ---------- chat 2.0: krajší a na mobile na celú obrazovku */
+.box.chat { padding: 0; gap: 0; overflow: hidden; min-height: 360px }
+.chat-hlava { padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--surface); align-items: center; flex-wrap: nowrap }
+.chat-titul { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.chat-titul h3 { margin: 0; font-size: 16px }
+.chat-ik { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--gold-soft); color: var(--gold); flex: none }
+.chat-ik svg { width: 22px; height: 22px }
+.chat-online { color: var(--good); font-weight: 600 }
+.chat-online::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--good); margin-right: 5px; vertical-align: 1px }
+.chat-clenovia { display: flex; flex-direction: row-reverse; justify-content: flex-end; margin-left: auto; padding-left: 8px }
+.chat-clen { position: relative; margin-left: -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface) }
+.chat-clen .av { display: grid }
+.chat-clen.on::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 2px var(--surface) }
+.chat-clen.viac { width: 30px; height: 30px; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--surface-2); color: var(--muted) }
+.chat-spravy { flex: 1 1 auto; height: auto; min-height: 0; padding: 14px 16px 18px; gap: 2px;
+  background: radial-gradient(1200px 400px at 100% 0%, color-mix(in srgb, var(--gold-soft) 55%, transparent), transparent 70%), var(--surface-2) }
+.chat-den { margin: 14px 0 8px; position: sticky; top: 0; z-index: 1 }
+.chat-den span { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 0; font-weight: 600; padding: 3px 12px }
+.sprava { gap: 8px; margin-top: 12px }
+.sprava.spojena { margin-top: 3px }
+.sprava-av { width: 32px }
+.sprava-av .av { box-shadow: 0 1px 3px rgba(0,0,0,.12) }
+.sprava-telo { max-width: min(520px, 76%) }
+.sprava-meno { color: hsl(var(--h, 40) 45% 36%); font-size: 12px; margin: 0 0 3px 12px }
+:root[data-theme="dark"] .sprava-meno { color: hsl(var(--h, 40) 60% 72%) }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sprava-meno { color: hsl(var(--h, 40) 60% 72%) } }
+.bublina { background: var(--surface); border: 0; border-radius: 18px 18px 18px 6px; padding: 8px 12px 6px; font-size: 14.5px; box-shadow: 0 1px 2px rgba(0,0,0,.07), 0 2px 8px rgba(0,0,0,.04) }
+.sprava.spojena:not(.ja) .bublina { border-top-left-radius: 6px }
+.sprava.ja .bublina { background: linear-gradient(160deg, #ecd796, var(--gold-strong)); color: #1f1b12; border-radius: 18px 18px 6px 18px; box-shadow: 0 1px 2px rgba(120,90,20,.18), 0 3px 10px rgba(168,134,47,.15) }
+.sprava.ja.spojena .bublina { border-top-right-radius: 6px }
+.sprava.ja .bublina a { color: #1f1b12 }
+.sprava.ja .sprava-cas { color: rgba(31,27,18,.6) }
+.sprava-cas { font-size: 10.5px; margin-top: 3px }
+.bublina.zmazana { background: transparent; box-shadow: inset 0 0 0 1px var(--line) }
+.sprava-sys { box-shadow: 0 2px 10px rgba(0,0,0,.06) }
+.chat-emoji { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 12px 0; background: var(--surface); border-top: 1px solid var(--line) }
+.chat-emoji button { border: 0; background: none; font-size: 22px; line-height: 1; padding: 6px; border-radius: 8px; cursor: pointer }
+.chat-emoji button:hover { background: var(--surface-2) }
+.chat-form { gap: 8px; align-items: flex-end; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--surface) }
+.chat-emoji:not([hidden]) + .chat-form { border-top: 0 }
+.chat-form textarea { border-radius: 22px; padding: 10px 16px; min-height: 44px; background: var(--surface-2); border: 1px solid var(--line); font-size: 15px; line-height: 1.4 }
+.chat-form textarea:focus { background: var(--surface); border-color: var(--gold-strong); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold-strong) 25%, transparent) }
+.chat-emoji-btn { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; font-size: 22px; cursor: pointer }
+.chat-emoji-btn[aria-expanded="true"], .chat-emoji-btn:hover { background: var(--surface-2) }
+.chat-poslat { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--gold-strong); color: #1f1b12; display: grid; place-items: center; cursor: pointer; box-shadow: 0 2px 8px rgba(168,134,47,.35) }
+.chat-poslat svg { width: 20px; height: 20px; margin-left: 2px }
+.chat-poslat:disabled { opacity: .5 }
+.chat-poslat:active:not(:disabled) { transform: scale(.94) }
+@media (max-width: 640px) {
+  main .wrap:has(.box.chat) { padding-inline: 0 }
+  .box.chat { border-radius: 0; border-left: 0; border-right: 0; margin-bottom: 0 }
+  .chat-clenovia .chat-clen:nth-child(n+5) { display: none }
+  .chat-spravy { padding: 10px 10px 14px }
+  .sprava-telo { max-width: 82% }
+  .sprava-av { width: 28px }
+  .chat-form { padding-inline: 8px }
+  .chat-emoji-btn { width: 40px }
+}
+
+/* ---------- hlavička na mobile: logo a ikony v jednom riadku, sekcie posuvné v druhom */
+.odhl-ik { display: none }
+@media (max-width: 640px) {
+  header.top .wrap { gap: 8px 10px; padding-block: 8px }
+  .brand { order: 1 }
+  .brand img { height: 34px }
+  .brand-sub { display: none }
+  .user { order: 2; margin-left: auto; gap: 4px }
+  .user button { padding: 5px 7px }
+  .user .odhl { padding-inline: 6px }
+  .odhl-ik { display: inline; font-size: 15px; line-height: 1 }
+  .odhl-txt { display: none }
+  nav.tabs { order: 3; width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 0 -6px; padding: 0 6px 2px }
+  nav.tabs::-webkit-scrollbar { display: none }
+  nav.tabs button { flex: none; white-space: nowrap }
+}
+.mk-pristup { display: grid; gap: 6px }
+@media (max-width: 380px) {
+  .brand img { height: 28px }
+  .user .odhl { padding-inline: 5px; font-size: 11px }
+  .odhl b { min-width: 0 }
+  .user .me-btn .av { width: 26px !important; height: 26px !important }
+}
