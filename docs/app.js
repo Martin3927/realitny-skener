@@ -269,7 +269,7 @@
   var LOGO_PREDV = "logo.png?v=202610191700";
   var SCHEMY = {
     zlata: ["Zlatá", "#dab967", "#a8862f", "#f3ead6", "#2b2f36"],
-    typek: ["Realitný týpek", "#f0ad1c", "#a36d00", "#fcefd2", "#1c1d21"],
+    typek: ["Realitný týpek", "#db9522", "#8a5a2b", "#f2e4c6", "#1e2a35"],
     modra: ["Modrá", "#4c8df6", "#2560c4", "#e4edfd", "#1c2738"],
     smaragd: ["Smaragdová", "#2fb380", "#16845a", "#ddf3e9", "#1d2b27"],
     vinova: ["Vínová", "#c4566a", "#9a2d42", "#f8e3e7", "#2b2125"],
@@ -288,7 +288,7 @@
       var c = V.farba, tmava = jas(c) > 0.45 ? zmiesaj(c, "#000000", 0.38) : jas(c) > 0.2 ? zmiesaj(c, "#000000", 0.2) : c;
       return ["Vlastná", jas(c) < 0.12 ? zmiesaj(c, "#ffffff", 0.35) : c, tmava, zmiesaj(c, "#ffffff", 0.84), zmiesaj("#23262c", c, 0.1)];
     }
-    return SCHEMY[V.schema] || SCHEMY.zlata;
+    return SCHEMY[V.schema] || SCHEMY.typek;
   }
   function aplikujVzhlad(V) {
     var f = farbySchemy(V), s = f[1], g = f[2];
@@ -341,7 +341,7 @@
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
       '<button class="btn primary wide" type="submit">Prihlásiť sa</button>' +
       "<p>Účet vám vytvorí administrátor. Ak ste zabudli heslo, požiadajte ho o nové.</p>" + PRAVA + "</form>" +
-      '<div class="login-pata"><img src="typek-hlava.png" alt="" width="28" height="28"><span><b>Realitný týpek</b> · nehnuteľnosti s rozumom</span></div></div>';
+      '<div class="login-pata"><img src="typek-hlava.png" alt="" width="28" height="28"><span><b>Realitný týpek</b></span></div></div>';
     pridajOko($("#f-login"));
     $("#f-login").addEventListener("submit", async function (e) {
       e.preventDefault();
@@ -869,7 +869,7 @@
     document.body.classList.add("ma-bocne");
     $("#app").innerHTML =
       '<aside class="bocne" aria-label="Sekcie"><a class="bocne-logo" href="#" data-tab="domov" title="Prehľad"><img src="' + esc(logoUrl()) + '" alt="' + esc(nazovKancelarie()) + '"><span>Realitný týpek</span></a>' + menuHtml +
-        '<div class="bocne-typek"><img src="typek-postava.png" alt="" width="64" height="72"><span><b>Realitný týpek</b>nehnuteľnosti s rozumom</span></div></aside>' +
+        '<div class="bocne-typek"><img src="typek-postava.png" alt="" width="64" height="72"><span><b>Realitný týpek</b></span></div></aside>' +
       '<header class="top"><div class="wrap">' +
       '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="' + esc(logoUrl()) + '" alt="' + esc(nazovKancelarie()) + '"><span class="brand-sub">Realitný<br>týpek</span></a>' +
       '<h1 class="hl-titul"><span class="menu-ik">' + ikona(aktualna[2]) + "</span>" + esc(aktualna[1]) + "</h1>" +
@@ -3785,9 +3785,9 @@
   var POZICIE = [["lh", "Vľavo hore"], ["ph", "Vpravo hore"], ["stred", "Stred"], ["ld", "Vľavo dole"], ["dole", "Dole v strede"], ["pd", "Vpravo dole"]];
   function vykresliVzhlad() {
     var el = $("#obsah"); if (!el || !admin()) return;
-    var D = S.vzhladDraft = S.vzhladDraft || JSON.parse(JSON.stringify(Object.assign({ schema: "zlata" }, S.vzhlad || {})));
+    var D = S.vzhladDraft = S.vzhladDraft || JSON.parse(JSON.stringify(Object.assign({ schema: "typek" }, S.vzhlad || {})));
     D.vodoznak = Object.assign({}, VODOZNAK_PREDV, D.vodoznak || {});
-    var w = D.vodoznak, zmenene = JSON.stringify(D) !== JSON.stringify(Object.assign({ schema: "zlata" }, S.vzhlad || {}, { vodoznak: Object.assign({}, VODOZNAK_PREDV, (S.vzhlad || {}).vodoznak || {}) }));
+    var w = D.vodoznak, zmenene = JSON.stringify(D) !== JSON.stringify(Object.assign({ schema: "typek" }, S.vzhlad || {}, { vodoznak: Object.assign({}, VODOZNAK_PREDV, (S.vzhlad || {}).vodoznak || {}) }));
     function karta(k, f) {
       return '<button type="button" class="vz-schema' + (D.schema === k ? " vybrana" : "") + '" data-schema="' + k + '" aria-pressed="' + (D.schema === k) + '">' +
         '<span class="vz-nahlad" style="--g:' + f[1] + ";--gr:" + f[4] + ";--soft:" + f[3] + '"><i class="vz-hl"></i><i class="vz-bod"></i><i class="vz-pas"></i></span><b>' + esc(f[0]) + "</b></button>";
@@ -3817,7 +3817,7 @@
         '<label class="vz-slider"><span>Veľkosť <b id="vz-vel-h">' + Math.round(w.velkost * 100) + ' %</b></span><input type="range" id="vz-vel" min="8" max="60" step="1" value="' + Math.round(w.velkost * 100) + '"></label>' +
         '<p class="meta">Platí pre nové fotky. Každý maklér si vodotlač pri nahrávaní môže vypnúť.</p></div>' +
         '<div class="vz-nahlad-foto"><canvas id="vz-canvas" width="960" height="640" aria-label="Náhľad vodotlače"></canvas><span class="meta">Náhľad</span></div></div></section>' +
-      '<section class="vz-sekcia vz-typek"><img src="typek-postava.png" alt="" width="90" height="101"><div><b>Realitný týpek</b><span class="meta">Softvér pre realitné kancelárie a maklérov – nehnuteľnosti s rozumom. Farby a logo si každá kancelária nastaví po svojom.</span></div></section></div>';
+      '<section class="vz-sekcia vz-typek"><img src="typek-postava.png" alt="" width="90" height="101"><div><b>Realitný týpek</b><span class="meta">Softvér pre realitné kancelárie a maklérov. Farby a logo si každá kancelária nastaví po svojom.</span></div></section></div>';
     el.innerHTML = h;
     napojVzhlad();
     kresliNahladVodoznaku();

@@ -1,7 +1,7 @@
-/* Verejné stránky ponúk – pre klientov a majiteľov. Svetlé, čisté, zlatá z loga Alpha Reality. */
+/* Verejné stránky ponúk – pre klientov a majiteľov. Svetlé, čisté, farby značky Realitný týpek. */
 :root {
-  --bg: #f6f5f1; --surface: #ffffff; --ink: #1f2329; --muted: #686c73; --line: #e6e2d8;
-  --gold: #a8862f; --gold-strong: #dab967; --gold-soft: #f4ecd9; --graphite: #24282e;
+  --bg: #f7f2e8; --surface: #fffdf8; --ink: #1e2a35; --muted: #4a6074; --line: #e6ddcb;
+  --gold: #8a5a2b; --gold-strong: #db9522; --gold-soft: #f2e4c6; --graphite: #1e2a35;
   --good: #1a8a4a; --good-soft: #e1f3e8; --bad: #b4462b; --bad-soft: #f8e6e0; --wa: #1fa855;
   --display: "Montserrat", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", Arial, sans-serif;
