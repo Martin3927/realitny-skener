@@ -12,7 +12,13 @@
     if (sb) return sb.rpc(fn, args).then(function (r) { if (r.error) throw r.error; return r.data; });
     return fetch(CFG.supabaseUrl + "/rest/v1/rpc/" + fn, {
       method: "POST", headers: { apikey: CFG.supabaseKey, "Content-Type": "application/json" }, body: JSON.stringify(args || {}),
-    }).then(function (r) { if (!r.ok) throw new Error("Údaje sa nepodarilo načítať (" + r.status + ")."); return r.json(); });
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        var d = null; try { d = t ? JSON.parse(t) : null; } catch (e) { /* nie JSON */ }
+        if (!r.ok) throw new Error((d && d.message) || "Údaje sa nepodarilo načítať (" + r.status + ").");
+        return d;
+      });
+    });
   }
   function fotkaUrl(f) {
     if (!f) return "";

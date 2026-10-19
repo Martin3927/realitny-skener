@@ -574,7 +574,7 @@ def zaznam(**kw):
         "id": None, "portal": None, "portaly": [], "url": None, "nazov": "", "typ": None, "izby": None,
         "cena": None, "plocha": None, "cena_m2": None, "obec": None, "okres": None,
         "predajca": None, "predajca_typ": None, "predajca_dovod": None, "foto": None, "popis": "",
-        "publikovane": None, "podtyp": None,
+        "publikovane": None, "podtyp": None, "lat": None, "lon": None, "ulica": None,
     }
     z.update(kw)
     if z["plocha"]:
@@ -630,6 +630,26 @@ def norm_bazos(r, pocty_uzivatelov):
     )
 
 
+def gps_z_lokality(loc):
+    """Presná poloha inzerátu, ak ju portál posiela (realitná mapa). Hľadá dvojicu súradníc v údajoch o lokalite."""
+    def najdi(o, h=0):
+        if h > 3 or not isinstance(o, dict):
+            return None
+        for a, b in (("latitude", "longitude"), ("lat", "lon"), ("lat", "lng")):
+            x, y = o.get(a), o.get(b)
+            if isinstance(x, (int, float)) and isinstance(y, (int, float)):
+                return float(x), float(y)
+        for v in o.values():
+            r = najdi(v, h + 1) if isinstance(v, dict) else None
+            if r:
+                return r
+        return None
+    r = najdi(loc or {})
+    if r and 47.6 < r[0] < 49.7 and 16.8 < r[1] < 22.6:   # len body na Slovensku
+        return round(r[0], 6), round(r[1], 6)
+    return None, None
+
+
 def norm_nehn(ad):
     par = ad.get("parameters", {})
     cat = par.get("category", {})
@@ -667,6 +687,8 @@ def norm_nehn(ad):
         predajca=meno, predajca_typ=ptyp, predajca_dovod=dovod, foto=fotky[0]["url"] if fotky else None,
         publikovane=(ad.get("createdAt") or "")[:10] or None,
         podtyp=podtyp_pozemku(ad.get("title", ""), par.get("area"), sub) if typ == "pozemok" else None,
+        lat=gps_z_lokality(loc)[0], lon=gps_z_lokality(loc)[1],
+        ulica=(loc.get("street") or loc.get("streetName") or None) if isinstance(loc.get("street") or loc.get("streetName"), str) else None,
     )
 
 
@@ -731,7 +753,7 @@ SKENER_KLUC = os.environ.get("SKENER_KLUC") or ""
 POUZI_DB = bool(DB_URL and DB_KEY and SKENER_KLUC)
 STLPCE = ["id", "portal", "portaly", "url", "nazov", "typ", "podtyp", "izby", "cena", "plocha", "cena_m2", "obec",
           "okres", "predajca", "predajca_typ", "predajca_dovod", "foto", "popis", "publikovane", "prvy_krat",
-          "naposledy", "aktivny", "duplikat_z", "dalsie_odkazy", "historia_cien"]
+          "naposledy", "aktivny", "duplikat_z", "dalsie_odkazy", "historia_cien", "lat", "lon", "ulica"]
 _POVODNE = {}  # odtlačky riadkov z databázy – posielame len zmenené
 
 

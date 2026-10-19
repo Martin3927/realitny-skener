@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#24282e">
+<title>Maklér · Alpha Reality</title>
+<meta name="description" content="Realitný maklér Alpha Reality – Spišská Nová Ves a Levoča. Aktuálne ponuky, kontakt a recenzie klientov.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="verejne.css?v=202610191400">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<style>
+.m-hero { background: linear-gradient(160deg, #24282e 0%, #2f343c 100%); color: #f1efe8; padding: 36px 0 30px }
+.m-hero .v-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 24px; align-items: center }
+.m-hero .v-av { box-shadow: 0 0 0 4px #dab967 }
+.m-hero h1 { font-family: var(--display); font-size: clamp(26px, 4vw, 38px); margin: 0 }
+.m-rola { color: #dab967; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 13px }
+.m-hodn { margin-top: 8px; color: #e9e4d6 }
+.m-hodn .h { color: #f1c24b; letter-spacing: 1px }
+.m-kont { display: grid; gap: 8px; min-width: 220px }
+.m-sek { padding: 28px 0 0 }
+.m-sek h2 { font-family: var(--display); font-size: 22px; margin: 0 0 14px }
+.m-rec { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px }
+.m-rec .v-box { display: grid; gap: 8px }
+.m-rec .h { color: #e0a51a; letter-spacing: 1px }
+.m-rec p { margin: 0; font-style: italic }
+.m-rec small { color: var(--muted) }
+@media (max-width: 760px) { .m-hero .v-wrap { grid-template-columns: auto minmax(0, 1fr) } .m-kont { grid-column: 1 / -1 } }
+</style>
+</head>
+<body>
+<header class="v-top"><div class="v-wrap"><a href="https://www.alphareality.sk/"><img src="logo.png" alt="Alpha Reality"></a><div class="v-top-t">Realitná kancelária<br><a href="https://www.alphareality.sk/">www.alphareality.sk</a></div></div></header>
+<section class="m-hero"><div class="v-wrap" id="hero"><div class="v-nic" style="padding:20px;color:#c9c5bb">Načítavam…</div></div></section>
+<main class="v-wrap">
+  <section class="m-sek"><h2>Moje aktuálne ponuky</h2><div id="ponuky"></div></section>
+  <section class="m-sek" id="rec-sek" hidden><h2>Čo hovoria klienti</h2><div class="m-rec" id="recenzie"></div></section>
+  <section class="m-sek"><div class="v-box" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between"><div><b>Spolupracovali sme?</b><div class="v-lok">Budem rád/a za vašu recenziu – pomôže ďalším klientom.</div></div><a class="v-btn zlate" id="napisat" href="#">⭐ Napísať recenziu</a></div></section>
+</main>
+<footer class="v-wrap v-pata" style="margin-top:32px">© Alpha Reality s.r.o. · Spišská Nová Ves a Levoča · <a href="https://www.alphareality.sk/">www.alphareality.sk</a></footer>
+<script src="config.js?v=202610182100"></script>
+<script src="verejne.js?v=202610191400"></script>
+<script>
+(function () {
+  var T = window.TYPEK, esc = T.esc, id = T.param("id");
+  document.getElementById("napisat").href = "recenzia.html?m=" + encodeURIComponent(id || "");
+  T.rpc("verejny_makler", { p_id: id }).then(function (m) {
+    if (!m) { document.getElementById("hero").innerHTML = '<div><h1>Stránka nie je dostupná</h1></div>'; return; }
+    document.title = m.meno + " · Alpha Reality";
+    var tel = T.telOdkaz(m.telefon), zena = m.pohlavie === "zena";
+    document.getElementById("napisat").parentNode.querySelector(".v-lok").textContent = "Budem " + (zena ? "rada" : "rád") + " za vašu recenziu – pomôže ďalším klientom.";
+    document.getElementById("hero").innerHTML = T.avatar(m, 110) + '<div><div class="m-rola">' + (zena ? "Realitná maklérka" : "Realitný maklér") + "</div><h1>" + esc(m.meno) + '</h1><div class="v-lok" style="color:#c9c5bb">Alpha Reality · Spišská Nová Ves a Levoča</div><div class="m-hodn" id="hodn"></div></div>' +
+      '<div class="m-kont">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 ' + esc(m.telefon) + '</a><a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(m.telefon)) + '" target="_blank" rel="noopener">WhatsApp</a>' : "") +
+      (m.email ? '<a class="v-btn" style="background:transparent;color:#f1efe8;border-color:rgba(255,255,255,.25)" href="mailto:' + esc(m.email) + '">✉️ ' + esc(m.email) + "</a>" : "") + "</div>";
+    var w = document.createElement("div"); w.setAttribute("data-typek-ponuky", ""); w.setAttribute("data-makler", m.id); w.setAttribute("data-filtre", "1");
+    document.getElementById("ponuky").appendChild(w);
+    var s = document.createElement("script"); s.src = "widget.js?v=202610191400"; document.body.appendChild(s);
+    return T.rpc("verejne_recenzie", { p_makler: m.id });
+  }).then(function (r) {
+    if (!r || !r.pocet) return;
+    var h = document.getElementById("hodn"); if (h) h.innerHTML = '<span class="h">★★★★★</span> <b>' + String(r.priemer).replace(".", ",") + "</b> · " + r.pocet + (r.pocet === 1 ? " recenzia" : r.pocet <= 4 ? " recenzie" : " recenzií");
+    document.getElementById("rec-sek").hidden = false;
+    document.getElementById("recenzie").innerHTML = r.zoznam.slice(0, 12).map(function (x) {
+      return '<div class="v-box"><span class="h">' + "★★★★★".slice(0, x.hodnotenie) + '<span style="color:var(--line)">' + "★★★★★".slice(x.hodnotenie) + "</span></span>" + (x.text ? "<p>„" + esc(x.text) + "“</p>" : "") +
+        "<small><b>" + esc(x.meno) + "</b> · " + esc(T.datum(x.datum)) + "</small></div>";
+    }).join("");
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

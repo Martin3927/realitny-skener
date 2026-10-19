@@ -11,7 +11,7 @@
 <meta property="og:image" content="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="verejne.css?v=202610190000">
+<link rel="stylesheet" href="verejne.css?v=202610191400">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 </head>
 <body>
@@ -23,7 +23,7 @@
 <footer class="v-wrap v-pata">© Alpha Reality s.r.o. · Spišská Nová Ves a Levoča · <a href="https://www.alphareality.sk/">www.alphareality.sk</a></footer>
 <script src="config.js?v=202610182100"></script>
 <script src="supabase.min.js"></script>
-<script src="verejne.js?v=202610190000"></script>
+<script src="verejne.js?v=202610191400"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, id = Number(T.param("id")), P = null, g = 0;
@@ -47,7 +47,8 @@
   function makler() {
     var m = P.makler || {};
     var tel = T.telOdkaz(m.telefon), sprava = "Dobrý deň, mám záujem o ponuku: " + T.nazov(P) + (P.cislo ? " (č. " + P.cislo + ")" : "") + " " + location.href.split("#")[0];
-    return '<div class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno || "Alpha Reality") + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · Alpha Reality</small></div></div>" +
+    return '<div class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + '<div><b><a href="makler.html?id=' + esc(m.id || "") + '" style="color:inherit;text-decoration:none">' + esc(m.meno || "Alpha Reality") + "</a></b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · Alpha Reality</small>" +
+      '<div class="v-hodn" id="mk-hodn"></div></div></div>' +
       '<div class="v-btns">' +
       (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 ' + esc(m.telefon) + "</a>" : "") +
       (tel ? '<div class="v-btns dva"><a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(m.telefon)) + "?text=" + encodeURIComponent(sprava) + '" target="_blank" rel="noopener">WhatsApp</a>' +
@@ -130,6 +131,10 @@
   T.rpc("verejna_ponuka", { p_id: id }).then(function (p) {
     if (!p) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Ponuka už nie je dostupná</b>Pozrite si ďalšie ponuky na <a href="https://www.alphareality.sk/">www.alphareality.sk</a>.</div>'; return; }
     P = p; vykresli();
+    if (p.makler && p.makler.id) T.rpc("verejne_recenzie", { p_makler: p.makler.id }).then(function (r) {
+      var h = document.getElementById("mk-hodn"); if (!h || !r || !r.pocet) return;
+      h.innerHTML = '<a href="makler.html?id=' + esc(p.makler.id) + '#rec-sek"><span>★</span> ' + String(r.priemer).replace(".", ",") + " · " + r.pocet + (r.pocet === 1 ? " recenzia" : r.pocet <= 4 ? " recenzie" : " recenzií") + "</a>";
+    }).catch(function () {});
     if (!T.param("nahlad")) T.rpc("zaznamenat_zobrazenie", { p_id: id }).catch(function () {});
   }).catch(function (e) {
     document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Ponuku sa nepodarilo načítať</b>' + esc(e.message || e) + "</div>";
