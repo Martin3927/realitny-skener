@@ -265,8 +265,64 @@
   }
 
   // ------------------------------------------------------------ štart a prihlásenie
+  // ------------------------------------------------------------ VZHĽAD KANCELÁRIE (farby, logo, vodotlač)
+  var LOGO_PREDV = "logo.png?v=202610191700";
+  var SCHEMY = {
+    zlata: ["Zlatá", "#dab967", "#a8862f", "#f3ead6", "#2b2f36"],
+    typek: ["Realitný týpek", "#f0ad1c", "#a36d00", "#fcefd2", "#1c1d21"],
+    modra: ["Modrá", "#4c8df6", "#2560c4", "#e4edfd", "#1c2738"],
+    smaragd: ["Smaragdová", "#2fb380", "#16845a", "#ddf3e9", "#1d2b27"],
+    vinova: ["Vínová", "#c4566a", "#9a2d42", "#f8e3e7", "#2b2125"],
+    oranzova: ["Oranžová", "#f08a2c", "#b85c0c", "#fdebd9", "#2a2522"],
+    fialova: ["Fialová", "#8d73ee", "#6247cc", "#ece7fd", "#231f36"],
+    grafit: ["Grafitová", "#a3adbb", "#566170", "#eceef2", "#212429"],
+  };
+  var VODOZNAK_PREDV = { pozicia: "pd", styl: "farebne", priehladnost: 0.62, velkost: 0.2 };
+  function hexRgb(h) { h = String(h || "#000000").replace("#", ""); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+  function rgbHex(c) { return "#" + c.map(function (v) { return Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0"); }).join(""); }
+  function zmiesaj(a, b, t) { var x = hexRgb(a), y = hexRgb(b); return rgbHex(x.map(function (v, i) { return v + (y[i] - v) * t; })); }
+  function jas(h) { var c = hexRgb(h).map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+  function farbySchemy(V) {
+    V = V || {};
+    if (V.schema === "vlastna" && /^#[0-9a-f]{6}$/i.test(V.farba || "")) {
+      var c = V.farba, tmava = jas(c) > 0.45 ? zmiesaj(c, "#000000", 0.38) : jas(c) > 0.2 ? zmiesaj(c, "#000000", 0.2) : c;
+      return ["Vlastná", jas(c) < 0.12 ? zmiesaj(c, "#ffffff", 0.35) : c, tmava, zmiesaj(c, "#ffffff", 0.84), zmiesaj("#23262c", c, 0.1)];
+    }
+    return SCHEMY[V.schema] || SCHEMY.zlata;
+  }
+  function aplikujVzhlad(V) {
+    var f = farbySchemy(V), s = f[1], g = f[2];
+    var on = jas(s) > 0.42 ? zmiesaj(s, "#000000", 0.85) : "#ffffff";
+    var dsoft = zmiesaj("#20232a", s, 0.18), dgr = zmiesaj("#0f1114", f[4], 0.35);
+    var css = ":root{--gold:" + g + ";--gold-strong:" + s + ";--gold-soft:" + f[3] + ";--graphite:" + f[4] + ";--accent-rgb:" + hexRgb(s).join(" ") +
+      ";--accent-dark-rgb:" + hexRgb(g).join(" ") + ";--accent-light:" + zmiesaj(s, "#ffffff", 0.35) + ";--on-accent:" + on + "}" +
+      '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--gold:' + s + ";--gold-soft:" + dsoft + ";--graphite:" + dgr + "}}" +
+      ':root[data-theme="dark"]{--gold:' + s + ";--gold-soft:" + dsoft + ";--graphite:" + dgr + "}";
+    var el = document.getElementById("vzhlad-css");
+    if (!el) { el = document.createElement("style"); el.id = "vzhlad-css"; document.head.appendChild(el); }
+    el.textContent = css;
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", f[4]);
+    if (S.logoUrlPred !== logoUrl()) { S.logoUrlPred = logoUrl(); S.logoP = null; }
+  }
+  function logoUrl() { return (S.vzhlad && S.vzhlad.logo) || LOGO_PREDV; }
+  function nazovKancelarie() { return (S.vzhlad && S.vzhlad.nazov) || "Alpha Reality"; }
+  function vodoznakNast() { return Object.assign({}, VODOZNAK_PREDV, (S.vzhlad && S.vzhlad.vodoznak) || {}); }
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#dab967"; }
+  // vzhľad sa pamätá v prehliadači, aby sa farby a logo ukázali hneď (aj na prihlasovacej obrazovke)
+  try { S.vzhlad = JSON.parse(localStorage.getItem("typek-vzhlad") || "null") || {}; } catch (e) { S.vzhlad = {}; }
+  aplikujVzhlad(S.vzhlad);
+  async function nacitajVzhlad() {
+    var v = await rpc("vzhlad_kancelarie", {});
+    var zmena = JSON.stringify(v || {}) !== JSON.stringify(S.vzhlad || {});
+    S.vzhlad = v || {};
+    try { localStorage.setItem("typek-vzhlad", JSON.stringify(S.vzhlad)); } catch (e) { /* bez úložiska */ }
+    if (zmena) aplikujVzhlad(S.vzhlad);
+    return zmena;
+  }
+
   async function start() {
     var ses = (await sb.auth.getSession()).data.session;
+    nacitajVzhlad().then(function (zmena) { if (zmena && !S.me && $("#f-login")) obrazovkaLogin($("#l-err") ? $("#l-err").textContent : ""); }).catch(function () {});
     if (ses) return poPrihlaseni(ses.user);
     var prve = false;
     try { prve = await rpc("je_prve_spustenie", {}); } catch (e) { /* zobrazíme prihlásenie */ }
@@ -277,13 +333,15 @@
 
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
-      '<div class="login"><form class="login-box" id="f-login">' +
-      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610191600" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
+      '<div class="login"><div class="login-typek" aria-hidden="true"><img src="typek-postava.png" alt="" width="568" height="640"><span class="login-bublina">Ahoj! Poďme predávať 🔑</span></div>' +
+      '<form class="login-box" id="f-login">' +
+      '<span class="lesk"><img class="login-logo" src="' + esc(logoUrl()) + '" alt="' + esc(nazovKancelarie()) + '"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
       '<button class="btn primary wide" type="submit">Prihlásiť sa</button>' +
-      "<p>Účet vám vytvorí administrátor. Ak ste zabudli heslo, požiadajte ho o nové.</p>" + PRAVA + "</form></div>";
+      "<p>Účet vám vytvorí administrátor. Ak ste zabudli heslo, požiadajte ho o nové.</p>" + PRAVA + "</form>" +
+      '<div class="login-pata"><img src="typek-hlava.png" alt="" width="28" height="28"><span><b>Realitný týpek</b> · nehnuteľnosti s rozumom</span></div></div>';
     pridajOko($("#f-login"));
     $("#f-login").addEventListener("submit", async function (e) {
       e.preventDefault();
@@ -305,7 +363,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610191600" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
+      '<img class="login-logo" src="' + esc(logoUrl()) + '" alt="' + esc(nazovKancelarie()) + '"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -508,6 +566,7 @@
   // ---------- automatické odhlásenie pri nečinnosti
   var KLUC_AKT = "typek-aktivita", aktPamat = 0, aktZapis = 0;
   async function nacitajNastavenia() {
+    nacitajVzhlad().then(function (zmena) { if (zmena && S.me) vykresli(); }).catch(function () {});
     var n = await rpc("nastavenia_aplikacie", {});
     S.odhlMin = Number(n.odhlasenie_min) || 0;
     S.odkaz = { text: n.odkaz_text || "", zapnuty: !!n.odkaz_zapnuty, autor: n.odkaz_autor || null };
@@ -582,7 +641,7 @@
   }
 
   // ---------- navigácia: každá sekcia je krok v histórii prehliadača (funguje tlačidlo Späť)
-  var TABY = ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat", "mapa", "kataster", "asistent", "web", "recenzie", "vykon", "makleri"];
+  var TABY = ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat", "mapa", "kataster", "asistent", "web", "recenzie", "vykon", "makleri", "vzhlad"];
   var SEKCIE = [["inzeraty", "Realitný skener", "skener"], ["schrankovanie", "Schránkovanie", "sch"], ["nehnutelnosti", "Nehnuteľnosti", "nehn"], ["klienti", "Klienti", "klienti"],
     ["kalendar", "Kalendár", "kal"], ["chat", "Chat", "chat"], ["mapa", "Realitná mapa", "mapa"], ["kataster", "Kataster", "kataster"], ["asistent", "AI asistent", "ai"], ["web", "Osobný web", "web"], ["recenzie", "Recenzie", "hviezda"]];
   var HLAVNE_SEKCIE = ["inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat"];
@@ -590,7 +649,7 @@
   function tabPovoleny(t) {
     if (TABY.indexOf(t) < 0) return false;
     if (t === "domov") return true;
-    if (t === "vykon" || t === "makleri") return admin();
+    if (t === "vykon" || t === "makleri" || t === "vzhlad") return admin();
     return maSekciu(t);
   }
   function tabZAdresy() {
@@ -802,15 +861,17 @@
   // ------------------------------------------------------------ kostra stránky
   function vykresli() {
     if (!tabPovoleny(S.tab)) S.tab = "domov";
+    if (S.tab !== "vzhlad" && S.vzhladDraft) { S.vzhladDraft = null; aplikujVzhlad(S.vzhlad); }
     var tabs = SEKCIE.filter(function (x) { return maSekciu(x[0]); });
-    if (admin()) tabs.push(["vykon", "Výkon", "vykon"], ["makleri", "Makléri", "makleri"]);
+    if (admin()) tabs.push(["vykon", "Výkon", "vykon"], ["makleri", "Makléri", "makleri"], ["vzhlad", "Vzhľad", "farby"]);
     var aktualna = tabs.find(function (t) { return t[0] === S.tab; }) || ["domov", "Prehľad", "domov"];
     var menuHtml = menuDlazdice(tabs);
     document.body.classList.add("ma-bocne");
     $("#app").innerHTML =
-      '<aside class="bocne" aria-label="Sekcie"><a class="bocne-logo" href="#" data-tab="domov" title="Prehľad"><img src="logo.png?v=202610191600" alt="Alpha Reality"><span>Realitný týpek</span></a>' + menuHtml + "</aside>" +
+      '<aside class="bocne" aria-label="Sekcie"><a class="bocne-logo" href="#" data-tab="domov" title="Prehľad"><img src="' + esc(logoUrl()) + '" alt="' + esc(nazovKancelarie()) + '"><span>Realitný týpek</span></a>' + menuHtml +
+        '<div class="bocne-typek"><img src="typek-postava.png" alt="" width="64" height="72"><span><b>Realitný týpek</b>nehnuteľnosti s rozumom</span></div></aside>' +
       '<header class="top"><div class="wrap">' +
-      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610191600" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
+      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="' + esc(logoUrl()) + '" alt="' + esc(nazovKancelarie()) + '"><span class="brand-sub">Realitný<br>týpek</span></a>' +
       '<h1 class="hl-titul"><span class="menu-ik">' + ikona(aktualna[2]) + "</span>" + esc(aktualna[1]) + "</h1>" +
       '<button type="button" class="menu-btn" data-act="menu" aria-expanded="false" aria-controls="menu-sheet"><span class="menu-mriezka" aria-hidden="true"><i></i><i></i><i></i><i></i></span>' +
         '<b>' + esc(aktualna[1]) + '</b><span class="tab-n" data-chat-n hidden></span><span class="menu-btn-hint">Menu ▾</span></button>' +
@@ -864,7 +925,7 @@
 
   // menu z dlaždíc – na počítači bočný panel, na mobile/tablete rozbaľovacia plocha
   var SKUPINY_MENU = [["Práca", ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar"]], ["Tím", ["chat", "recenzie"]],
-    ["Nástroje", ["mapa", "kataster", "asistent", "web"]], ["Správa", ["vykon", "makleri"]]];
+    ["Nástroje", ["mapa", "kataster", "asistent", "web"]], ["Správa", ["vykon", "makleri", "vzhlad"]]];
   function menuDlazdice(tabs) {
     var podla = { domov: ["domov", "Prehľad", "domov"] }; tabs.forEach(function (t) { podla[t[0]] = t; });
     return SKUPINY_MENU.map(function (g) {
@@ -900,6 +961,7 @@
     else if (S.tab === "kalendar") { if (!S.kalForm && !(document.activeElement && document.activeElement.closest && document.activeElement.closest("#obsah"))) vykresliKalendar(); }
     else if (S.tab === "mapa") { if (!$("#realitna-mapa")) vykresliMapu(); }
     else if (S.tab === "kataster") { if (!$("#kat-mapa")) vykresliKataster(); }
+    else if (S.tab === "vzhlad") { if (!$(".vz-box")) vykresliVzhlad(); }
     else if (S.tab === "asistent") { if (!$("#ai-spravy")) vykresliAsistenta(); }
     else if (S.tab === "web") { if (!$(".web-box")) vykresliWeb(); }
     else if (S.tab === "recenzie") { if (!S.recForm) vykresliRecenzie(); }
@@ -1893,6 +1955,7 @@
       kal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17.5h2"/>',
       mapa: '<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>',
       kataster: '<path d="M4 4h16v16H4z"/><path d="M4 11h7v9M11 4v7h9M15 11v9"/>',
+      farby: '<path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.3 0 1.9-.9 1.6-2-.3-1.2.4-2.2 1.7-2.2h2.2a3 3 0 0 0 3-3A8.6 8.6 0 0 0 12 3.5z"/><circle cx="7.6" cy="11" r="1.1"/><circle cx="10.5" cy="7.4" r="1.1"/><circle cx="15" cy="7.8" r="1.1"/>',
       poloha: '<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/>',
       lv: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 12h6M9.5 15.5h6M9.5 8.5h2.5"/>',
       urad: '<path d="M3 9.5 12 4l9 5.5M4.5 20h15M6 10v8M10 10v8M14 10v8M18 10v8"/>',
@@ -1970,6 +2033,7 @@
       (veta ? '<figure class="hero-veta"><blockquote>' + esc(veta) + "</blockquote>" +
         (autorVety && S.mById[autorVety] && autorVety !== S.me.id ? "<figcaption>— " + esc(oslovenie(S.mById[autorVety])) + "</figcaption>" : "") +
         reakcieBar("veta:" + S.me.id + ":" + hashTextu(veta)) + "</figure>" : "") +
+      (!kruhy ? '<img class="hero-typek" src="typek-postava.png" alt="" width="563" height="640">' : "") +
       '<div class="hero-znak">Realitný <span>týpek</span></div></section>' +
       (cudzie.length ? '<div class="oslavy-ini">' + cudzie.map(function (x) {
         var m = S.mById[x.makler_id], o = oslovenie(m);
@@ -2249,7 +2313,7 @@
     if (window.LOKALITY) return Promise.resolve();
     if (S.lokalityP) return S.lokalityP;
     S.lokalityP = new Promise(function (ok, chyba) {
-      var sc = document.createElement("script"); sc.src = "lokality.js?v=202610191600"; sc.onload = ok; sc.onerror = function () { chyba(new Error("Zoznam obcí sa nepodarilo načítať.")); };
+      var sc = document.createElement("script"); sc.src = "lokality.js?v=202610191700"; sc.onload = ok; sc.onerror = function () { chyba(new Error("Zoznam obcí sa nepodarilo načítať.")); };
       document.head.appendChild(sc);
     });
     return S.lokalityP;
@@ -2552,8 +2616,24 @@
   // ---------- fotky: zmenšenie, nahratie, poradie
   function vodoznakZapnuty() { try { return localStorage.getItem("typek-vodoznak") !== "0"; } catch (e) { return true; } }
   function logoObr() {
-    if (!S.logoP) S.logoP = new Promise(function (ok) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = function () { ok(null); }; i.src = "logo.png?v=202610191600"; });
+    if (!S.logoP) S.logoP = new Promise(function (ok) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = function () { ok(null); }; i.crossOrigin = "anonymous"; i.src = logoUrl(); });
     return S.logoP;
+  }
+  // vodotlač loga podľa nastavenia kancelárie: poloha, farebná/biela, priehľadnosť, veľkosť
+  function kresliVodoznak(g, W, H, logo, n) {
+    var lw = Math.round(Math.max(W, H) * n.velkost * (n.pozicia === "stred" ? 1.6 : 1)), lh = Math.round(lw * logo.height / logo.width);
+    if (lw > W * 0.9) { lw = Math.round(W * 0.9); lh = Math.round(lw * logo.height / logo.width); }
+    var m = Math.round(Math.min(W, H) * 0.03), x, y;
+    if (n.pozicia === "stred") { x = (W - lw) / 2; y = (H - lh) / 2; }
+    else if (n.pozicia === "dole") { x = (W - lw) / 2; y = H - lh - m; }
+    else { x = n.pozicia.charAt(0) === "l" ? m : W - lw - m; y = n.pozicia.charAt(1) === "h" ? m : H - lh - m; }
+    var zdroj = logo;
+    if (n.styl === "biele") {
+      zdroj = document.createElement("canvas"); zdroj.width = lw; zdroj.height = lh;
+      var z = zdroj.getContext("2d"); z.drawImage(logo, 0, 0, lw, lh); z.globalCompositeOperation = "source-in"; z.fillStyle = "#ffffff"; z.fillRect(0, 0, lw, lh);
+    }
+    g.save(); g.globalAlpha = n.priehladnost; g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = Math.round(lw * 0.03);
+    g.drawImage(zdroj, Math.round(x), Math.round(y), lw, lh); g.restore();
   }
   async function zmensiFotku(subor, vodoznak) {
     var logo = vodoznak ? await logoObr() : null;
@@ -2563,12 +2643,7 @@
         var max = 1920, k = Math.min(1, max / Math.max(img.width, img.height));
         var c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
         var g = c.getContext("2d"); g.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-        if (logo) {
-          // logo Alpha Reality vpravo dole, polopriehľadné, s jemným tieňom (čitateľné na svetlom aj tmavom pozadí)
-          var lw = Math.round(Math.max(c.width, c.height) * 0.2), lh = Math.round(lw * logo.height / logo.width), m = Math.round(Math.min(c.width, c.height) * 0.03);
-          g.save(); g.globalAlpha = 0.62; g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = Math.round(lw * 0.03);
-          g.drawImage(logo, c.width - lw - m, c.height - lh - m, lw, lh); g.restore();
-        }
+        if (logo) kresliVodoznak(g, c.width, c.height, logo, vodoznakNast());
         var varovanie = img.height > img.width ? "Fotka je na výšku – portály uprednostňujú fotky na šírku." : (img.width < 800 || img.height < 600) ? "Fotka je menšia ako 800 × 600." : "";
         c.toBlob(function (b) { b ? ok({ blob: b, w: c.width, h: c.height, varovanie: varovanie }) : chyba(new Error("Fotku sa nepodarilo spracovať.")); }, "image/jpeg", 0.85);
       };
@@ -3110,7 +3185,7 @@
     el.querySelectorAll("[data-kopiruj-kod]").forEach(function (b) { b.onclick = function () { kopiruj($("#" + b.dataset.kopirujKod).textContent, "Kód je skopírovaný."); }; });
     el.querySelectorAll("[data-kopiruj]").forEach(function (b) { b.onclick = function () { kopiruj(b.dataset.kopiruj, "Adresa feedu je skopírovaná."); }; });
     if (window.TypekPonuky) window.TypekPonuky.obnov();
-    else nacitajSkript("widget.js?v=202610191600", "TypekPonuky").catch(function (e) { toast(chybaText(e), true); });
+    else nacitajSkript("widget.js?v=202610191700", "TypekPonuky").catch(function (e) { toast(chybaText(e), true); });
   }
 
   // ------------------------------------------------------------ KLIENTI A DOPYTY
@@ -3706,6 +3781,106 @@
     }, function () { $("#kat-mapa").innerHTML = '<div class="meta" style="padding:20px">Mapu sa nepodarilo načítať.</div>'; });
   }
 
+  // ------------------------------------------------------------ VZHĽAD A ZNAČKA (admin)
+  var POZICIE = [["lh", "Vľavo hore"], ["ph", "Vpravo hore"], ["stred", "Stred"], ["ld", "Vľavo dole"], ["dole", "Dole v strede"], ["pd", "Vpravo dole"]];
+  function vykresliVzhlad() {
+    var el = $("#obsah"); if (!el || !admin()) return;
+    var D = S.vzhladDraft = S.vzhladDraft || JSON.parse(JSON.stringify(Object.assign({ schema: "zlata" }, S.vzhlad || {})));
+    D.vodoznak = Object.assign({}, VODOZNAK_PREDV, D.vodoznak || {});
+    var w = D.vodoznak, zmenene = JSON.stringify(D) !== JSON.stringify(Object.assign({ schema: "zlata" }, S.vzhlad || {}, { vodoznak: Object.assign({}, VODOZNAK_PREDV, (S.vzhlad || {}).vodoznak || {}) }));
+    function karta(k, f) {
+      return '<button type="button" class="vz-schema' + (D.schema === k ? " vybrana" : "") + '" data-schema="' + k + '" aria-pressed="' + (D.schema === k) + '">' +
+        '<span class="vz-nahlad" style="--g:' + f[1] + ";--gr:" + f[4] + ";--soft:" + f[3] + '"><i class="vz-hl"></i><i class="vz-bod"></i><i class="vz-pas"></i></span><b>' + esc(f[0]) + "</b></button>";
+    }
+    var h = '<div class="box vz-box"><div class="vykon-hlava"><h3>🎨 Vzhľad a značka kancelárie</h3>' +
+      '<div class="nehn-akcie">' + (zmenene ? '<span class="chip">Neuložené zmeny</span><button class="btn ghost" type="button" data-vz="zrusit">Zrušiť</button>' : "") +
+      '<button class="btn primary" type="button" data-vz="ulozit"' + (zmenene ? "" : " disabled") + ">Uložiť pre celý tím</button></div></div>" +
+      '<p class="meta">Nastavenie platí pre všetkých maklérov – farby aplikácie, logo v menu, na prihlásení, na verejných stránkach ponúk a vodotlač na nových fotkách.</p>' +
+      '<section class="vz-sekcia"><h4>Farebná schéma</h4><div class="vz-schemy">' +
+      Object.keys(SCHEMY).map(function (k) { return karta(k, SCHEMY[k]); }).join("") +
+      '<label class="vz-schema vlastna' + (D.schema === "vlastna" ? " vybrana" : "") + '"><span class="vz-nahlad" style="--g:' + esc(D.farba || "#7a5cff") + ";--gr:" + farbySchemy({ schema: "vlastna", farba: D.farba || "#7a5cff" })[4] +
+        ";--soft:" + zmiesaj(D.farba || "#7a5cff", "#ffffff", 0.84) + '"><i class="vz-hl"></i><i class="vz-bod"></i><i class="vz-pas"></i></span><b>Vlastná farba</b>' +
+        '<input type="color" id="vz-farba" value="' + esc(D.farba || "#7a5cff") + '" aria-label="Vlastná farba"></label></div></section>' +
+      '<section class="vz-sekcia"><h4>Logo kancelárie</h4><div class="vz-logo"><div class="vz-logo-nahlad"><span class="tmave"><img src="' + esc(D.logo || LOGO_PREDV) + '" alt="Logo"></span>' +
+        '<span class="svetle"><img src="' + esc(D.logo || LOGO_PREDV) + '" alt=""></span></div><div class="vz-logo-akcie">' +
+        '<label class="btn primary">📤 Nahrať logo<input type="file" id="vz-logo-subor" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></label>' +
+        (D.logo ? '<button class="btn ghost" type="button" data-vz="logo-predv">Vrátiť pôvodné logo</button>' : "") +
+        '<span class="meta">Najlepšie PNG s priehľadným pozadím, na šírku. Použije sa aj na vodotlač.</span>' +
+        '<label class="field"><span>Názov kancelárie</span><input type="text" id="vz-nazov" maxlength="80" value="' + esc(D.nazov || "") + '" placeholder="Alpha Reality"></label></div></div></section>' +
+      '<section class="vz-sekcia"><h4>Vodotlač na fotky</h4><div class="vz-vodoznak"><div class="vz-ovladanie">' +
+        '<span class="meta">Kde bude logo</span><div class="vz-pozicie">' + POZICIE.map(function (p) {
+          return '<button type="button" class="vz-poz p-' + p[0] + '" data-poz="' + p[0] + '" aria-pressed="' + (w.pozicia === p[0]) + '" title="' + p[1] + '" aria-label="' + p[1] + '"><i></i></button>';
+        }).join("") + "</div>" +
+        '<span class="meta">Farba loga</span><div class="seg" role="group"><button type="button" data-styl="farebne" aria-pressed="' + (w.styl === "farebne") + '">🎨 Farebné</button>' +
+        '<button type="button" data-styl="biele" aria-pressed="' + (w.styl === "biele") + '">⬜ Biele</button></div>' +
+        '<label class="vz-slider"><span>Priehľadnosť <b id="vz-pr-h">' + Math.round((1 - w.priehladnost) * 100) + ' %</b></span><input type="range" id="vz-pr" min="0" max="90" step="5" value="' + Math.round((1 - w.priehladnost) * 100) + '"></label>' +
+        '<label class="vz-slider"><span>Veľkosť <b id="vz-vel-h">' + Math.round(w.velkost * 100) + ' %</b></span><input type="range" id="vz-vel" min="8" max="60" step="1" value="' + Math.round(w.velkost * 100) + '"></label>' +
+        '<p class="meta">Platí pre nové fotky. Každý maklér si vodotlač pri nahrávaní môže vypnúť.</p></div>' +
+        '<div class="vz-nahlad-foto"><canvas id="vz-canvas" width="960" height="640" aria-label="Náhľad vodotlače"></canvas><span class="meta">Náhľad</span></div></div></section>' +
+      '<section class="vz-sekcia vz-typek"><img src="typek-postava.png" alt="" width="90" height="101"><div><b>Realitný týpek</b><span class="meta">Softvér pre realitné kancelárie a maklérov – nehnuteľnosti s rozumom. Farby a logo si každá kancelária nastaví po svojom.</span></div></section></div>';
+    el.innerHTML = h;
+    napojVzhlad();
+    kresliNahladVodoznaku();
+  }
+  function nahladVzhladu() { aplikujVzhlad(S.vzhladDraft); }
+  async function kresliNahladVodoznaku() {
+    var c = $("#vz-canvas"); if (!c) return;
+    var g = c.getContext("2d"), W = c.width, H = c.height, D = S.vzhladDraft;
+    var foto = null, p = (S.ponuky || []).find(function (x) { return (x.fotky || []).length; });
+    if (p) foto = await nacitajObr(fotkaUrl(p.fotky[0]));
+    if (!$("#vz-canvas")) return;
+    if (foto) { var k = Math.max(W / foto.width, H / foto.height); g.drawImage(foto, (W - foto.width * k) / 2, (H - foto.height * k) / 2, foto.width * k, foto.height * k); }
+    else {
+      var gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, "#8fb8e0"); gr.addColorStop(0.62, "#dce9f3"); gr.addColorStop(0.62, "#7aa35a"); gr.addColorStop(1, "#5b8243");
+      g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      g.fillStyle = "#efe7da"; g.fillRect(300, 260, 360, 200); g.fillStyle = "#9b4b36"; g.beginPath(); g.moveTo(270, 270); g.lineTo(480, 140); g.lineTo(690, 270); g.closePath(); g.fill();
+      g.fillStyle = "#5c7da0"; [[340, 300], [440, 300], [560, 300]].forEach(function (o) { g.fillRect(o[0], o[1], 60, 60); }); g.fillStyle = "#6b4a33"; g.fillRect(450, 370, 60, 90);
+    }
+    var logo = await nacitajObr(D.logo || LOGO_PREDV);
+    if (logo && $("#vz-canvas")) kresliVodoznak(g, W, H, logo, Object.assign({}, VODOZNAK_PREDV, D.vodoznak));
+  }
+  function napojVzhlad() {
+    var el = $("#obsah"), D = S.vzhladDraft;
+    function zmena(prekresli) { nahladVzhladu(); if (prekresli) vykresliVzhlad(); else { kresliNahladVodoznaku(); var u = el.querySelector('[data-vz="ulozit"]'); if (u) u.disabled = false; } }
+    el.querySelectorAll("[data-schema]").forEach(function (b) { b.onclick = function () { D.schema = b.dataset.schema; zmena(true); }; });
+    var fa = $("#vz-farba");
+    fa.oninput = function () { D.schema = "vlastna"; D.farba = fa.value; nahladVzhladu(); };
+    fa.onchange = function () { D.schema = "vlastna"; D.farba = fa.value; zmena(true); };
+    el.querySelectorAll("[data-poz]").forEach(function (b) { b.onclick = function () { D.vodoznak.pozicia = b.dataset.poz; el.querySelectorAll("[data-poz]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); zmena(); }; });
+    el.querySelectorAll("[data-styl]").forEach(function (b) { b.onclick = function () { D.vodoznak.styl = b.dataset.styl; el.querySelectorAll("[data-styl]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); zmena(); }; });
+    $("#vz-pr").oninput = function () { D.vodoznak.priehladnost = Math.round((1 - this.value / 100) * 100) / 100; $("#vz-pr-h").textContent = this.value + " %"; zmena(); };
+    $("#vz-vel").oninput = function () { D.vodoznak.velkost = this.value / 100; $("#vz-vel-h").textContent = this.value + " %"; zmena(); };
+    $("#vz-nazov").oninput = function () { D.nazov = this.value; var u = el.querySelector('[data-vz="ulozit"]'); if (u) u.disabled = false; };
+    $("#vz-logo-subor").onchange = async function () {
+      var f = this.files[0]; if (!f) return;
+      try {
+        toast("Nahrávam logo…");
+        var obr = await new Promise(function (ok, chyba) { var i = new Image(), u = URL.createObjectURL(f); i.onload = function () { ok(i); }; i.onerror = function () { chyba(new Error("Súbor nie je obrázok.")); }; i.src = u; });
+        var k = Math.min(1, 900 / Math.max(obr.width || 900, obr.height || 300)), cv = document.createElement("canvas");
+        cv.width = Math.round((obr.width || 900) * k); cv.height = Math.round((obr.height || 300) * k); cv.getContext("2d").drawImage(obr, 0, 0, cv.width, cv.height);
+        var blob = await new Promise(function (ok) { cv.toBlob(ok, "image/png"); });
+        var cesta = "vzhlad/logo-" + Date.now() + ".png", r;
+        try { r = await sb.storage.from("ponuky").upload(cesta, blob, { contentType: "image/png", upsert: false }); } catch (e1) { r = { error: e1 }; }
+        if (r.error) throw r.error;
+        D.logo = CFG.supabaseUrl + "/storage/v1/object/public/ponuky/" + cesta;
+        toast("Logo je nahraté – nezabudnite Uložiť.");
+        zmena(true);
+      } catch (err) { toast(chybaText(err), true); }
+    };
+    el.querySelectorAll("[data-vz]").forEach(function (b) {
+      b.onclick = async function () {
+        var a = b.dataset.vz;
+        if (a === "logo-predv") { D.logo = null; return zmena(true); }
+        if (a === "zrusit") { S.vzhladDraft = null; aplikujVzhlad(S.vzhlad); return vykresliVzhlad(); }
+        if (a === "ulozit") {
+          b.disabled = true;
+          try { await rpc("ulozit_vzhlad", { p: D }); S.vzhladDraft = null; await nacitajVzhlad(); aplikujVzhlad(S.vzhlad); toast("🎨 Vzhľad je uložený – uvidí ho celý tím."); konfety({ pocet: 70 }); vykresli(); }
+          catch (err) { b.disabled = false; toast(chybaText(err), true); }
+        }
+      };
+    });
+  }
+
   // ------------------------------------------------------------ AI ASISTENT
   var AI_NAVRHY = [
     ["✍️ Popis nehnuteľnosti", "Napíš predajný popis nehnuteľnosti (cca 1200 znakov) a pútavý názov do 60 znakov. Použi údaje z podkladov."],
@@ -3730,14 +3905,16 @@
     var el = $("#obsah"); if (!el) return;
     var M = S.aiSpravy = S.aiSpravy || [];
     var ponuky = (S.ponuky || []).filter(function (p) { return ["archiv"].indexOf(p.stav) < 0; });
-    el.innerHTML = '<div class="box chat ai-box"><div class="chat-hlava"><div class="chat-titul"><span class="chat-ik">' + ikona("ai") + '</span><div><h3>AI asistent</h3><span class="meta">Texty, odpovede klientom, rady – po slovensky</span></div></div>' +
+    el.innerHTML = '<div class="box chat ai-box"><div class="chat-hlava"><div class="chat-titul"><span class="chat-ik typek-ik"><img src="typek-hlava.png" alt="" width="38" height="38"></span><div><h3>AI asistent Týpek</h3><span class="meta">Texty, odpovede klientom, rady – po slovensky</span></div></div>' +
       (M.length ? '<button class="btn ghost" type="button" data-ai="nova">Nový rozhovor</button>' : "") + "</div>" +
       '<div class="chat-spravy" id="ai-spravy">' + (M.length ? M.map(function (m, i) {
-        return '<div class="sprava' + (m.role === "user" ? " ja" : "") + '"><div class="sprava-telo">' + (m.role !== "user" && i === 0 || m.role !== "user" && M[i - 1].role === "user" ? '<div class="sprava-meno">✨ AI asistent</div>' : "") +
+        var prvaOdpoved = m.role !== "user" && (i === 0 || M[i - 1].role === "user");
+        return '<div class="sprava' + (m.role === "user" ? " ja" : "") + '">' + (m.role !== "user" ? '<span class="sprava-av">' + (prvaOdpoved ? '<img class="typek-av" src="typek-hlava.png" alt="" width="36" height="36">' : "") + "</span>" : "") +
+          '<div class="sprava-telo">' + (prvaOdpoved ? '<div class="sprava-meno">Týpek</div>' : "") +
           '<div class="bublina' + (m.chyba ? " ai-chyba" : "") + '">' + esc(m.content) + "</div>" +
           (m.role !== "user" && !m.chyba ? '<button type="button" class="btn-link" data-ai-kopiruj="' + i + '">Kopírovať</button>' : "") + "</div></div>";
-      }).join("") + (S.aiCaka ? '<div class="sprava"><div class="sprava-telo"><div class="bublina ai-pise"><span></span><span></span><span></span></div></div></div>' : "") :
-        '<div class="ai-uvod"><b>S čím vám pomôžem?</b><span class="meta">Vyberte ponuku (nepovinné) a ťuknite na návrh, alebo napíšte vlastnú otázku.</span><div class="ai-navrhy">' +
+      }).join("") + (S.aiCaka ? '<div class="sprava"><span class="sprava-av"><img class="typek-av" src="typek-hlava.png" alt="" width="36" height="36"></span><div class="sprava-telo"><div class="bublina ai-pise"><span></span><span></span><span></span></div></div></div>' : "") :
+        '<div class="ai-uvod"><img class="ai-typek" src="typek-postava.png" alt="" width="568" height="640"><b>Ahoj, som Týpek. S čím vám pomôžem?</b><span class="meta">Vyberte ponuku (nepovinné) a ťuknite na návrh, alebo napíšte vlastnú otázku.</span><div class="ai-navrhy">' +
         AI_NAVRHY.map(function (n, i) { return '<button type="button" class="ai-navrh" data-ai-navrh="' + i + '">' + esc(n[0]) + "</button>"; }).join("") + "</div></div>") + "</div>" +
       '<div class="ai-kontext"><label class="field"><span>Podklady z ponuky</span><select id="ai-ponuka"><option value="">— bez ponuky —</option>' + ponuky.map(function (p) {
         return '<option value="' + p.id + '"' + (Number(S.aiPonuka) === p.id ? " selected" : "") + ">" + esc((p.cislo ? p.cislo + " · " : "") + nazovPonuky(p)) + "</option>"; }).join("") + "</select></label></div>" +
@@ -3869,7 +4046,7 @@
     var F = FORMATY.find(function (x) { return x[0] === fmt; }) || FORMATY[0], W = F[2], H = F[3];
     canvas.width = W; canvas.height = H;
     var g = canvas.getContext("2d"), mk = S.mById[p.makler_id] || S.me;
-    var foto = await nacitajObr(fotkaUrl((p.fotky || [])[0])), logo = await nacitajObr("logo.png?v=202610182100");
+    var foto = await nacitajObr(fotkaUrl((p.fotky || [])[0])), logo = await nacitajObr(logoUrl());
     g.fillStyle = "#24282e"; g.fillRect(0, 0, W, H);
     var fotoH = fmt === "sirka" ? H : Math.round(H * (fmt === "story" ? 0.6 : 0.56));
     var fotoW = fmt === "sirka" ? Math.round(W * 0.58) : W;
@@ -3881,7 +4058,8 @@
     if (p.stav === "rezervovane") stitok = "REZERVOVANÉ"; else if (p.exkluzivne) stitok += " · EXKLUZÍVNE";
     g.font = "800 " + (fmt === "sirka" ? 26 : 32) + "px Montserrat, Arial, sans-serif"; var sw = g.measureText(stitok).width + 44;
     var sy = fmt === "sirka" ? H - 80 : fotoH - 30;
-    g.fillStyle = "#dab967"; g.fillRect(fmt === "sirka" ? 36 : 36, sy - 26, sw, 52); g.fillStyle = "#1f1b12"; g.textBaseline = "middle"; g.fillText(stitok, 58, sy);
+    var AKC = cssVar("--gold-strong"), NA_AKC = cssVar("--on-accent");
+    g.fillStyle = AKC; g.fillRect(fmt === "sirka" ? 36 : 36, sy - 26, sw, 52); g.fillStyle = NA_AKC; g.textBaseline = "middle"; g.fillText(stitok, 58, sy);
     var x0 = fmt === "sirka" ? fotoW + 44 : 56, maxW = (fmt === "sirka" ? W - fotoW - 80 : W - 112), y = fmt === "sirka" ? 90 : fotoH + (fmt === "story" ? 110 : 80);
     function riadky(text, font, farba, vyska, max) {
       g.font = font; g.fillStyle = farba; g.textBaseline = "alphabetic";
@@ -3896,12 +4074,12 @@
     var vel = fmt === "sirka" ? 1 : fmt === "story" ? 1.4 : 1.15;
     riadky(nazovPonuky(p), "800 " + Math.round(40 * vel) + "px Montserrat, Arial, sans-serif", "#ffffff", Math.round(50 * vel), fmt === "sirka" ? 3 : 2);
     y += 4; riadky("📍 " + [p.cast_obce, p.obec].filter(Boolean).join(", "), "500 " + Math.round(26 * vel) + "px 'Public Sans', Arial, sans-serif", "#c9c5bb", Math.round(40 * vel), 1);
-    y += Math.round(14 * vel); riadky(cenaPonuky(p), "800 " + Math.round(54 * vel) + "px Montserrat, Arial, sans-serif", "#dab967", Math.round(64 * vel), 1);
+    y += Math.round(14 * vel); riadky(cenaPonuky(p), "800 " + Math.round(54 * vel) + "px Montserrat, Arial, sans-serif", AKC, Math.round(64 * vel), 1);
     var par = [p.plocha_uzitkova ? nf.format(p.plocha_uzitkova) + " m²" : p.plocha_pozemku ? nf.format(p.plocha_pozemku) + " m²" : "", p.izby ? p.izby + " izby" : "", p.stav_objektu || ""].filter(Boolean).join("  ·  ");
     if (par) riadky(par, "600 " + Math.round(26 * vel) + "px 'Public Sans', Arial, sans-serif", "#e9e4d6", Math.round(40 * vel), 1);
     g.font = "600 " + Math.round(24 * vel) + "px 'Public Sans', Arial, sans-serif"; g.fillStyle = "#c9c5bb"; g.textBaseline = "alphabetic";
     g.fillText((mk.meno || "Alpha Reality") + (mk.telefon ? "  ·  " + mk.telefon : ""), x0, H - (fmt === "sirka" ? 40 : 54));
-    g.fillStyle = "#dab967"; g.fillRect(0, H - 10, W, 10);
+    g.fillStyle = AKC; g.fillRect(0, H - 10, W, 10);
   }
   function panelSiete(p) {
     var fmt = S.siteFmt || "stvorec";

@@ -71,6 +71,36 @@
   }
   function verejnyOdkaz(id) { return new URL("ponuka.html?id=" + id, location.href).href; }
 
+  // vzhľad kancelárie (logo a farba z nastavení administrátora) – aj na verejných stránkach
+  function hexRgb(h) { h = String(h).replace("#", ""); return [0, 2, 4].map(function (i) { return parseInt(h.slice(i, i + 2), 16); }); }
+  function zmiesaj(a, b, t) { var x = hexRgb(a), y = hexRgb(b); return "#" + x.map(function (v, i) { return Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0"); }).join(""); }
+  var SCH = { zlata: ["#dab967", "#a8862f"], typek: ["#f0ad1c", "#a36d00"], modra: ["#4c8df6", "#2560c4"], smaragd: ["#2fb380", "#16845a"], vinova: ["#c4566a", "#9a2d42"],
+    oranzova: ["#f08a2c", "#b85c0c"], fialova: ["#8d73ee", "#6247cc"], grafit: ["#a3adbb", "#566170"] };
+  function aplikujVzhlad(v) {
+    if (!v) return;
+    var f = v.schema === "vlastna" && /^#[0-9a-f]{6}$/i.test(v.farba || "") ? [v.farba, zmiesaj(v.farba, "#000000", 0.3)] : SCH[v.schema];
+    if (f && v.schema !== "zlata") {
+      var st = document.createElement("style");
+      st.textContent = ":root{--gold:" + f[1] + ";--gold-strong:" + f[0] + ";--gold-soft:" + zmiesaj(f[0], "#ffffff", 0.84) + "}" +
+        '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--gold:' + f[0] + ";--gold-soft:" + zmiesaj("#1f2228", f[0], 0.18) + "}}";
+      document.head.appendChild(st);
+    }
+    if (v.logo) document.querySelectorAll('img[src^="logo.png"]').forEach(function (i) { i.src = v.logo; if (v.nazov) i.alt = v.nazov; });
+  }
+  try { aplikujVzhlad(JSON.parse(localStorage.getItem("typek-vzhlad") || "null")); } catch (e) { /* bez úložiska */ }
+  function vzhladZoServera() {
+    rpc("vzhlad_kancelarie", {}).then(function (v) {
+      try { localStorage.setItem("typek-vzhlad", JSON.stringify(v || {})); } catch (e) { /* nič */ }
+      aplikujVzhlad(v);
+    }).catch(function () {});
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", vzhladZoServera); else vzhladZoServera();
+  // logá vložené neskôr (napr. leták) sa prepnú tiež
+  new MutationObserver(function () {
+    var v = null; try { v = JSON.parse(localStorage.getItem("typek-vzhlad") || "null"); } catch (e) { /* nič */ }
+    if (v && v.logo) document.querySelectorAll('img[src^="logo.png"]').forEach(function (i) { i.src = v.logo; });
+  }).observe(document.documentElement, { childList: true, subtree: true });
+
   window.TYPEK = { CFG: CFG, sb: sb, nf: nf, esc: esc, eur: eur, rpc: rpc, fotkaUrl: fotkaUrl, nazov: nazov, lokalita: lokalita, cena: cena, cenaM2: cenaM2,
     parametre: parametre, telOdkaz: telOdkaz, waOdkaz: waOdkaz, avatar: avatar, param: param, datum: datum, verejnyOdkaz: verejnyOdkaz };
 })();
