@@ -278,7 +278,7 @@
   function obrazovkaLogin(sprava) {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-login">' +
-      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610191400" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
+      '<span class="lesk"><img class="login-logo" src="logo.png?v=202610191600" alt="Alpha Reality"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
@@ -305,7 +305,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="logo.png?v=202610191400" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
+      '<img class="login-logo" src="logo.png?v=202610191600" alt="Alpha Reality"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
@@ -347,7 +347,11 @@
     setTimeout(ukazPochvalu, 1200);
     spustiOdpocet();
     somTu();
-    setInterval(function () { if (S.tab === "chat" && !document.hidden) chatNove(); }, 5000);
+    var chatTik = 0;
+    setInterval(function () {
+      chatTik++;
+      if ((S.tab === "chat" && !document.hidden) || chatTik % 3 === 0) chatNove();
+    }, 5000);
     document.addEventListener("visibilitychange", function () { if (!document.hidden) obnov(); });
   }
 
@@ -578,9 +582,9 @@
   }
 
   // ---------- navigácia: každá sekcia je krok v histórii prehliadača (funguje tlačidlo Späť)
-  var TABY = ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat", "mapa", "asistent", "web", "recenzie", "vykon", "makleri"];
+  var TABY = ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat", "mapa", "kataster", "asistent", "web", "recenzie", "vykon", "makleri"];
   var SEKCIE = [["inzeraty", "Realitný skener", "skener"], ["schrankovanie", "Schránkovanie", "sch"], ["nehnutelnosti", "Nehnuteľnosti", "nehn"], ["klienti", "Klienti", "klienti"],
-    ["kalendar", "Kalendár", "kal"], ["chat", "Chat", "chat"], ["mapa", "Realitná mapa", "mapa"], ["asistent", "AI asistent", "ai"], ["web", "Osobný web", "web"], ["recenzie", "Recenzie", "hviezda"]];
+    ["kalendar", "Kalendár", "kal"], ["chat", "Chat", "chat"], ["mapa", "Realitná mapa", "mapa"], ["kataster", "Kataster", "kataster"], ["asistent", "AI asistent", "ai"], ["web", "Osobný web", "web"], ["recenzie", "Recenzie", "hviezda"]];
   var HLAVNE_SEKCIE = ["inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat"];
   function maSekciu(t) { return admin() || (S.me && (S.me.pristup || SEKCIE.map(function (x) { return x[0]; })).indexOf(t) >= 0); }
   function tabPovoleny(t) {
@@ -800,25 +804,16 @@
     if (!tabPovoleny(S.tab)) S.tab = "domov";
     var tabs = SEKCIE.filter(function (x) { return maSekciu(x[0]); });
     if (admin()) tabs.push(["vykon", "Výkon", "vykon"], ["makleri", "Makléri", "makleri"]);
-    var hlavne = tabs.filter(function (t) { return HLAVNE_SEKCIE.indexOf(t[0]) >= 0; }), viac = tabs.filter(function (t) { return HLAVNE_SEKCIE.indexOf(t[0]) < 0; });
-    var aktualna = tabs.find(function (t) { return t[0] === S.tab; }) || ["domov", "Hlavná obrazovka", "domov"];
-    var viacAkt = viac.find(function (t) { return t[0] === S.tab; });
-    function polozka(t) {
-      return '<button type="button" class="menu-pol" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + '><span class="menu-ik">' + ikona(t[2]) + "</span>" + t[1] +
-        (t[0] === "chat" ? ' <span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
-    }
+    var aktualna = tabs.find(function (t) { return t[0] === S.tab; }) || ["domov", "Prehľad", "domov"];
+    var menuHtml = menuDlazdice(tabs);
+    document.body.classList.add("ma-bocne");
     $("#app").innerHTML =
+      '<aside class="bocne" aria-label="Sekcie"><a class="bocne-logo" href="#" data-tab="domov" title="Prehľad"><img src="logo.png?v=202610191600" alt="Alpha Reality"><span>Realitný týpek</span></a>' + menuHtml + "</aside>" +
       '<header class="top"><div class="wrap">' +
-      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610191400" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
-      '<nav class="tabs" aria-label="Sekcie">' + hlavne.map(function (t) {
-        return '<button type="button" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + ">" + t[1] +
-          (t[0] === "chat" ? ' <span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
-      }).join("") + (viac.length ? '<div class="viac"><button type="button" class="viac-btn" data-act="viac" aria-expanded="false"' + (viacAkt ? ' aria-current="page"' : "") + ">" +
-        (viacAkt ? esc(viacAkt[1]) : "Viac") + ' <span aria-hidden="true">▾</span></button><div class="viac-panel" hidden>' + viac.map(polozka).join("") + "</div></div>" : "") + "</nav>" +
-      '<div class="menu-mobil"><button type="button" class="menu-btn" data-act="menu" aria-expanded="false"><span class="menu-ik">' + ikona(aktualna[2]) + "</span><b>" + esc(aktualna[1]) +
-        '</b><span class="tab-n" data-chat-n hidden></span><span class="menu-sip" aria-hidden="true">▾</span></button>' +
-        '<div class="menu-panel" hidden><button type="button" class="menu-pol" data-tab="domov"' + (S.tab === "domov" ? ' aria-current="page"' : "") + '><span class="menu-ik">' + ikona("domov") + "</span>Hlavná obrazovka</button>" +
-        tabs.map(polozka).join("") + "</div></div>" +
+      '<a class="brand" href="#" data-tab="domov" title="Hlavná obrazovka"><img src="logo.png?v=202610191600" alt="Alpha Reality"><span class="brand-sub">Realitný<br>týpek</span></a>' +
+      '<h1 class="hl-titul"><span class="menu-ik">' + ikona(aktualna[2]) + "</span>" + esc(aktualna[1]) + "</h1>" +
+      '<button type="button" class="menu-btn" data-act="menu" aria-expanded="false" aria-controls="menu-sheet"><span class="menu-mriezka" aria-hidden="true"><i></i><i></i><i></i><i></i></span>' +
+        '<b>' + esc(aktualna[1]) + '</b><span class="tab-n" data-chat-n hidden></span><span class="menu-btn-hint">Menu ▾</span></button>' +
       '<div class="user">' +
       '<span class="odhl" id="odhl" hidden title="Automatické odhlásenie pri nečinnosti – odpočet sa vynuluje pri každej vašej aktivite">⏱ <b id="odhl-cas"></b></span>' +
       '<button type="button" class="bell" data-act="zvoncek" id="zvon-btn" aria-label="Pripomienky">🔔<span class="badge" id="zvon-n" hidden></span></button>' +
@@ -826,9 +821,11 @@
       '<button type="button" class="theme-btn" data-act="tema" id="tema-btn"></button>' +
       '<button type="button" data-act="odhlasit" title="Odhlásiť" aria-label="Odhlásiť"><svg class="odhl-ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg><span class="odhl-txt">Odhlásiť</span></button></div>' +
       "</div>" + (S.tab === "inzeraty" ? '<div class="wrap stats" id="stats"></div>' : "") + "</header>" +
+      '<div class="menu-sheet" id="menu-sheet" hidden><div class="menu-sheet-pozadie" data-act="menu-zavri"></div><div class="menu-sheet-panel" role="dialog" aria-label="Sekcie">' +
+        '<div class="menu-sheet-hl"><b>Kam idete?</b><button type="button" class="menu-sheet-x" data-act="menu-zavri" aria-label="Zavrieť">×</button></div>' + menuHtml + "</div></div>" +
       '<div id="filters"></div><main><div class="wrap"><div id="pwd"></div><div id="zvon"></div><div id="obsah"></div></div></main>' +
       '<footer><div class="wrap" id="foot"></div></footer>';
-    $("header.top").addEventListener("click", function (e) {
+    function klikMenu(e) {
       var t = e.target.closest("[data-tab]");
       if (t) {
         e.preventDefault();
@@ -839,17 +836,18 @@
       }
       var a = e.target.closest("[data-act]");
       if (!a) return;
-      if (a.dataset.act === "menu" || a.dataset.act === "viac") {
-        var pan = a.parentNode.querySelector(a.dataset.act === "menu" ? ".menu-panel" : ".viac-panel"), otv = pan.hidden;
-        zavriMenu(); pan.hidden = !otv; a.setAttribute("aria-expanded", String(otv)); return;
-      }
+      if (a.dataset.act === "menu") { otvorMenu(); return; }
+      if (a.dataset.act === "menu-zavri") { zavriMenu(); return; }
       if (a.dataset.act === "odhlasit") odhlasit();
       if (a.dataset.act === "tema") prepniTemu();
       if (a.dataset.act === "profil" || a.dataset.act === "zvoncek") animPanel();
       if (a.dataset.act === "profil") { S.pwdOpen = !S.pwdOpen; vykresliHeslo(); if (S.pwdOpen) window.scrollTo({ top: 0, behavior: "smooth" }); }
       if (a.dataset.act === "zvoncek") { S.zvonOpen = !S.zvonOpen; S.pripForm = null; vykresliZvoncek(); if (S.zvonOpen) window.scrollTo({ top: 0, behavior: "smooth" }); }
       if (a.dataset.act === "preset") predvolba(a.dataset.v);
-    });
+    }
+    $("header.top").addEventListener("click", klikMenu);
+    $(".bocne").addEventListener("click", klikMenu);
+    $("#menu-sheet").addEventListener("click", function (e) { if (e.target.closest("[data-tab]")) zavriMenu(); klikMenu(e); });
     vykresliHeslo();
     vykresliZvoncek();
     popisTemy();
@@ -864,11 +862,32 @@
     prekresliObsah();
   }
 
-  function zavriMenu() {
-    document.querySelectorAll(".menu-panel, .viac-panel").forEach(function (p) { p.hidden = true; });
-    document.querySelectorAll('[data-act="menu"], [data-act="viac"]').forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+  // menu z dlaždíc – na počítači bočný panel, na mobile/tablete rozbaľovacia plocha
+  var SKUPINY_MENU = [["Práca", ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar"]], ["Tím", ["chat", "recenzie"]],
+    ["Nástroje", ["mapa", "kataster", "asistent", "web"]], ["Správa", ["vykon", "makleri"]]];
+  function menuDlazdice(tabs) {
+    var podla = { domov: ["domov", "Prehľad", "domov"] }; tabs.forEach(function (t) { podla[t[0]] = t; });
+    return SKUPINY_MENU.map(function (g) {
+      var pol = g[1].filter(function (k) { return podla[k]; });
+      if (!pol.length) return "";
+      return '<div class="menu-skup"><span class="menu-skup-n">' + g[0] + '</span><div class="menu-dl">' + pol.map(function (k) {
+        var t = podla[k];
+        return '<button type="button" class="dl-menu" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + '><span class="dl-menu-ik">' + ikona(t[2]) + "</span>" +
+          "<span>" + esc(t[1]) + "</span>" + (t[0] === "chat" ? '<span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
+      }).join("") + "</div></div>";
+    }).join("");
   }
-  document.addEventListener("click", function (e) { if (!e.target.closest(".menu-mobil, .viac")) zavriMenu(); });
+  function otvorMenu() {
+    var m = $("#menu-sheet"); if (!m) return;
+    m.hidden = false; document.body.classList.add("menu-otvorene");
+    var b = $(".menu-btn"); if (b) b.setAttribute("aria-expanded", "true");
+    var ak = m.querySelector('[aria-current="page"]') || m.querySelector(".dl-menu"); if (ak) ak.focus({ preventScroll: true });
+  }
+  function zavriMenu() {
+    var m = $("#menu-sheet"); if (!m || m.hidden) return;
+    m.hidden = true; document.body.classList.remove("menu-otvorene");
+    var b = $(".menu-btn"); if (b) b.setAttribute("aria-expanded", "false");
+  }
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") zavriMenu(); });
   function prekresliObsah() {
     if (S.tab === "inzeraty") { vykresliStaty(); vykresliZoznam(); }
@@ -880,6 +899,7 @@
     else if (S.tab === "klienti") { if (!$(".dopyt-form") && !$(".dopyt-detail")) vykresliKlientov(); }
     else if (S.tab === "kalendar") { if (!S.kalForm && !(document.activeElement && document.activeElement.closest && document.activeElement.closest("#obsah"))) vykresliKalendar(); }
     else if (S.tab === "mapa") { if (!$("#realitna-mapa")) vykresliMapu(); }
+    else if (S.tab === "kataster") { if (!$("#kat-mapa")) vykresliKataster(); }
     else if (S.tab === "asistent") { if (!$("#ai-spravy")) vykresliAsistenta(); }
     else if (S.tab === "web") { if (!$(".web-box")) vykresliWeb(); }
     else if (S.tab === "recenzie") { if (!S.recForm) vykresliRecenzie(); }
@@ -1206,7 +1226,7 @@
       (ozn ? '<span class="pill rk">Označil ' + esc(meno(ozn.oznacil)) + "</span>" : "") +
       (o && o.podhodnotene ? '<span class="pill priv">Pod cenou</span>' : "") +
       (znizena ? '<span class="pill priv">Znížená cena z ' + eur(hist[hist.length - 2][1]) + "</span>" : "") + "</div>" +
-      '<div class="links">' + odkazy + "</div></div>" +
+      '<div class="links">' + odkazy + katasterTlacidlo(z) + "</div></div>" +
       '<div class="price"><b>' + eur(z.cena) + "</b>" + (z.cena_m2 && z.typ !== "garaz" ? '<span class="m2">' + m2(z.cena_m2) + " €/m²</span>" : "") + delta + "</div></div>";
 
     // pracovný pás
@@ -1561,7 +1581,6 @@
   });
 
   // ------------------------------------------------------------ SCHRÁNKOVANIE PO SÍDLISKÁCH
-  var CASTI = { cele: "Celé sídlisko", "1": "1. polovica", "2": "2. polovica" };
   var REZ_DNI = 7;      // rezervácia bez zapísaného dátumu platí 7 dní
   function datumPlus2m(d) { var x = new Date(d + "T12:00:00"); x.setMonth(x.getMonth() + 2); return x; }
   function akciaBlokuje(a) {
@@ -1569,12 +1588,12 @@
     if (!a.datum) return new Date(a.rezervovane).getTime() > Date.now() - REZ_DNI * 864e5;
     return datumPlus2m(a.datum).getTime() > Date.now();
   }
-  function akciaCasti(sid, cast) {
-    return (S.akcie || []).filter(function (a) { return a.sidlisko_id === sid && akciaBlokuje(a) && (a.polovica === "cele" || cast === "cele" || a.polovica === cast); })
+  function akciaCasti(sid) {
+    return (S.akcie || []).filter(function (a) { return a.sidlisko_id === sid && akciaBlokuje(a); })
       .sort(function (a, b) { return String(b.rezervovane).localeCompare(String(a.rezervovane)); })[0] || null;
   }
-  function poslednaAkcia(sid, cast) {
-    return (S.akcie || []).filter(function (a) { return a.sidlisko_id === sid && a.datum && !akciaBlokuje(a) && (a.polovica === "cele" || cast === "cele" || a.polovica === cast); })
+  function poslednaAkcia(sid) {
+    return (S.akcie || []).filter(function (a) { return a.sidlisko_id === sid && a.datum && !akciaBlokuje(a); })
       .sort(function (a, b) { return String(b.datum).localeCompare(String(a.datum)); })[0] || null;
   }
   function sklon(m, muz, zena) { return rodMaklera(S.mById[m] || {}) === "zena" ? zena : muz; }
@@ -1586,7 +1605,7 @@
     var mn = Object.keys(mesta).sort(function (a, b) { var x = poradieMiest.indexOf(a), y = poradieMiest.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.localeCompare(b, "sk"); });
     var moje = (S.akcie || []).filter(function (a) { return a.makler_id === S.me.id && akciaBlokuje(a); }).length;
     var h = '<div class="box sid-box"><div class="vykon-hlava"><h3>🏘️ Sídliská na schránkovanie</h3><span class="meta">' + (moje ? "Máte " + moje + (moje === 1 ? " aktívnu rezerváciu" : moje <= 4 ? " aktívne rezervácie" : " aktívnych rezervácií") : "") + "</span></div>" +
-      '<p class="meta">Pred schránkovaním si sídlisko (celé alebo polovicu) rezervujte, aby ste sa s kolegami nestretli. Po schránkovaní zapíšte dátum – sídlisko bude 2 mesiace obsadené pre všetkých. Rezervácia bez zapísaného dátumu platí ' + REZ_DNI + " dní.</p>" +
+      '<p class="meta">Pred schránkovaním si sídlisko rezervujte, aby ste sa s kolegami nestretli. Po schránkovaní zapíšte dátum – sídlisko bude 2 mesiace obsadené pre všetkých. Rezervácia bez zapísaného dátumu platí ' + REZ_DNI + " dní.</p>" +
       '<div class="sid-legenda"><span class="sid-b volne"></span>voľné<span class="sid-b rez"></span>rezervované<span class="sid-b obs"></span>schránkované (2 mesiace)</div>';
     mn.forEach(function (m) {
       h += '<h4 class="sid-mesto">' + esc(m) + '</h4><div class="sid-grid">' + mesta[m].sort(function (a, b) { return a.poradie - b.poradie; }).map(kartaSidliska).join("") + "</div>";
@@ -1598,22 +1617,18 @@
     napojSidliska();
   }
   function kartaSidliska(s) {
-    var cele = (S.akcie || []).filter(function (a) { return a.sidlisko_id === s.id && akciaBlokuje(a); });
-    var celeAkcia = cele.find(function (a) { return a.polovica === "cele"; });
-    var bloky;
-    if (celeAkcia) bloky = [blokCasti(s, "cele", celeAkcia)];
-    else if (cele.length) bloky = [blokCasti(s, "1", akciaCasti(s.id, "1")), blokCasti(s, "2", akciaCasti(s.id, "2"))];
-    else bloky = [blokCasti(s, "cele", null)];
-    var stav = celeAkcia ? (celeAkcia.datum ? "obs" : "rez") : cele.length ? "ciast" : "volne";
+    var akcia = akciaCasti(s.id);
+    var bloky = [blokCasti(s, "cele", akcia)];
+    var stav = akcia ? (akcia.datum ? "obs" : "rez") : "volne";
     var f = S.sidForm && S.sidForm.sidlisko_id === s.id ? S.sidForm : null;
     return '<div class="sid-karta ' + stav + '" data-sid="' + s.id + '"><div class="sid-hl"><b>' + esc(s.nazov) + "</b>" +
       (admin() ? '<button type="button" class="btn-link" data-sid-skryt="' + s.id + '" title="Skryť sídlisko zo zoznamu">skryť</button>' : "") + "</div>" +
       bloky.join("") + (f ? formSidliska(s, f) : "") + "</div>";
   }
   function blokCasti(s, cast, a) {
-    var h = '<div class="sid-cast ' + (!a ? "volne" : a.datum ? "obs" : "rez") + '">' + (cast !== "cele" || a ? '<span class="sid-cast-n">' + CASTI[a && a.polovica === "cele" ? "cele" : cast] + "</span>" : "");
+    var h = '<div class="sid-cast ' + (!a ? "volne" : a.datum ? "obs" : "rez") + '">';
     if (!a) {
-      var p = poslednaAkcia(s.id, cast);
+      var p = poslednaAkcia(s.id);
       h += '<div class="sid-stav">✅ Voľné' + (p ? '<small class="meta d-block">naposledy ' + esc(meno(p.makler_id)) + " · " + datum(p.datum) + "</small>" : "") + "</div>" +
         '<div class="sid-akcie"><button class="btn primary" type="button" data-sid-akt="rez" data-sid-id="' + s.id + '" data-cast="' + cast + '">Rezervovať</button></div>';
       return h + "</div>";
@@ -1642,19 +1657,15 @@
   }
   function formSidliska(s, f) {
     if (f.mode === "rez") {
-      var vol = { cele: !akciaCasti(s.id, "cele"), "1": !akciaCasti(s.id, "1"), "2": !akciaCasti(s.id, "2") };
-      var cast = vol[f.cast] ? f.cast : ["cele", "1", "2"].find(function (c) { return vol[c]; });
-      return '<form class="sid-form" id="f-sid"><div class="seg" role="group">' + ["cele", "1", "2"].map(function (c) {
-        return '<button type="button" data-sid-cast="' + c + '" aria-pressed="' + (cast === c) + '"' + (vol[c] ? "" : " disabled") + ">" + (c === "cele" ? "Celé" : c === "1" ? "1. polovica" : "2. polovica") + "</button>";
-      }).join("") + '</div><input type="hidden" name="cast" value="' + esc(cast || "") + '">' +
-        '<label class="field"><span>Ktorá časť / ulice <small class="meta">nepovinné, pri polovici odporúčané</small></span><input type="text" name="poznamka" placeholder="napr. Hutnícka, Gorkého, Lipová"></label>' +
+      return '<form class="sid-form" id="f-sid">' +
+        '<label class="field"><span>Poznámka <small class="meta">nepovinné</small></span><input type="text" name="poznamka" placeholder="napr. začínam od Hutníckej"></label>' +
         '<label class="field"><span>Už schránkované dňa <small class="meta">nechajte prázdne, ak len rezervujete</small></span><input type="date" name="datum" max="' + dnes() + '"></label>' +
         '<div class="form-actions"><button class="btn primary" type="submit">Rezervovať</button><button class="btn ghost" type="button" data-sid-akt="zavriet">Zrušiť</button></div></form>';
     }
     if (f.mode === "datum") {
       var a = (S.akcie || []).find(function (x) { return x.id === f.akcia_id; }) || {};
       return '<form class="sid-form" id="f-sid"><label class="field"><span>Dátum schránkovania</span><input type="date" name="datum" required max="' + dnes() + '" value="' + esc(a.datum || dnes()) + '"></label>' +
-        '<label class="field"><span>Ktorá časť / ulice</span><input type="text" name="poznamka" value="' + esc(a.poznamka || "") + '"></label>' +
+        '<label class="field"><span>Poznámka</span><input type="text" name="poznamka" value="' + esc(a.poznamka || "") + '"></label>' +
         '<div class="form-actions"><button class="btn primary" type="submit">Uložiť dátum</button><button class="btn ghost" type="button" data-sid-akt="zavriet">Zrušiť</button></div></form>';
     }
     if (f.mode === "kontakt") {
@@ -1687,9 +1698,6 @@
         }
       };
     });
-    el.querySelectorAll("[data-sid-cast]").forEach(function (b) {
-      b.onclick = function () { var f = b.closest("form"); f.cast.value = b.dataset.sidCast; f.querySelectorAll("[data-sid-cast]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); };
-    });
     el.querySelectorAll("[data-sid-skryt]").forEach(function (b) {
       b.onclick = async function () {
         var s = S.sidliska.find(function (x) { return x.id === Number(b.dataset.sidSkryt); });
@@ -1712,8 +1720,7 @@
         var F = S.sidForm, btn = f.querySelector('[type="submit"]'); btn.disabled = true;
         try {
           if (F.mode === "rez") {
-            if (!f.cast.value) throw new Error("Celé sídlisko aj obe polovice sú obsadené.");
-            await rpc("rezervovat_sidlisko", { p_sidlisko: F.sidlisko_id, p_polovica: f.cast.value, p_datum: f.datum.value || null, p_poznamka: f.poznamka.value });
+            await rpc("rezervovat_sidlisko", { p_sidlisko: F.sidlisko_id, p_polovica: "cele", p_datum: f.datum.value || null, p_poznamka: f.poznamka.value });
             toast(f.datum.value ? "✅ Schránkovanie je zapísané – 2 mesiace obsadené." : "📌 Rezervované na " + REZ_DNI + " dní. Po schránkovaní zapíšte dátum.");
           }
           if (F.mode === "datum") {
@@ -1885,6 +1892,12 @@
       profil: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
       kal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17.5h2"/>',
       mapa: '<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>',
+      kataster: '<path d="M4 4h16v16H4z"/><path d="M4 11h7v9M11 4v7h9M15 11v9"/>',
+      poloha: '<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/>',
+      lv: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 12h6M9.5 15.5h6M9.5 8.5h2.5"/>',
+      urad: '<path d="M3 9.5 12 4l9 5.5M4.5 20h15M6 10v8M10 10v8M14 10v8M18 10v8"/>',
+      satelit: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m3.5 16 5-5 4 4 2.5-2.5 5.5 5.5"/><circle cx="15.5" cy="9" r="1.6"/>',
+      vrstvy: '<path d="m12 4 8.5 4.5L12 13 3.5 8.5z"/><path d="m3.5 12.5 8.5 4.5 8.5-4.5M3.5 16.5 12 21l8.5-4.5"/>',
       ai: '<path d="M12 3.5 13.8 8l4.7 1.8-4.7 1.8L12 16l-1.8-4.4L5.5 9.8 10.2 8z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>',
       web: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5"/>',
       hviezda: '<path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/>',
@@ -1935,6 +1948,7 @@
       ["chat", "chat", "Chat", "Správy pre celý tím", neprec ? neprec + (neprec === 1 ? " neprečítaná správa" : neprec <= 4 ? " neprečítané správy" : " neprečítaných správ") : "Všetko prečítané", "", ""],
       ["kalendar", "kal", "Kalendár", "Stretnutia, obhliadky a pripomienky – aj v Google a Apple kalendári", (function () { var n = polozkyKalendara().filter(function (x) { return denKluc(x.od) === denKluc(new Date()); }).length; return n ? n + " dnes" : "Dnes voľno"; })(), "", ""],
       ["mapa", "mapa", "Realitná mapa", "Naše ponuky a súkromní predajcovia na mape", "", "", ""],
+      ["kataster", "kataster", "Kataster", "Katastrálna mapa, list vlastníctva, parcela podľa GPS", "", "", ""],
       ["asistent", "ai", "AI asistent", "Popisy, príspevky, SMS a odpovede klientom", "", "", ""],
       ["recenzie", "hviezda", "Recenzie", "Hodnotenia klientov – zbierajte ich jedným odkazom", "", "", ""],
       ["web", "web", "Osobný web", "Vaša stránka s ponukami a recenziami", "", "", ""],
@@ -2235,7 +2249,7 @@
     if (window.LOKALITY) return Promise.resolve();
     if (S.lokalityP) return S.lokalityP;
     S.lokalityP = new Promise(function (ok, chyba) {
-      var sc = document.createElement("script"); sc.src = "lokality.js?v=202610191400"; sc.onload = ok; sc.onerror = function () { chyba(new Error("Zoznam obcí sa nepodarilo načítať.")); };
+      var sc = document.createElement("script"); sc.src = "lokality.js?v=202610191600"; sc.onload = ok; sc.onerror = function () { chyba(new Error("Zoznam obcí sa nepodarilo načítať.")); };
       document.head.appendChild(sc);
     });
     return S.lokalityP;
@@ -2538,7 +2552,7 @@
   // ---------- fotky: zmenšenie, nahratie, poradie
   function vodoznakZapnuty() { try { return localStorage.getItem("typek-vodoznak") !== "0"; } catch (e) { return true; } }
   function logoObr() {
-    if (!S.logoP) S.logoP = new Promise(function (ok) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = function () { ok(null); }; i.src = "logo.png?v=202610191400"; });
+    if (!S.logoP) S.logoP = new Promise(function (ok) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = function () { ok(null); }; i.src = "logo.png?v=202610191600"; });
     return S.logoP;
   }
   async function zmensiFotku(subor, vodoznak) {
@@ -2856,7 +2870,7 @@
       '<a class="btn" href="letak.html?id=' + p.id + '" target="_blank" rel="noopener">🖨 Leták (PDF)</a>' +
       (mozem ? '<button class="btn" type="button" data-pdn="report" aria-pressed="' + (S.pdPanel === "report") + '">📊 Report majiteľovi</button>' : "") +
       '<button class="btn" type="button" data-pdn="siete" aria-pressed="' + (S.pdPanel === "siete") + '">📣 Sociálne siete</button>' +
-      '<button class="btn" type="button" data-pdn="text">📋 Text pre portál</button>' +
+      '<button class="btn" type="button" data-pdn="text">📋 Text pre portál</button>' + katasterTlacidlo(p, "btn") +
       ((p.fotky || []).length ? '<button class="btn" type="button" data-pdn="zip">⬇️ Fotky (ZIP)</button>' : "") +
       (mozem ? '<button class="btn ghost" type="button" data-pdn="duplikovat">⧉ Duplikovať</button>' : "") + "</div>" +
       '<div class="pd-staty"><span>👁 <b>' + nf.format(Z.spolu) + "</b> zobrazení ponuky" + (Z.d7 ? " (" + Z.d7 + " za 7 dní)" : "") + "</span>" +
@@ -3096,7 +3110,7 @@
     el.querySelectorAll("[data-kopiruj-kod]").forEach(function (b) { b.onclick = function () { kopiruj($("#" + b.dataset.kopirujKod).textContent, "Kód je skopírovaný."); }; });
     el.querySelectorAll("[data-kopiruj]").forEach(function (b) { b.onclick = function () { kopiruj(b.dataset.kopiruj, "Adresa feedu je skopírovaná."); }; });
     if (window.TypekPonuky) window.TypekPonuky.obnov();
-    else nacitajSkript("widget.js?v=202610191400", "TypekPonuky").catch(function (e) { toast(chybaText(e), true); });
+    else nacitajSkript("widget.js?v=202610191600", "TypekPonuky").catch(function (e) { toast(chybaText(e), true); });
   }
 
   // ------------------------------------------------------------ KLIENTI A DOPYTY
@@ -3503,7 +3517,7 @@
     Promise.all([nacitajCluster(), nacitajLokality()]).then(function () {
       var box = $("#realitna-mapa"); if (!box) return;
       var mapa = L.map(box, { scrollWheelZoom: true }).setView([48.98, 20.6], 11);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(mapa);
+      ovladanieVrstiev(mapa, "realVrstvy", "mapa");
       S.realMapa = mapa; kresliRealitnuMapu(true);
       setTimeout(function () { mapa.invalidateSize(); }, 200);
     }, function () { $("#realitna-mapa").innerHTML = '<div class="meta" style="padding:20px">Mapu sa nepodarilo načítať.</div>'; });
@@ -3525,7 +3539,8 @@
       var f = (p.fotky || [])[0];
       var mk = L.marker(ll, { icon: ikonka("ponuka", kratkaCena(p.cena), pr) }).bindPopup('<div class="rm-pop">' + (f ? '<img src="' + esc(fotkaUrl(f)) + '" alt="">' : "") +
         '<span class="rm-zn ponuka">Naša ponuka</span><b>' + esc(nazovPonuky(p)) + "</b><span>" + esc([p.cast_obce, p.obec].filter(Boolean).join(", ")) + '</span><span class="rm-cena">' + esc(cenaPonuky(p)) + "</span>" +
-        '<span class="meta">' + esc(meno(p.makler_id)) + '</span><button type="button" class="btn" data-mapa-ponuka="' + p.id + '">Detail ponuky</button></div>');
+        '<span class="meta">' + esc(meno(p.makler_id)) + '</span><span class="rm-odkazy"><button type="button" class="btn" data-mapa-ponuka="' + p.id + '">Detail ponuky</button>' +
+        '<a class="btn ghost" href="' + esc(pr ? katasterOdkaz({ obec: p.obec, okres: p.okres }) : zbgisOdkaz(ll[0], ll[1], 19)) + '" target="_blank" rel="noopener">📐 Kataster</a></span></div>');
       vrstva.addLayer(mk); body.push(ll); n.ponuky++;
     });
     if ((F.sukr || F.rk) && maSekciu("inzeraty")) S.inz.forEach(function (z) {
@@ -3537,7 +3552,8 @@
         '<span class="rm-zn ' + (rk ? "rk" : "sukr") + '">' + (rk ? "RK" : "Súkromný predajca") + "</span><b>" + esc(z.nazov) + "</b><span>" + esc(z.obec || "") + (z.ulica ? ", " + esc(z.ulica) : "") + (q.presna ? "" : " · poloha približne") + "</span>" +
         '<span class="rm-cena">' + eur(z.cena) + (z.plocha ? " · " + nf.format(z.plocha) + " m²" : "") + "</span>" +
         (pr && pr.makler_id ? '<span class="meta">Prevzal ' + esc(meno(pr.makler_id)) + "</span>" : '<span class="meta">' + (rk ? esc(z.predajca || "") : "Voľný") + "</span>") +
-        '<span class="rm-odkazy"><button type="button" class="btn" data-mapa-inz="' + esc(z.id) + '">V skeneri</button><a class="btn ghost" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(PORTAL[z.portal] || "Portál") + "</a></span></div>");
+        '<span class="rm-odkazy"><button type="button" class="btn" data-mapa-inz="' + esc(z.id) + '">V skeneri</button><a class="btn ghost" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(PORTAL[z.portal] || "Portál") + "</a>" +
+        '<a class="btn ghost" href="' + esc(q.presna ? zbgisOdkaz(q.ll[0], q.ll[1], 19) : katasterOdkaz(z)) + '" target="_blank" rel="noopener" title="Kataster">📐</a></span></div>');
       vrstva.addLayer(mk); body.push(q.ll); n[rk ? "rk" : "sukr"]++;
     });
     vrstva.addTo(mapa); S.realVrstva = vrstva;
@@ -3550,6 +3566,145 @@
     var c = e.target.closest("[data-mapa-inz]");
     if (c) prejdi("inzeraty", c.dataset.mapaInz);
   });
+
+  // ------------------------------------------------------------ KATASTER
+  var KAT_ODKAZY = {
+    zbgis: "https://zbgis.skgeodesy.sk/mapka/sk/kataster?pos=48.800000,19.530000,8",
+    eskn: "https://kataster.skgeodesy.sk/eskn-portal/",
+    ugkk: "https://www.skgeodesy.sk/sk/",
+  };
+  function katasterTlacidlo(x, trieda) {
+    return '<a class="' + (trieda || "kat-link") + '" href="' + esc(KAT_ODKAZY.zbgis) + '" target="_blank" rel="noopener" data-kataster data-obec="' + esc(x.obec || "") + '" data-okres="' + esc(x.okres || "") + '"' +
+      (x.lat && x.lon ? ' data-lat="' + x.lat + '" data-lon="' + x.lon + '"' : "") + ' title="Otvoriť v katastri (ZBGIS)">📐 Kataster</a>';
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("[data-kataster]"); if (!a) return;
+    var x = { obec: a.dataset.obec, okres: a.dataset.okres, lat: Number(a.dataset.lat) || null, lon: Number(a.dataset.lon) || null };
+    if (x.lat || window.LOKALITY) { a.href = katasterOdkaz(x); return; }
+    e.preventDefault();
+    var okno = window.open("about:blank", "_blank");
+    nacitajLokality().then(function () { var u = katasterOdkaz(x); a.href = u; if (okno) okno.location.href = u; else location.href = u; },
+      function () { if (okno) okno.location.href = KAT_ODKAZY.zbgis; });
+  });
+  function zbgisOdkaz(lat, lon, zoom) {
+    return "https://zbgis.skgeodesy.sk/mapka/sk/kataster?pos=" + Number(lat).toFixed(6) + "," + Number(lon).toFixed(6) + "," + (zoom || 18);
+  }
+  // poloha obce zo zoznamu obcí (stred obce)
+  function polohaObce(obec, okres) {
+    var l = (window.LOKALITY || []).find(function (x) { return !x[5] && normLok(x[0]) === normLok(obec) && (!okres || x[1] === okres); }) ||
+      (window.LOKALITY || []).find(function (x) { return normLok(x[0]) === normLok(obec); });
+    return l ? [l[3], l[4]] : null;
+  }
+  // odkaz do katastra pre ponuku alebo inzerát – presná poloha, inak stred obce
+  function katasterOdkaz(x) {
+    if (x.lat && x.lon) return zbgisOdkaz(x.lat, x.lon, 19);
+    var ll = window.LOKALITY ? polohaObce(x.obec, x.okres) : null;
+    return ll ? zbgisOdkaz(ll[0], ll[1], 16) : KAT_ODKAZY.zbgis;
+  }
+  // podkladové mapy + vrstva parciel (ÚGKK SR); vracia ovládacie tlačidlá s piktogramami
+  var PODKLADY = {
+    mapa: ["Mapa", "mapa", function () { return L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }); }],
+    letecka: ["Letecká", "satelit", function () { return L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: "Esri, Maxar, Earthstar Geographics" }); }],
+  };
+  function vrstvaParciel(naChybu) {
+    var KN = "https://kataster.skgeodesy.sk/eskn/rest/services/NR/kn_wms_norm/MapServer/export";
+    var V = L.TileLayer.extend({
+      getTileUrl: function (c) {
+        var ts = this.getTileSize(), nw = this._map.unproject(c.scaleBy(ts), c.z), se = this._map.unproject(c.add([1, 1]).scaleBy(ts), c.z);
+        var a = L.CRS.EPSG3857.project(nw), b = L.CRS.EPSG3857.project(se);
+        return KN + "?bbox=" + [a.x, b.y, b.x, a.y].map(function (v) { return v.toFixed(2); }).join(",") +
+          "&bboxSR=3857&imageSR=3857&size=256,256&format=png32&transparent=true&dpi=96&f=image";
+      },
+    });
+    var v = new V("", { maxZoom: 21, minZoom: 14, opacity: 0.85, attribution: "Kataster © ÚGKK SR", zIndex: 5 });
+    var ok = 0, zle = 0;
+    v.on("tileload", function () { ok++; });
+    v.on("tileerror", function () { zle++; if (zle === 6 && !ok && naChybu) naChybu(); });
+    return v;
+  }
+  function ovladanieVrstiev(mapa, kluc, pred) {
+    var st = S[kluc] = S[kluc] || { podklad: pred || "mapa", parcely: false };
+    var podklad = PODKLADY[st.podklad][2]().addTo(mapa), parcely = null;
+    function nastavParcely() {
+      if (parcely) { mapa.removeLayer(parcely); parcely = null; }
+      if (st.parcely) {
+        parcely = vrstvaParciel(function () { toast("Vrstvu parciel sa teraz nepodarilo načítať – kliknite do mapy a otvorte kataster ZBGIS.", true); }).addTo(mapa);
+        if (mapa.getZoom() < 16) mapa.setZoom(17);
+      }
+    }
+    nastavParcely();
+    var Ovl = L.Control.extend({
+      options: { position: "topright" },
+      onAdd: function () {
+        var d = L.DomUtil.create("div", "pikto-vrstvy");
+        d.innerHTML = Object.keys(PODKLADY).map(function (k) {
+          return '<button type="button" data-podklad="' + k + '" aria-pressed="' + (st.podklad === k) + '" title="' + PODKLADY[k][0] + '">' + ikona(PODKLADY[k][1]) + "<span>" + PODKLADY[k][0] + "</span></button>";
+        }).join("") + '<button type="button" data-parcely aria-pressed="' + st.parcely + '" title="Hranice parciel z katastra (pri väčšom priblížení)">' + ikona("kataster") + "<span>Parcely</span></button>";
+        L.DomEvent.disableClickPropagation(d);
+        d.querySelectorAll("[data-podklad]").forEach(function (b) {
+          b.onclick = function () {
+            st.podklad = b.dataset.podklad; mapa.removeLayer(podklad); podklad = PODKLADY[st.podklad][2]().addTo(mapa); podklad.bringToBack();
+            d.querySelectorAll("[data-podklad]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+          };
+        });
+        d.querySelector("[data-parcely]").onclick = function () { st.parcely = !st.parcely; this.setAttribute("aria-pressed", String(st.parcely)); nastavParcely(); };
+        return d;
+      },
+    });
+    new Ovl().addTo(mapa);
+  }
+  function vykresliKataster() {
+    var el = $("#obsah"); if (!el) return;
+    var obce = ["Spišská Nová Ves", "Levoča", "Smižany", "Spišské Podhradie", "Krompachy", "Spišské Vlachy", "Markušovce", "Hrabušice", "Harichovce", "Spišský Štvrtok"];
+    el.innerHTML = '<div class="box kat-box"><div class="vykon-hlava"><h3>📐 Kataster nehnuteľností</h3></div>' +
+      '<div class="kat-pikto">' +
+      '<a class="kat-dl" href="' + KAT_ODKAZY.zbgis + '" target="_blank" rel="noopener" id="kat-zbgis"><span class="kat-ik">' + ikona("kataster") + "</span><b>Katastrálna mapa</b><small>ZBGIS – parcely, LV, vlastníci</small></a>" +
+      '<button type="button" class="kat-dl" data-kat="poloha"><span class="kat-ik">' + ikona("poloha") + "</span><b>Kataster tu, kde stojím</b><small>otvorí parcelu podľa GPS mobilu</small></button>" +
+      '<a class="kat-dl" href="' + KAT_ODKAZY.eskn + '" target="_blank" rel="noopener"><span class="kat-ik">' + ikona("lv") + "</span><b>List vlastníctva</b><small>portál ESKN – vyhľadanie LV a parciel</small></a>" +
+      '<a class="kat-dl" href="' + KAT_ODKAZY.ugkk + '" target="_blank" rel="noopener"><span class="kat-ik">' + ikona("urad") + "</span><b>Úrad geodézie</b><small>skgeodesy.sk – ÚGKK SR</small></a></div>" +
+      '<div class="kat-obec"><label class="field"><span>Otvoriť kataster obce</span><input type="text" id="kat-obec" list="kat-obce" placeholder="napr. Spišská Nová Ves"></label>' +
+      '<button class="btn primary" type="button" data-kat="obec">Otvoriť v katastri</button><datalist id="kat-obce"></datalist>' +
+      '<div class="cipy">' + obce.map(function (o) { return '<button type="button" class="cip" data-kat-rychla="' + esc(o) + '">' + esc(o) + "</button>"; }).join("") + "</div></div>" +
+      '<div id="kat-mapa" class="realitna-mapa kat-mapa"></div>' +
+      '<p class="meta">👆 Ťuknite kamkoľvek do mapy – otvorí sa katastrálna mapa ZBGIS presne na tom mieste (parcela, list vlastníctva, výmera). Piktogramy vpravo hore prepínajú mapu, leteckú snímku a hranice parciel.</p></div>';
+    nacitajLokality().then(function () {
+      var dl = $("#kat-obce"); if (!dl) return;
+      dl.innerHTML = window.LOKALITY.filter(function (x) { return !x[5]; }).map(function (x) { return '<option value="' + esc(x[0]) + '">' + esc("okres " + x[1]) + "</option>"; }).join("");
+    }).catch(function () {});
+    function otvorObec(nazov) {
+      nacitajLokality().then(function () {
+        var ll = polohaObce(nazov); if (!ll) return toast("Obec „" + nazov + "“ som nenašiel.", true);
+        window.open(zbgisOdkaz(ll[0], ll[1], 15), "_blank", "noopener");
+        if (S.katMapa) S.katMapa.setView(ll, 15);
+      });
+    }
+    el.querySelectorAll("[data-kat-rychla]").forEach(function (b) { b.onclick = function () { $("#kat-obec").value = b.dataset.katRychla; otvorObec(b.dataset.katRychla); }; });
+    el.querySelector('[data-kat="obec"]').onclick = function () { var v = $("#kat-obec").value.trim(); if (!v) return toast("Napíšte názov obce.", true); otvorObec(v); };
+    $("#kat-obec").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); el.querySelector('[data-kat="obec"]').click(); } });
+    el.querySelector('[data-kat="poloha"]').onclick = function () {
+      if (!navigator.geolocation) return toast("Tento prehliadač nevie zistiť polohu.", true);
+      var okno = window.open("about:blank", "_blank");
+      toast("📍 Zisťujem polohu…");
+      navigator.geolocation.getCurrentPosition(function (p) {
+        var u = zbgisOdkaz(p.coords.latitude, p.coords.longitude, 19);
+        if (okno) okno.location.href = u; else location.href = u;
+        if (S.katMapa) S.katMapa.setView([p.coords.latitude, p.coords.longitude], 18);
+      }, function () { if (okno) okno.close(); toast("Polohu sa nepodarilo zistiť – povoľte prístup k polohe.", true); }, { enableHighAccuracy: true, timeout: 15000 });
+    };
+    nacitajLeaflet().then(function () {
+      var box = $("#kat-mapa"); if (!box) return;
+      var mapa = S.katMapa = L.map(box, { scrollWheelZoom: true }).setView(S.katStred || [48.946, 20.565], S.katZoom || 13);
+      ovladanieVrstiev(mapa, "katVrstvy", "letecka");
+      var odkaz = $("#kat-zbgis");
+      function aktualizuj() { var c = mapa.getCenter(); S.katStred = [c.lat, c.lng]; S.katZoom = mapa.getZoom(); if (odkaz) odkaz.href = zbgisOdkaz(c.lat, c.lng, Math.max(14, mapa.getZoom())); }
+      mapa.on("moveend", aktualizuj); aktualizuj();
+      mapa.on("click", function (e) {
+        L.popup().setLatLng(e.latlng).setContent('<div class="rm-pop"><b>📐 Toto miesto v katastri</b><span class="meta">' + e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5) + "</span>" +
+          '<a class="btn primary" href="' + zbgisOdkaz(e.latlng.lat, e.latlng.lng, 19) + '" target="_blank" rel="noopener">Otvoriť parcelu v ZBGIS</a></div>').openOn(mapa);
+      });
+      setTimeout(function () { mapa.invalidateSize(); }, 200);
+    }, function () { $("#kat-mapa").innerHTML = '<div class="meta" style="padding:20px">Mapu sa nepodarilo načítať.</div>'; });
+  }
 
   // ------------------------------------------------------------ AI ASISTENT
   var AI_NAVRHY = [
@@ -3783,21 +3938,103 @@
   async function nacitajChat() {
     var r = await sb.from("spravy").select("*").order("id", { ascending: false }).limit(300);
     if (r.error) return;
-    S.chat = r.data.reverse();
-    S.chatMax = S.chat.length ? S.chat[S.chat.length - 1].id : 0;
+    S.chat = r.data.reverse().filter(function (m) { return !m.zmazane; });
+    S.chatMax = r.data.length ? r.data[r.data.length - 1].id : 0;
+    if (S.chat.length) S.chatMax = Math.max(S.chatMax, S.chat[S.chat.length - 1].id);
   }
   async function chatNove() {
     if (!S.me) return;
     var r = await sb.from("spravy").select("*").gt("id", S.chatMax).order("id", { ascending: true }).limit(200);
+    if (!r.error && S.tab === "chat") await synchZmazane();
     if (r.error || !r.data.length) { popisChat(); return; }
-    S.chat = S.chat.concat(r.data).slice(-500);
-    S.chatMax = S.chat[S.chat.length - 1].id;
-    if (S.tab === "chat") { pridajSpravy(r.data); oznacPrecitane(); } else if (S.tab === "domov") vykresliDomov();
+    var nove = r.data.filter(function (m) { return !m.zmazane; });
+    S.chatMax = r.data[r.data.length - 1].id;
+    if (!nove.length) return popisChat();
+    S.chat = S.chat.concat(nove).slice(-500);
+    if (S.tab === "chat" && !document.hidden) { pridajSpravy(nove); oznacPrecitane(); }
+    else { if (S.tab === "chat") pridajSpravy(nove); else if (S.tab === "domov") vykresliDomov(); upozornNaSpravy(nove); }
     popisChat();
+  }
+  // ---------- vyskakovacie upozornenie na nové správy
+  function nastChat(k) { try { return localStorage.getItem("typek-chat-" + k) !== "vyp"; } catch (e) { return true; } }
+  function nastavChat(k, zap) { try { localStorage.setItem("typek-chat-" + k, zap ? "zap" : "vyp"); } catch (e) { /* nič */ } }
+  function cinknut() {
+    try {
+      var A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+      var c = S.zvukCtx = S.zvukCtx || new A(), t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(880, t); o.frequency.setValueAtTime(1318, t + 0.09);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.13, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.4);
+    } catch (e) { /* zvuk nie je dostupný */ }
+  }
+  function upozornNaSpravy(nove) {
+    var cudzie = nove.filter(function (m) { return m.makler_id !== S.me.id; });
+    if (!cudzie.length || !maSekciu("chat") || !nastChat("popup")) return;
+    var m = cudzie[cudzie.length - 1];
+    S.chatPop = S.chatPop || { pocet: 0 };
+    S.chatPop.pocet += cudzie.length; S.chatPop.m = m;
+    kresliChatPop();
+    if (nastChat("zvuk")) cinknut();
+    if (document.hidden && "Notification" in window && Notification.permission === "granted" && navigator.serviceWorker) {
+      var titul = m.makler_id ? meno(m.makler_id) + " · Chat tímu" : "Realitný týpek · Chat tímu";
+      navigator.serviceWorker.ready.then(function (reg) {
+        reg.showNotification(titul, { body: String(m.text || "").slice(0, 180) + (cudzie.length > 1 ? "  (+" + (cudzie.length - 1) + " ďalšie)" : ""),
+          icon: "ikona-192.png", badge: "favicon-32.png", tag: "typek-chat", renotify: true, data: { url: location.href.split("#")[0] + "#chat" } });
+      }).catch(function () {});
+    }
+  }
+  function kresliChatPop() {
+    var P = S.chatPop; if (!P) return;
+    var box = $("#chat-pop");
+    if (!box) { box = document.createElement("div"); box.id = "chat-pop"; box.setAttribute("aria-live", "polite"); document.body.appendChild(box); }
+    var m = P.m, sys = !m.makler_id, koncept = box.querySelector(".cpop-odp input") ? box.querySelector(".cpop-odp input").value : "";
+    box.innerHTML = '<div class="cpop" role="alert"><button type="button" class="cpop-x" data-cpop="zavriet" aria-label="Zavrieť">×</button>' +
+      '<button type="button" class="cpop-hl" data-cpop="otvor">' + (sys ? '<span class="cpop-sys">🎉</span>' : avatar(m.makler_id, 40)) +
+      "<span><b>" + esc(sys ? "Tím Alpha Reality" : meno(m.makler_id)) + "</b><small>💬 Chat tímu · " +
+      new Date(m.vytvorene).toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" }) + "</small></span></button>" +
+      '<button type="button" class="cpop-text" data-cpop="otvor">' + esc(m.text) + "</button>" +
+      (P.pocet > 1 ? '<div class="cpop-viac">+ ' + (P.pocet - 1) + (P.pocet - 1 === 1 ? " ďalšia nová správa" : P.pocet - 1 <= 4 ? " ďalšie nové správy" : " ďalších nových správ") + "</div>" : "") +
+      '<form class="cpop-odp"><input type="text" maxlength="2000" placeholder="Rýchla odpoveď…" aria-label="Rýchla odpoveď" value="' + esc(koncept) + '">' +
+      '<button type="submit" aria-label="Odoslať"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z" fill="currentColor"/></svg></button></form>' +
+      '<button type="button" class="cpop-otvor" data-cpop="otvor">Otvoriť chat →</button></div>';
+    box.hidden = false;
+    var karta = box.querySelector(".cpop"); karta.classList.add("prisla");
+    box.querySelectorAll("[data-cpop]").forEach(function (b) {
+      b.onclick = function () { var a = b.dataset.cpop; zavriChatPop(); if (a === "otvor") prejdi("chat"); };
+    });
+    box.querySelector(".cpop-odp").onsubmit = async function (e) {
+      e.preventDefault();
+      var inp = e.target.querySelector("input"), v = inp.value.trim(); if (!v) return;
+      inp.disabled = true;
+      try { await rpc("poslat_spravu", { p_text: v }); S.me.chat_precitane = new Date().toISOString(); rpc("chat_precitane", {}).catch(function () {});
+        zavriChatPop(); toast("💬 Odpoveď je odoslaná."); chatNove(); }
+      catch (err) { inp.disabled = false; toast(chybaText(err), true); }
+    };
+    clearTimeout(S.chatPopT);
+    var casovac = function () { S.chatPopT = setTimeout(function () { if (box.matches(":hover") || box.contains(document.activeElement)) return casovac(); zavriChatPop(); }, 15000); };
+    casovac();
+  }
+  function zavriChatPop() {
+    clearTimeout(S.chatPopT); S.chatPop = null;
+    var box = $("#chat-pop"); if (!box || box.hidden) return;
+    var k = box.querySelector(".cpop"); if (k) k.classList.add("odchadza");
+    setTimeout(function () { if (!S.chatPop) { box.hidden = true; box.innerHTML = ""; } }, 200);
+  }
+  // správy, ktoré niekto medzičasom zmazal, zmiznú aj u ostatných
+  async function synchZmazane() {
+    if (!S.chat.length || Date.now() - (S.chatSynch || 0) < 15000) return;
+    S.chatSynch = Date.now();
+    var r = await sb.from("spravy").select("id").gte("id", S.chat[0].id).lte("id", S.chatMax).limit(1000);
+    if (r.error) return;
+    var ok = {}; r.data.forEach(function (x) { ok[x.id] = true; });
+    var preč = S.chat.filter(function (m) { return !ok[m.id]; });
+    if (!preč.length) return;
+    S.chat = S.chat.filter(function (m) { return ok[m.id]; });
+    if (S.tab === "chat") vykresliChat();
   }
   function pocetNeprecitanych() {
     var od = S.me.chat_precitane ? new Date(S.me.chat_precitane).getTime() : 0;
-    return S.chat.filter(function (m) { return !m.zmazane && m.makler_id !== S.me.id && new Date(m.vytvorene).getTime() > od; }).length;
+    return S.chat.filter(function (m) { return m.makler_id !== S.me.id && new Date(m.vytvorene).getTime() > od; }).length;
   }
   function popisChat() {
     var n = S.me ? pocetNeprecitanych() : 0;
@@ -3835,9 +4072,8 @@
     return h + '<div class="sprava' + (ja ? " ja" : "") + (spojit ? " spojena" : "") + '" data-sprava="' + m.id + '">' +
       (!ja ? '<span class="sprava-av">' + (spojit ? "" : avatar(m.makler_id, 36)) + "</span>" : "") +
       '<div class="sprava-telo">' + (!ja && !spojit ? '<div class="sprava-meno" style="--h:' + odtienMena(m.makler_id) + '">' + esc(meno(m.makler_id)) + "</div>" : "") +
-      '<div class="bublina' + (m.zmazane ? " zmazana" : "") + '">' + (m.zmazane ? "Správa bola zmazaná" : textSpravy(m.text)) +
-      '<span class="sprava-cas">' + cas + "</span></div></div>" +
-      (!m.zmazane && (ja || admin()) ? '<button type="button" class="sprava-x" data-zmaz-spravu="' + m.id + '" title="Zmazať správu" aria-label="Zmazať správu">×</button>' : "") + "</div>";
+      '<div class="bublina">' + textSpravy(m.text) + '<span class="sprava-cas">' + cas + "</span></div></div>" +
+      (ja || admin() ? '<button type="button" class="sprava-x" data-zmaz-spravu="' + m.id + '" title="Zmazať správu" aria-label="Zmazať správu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : "") + "</div>";
   }
   function vykresliChat() {
     var el = $("#obsah"); if (!el) return;
@@ -3850,7 +4086,14 @@
       '<span class="meta">' + clenovia.length + " " + (clenovia.length >= 2 && clenovia.length <= 4 ? "členovia" : "členov") + ' · <span class="chat-online">' + online + " online</span></span></div></div>" +
       '<div class="chat-clenovia">' + clenovia.slice(0, 8).map(function (m) {
         return '<span class="chat-clen' + (jeOnline(m) ? " on" : "") + '" title="' + esc((m.meno || m.email) + (jeOnline(m) ? " · online" : "")) + '">' + avatar(m.id, 30) + "</span>";
-      }).join("") + (clenovia.length > 8 ? '<span class="chat-clen viac">+' + (clenovia.length - 8) + "</span>" : "") + "</div></div>" +
+      }).join("") + (clenovia.length > 8 ? '<span class="chat-clen viac">+' + (clenovia.length - 8) + "</span>" : "") + "</div>" +
+      '<button type="button" class="chat-nast-btn" id="chat-nast-btn" aria-expanded="' + !!S.chatNast + '" title="Upozornenia" aria-label="Nastavenia upozornení">🔔</button></div>' +
+      (S.chatNast ? '<div class="chat-nast"><b>Upozornenia na nové správy</b>' +
+        '<label class="toggle"><input type="checkbox" data-chat-nast="popup"' + (nastChat("popup") ? " checked" : "") + "> Vyskakovacie okno v aplikácii</label>" +
+        '<label class="toggle"><input type="checkbox" data-chat-nast="zvuk"' + (nastChat("zvuk") ? " checked" : "") + "> Zvuk pri novej správe</label>" +
+        ("Notification" in window ? (Notification.permission === "granted" ? '<span class="meta">✅ Upozornenia mimo aplikácie sú povolené (keď je Týpek otvorený na pozadí).</span>' :
+          Notification.permission === "denied" ? '<span class="meta">Upozornenia mimo aplikácie sú v prehliadači zablokované – povoľte ich v nastaveniach stránky.</span>' :
+          '<button type="button" class="btn" id="chat-notif">📱 Povoliť upozornenia aj mimo aplikácie</button>') : "") + "</div>" : "") +
       '<div class="chat-spravy" id="chat-spravy">' +
       (S.chat.length ? S.chat.map(function (m, i) { return htmlSpravy(m, S.chat[i - 1]); }).join("") :
         '<div class="prazdne"><span class="dl-ikona velka">' + ikona("chat") + "</span><b>Zatiaľ žiadne správy</b><span class=\"meta\">Napíšte prvú správu celému tímu.</span></div>") +
@@ -3864,6 +4107,10 @@
     var box = $("#chat-spravy");
     vyskaChatu(); box.scrollTop = box.scrollHeight;
     var t = $("#chat-text");
+    $("#chat-nast-btn").onclick = function () { S.chatNast = !S.chatNast; vykresliChat(); };
+    el.querySelectorAll("[data-chat-nast]").forEach(function (c) { c.onchange = function () { nastavChat(c.dataset.chatNast, c.checked); if (c.checked && c.dataset.chatNast === "zvuk") cinknut(); }; });
+    var nb = $("#chat-notif");
+    if (nb) nb.onclick = function () { Notification.requestPermission().then(function (v) { toast(v === "granted" ? "✅ Upozornenia sú povolené." : "Upozornenia neboli povolené.", v !== "granted"); vykresliChat(); }); };
     $("#chat-emoji-btn").onclick = function () { var e = $("#chat-emoji"); e.hidden = !e.hidden; this.setAttribute("aria-expanded", String(!e.hidden)); vyskaChatu(); };
     el.querySelectorAll("[data-emoji]").forEach(function (b) {
       b.onclick = function () { var z = t.selectionStart != null ? t.selectionStart : t.value.length, k = t.selectionEnd != null ? t.selectionEnd : z; t.value = t.value.slice(0, z) + b.dataset.emoji + t.value.slice(k); t.focus(); t.selectionStart = t.selectionEnd = z + b.dataset.emoji.length; };
@@ -3882,6 +4129,7 @@
       btn.disabled = false; t.focus();
     });
     oznacPrecitane();
+    zavriChatPop();
   }
   // chat vyplní obrazovku – pole na písanie je vždy vidno (aj na mobile s klávesnicou)
   function vyskaChatu() {
@@ -3909,12 +4157,15 @@
   document.addEventListener("click", async function (e) {
     var b = e.target.closest("[data-zmaz-spravu]");
     if (!b) return;
-    var id = Number(b.dataset.zmazSpravu);
+    var id = Number(b.dataset.zmazSpravu), m = S.chat.find(function (x) { return x.id === id; });
+    if (!confirm2("Zmazať správu? Zmizne úplne – neuvidí ju nikto z tímu.")) return;
+    var riadok = b.closest(".sprava"); if (riadok) riadok.classList.add("mizne");
     try {
       await rpc("zmazat_spravu", { p_id: id });
-      var m = S.chat.find(function (x) { return x.id === id; }); if (m) m.zmazane = new Date().toISOString();
-      vykresliChat();
-    } catch (err) { toast(chybaText(err), true); }
+      S.chat = S.chat.filter(function (x) { return x.id !== id; });
+      setTimeout(vykresliChat, riadok ? 220 : 0);
+      toast("Správa je zmazaná.");
+    } catch (err) { if (riadok) riadok.classList.remove("mizne"); toast(chybaText(err), true); }
   });
 
   // ------------------------------------------------------------ VÝKON MAKLÉROV (len admin)
