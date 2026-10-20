@@ -1357,3 +1357,108 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .menu-sheet-panel { background: linear-gradient(180deg, var(--panel) 0%, var(--graphite) 70%) }
 .login { background: radial-gradient(900px 500px at 15% 10%, rgb(var(--accent-rgb) / .22), transparent 60%), radial-gradient(700px 500px at 100% 100%, rgb(var(--accent-rgb) / .12), transparent 60%), var(--graphite) }
 .btn.primary:hover { filter: brightness(1.06) }
+
+/* ---------- spoločné */
+.linka { background: none; border: 0; padding: 0; font: inherit; color: var(--gold-strong); cursor: pointer; text-align: left; text-decoration: underline; text-underline-offset: 2px }
+.linka:hover { color: var(--ink) }
+
+/* ---------- export do Realsoftu (United Classifieds) */
+.uc-blok { justify-items: stretch }
+.uc-kroky { margin: 0; padding-left: 22px; display: grid; gap: 16px }
+.uc-kroky > li { padding-left: 4px }
+.uc-kroky > li::marker { font-weight: 800; color: var(--gold-strong) }
+.uc-kroky > li > p.meta { margin: 4px 0 8px }
+.uc-kroky details > summary { cursor: pointer; display: flex; gap: 8px; align-items: center; list-style: none }
+.uc-kroky details > summary::-webkit-details-marker { display: none }
+.uc-kroky details > summary::after { content: "▾"; color: var(--muted) }
+.uc-kroky details[open] > summary { margin-bottom: 10px }
+.uc-suhrn { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 8px }
+.uc-ok { border-color: var(--good); color: var(--good) }
+.uc-chyba { white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; font-size: 12px; margin: 6px 0 0 }
+.uc-ponuky { display: grid; gap: 8px; margin-top: 8px }
+.uc-p { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface); display: grid; gap: 6px }
+.uc-p.zle { border-color: rgb(var(--accent-rgb) / .55); }
+.uc-p.vyn { opacity: .8 }
+.uc-p-hl { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center }
+.uc-p-hl .chip { margin-left: auto }
+.uc-chyby, .uc-upoz { margin: 0; padding-left: 18px; font-size: 13px }
+.uc-chyby li { color: var(--bad) }
+.uc-upoz li { color: var(--muted) }
+.uc-p-volby { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end }
+.uc-p-volby .field { min-width: 200px; flex: 0 1 280px; margin: 0 }
+.uc-vyn-n { margin: 14px 0 0 }
+
+/* ---------- priamo na Facebook a Instagram */
+.siete-priamo { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; display: grid; gap: 8px }
+.siete-priamo h5 { margin: 0; font-size: 15px }
+.siete-volby { display: flex; gap: 16px; flex-wrap: wrap }
+.sp-fotky { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px }
+.sp-foto { position: relative; display: block; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: var(--surface-2) }
+.sp-foto img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .45; transition: opacity .15s }
+.sp-foto input { position: absolute; top: 6px; left: 6px; width: 18px; height: 18px; z-index: 1; accent-color: var(--gold-strong) }
+.sp-foto:has(input:checked) { border-color: var(--gold-strong) }
+.sp-foto:has(input:checked) img { opacity: 1 }
+.sp-foto:focus-within { outline: 2px solid var(--gold); outline-offset: 2px }
+.sp-n { position: absolute; right: 5px; bottom: 4px; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8) }
+.sp-foto.vyska::after { content: "IG ✕"; position: absolute; right: 4px; top: 4px; font-size: 10px; font-weight: 800; background: rgba(0,0,0,.6); color: #fff; padding: 1px 4px; border-radius: 4px }
+.sp-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.sp-hist li { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+#sp-historia h6 { margin: 6px 0; font-size: 13px }
+
+/* ---------- provízie */
+.prov-dlazdice { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 6px 0 14px }
+.prov-dl { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface); display: grid; gap: 2px }
+.prov-dl b { font-size: 20px; font-family: Montserrat, system-ui, sans-serif }
+.prov-dl.zle { border-color: var(--bad) }
+.prov-dl.zle small { color: var(--bad) }
+.prov-tab-wrap { overflow-x: auto; margin-bottom: 14px }
+.prov-tab { width: 100%; border-collapse: collapse; font-size: 14px }
+.prov-tab th, .prov-tab td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap }
+.prov-tab th { font-size: 12px; color: var(--muted); font-weight: 600 }
+.prov-tab td .av { vertical-align: middle }
+.prov-zoz { display: grid; gap: 8px }
+.prov-r { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); display: grid; gap: 6px }
+.prov-r-hl { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center }
+.prov-r-hl .chip { margin-left: auto }
+.prov-r-cisla { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; align-items: center }
+.prov-r-cisla .av { vertical-align: middle }
+.prov-r-akcie { display: flex; flex-wrap: wrap; gap: 6px }
+.prov-pozn { font-size: 13px }
+.prov-pct { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px }
+.prov-pct .btn { padding: 3px 8px; font-size: 12px; min-height: 0 }
+
+/* ---------- história zmien */
+.hist-sekcia { margin: 14px 0 6px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--surface) }
+.hist-sekcia > summary { cursor: pointer; font-weight: 700 }
+.hist-sekcia[open] > summary { margin-bottom: 8px }
+.hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px }
+.hist > li { border-left: 3px solid rgb(var(--accent-rgb) / .5); padding: 2px 0 2px 10px }
+.hist-hl { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center }
+.hist-kedy { margin-left: auto }
+.hist-sys { font-size: 16px }
+.hist-co { font-weight: 600 }
+.hist-zmeny { margin: 4px 0 0; padding-left: 16px; font-size: 13px; display: grid; gap: 2px }
+.hist-zmeny span { color: var(--muted) }
+.hist-zmeny s { color: var(--muted) }
+.hist-box .hist { margin-top: 8px }
+
+/* ---------- sprievodca (Realitný týpek) */
+#sprievodca { position: fixed; inset: 0; z-index: 120; pointer-events: auto }
+.spr-tien { position: fixed; inset: 0; background: rgba(15,17,20,.55); backdrop-filter: blur(2px) }
+.spr-ring { position: fixed; z-index: 1; border-radius: 12px; border: 3px solid var(--gold); box-shadow: 0 0 0 9999px rgba(15,17,20,.55); transition: all .25s ease; pointer-events: none }
+.spr-karta { position: fixed; z-index: 2; right: 24px; bottom: 24px; width: min(420px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); border-radius: 16px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.35); border: 1px solid var(--line); padding: 16px 16px 14px 104px; animation: fadeIn .2s ease-out; min-height: 150px }
+.spr-typek { position: absolute; left: 10px; bottom: 12px; width: 84px; height: auto }
+.spr-text h3 { margin: 2px 0 6px }
+.spr-text p { margin: 0 0 12px; line-height: 1.45 }
+.spr-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end }
+.spr-body { display: flex; gap: 4px; justify-content: center; margin-top: 10px }
+.spr-body i { width: 6px; height: 6px; border-radius: 50%; background: var(--line) }
+.spr-body i.ak { background: var(--gold-strong); width: 16px; border-radius: 3px }
+@media (max-width: 640px) {
+  .spr-karta { left: 16px; right: 16px; bottom: 16px; width: auto; padding-left: 86px }
+  .spr-typek { width: 66px; left: 10px }
+}
+.spr-znova { display: flex; gap: 12px; align-items: center; flex-wrap: wrap }
+.spr-znova > div { flex: 1 1 220px }
+.spr-znova h3 { margin: 0 0 2px }
