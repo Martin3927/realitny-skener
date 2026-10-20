@@ -242,6 +242,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .seg:focus-visible{outline:3px solid #F7F2E8;outline-offset:2px}
 .okr{display:flex;flex-direction:column;gap:8px}
 .okr-l{font-size:13px;font-weight:700;color:#C9D4DD}
+.stp{display:flex;align-items:center;gap:6px;padding:4px;border-radius:999px;background:rgba(247,242,232,.09)}.stp-b{flex:0 0 auto;width:42px;height:42px;border:0;border-radius:999px;background:#DB9522;color:#1E2A35;font:inherit;font-size:22px;font-weight:800;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.stp-b:disabled{background:rgba(247,242,232,.12);color:#8EA2B3;cursor:default}.stp-b:focus-visible{outline:3px solid #F7F2E8;outline-offset:2px}.stp-v{flex:1 1 auto;text-align:center;font-size:14px;font-weight:700;color:#C9D4DD}.stp-v b{font-size:20px;font-weight:800;color:#F7F2E8;margin-right:2px}.okr-h{font-size:12px;line-height:1.45;color:#8EA2B3}
 .plines{display:flex;flex-direction:column}
 .prow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px dashed rgba(247,242,232,.14);font-size:14px;color:#C9D4DD}
 .prow b{flex:none;color:#F7F2E8;font-weight:800;white-space:nowrap}
@@ -1092,7 +1093,7 @@ AML: klient overený
 <div data-modpanel="none" style="display: contents" hidden><span style="font-size: 14px; color: #8EA2B3">Vyber aspoň jeden modul.</span></div>
 </div>
 <div class="seg-wrap" role="group" aria-label="Spôsob platby"><button type="button" class="seg" aria-pressed="false" data-calc="pay" data-key="m">Mesačne</button><button type="button" class="seg" aria-pressed="false" data-calc="pay" data-key="y">Ročne <small>zľava</small></button></div>
-<div data-show="CSk" style="display: contents" hidden><div class="okr"><span class="okr-l">Realitný skener: koľko okresov chceš sledovať?</span><div class="seg-wrap" role="group" aria-label="Počet okresov"><button type="button" class="seg" aria-pressed="false" data-calc="okr" data-key="1">1</button><button type="button" class="seg" aria-pressed="false" data-calc="okr" data-key="2">2</button><button type="button" class="seg" aria-pressed="false" data-calc="okr" data-key="3">3</button><button type="button" class="seg" aria-pressed="false" data-calc="okr" data-key="5">5 a viac</button></div></div></div>
+<div data-show="CSk" style="display: contents" hidden><div class="okr"><span class="okr-l">Realitný skener: koľko okresov chceš sledovať?</span><div class="stp" role="group" aria-label="Počet okresov"><button type="button" class="stp-b" aria-label="O jeden okres menej" data-okr="-1">−</button><span class="stp-v" aria-live="polite"><b data-v="okrN">1</b> <span data-v="okrW">okres</span></span><button type="button" class="stp-b" aria-label="O jeden okres viac" data-okr="1">+</button></div><span class="okr-h">1 okres 19 €, každý ďalší okres +2 € mesačne s DPH. Pri ročnej platbe máš mesiac zdarma.</span></div></div>
 <div class="plines" aria-live="polite">
 <div data-show="CSk" style="display: contents" hidden><div class="prow"><span>Realitný skener · <span data-v="cOkr"></span></span><b><span data-v="cSk"></span></b></div></div>
 <div data-show="CWeb" style="display: contents" hidden><div class="prow"><span>Osobný web s doménou a hostingom</span><b><span data-v="cWeb"></span></b></div></div>
@@ -1328,24 +1329,27 @@ AML: klient overený
     document.querySelectorAll('[data-free-count]').forEach(function(c){c.textContent=fr;});
     calc();
   }
-  var PAY='m',OKR=1,SKP={1:[19,209],2:[35,385],3:[45,405],5:[55,440]},WEBP=[69,690],VAT=0.23;
+  var PAY='m',OKR=1,SKP={},WEBP=[69,690],VAT=0.23;
   function eur(n){var r=Math.round(n*100)/100;var p=r.toFixed(2).split('.');var i=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,' ');return (p[1]==='00'?i:i+','+p[1])+' €';}
   function calc(){
     var has=function(k){return !!MODSEL[k];};
     var yi=PAY==='y'?1:0;
+    var skMo=19+2*(OKR-1);SKP[OKR]=[skMo,skMo*11];var okrW=OKR===1?'okres':OKR<5?'okresy':'okresov';
     var sk=has('skener')?SKP[OKR][yi]:0,wb=has('web')?WEBP[yi]:0,net=sk+wb;
     var fullY=(has('skener')?SKP[OKR][0]*12:0)+(has('web')?WEBP[0]*12:0);
     var yearN=(has('skener')?SKP[OKR][1]:0)+(has('web')?WEBP[1]:0);
     var UNP=['ponuky','klienti','dokumenty','newsletter','ai','email'];if(!has('web'))UNP.push('domena');
     var custom=0;UNP.forEach(function(k){if(has(k))custom++;});
     var freeN=0;['kataster','kalendar','chat'].forEach(function(k){if(has(k))freeN++;});
-    var V={cOkr:OKR===5?'5 a viac okresov':OKR===1?'1 okres':OKR+' okresy',cSk:eur(sk),cWeb:eur(wb),cNet:eur(net/(1+VAT)),cGross:eur(net),cPer:yi?'/ rok':'/ mesiac',cMoEq:eur(yearN/12),cSave:eur(fullY-yearN),cCustomN:custom===1?'1 modul':custom<5?custom+' moduly':custom+' modulov'};
+    var V={cOkr:OKR+' '+okrW,okrN:String(OKR),okrW:okrW,cSk:eur(sk),cWeb:eur(wb),cNet:eur(net/(1+VAT)),cGross:eur(net),cPer:yi?'/ rok':'/ mesiac',cMoEq:eur(yearN/12),cSave:eur(fullY-yearN),cCustomN:custom===1?'1 modul':custom<5?custom+' moduly':custom+' modulov'};
     var S={CSk:has('skener'),CWeb:has('web'),CDom:has('web')&&has('domena'),CFree:freeN>0,CCustom:custom>0,CPriced:net>0,CYear:yi===1&&net>0,CMonth:yi===0&&net>0,CNoPrice:net===0};
     document.querySelectorAll('[data-v]').forEach(function(e){var k=e.getAttribute('data-v');if(k in V)e.textContent=V[k];});
+    document.querySelectorAll('[data-okr]').forEach(function(b){b.disabled=b.getAttribute('data-okr')==='-1'?OKR<=1:OKR>=79;});
     document.querySelectorAll('[data-show]').forEach(function(e){e.hidden=!S[e.getAttribute('data-show')];});
-    document.querySelectorAll('[data-calc]').forEach(function(b){var on=b.getAttribute('data-calc')==='pay'?b.getAttribute('data-key')===PAY:Number(b.getAttribute('data-key'))===OKR;b.classList.toggle('seg-on',on);b.setAttribute('aria-pressed',on?'true':'false');});
+    document.querySelectorAll('[data-calc]').forEach(function(b){var on=b.getAttribute('data-key')===PAY;b.classList.toggle('seg-on',on);b.setAttribute('aria-pressed',on?'true':'false');});
   }
-  document.querySelectorAll('[data-calc]').forEach(function(b){b.addEventListener('click',function(){if(b.getAttribute('data-calc')==='pay')PAY=b.getAttribute('data-key');else OKR=Number(b.getAttribute('data-key'));calc();});});
+  document.querySelectorAll('[data-calc]').forEach(function(b){b.addEventListener('click',function(){PAY=b.getAttribute('data-key');calc();});});
+  document.querySelectorAll('[data-okr]').forEach(function(b){b.addEventListener('click',function(){OKR=Math.min(79,Math.max(1,OKR+Number(b.getAttribute('data-okr'))));calc();});});
   document.querySelectorAll('.mnav-p a').forEach(function(a){a.addEventListener('click',function(){var d=a.closest('details');if(d)d.open=false;});});
   document.addEventListener('click',function(e){document.querySelectorAll('details.mnav[open]').forEach(function(d){if(!d.contains(e.target))d.open=false;});});
   document.querySelectorAll('[data-mod]').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-mod');MODSEL[k]=!MODSEL[k];renderMods();});});
