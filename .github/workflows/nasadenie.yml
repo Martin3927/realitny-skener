@@ -65,24 +65,19 @@ jobs:
           </IfModule>
           EOF
 
-      - name: Nahrať aplikáciu (app.realitnytypek.sk)
+      - name: Nahrať aplikáciu aj web (SFTP)
         if: env.MA_FTP == 'true'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USER }}
-          password: ${{ secrets.FTP_HESLO }}
-          protocol: ftps
-          local-dir: ./build/app/
-          server-dir: ${{ vars.FTP_DIR_APP || '/realitnytypek.sk/sub/app/' }}
-
-      - name: Nahrať web (realitnytypek.sk)
-        if: env.MA_FTP == 'true'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USER }}
-          password: ${{ secrets.FTP_HESLO }}
-          protocol: ftps
-          local-dir: ./build/web/
-          server-dir: ${{ vars.FTP_DIR_WEB || '/realitnytypek.sk/web/' }}
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_HESLO: ${{ secrets.FTP_HESLO }}
+          DIR_APP: ${{ vars.FTP_DIR_APP || '/realitnytypek.sk/sub/app' }}
+          DIR_WEB: ${{ vars.FTP_DIR_WEB || '/realitnytypek.sk/web' }}
+        run: |
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq lftp >/dev/null
+          lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "
+            set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30;
+            cls -1 /;
+            mirror -R --verbose=1 --parallel=4 build/app/ $DIR_APP;
+            mirror -R --verbose=1 --parallel=4 build/web/ $DIR_WEB;
+            bye"
