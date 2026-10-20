@@ -2308,6 +2308,13 @@
   function skupinaStavu(st) { return st === "predane" || st === "neaktivne" ? "neaktivne" : st === "archiv" ? "archiv" : st === "koncept" ? "koncepty" : "aktivne"; }
 
   // ---------- zoznam
+  // zobrazenie ponúk: dlaždice alebo zoznam pod sebou (pamätá si to prehliadač každého makléra)
+  var POHLADY_P = [
+    ["dlazdice", "Dlaždice", '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'],
+    ["zoznam", "Zoznam", '<rect x="3" y="4" width="5" height="4" rx="1"/><rect x="3" y="10" width="5" height="4" rx="1"/><rect x="3" y="16" width="5" height="4" rx="1"/><path d="M11 6h10M11 12h10M11 18h10"/>']];
+  function klucPohladu() { return "typek-ponuky-pohlad-" + (S.me ? S.me.id : ""); }
+  function pohladPonuk() { try { return localStorage.getItem(klucPohladu()) === "zoznam" ? "zoznam" : "dlazdice"; } catch (e) { return S.ponukyPohlad || "dlazdice"; } }
+  function nastavPohladPonuk(v) { S.ponukyPohlad = v; try { localStorage.setItem(klucPohladu(), v); } catch (e) { /* bez úložiska */ } }
   function vykresliNehnutelnosti() {
     var el = $("#obsah"); if (!el) return;
     if (S.ponukaEdit) return vykresliFormularPonuky();
@@ -2322,18 +2329,35 @@
     var zoz = S.ponuky.filter(function (p) {
       return skupinaStavu(p.stav) === S.nehnObd && (!q || norm([p.nazov, p.obec, p.okres, p.typ, p.cislo, meno(p.makler_id)].join(" ")).indexOf(q) >= 0);
     });
-    var koncept = nacitajKoncept();
+    var koncept = nacitajKoncept(), pohlad = pohladPonuk();
     var h = '<div class="box nehn"><div class="vykon-hlava"><h3>🏠 Nehnuteľnosti v ponuke</h3>' +
       '<div class="nehn-akcie"><button class="btn" type="button" data-ponuka="export">🌐 Web a export</button><button class="btn primary" type="button" data-ponuka="nova">+ Pridať ponuku</button></div></div>' +
       (koncept ? '<div class="note koncept-pozn">📝 Máte rozpracovanú ponuku' + (koncept.p.obec ? " (" + esc(koncept.p.obec) + ")" : "") + ' z ' + datum(koncept.ulozene, true) +
         ' <button class="btn" type="button" data-ponuka="pokracovat">Pokračovať</button> <button class="btn ghost" type="button" data-ponuka="zahodit">Zahodiť</button></div>' : "") +
       '<div class="nehn-filtre"><div class="seg" role="group">' + OBD.map(function (o) {
         return '<button type="button" data-nehn="' + o[0] + '" aria-pressed="' + (S.nehnObd === o[0]) + '">' + o[1] + ' <span class="n">' + poc[o[0]] + "</span></button>";
-      }).join("") + '</div><input type="search" id="ponuky-q" placeholder="Hľadať: obec, názov, maklér, číslo…" value="' + esc(S.ponukyQ || "") + '"></div>';
+      }).join("") + '</div><input type="search" id="ponuky-q" placeholder="Hľadať: obec, názov, maklér, číslo…" value="' + esc(S.ponukyQ || "") + '">' +
+      '<div class="seg pohlad-seg" role="group" aria-label="Zobrazenie ponúk">' + POHLADY_P.map(function (o) {
+        return '<button type="button" data-pohlad="' + o[0] + '" aria-pressed="' + (pohlad === o[0]) + '" title="' + o[1] + '">' +
+          '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + o[2] + "</svg><span>" + o[1] + "</span></button>";
+      }).join("") + "</div></div>";
     if (!zoz.length) {
       h += '<div class="prazdne"><span class="dl-ikona velka">' + ikona("nehn") + "</span><b>" +
         (q ? "Nič sa nenašlo" : ({ aktivne: "Zatiaľ žiadne aktívne ponuky", neaktivne: "Žiadne neaktívne ponuky", koncepty: "Žiadne koncepty", archiv: "Archív je prázdny" })[S.nehnObd] || "Žiadne ponuky") + "</b>" +
         '<span class="meta">Novú ponuku pridáte tlačidlom „Pridať ponuku“ alebo priamo zo skenera pri získanom inzeráte („➕ Do ponuky“).</span></div>';
+    } else if (pohlad === "zoznam") {
+      h += '<div class="ponuky-zoznam">' + zoz.map(function (p) {
+        var f = (p.fotky || [])[0], st = STAVY_P[p.stav] || ["?", "na"];
+        var par = [p.plocha_uzitkova ? nf.format(p.plocha_uzitkova) + " m²" : p.plocha_pozemku ? nf.format(p.plocha_pozemku) + " m² pozemok" : "", p.izby ? p.izby + "-izb." : ""].filter(Boolean).join(" · ");
+        return '<button type="button" class="ponuka-riadok" data-ponuka-detail="' + p.id + '">' +
+          '<span class="pr-foto">' + (f ? '<img loading="lazy" src="' + esc(fotkaUrl(f)) + '" alt="">' : '<span class="pk-bez">' + (KATEGORIE.find(function (k) { return k[0] === p.kategoria; }) || ["", "", "🏠"])[2] + "</span>") + "</span>" +
+          '<span class="pr-telo"><span class="pk-tr">' + (p.transakcia === "prenajom" ? "Prenájom" : "Predaj") + (p.typ ? " · " + esc(p.typ) : "") + (p.cislo ? " · č. " + esc(p.cislo) : "") + "</span>" +
+          "<b>" + esc(nazovPonuky(p)) + "</b>" +
+          '<span class="meta">' + esc([[p.cast_obce, p.obec, p.okres ? "okr. " + p.okres : ""].filter(Boolean).join(", "), par].filter(Boolean).join(" · ")) + "</span>" +
+          '<span class="pr-stitky"><span class="chip ' + st[1] + '">' + st[0] + "</span>" + (p.exkluzivne ? '<span class="pk-exk">Exkluzívne</span>' : "") + zmluvaStitok(S.ponukyInt[p.id]) + "</span></span>" +
+          '<span class="pr-vpravo"><span class="pk-cena">' + esc(cenaPonuky(p)) + "</span>" +
+          '<span class="pk-makler">' + avatar(p.makler_id, 22) + "<span>" + esc(meno(p.makler_id)) + "</span><span class=\"meta\">· " + ago(p.upravene) + "</span></span></span></button>";
+      }).join("") + "</div>";
     } else {
       h += '<div class="ponuky-grid">' + zoz.map(function (p) {
         var f = (p.fotky || [])[0], st = STAVY_P[p.stav] || ["?", "na"];
@@ -2350,6 +2374,7 @@
     }
     el.innerHTML = h + "</div>";
     el.querySelectorAll("[data-nehn]").forEach(function (b) { b.onclick = function () { S.nehnObd = b.dataset.nehn; vykresliNehnutelnosti(); }; });
+    el.querySelectorAll("[data-pohlad]").forEach(function (b) { b.onclick = function () { nastavPohladPonuk(b.dataset.pohlad); vykresliNehnutelnosti(); }; });
     var t; $("#ponuky-q").addEventListener("input", function () { var v = this.value; clearTimeout(t); t = setTimeout(function () { S.ponukyQ = v; vykresliNehnutelnosti(); var i = $("#ponuky-q"); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } }, 200); });
   }
 
