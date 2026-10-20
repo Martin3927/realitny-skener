@@ -3814,7 +3814,7 @@
     if (window.ULICE) return Promise.resolve();
     if (S.uliceP) return S.uliceP;
     S.uliceP = new Promise(function (ok) {
-      var sc = document.createElement("script"); sc.src = "ulice.js?v=202610201900"; sc.onload = ok; sc.onerror = function () { window.ULICE = {}; ok(); };
+      var sc = document.createElement("script"); sc.src = "ulice.js?v=202610201945"; sc.onload = ok; sc.onerror = function () { window.ULICE = {}; ok(); };
       document.head.appendChild(sc);
     });
     return S.uliceP;
@@ -3838,7 +3838,7 @@
   function uliceObce(obec) {
     S.uliceVz = S.uliceVz || {};
     if (S.uliceVz[obec]) return S.uliceVz[obec];
-    var zoz = ((window.ULICE || {})[obec] || []).map(function (u) { var v = vzorUlice(u[0]); v.meno = u[0]; v.ll = [u[1], u[2]]; v.druh = u[3] || "u"; v.vzory = (u[4] || []).map(function (x) { return new RegExp(x); }); return v; });
+    var zoz = ((window.ULICE || {})[obec] || []).map(function (u) { var v = vzorUlice(u[0]); v.meno = u[0]; v.ll = [u[1], u[2]]; v.druh = u[3] || "u"; v.vzory = (u[4] || []).map(function (x) { try { return new RegExp(x); } catch (e) { return null; } }).filter(Boolean); return v; });
     return (S.uliceVz[obec] = zoz);
   }
   // obec z textu inzerátu, keď ju portál neuviedol (Bazoš)
