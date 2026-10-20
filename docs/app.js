@@ -283,7 +283,7 @@
 
   // ------------------------------------------------------------ štart a prihlásenie
   // ------------------------------------------------------------ VZHĽAD KANCELÁRIE (farby, logo, vodotlač)
-  var LOGO_PREDV = "logo.png?v=202610201000";
+  var LOGO_PREDV = "logo.png?v=202610201600";
   var SCHEMY = {
     zlata: ["Zlatá", "#dab967", "#a8862f", "#f3ead6", "#2b2f36"],
     typek: ["Realitný týpek", "#db9522", "#8a5a2b", "#f2e4c6", "#1e2a35"],
@@ -1244,17 +1244,61 @@
     return { out: out, pocty: pocty };
   }
 
+
+  // ---------- stav skenera: upozornenie, keď portály dlho nekontroloval, a oprava kľúča (admin)
+  var GH_REPO = "https://github.com/Martin3927/realitny-skener";
+  function skenerStoji() {
+    var m = S.meta || {}, t = m.posledna_kontrola ? new Date(m.posledna_kontrola).getTime() : 0;
+    if (!t) return null;
+    var hod = new Date().getHours(), vek = (Date.now() - t) / 36e5;
+    return vek > (hod >= 8 && hod <= 22 ? 3 : 7) ? vek : null;
+  }
+  function vekText(h) { return h >= 48 ? Math.floor(h / 24) + " dni" : h >= 24 ? "viac ako deň" : Math.round(h) + " h"; }
+  function bannerSkenera() {
+    var m = S.meta || {}, vek = skenerStoji(), chyby = m.chyby || [];
+    if (!vek && !chyby.length && !S.skOprava) return "";
+    var h = "";
+    if (vek || chyby.length) h += '<div class="sk-stav' + (vek ? " zle" : "") + '" role="status"><span>' + (vek ?
+      "⚠️ <b>Skener " + vekText(vek) + " nekontroloval portály</b> – nové inzeráty sa teraz neobjavujú. Posledná kontrola " + datum(m.posledna_kontrola, true) + "." + (admin() ? "" : " Dajte vedieť administrátorovi.") :
+      "⚠️ Pri poslednej kontrole sa nepodarilo načítať: " + esc(chyby.join("; ")) + ". Ostatné portály bežia normálne.") + "</span>" +
+      (admin() ? '<button class="btn" type="button" data-sk="oprav">🔧 Opraviť skener</button>' : "") + "</div>";
+    if (S.skOprava && admin()) h += '<div class="box sk-oprava"><div class="vykon-hlava"><h3>🔧 Oprava skenera</h3><button class="btn ghost" type="button" data-sk="zavri">Zavrieť</button></div>' +
+      '<p class="meta">Skener beží na GitHube cez deň každých 30 minút (v noci plná kontrola) a do databázy sa prihlasuje tajným kľúčom. Keď kľúč na GitHube nesedí s databázou, každá kontrola zlyhá. Oprava trvá 2 minúty:</p>' +
+      '<ol class="sk-kroky"><li><b>Vytvorte nový kľúč</b> a skopírujte ho.<div class="pd-odkaz">' +
+        (S.skKluc ? '<input type="text" readonly value="' + esc(S.skKluc) + '" aria-label="Nový kľúč skenera"><button class="btn primary" type="button" data-sk="kopiruj">Kopírovať kľúč</button>' :
+          '<button class="btn primary" type="button" data-sk="novy">Vytvoriť nový kľúč</button>') + "</div>" +
+        (S.skKluc ? '<p class="meta">Kľúč sa zobrazí len teraz – v databáze je uložený iba jeho odtlačok. Do chatu ani emailu ho neposielajte.</p>' : '<p class="meta">Starý kľúč tým prestane platiť.</p>') + "</li>" +
+      '<li><b>Vložte ho do GitHubu:</b> <a href="' + GH_REPO + '/settings/secrets/actions" target="_blank" rel="noopener">Settings → Secrets and variables → Actions</a> → pri <code>SKENER_KLUC</code> ✏️ → vložiť → <i>Update secret</i>.</li>' +
+      '<li><b>Spustite kontrolu:</b> <a href="' + GH_REPO + '/actions/workflows/skener.yml" target="_blank" rel="noopener">Actions → Realitný skener</a> → <i>Run workflow</i>. O 5–10 minút sa tu objaví nová kontrola a upozornenie zmizne.</li></ol></div>';
+    return h;
+  }
+  function napojBannerSkenera(el) {
+    el.querySelectorAll("[data-sk]").forEach(function (b) {
+      b.onclick = async function () {
+        var a = b.dataset.sk;
+        if (a === "oprav") { S.skOprava = true; vykresliZoznam(); return; }
+        if (a === "zavri") { S.skOprava = false; S.skKluc = null; vykresliZoznam(); return; }
+        if (a === "kopiruj") return kopiruj(S.skKluc, "Kľúč je skopírovaný – vložte ho do GitHubu.");
+        if (a === "novy") {
+          if (!confirm2("Vytvoriť nový kľúč skenera? Starý prestane platiť a skener pôjde, až keď nový vložíte do GitHubu.")) return;
+          try { S.skKluc = await rpc("skener_novy_kluc", {}); vykresliZoznam(); toast("🔑 Nový kľúč je pripravený."); }
+          catch (err) { toast(chybaText(err), true); }
+        }
+      };
+    });
+  }
   function vykresliZoznam() {
     var el = $("#obsah"); if (!el) return;
     var r = filtruj(), out = r.out;
     document.querySelectorAll("[data-n]").forEach(function (n) { n.textContent = nf.format(r.pocty[n.dataset.n] || 0); });
-    var h = S.jedenId ? '<div class="note" style="margin-bottom:10px">Zobrazený inzerát z pripomienky. <button class="btn" type="button" id="vsetky-inz">Zobraziť všetky inzeráty</button></div>' : "";
+    var h = bannerSkenera() + (S.jedenId ? '<div class="note" style="margin-bottom:10px">Zobrazený inzerát z pripomienky. <button class="btn" type="button" id="vsetky-inz">Zobraziť všetky inzeráty</button></div>' : "");
     h += '<div class="bar"><span>' + nf.format(out.length) + (out.length === 1 ? " inzerát" : out.length > 1 && out.length < 5 ? " inzeráty" : " inzerátov") + "</span>" +
       (S.canUnder ? "<span>Porovnanie: cena/m² oproti mediánu podobných aktuálnych ponúk</span>" : "") + "</div>";
     h += out.length ? '<div class="list" id="list">' + out.slice(0, S.shown).map(karta).join("") + "</div>" :
       '<div class="empty">Nič nezodpovedá filtrom. Skúste „Všetky“ a „Všetci“ alebo zrušte obmedzenie času.</div>';
     if (out.length > S.shown) h += '<button class="btn more" type="button" id="more">Zobraziť ďalšie (zostáva ' + nf.format(out.length - S.shown) + ")</button>";
     el.innerHTML = h;
+    napojBannerSkenera(el);
     if ($("#more")) $("#more").onclick = function () { S.shown += 100; vykresliZoznam(); };
     if ($("#vsetky-inz")) $("#vsetky-inz").onclick = function () { S.jedenId = null; history.replaceState({ tab: "inzeraty" }, "", "#inzeraty"); vykresliZoznam(); };
   }
@@ -2103,7 +2147,8 @@
       dlazdice.push(["vykon", "vykon", "Výkon maklérov", "Hovory, SMS, výsledky a grafy – len pre vás", "", "", ""]);
       dlazdice.push(["makleri", "makleri", "Makléri", "Účty, práva, heslá a texty SMS", S.makleri.filter(function (m) { return m.aktivny; }).length + " aktívnych", "", ""]);
     }
-    el.innerHTML = '<div class="domov">' +
+    el.innerHTML = '<div class="domov">' + (admin() && skenerStoji() ? '<div class="sk-stav zle"><span>⚠️ <b>Skener ' + vekText(skenerStoji()) + " nekontroloval portály</b> – nové inzeráty sa neobjavujú.</span>" +
+      '<a class="btn" href="#inzeraty">Pozrieť a opraviť</a></div>' : "") +
       '<section class="hero' + (mojeO.length ? " oslava" : "") + '"><div class="hero-hlava"><span class="hero-foto">' + avatar(S.me.id, 76) + "</span>" +
       '<div class="hero-text"><div class="hero-dnes">' + esc(dnes.charAt(0).toUpperCase() + dnes.slice(1)) + (meninyDnes.length ? ' · meniny má <b>' + esc(meninyDnes.join(", ")) + "</b>" : "") + "</div>" +
       "<h2>Ahoj" + (krstne ? ", " + esc(krstne) : "") + ' <span class="mava" aria-hidden="true">👋</span></h2>' +
@@ -2418,7 +2463,7 @@
     if (window.LOKALITY) return Promise.resolve();
     if (S.lokalityP) return S.lokalityP;
     S.lokalityP = new Promise(function (ok, chyba) {
-      var sc = document.createElement("script"); sc.src = "lokality.js?v=202610201000"; sc.onload = ok; sc.onerror = function () { chyba(new Error("Zoznam obcí sa nepodarilo načítať.")); };
+      var sc = document.createElement("script"); sc.src = "lokality.js?v=202610201600"; sc.onload = ok; sc.onerror = function () { chyba(new Error("Zoznam obcí sa nepodarilo načítať.")); };
       document.head.appendChild(sc);
     });
     return S.lokalityP;
@@ -3365,7 +3410,7 @@
     el.querySelectorAll("[data-kopiruj]").forEach(function (b) { b.onclick = function () { kopiruj(b.dataset.kopiruj, "Adresa feedu je skopírovaná."); }; });
     if (admin()) vykresliUc();
     if (window.TypekPonuky) window.TypekPonuky.obnov();
-    else nacitajSkript("widget.js?v=202610201000", "TypekPonuky").catch(function (e) { toast(chybaText(e), true); });
+    else nacitajSkript("widget.js?v=202610201600", "TypekPonuky").catch(function (e) { toast(chybaText(e), true); });
   }
 
   // ------------------------------------------------------------ KLIENTI A DOPYTY

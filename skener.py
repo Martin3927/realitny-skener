@@ -99,6 +99,11 @@ def normalizuj_obec(nazov):
     return None
 
 
+# sídliská a štvrte Spišskej Novej Vsi – v inzerátoch často namiesto názvu mesta
+SIDLISKA_SNV = re.compile(r"\b(sidl\w*\.?\s*)(mier\w*|zapad\w*|tarc\w*|vychod\w*|fabrik\w*|telep\w*|kozi vrch\w*)|"
+                          r"\bza hornadom\b|\bzelene udolie\b|\bzelenom udoli\b|\bnovoveska huta\b|\bfercekov\w*|\bsidlisko mier\b")
+
+
 def najdi_obec_v_texte(text):
     b = bez_diakritiky(text)
     # "Obec: X" má prednosť
@@ -114,6 +119,8 @@ def najdi_obec_v_texte(text):
                 continue
             if pat.search(b):
                 return CASTI.get(n, n) if n in CASTI else n
+    if SIDLISKA_SNV.search(b):
+        return "Spišská Nová Ves"
     # mesto berieme len vtedy, keď nie je spomenuté ako okres alebo orientačný bod („10 km od SNV“)
     pats = {"Spišská Nová Ves": [dict(_OBCE_PATTERNS)["Spišská Nová Ves"], re.compile(r"\bsnv\b"),
                                  re.compile(r"\bspisskej novej vsi\b")],
@@ -234,12 +241,19 @@ DOPYT = re.compile(r"^\W*(hladam|hladame|kupim|kupime|mam zaujem|mame zaujem|dop
 
 
 MIMO = re.compile(r"\b(v |pri )?(poprad\w*|kezmar\w*|kosic\w*|presov\w*|gelnic\w*|roznav\w*|svit\w*|"
-                  r"spisska bela|spisskej belej|stara lubovn\w*|sabinov\w*|spisska stara ves)\b")
+                  r"spisska bela|spisskej belej|stara lubovn\w*|\w*lubovn\w*|sabinov\w*|spisska stara ves|bardejov\w*|margecan\w*|prakov\w*|svedlar\w*|dobsin\w*|"
+                  r"hranovnic\w*|vernar\w*|spissk\w* stiavnik\w*|kluknav\w*|richnav\w*|jaklov\w*|helcmanov\w*|smolnik\w*|mnisek\w*)\b")
+
+
+PRENAJOM = re.compile(r"\bprenaj\w*|\bnajom\b|\bpodnajom")
 
 
 def je_dopyt(nazov):
-    """Inzeráty typu „Hľadám byt“ / „Kúpim pozemok“ nie sú ponuky na predaj."""
-    return bool(DOPYT.search(bez_diakritiky(nazov or "")))
+    """Inzeráty typu „Hľadám byt“ / „Kúpim pozemok“ nie sú ponuky na predaj. Rovnako prenájom zaradený medzi predaj."""
+    b = bez_diakritiky(nazov or "")
+    if PRENAJOM.search(b) and not re.search(r"\bpred\w*|investic|vynos|vhodn|najomn|najomc|na dalsi", b):
+        return True
+    return bool(DOPYT.search(b))
 
 
 PODA = re.compile(r"orn\w* pod|polnohosp|\bluk|pasien|\btrval\w* trav|\bles\b|lesn|ovocn\w* sad|\bsad\b|"
@@ -836,9 +850,33 @@ def obnov_naposledy(e):
 
 
 def kluc_duplicity(z):
-    if not z.get("cena") or not z.get("plocha"):
-        return None
-    return (z["typ"], z["okres"], int(z["cena"]))
+    if z.get("cena"):
+        return (z["typ"], z["okres"], int(z["cena"]))
+    t = " ".join(slova_nazvu(z.get("nazov")))
+    return (z["typ"], z["okres"], "t:" + t) if len(t) >= 12 else None
+
+
+def slova_nazvu(nazov):
+    return [w for w in re.findall(r"[a-z0-9]+", bez_diakritiky(nazov or "")) if len(w) >= 3 and w not in ("predaj", "predam", "na", "predaju")]
+
+
+def je_duplikat(a, b):
+    """Ten istý inzerát na inom portáli (alebo dvakrát od toho istého predajcu)."""
+    if a.get("obec") and b.get("obec") and a["obec"] != b["obec"]:
+        return False
+    if a.get("izby") and b.get("izby") and a["izby"] != b["izby"]:
+        return False
+    sa, sb = set(slova_nazvu(a.get("nazov"))), set(slova_nazvu(b.get("nazov")))
+    podobnost = len(sa & sb) / len(sa | sb) if sa and sb else 0
+    if a.get("plocha") and b.get("plocha"):
+        if a["plocha"] == b["plocha"]:
+            return True
+        # rovnaká cena a takmer rovnaká plocha, ale celkom iný názov = dva rôzne byty v tom istom dome
+        return abs(a["plocha"] - b["plocha"]) <= 0.03 * a["plocha"] and podobnost > 0.25
+    if not sa or not sb:
+        return False
+    # všeobecné názvy („3-izbový byt“) nestačia – treba aspoň 3 spoločné významové slová
+    return len(sa & sb) >= 3 and podobnost >= 0.5
 
 
 def izby_skupina(z):
@@ -1165,32 +1203,38 @@ def main():
 
     najdene = []
     chyby = []
+    zlyhane = set()   # portály, ktoré sa v tomto behu nepodarilo prečítať – ich inzeráty sa nesmú označiť ako zmiznuté
 
-    def bezpecne(nazov, fn):
+    def bezpecne(nazov, fn, portal=None):
         try:
-            return fn()
+            v = fn()
+            if portal and not v:
+                raise RuntimeError("portál nevrátil žiadne inzeráty (zmenil sa vzhľad stránky?)")
+            return v
         except Exception as e:  # noqa – jeden pokazený portál nesmie zastaviť ostatné
             chyby.append(f"{nazov}: {e}")
             log(f"! {nazov} zlyhal: {e}")
+            if portal:
+                zlyhane.add(portal)
             return []
 
     if "nehnutelnosti" in portaly:
-        for ad in bezpecne("Nehnuteľnosti.sk", lambda: skenuj_nehnutelnosti(plny, max_stran)):
+        for ad in bezpecne("Nehnuteľnosti.sk", lambda: skenuj_nehnutelnosti(plny, max_stran), "nehnutelnosti"):
             z = norm_nehn(ad)
             if z:
                 najdene.append(z)
     if "reality" in portaly:
-        for r in bezpecne("Reality.sk", lambda: skenuj_reality(plny, max_stran)):
+        for r in bezpecne("Reality.sk", lambda: skenuj_reality(plny, max_stran), "reality"):
             z = norm_reality(r)
             if z:
                 najdene.append(z)
     if "topreality" in portaly:
-        for r in bezpecne("TopReality.sk", lambda: skenuj_topreality(plny, max_stran)):
+        for r in bezpecne("TopReality.sk", lambda: skenuj_topreality(plny, max_stran), "topreality"):
             z = norm_topreality(r)
             if z:
                 najdene.append(z)
     if "bazos" in portaly:
-        surove = bezpecne("Bazoš", lambda: skenuj_bazos(plny, max_stran))
+        surove = bezpecne("Bazoš", lambda: skenuj_bazos(plny, max_stran), "bazos")
         pocty = {}
         for r in surove:
             if r.get("uzivatel_id"):
@@ -1258,6 +1302,8 @@ def main():
     if plny:
         hranica = NOW - timedelta(days=int(CONFIG.get("dni_kym_inzerat_zmizne", 3)))
         for e in inzeraty.values():
+            if set(e.get("portaly") or [e.get("portal")]) & zlyhane:
+                continue
             if datetime.fromisoformat(e["naposledy"]) < hranica:
                 e["aktivny"] = False
 
@@ -1272,7 +1318,7 @@ def main():
         e["duplikat_z"] = None
         if not k:
             continue
-        povodny = next((x for x in podla_kluca.get(k, []) if abs(x["plocha"] - e["plocha"]) <= 0.03 * x["plocha"]), None)
+        povodny = next((x for x in podla_kluca.get(k, []) if je_duplikat(x, e)), None)
         if povodny:
             e["duplikat_z"] = povodny["id"]
             for p in e["portaly"]:

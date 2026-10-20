@@ -1487,3 +1487,12 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .spr-znova { display: flex; gap: 12px; align-items: center; flex-wrap: wrap }
 .spr-znova > div { flex: 1 1 220px }
 .spr-znova h3 { margin: 0 0 2px }
+
+/* ---------- stav skenera */
+.sk-stav { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px }
+.sk-stav.zle { border-color: var(--bad); background: var(--bad-soft) }
+.sk-stav > span { flex: 1 1 280px }
+.sk-oprava { margin-bottom: 14px }
+.sk-kroky { margin: 8px 0 0; padding-left: 22px; display: grid; gap: 12px }
+.sk-kroky .pd-odkaz { margin-top: 6px }
+.sk-kroky code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px }
