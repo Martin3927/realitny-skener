@@ -422,7 +422,13 @@
     zaznamenajAktivitu(true);
     S.tab = tabZAdresy() || "domov";
     var dmAdresa = location.hash.match(/^#chat\/([0-9a-f-]{36})$/i); if (dmAdresa) S.chatS = dmAdresa[1];
-    history.replaceState({ tab: S.tab }, "", "#" + S.tab);
+    // odkaz na jednu ponuku alebo inzerát (napr. z realitnej mapy v novom okne)
+    var stavAdresy = { tab: S.tab }, jedenAdresa = location.hash.match(/^#(nehnutelnosti|inzeraty)\/(.+)$/);
+    if (jedenAdresa && S.tab === jedenAdresa[1]) {
+      if (S.tab === "nehnutelnosti" && Number(jedenAdresa[2])) { S.ponukaDetail = Number(jedenAdresa[2]); stavAdresy.detail = S.ponukaDetail; }
+      if (S.tab === "inzeraty") { S.jedenId = decodeURIComponent(jedenAdresa[2]); stavAdresy.jeden = S.jedenId; }
+    }
+    history.replaceState(stavAdresy, "", "#" + S.tab);
     try { await nacitajVsetko(); } catch (e) { toast(chybaText(e), true); }
     vykresli();
     setInterval(obnov, 60000);
@@ -691,6 +697,15 @@
     history.pushState({ tab: tab, jeden: S.jedenId }, "", "#" + tab);
     vykresli(); window.scrollTo(0, 0);
   }
+  // odkaz #nehnutelnosti/ID alebo #inzeraty/ID otvorený v už bežiacej aplikácii
+  window.addEventListener("hashchange", function () {
+    var m = location.hash.match(/^#(nehnutelnosti|inzeraty)\/(.+)$/);
+    if (!m || !S.me || !tabPovoleny(m[1])) return;
+    if (m[1] === "nehnutelnosti") {
+      S.tab = "nehnutelnosti"; S.ponukaEdit = null; S.ponukaDetail = Number(m[2]) || null;
+      history.replaceState({ tab: S.tab, detail: S.ponukaDetail }, "", "#nehnutelnosti"); vykresli(); window.scrollTo(0, 0);
+    } else { history.replaceState({ tab: "inzeraty" }, "", "#inzeraty"); prejdi("inzeraty", decodeURIComponent(m[2])); }
+  });
   window.addEventListener("popstate", function (e) {
     if (!S.me) return;
     var st = e.state || { tab: tabZAdresy() || "domov" };
@@ -989,7 +1004,7 @@
     else if (S.tab === "nehnutelnosti") { if (!$(".ponuka-form") && !$(".ponuka-detail") && !$(".export")) vykresliNehnutelnosti(); }
     else if (S.tab === "klienti") { if (!$(".dopyt-form") && !$(".dopyt-detail")) vykresliKlientov(); }
     else if (S.tab === "kalendar") { if (!S.kalForm && !(document.activeElement && document.activeElement.closest && document.activeElement.closest("#obsah"))) vykresliKalendar(); }
-    else if (S.tab === "mapa") { if (!$("#realitna-mapa")) vykresliMapu(); }
+    else if (S.tab === "mapa") { if (!$("#realitna-mapa")) vykresliMapu(); else kresliRealitnuMapu(false, true); }
     else if (S.tab === "kataster") { if (!$("#kat-mapa")) vykresliKataster(); }
     else if (S.tab === "vzhlad") { if (!$(".vz-box")) vykresliVzhlad(); }
     else if (S.tab === "provizie") { if (!$(".prov-form") && !$(".prov-box")) vykresliProvizie(); }
@@ -1292,7 +1307,7 @@
     var el = $("#obsah"); if (!el) return;
     var r = filtruj(), out = r.out;
     document.querySelectorAll("[data-n]").forEach(function (n) { n.textContent = nf.format(r.pocty[n.dataset.n] || 0); });
-    var h = bannerSkenera() + (S.jedenId ? '<div class="note" style="margin-bottom:10px">Zobrazený inzerát z pripomienky. <button class="btn" type="button" id="vsetky-inz">Zobraziť všetky inzeráty</button></div>' : "");
+    var h = bannerSkenera() + (S.jedenId ? '<div class="note" style="margin-bottom:10px">Zobrazený je jeden inzerát. <button class="btn" type="button" id="vsetky-inz">Zobraziť všetky inzeráty</button></div>' : "");
     h += '<div class="bar"><span>' + nf.format(out.length) + (out.length === 1 ? " inzerát" : out.length > 1 && out.length < 5 ? " inzeráty" : " inzerátov") + "</span>" +
       (S.canUnder ? "<span>Porovnanie: cena/m² oproti mediánu podobných aktuálnych ponúk</span>" : "") + "</div>";
     h += out.length ? '<div class="list" id="list">' + out.slice(0, S.shown).map(karta).join("") + "</div>" :
@@ -3794,79 +3809,215 @@
     });
   }
   function hashCislo(s) { var h = 0; String(s).split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) | 0; }); return h; }
-  function polohaInzeratu(z) {
-    if (z.lat && z.lon) return { ll: [z.lat, z.lon], presna: true };
-    var l = (window.LOKALITY || []).find(function (x) { return !x[5] && normLok(x[0]) === normLok(z.obec) && (!z.okres || x[1] === z.okres); });
-    if (!l) return null;
-    var h = hashCislo(z.id), uhol = (h % 360) * Math.PI / 180, r = 0.0015 + ((h >>> 8) % 100) / 100 * 0.0045;
-    return { ll: [l[3] + Math.sin(uhol) * r, l[4] + Math.cos(uhol) * r * 1.5], presna: false };
+  // ulice a časti obcí s polohou (docs/ulice.js) – podľa nich spresníme inzeráty bez súradníc
+  function nacitajUlice() {
+    if (window.ULICE) return Promise.resolve();
+    if (S.uliceP) return S.uliceP;
+    S.uliceP = new Promise(function (ok) {
+      var sc = document.createElement("script"); sc.src = "ulice.js?v=202610201900"; sc.onload = ok; sc.onerror = function () { window.ULICE = {}; ok(); };
+      document.head.appendChild(sc);
+    });
+    return S.uliceP;
   }
+  var SLABE_ULICE = /^(nova|kratka|mala|dlha|lesna|lucna|polna|zelena|sadova|skolska|zahradna|mlynska|potocna|jarna|letna|zimna|jesenna|vysoka|stredna|hlavna|slnecna|okruzna|druzstevna|nabrezna|lipova|brezova|dubova|topolova|gastanova|javorova|agatova|jablonova|ruzova|smrekova|vrbova|jahodova|slovenska|spisska|ceska|moravska|banska|banicka|kamenna|cintorinska|zeleznicna|stanicna|tatranska|horska|veterna|vetrova|letecka|slobody|snp|medza|majer|pila|dolina|hradby|rozvoj|predmestie|okolie|sokol|rybniky|zahradky|stojan|hajik|robotnicka|partizanska|hornadska|obchodna|kostolna|uholna|osloboditelov|posta|postova|hrad|trhovisko|levocska|smizianska|tomasovska|iliasovska|kosicka|presovska|maurerova|masa|mier|zapad|vychod|stred|centrum|kupelna|bielidla|podskala|podskalka|vapenec|hagy|sestnastka|brusnik|jarecek|podlesok|turisticka|lesnicka|horska|sportovcov|ziacka|kasarenska|dolina|slovenskeho raja|slov\. raja|stara cesta|nova cesta)$/;
+  function vzorUlice(meno) {
+    var n = norm(meno).replace(/\s+/g, " ").trim();
+    var slova = n.replace(/\./g, ". ").replace(/\s+/g, " ").trim().split(" ");
+    // posledné slovo v páde: Hutnícka → Hutníckej/Hutnícku/Hutníckou; námestie → nám.
+    var casti = slova.map(function (w, i) {
+      var e = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (/^namestie$/.test(w)) return "nam(?:estie|esti|\\.)?";
+      if (/^[a-z]\.$/.test(w) || /^(ing|dr|sv|gen)\.$/.test(w)) return "(?:" + e + "\\s*)?";
+      if (i === slova.length - 1 && /[a]$/.test(w) && w.length > 3) return e.slice(0, -1) + "(?:a|ej|u|ou)";
+      return e;
+    });
+    var jadro = casti.join("\\s*");
+    return { n: n, re: new RegExp("(?:^|[^a-z0-9])(" + jadro + ")(?![a-z0-9])"), slabe: SLABE_ULICE.test(n) || (slova.length === 1 && n.length < 6),
+      reUl: new RegExp("(?:ul\\.?|ulic[a-z]*)\\s*(?:" + jadro + ")(?![a-z0-9])|(?:^|[^a-z0-9])(?:" + jadro + ")\\s+ul(?:\\.|ic[a-z]*)") };
+  }
+  function uliceObce(obec) {
+    S.uliceVz = S.uliceVz || {};
+    if (S.uliceVz[obec]) return S.uliceVz[obec];
+    var zoz = ((window.ULICE || {})[obec] || []).map(function (u) { var v = vzorUlice(u[0]); v.meno = u[0]; v.ll = [u[1], u[2]]; v.druh = u[3] || "u"; v.vzory = (u[4] || []).map(function (x) { return new RegExp(x); }); return v; });
+    return (S.uliceVz[obec] = zoz);
+  }
+  // obec z textu inzerátu, keď ju portál neuviedol (Bazoš)
+  var OKRESY_MAPA = ["Spišská Nová Ves", "Levoča"];
+  function obecZTextu(z) {
+    if (!window.LOKALITY) return null;
+    return obecZTextuV(z, z.okres) || obecZTextuV(z, "*");
+  }
+  function obecZTextuV(z, okr) {
+    S.obceVz = S.obceVz || {};
+    var vz = S.obceVz[okr] || (S.obceVz[okr] = window.LOKALITY.filter(function (x) { return !x[5] && (okr === "*" ? OKRESY_MAPA.indexOf(x[1]) >= 0 : x[1] === okr); }).map(function (x) {
+      var w = norm(x[0]).split(/\s+/).map(function (s) { return s === "ves" ? "v(?:es|si)" : s.length > 5 ? s.slice(0, s.length - 2) + "[a-z]{0,4}" : s.length > 3 ? s.slice(0, -1) + "[a-z]{0,3}" : s; });
+      var vz = w.join("\\s+");
+      if (x[0] === "Spišská Nová Ves") vz = "(?:" + vz + "|snv|sp\\.?\\s*nov[a-z]{0,3}\\s+v(?:es|si))";
+      return { meno: x[0], re: new RegExp("(?:^|[^a-z])" + vz + "(?![a-z])") };
+    }).sort(function (a, b) { return b.meno.length - a.meno.length; }));
+    var texty = [norm(z.nazov), norm(z.popis)];
+    for (var i = 0; i < texty.length; i++) {
+      var naj = null, poz = 1e9;
+      vz.forEach(function (o) { var m = o.re.exec(texty[i]); if (m && m.index < poz) { poz = m.index; naj = o.meno; } });
+      if (naj) return naj;
+    }
+    return null;
+  }
+  // obec podľa výraznej ulice alebo sídliska v texte (napr. „sídlisko Tarča“, „ul. Boženy Němcovej“), keď obec v inzeráte chýba
+  function obecPodlaUlice(text) {
+    var naj = null;
+    Object.keys(window.ULICE || {}).forEach(function (o) {
+      if (o.charAt(0) === "_" || naj) return;
+      var u = najdiUlicu(o, text, null, true);
+      if (u) naj = { obec: o, u: u };
+    });
+    return naj;
+  }
+  function najdiUlicu(obec, text, ulica, lenIsta) {
+    var zoz = uliceObce(obec); if (!zoz.length) return null;
+    var t = norm(text), u = ulica ? norm(ulica).replace(/\s+\d.*$/, "") : "";
+    if (u) { var pr = zoz.find(function (x) { return x.druh === "u" && (x.n === u || x.re.test(u)); }); if (pr) return pr; }
+    var lep = null, lepSk = -1;
+    zoz.forEach(function (x) {
+      var sk = -1, m;
+      if (x.druh === "c") { if (x.vzory.some(function (r, i) { return (!lenIsta || i === 0) && r.test(t); }) && !(lenIsta && x.meno === "centrum")) sk = 1; }
+      else if (x.reUl.test(t) && !(lenIsta && x.slabe)) sk = 3;
+      else if (!x.slabe && (m = x.re.exec(t))) sk = 2;
+      if (sk > lepSk) { lep = x; lepSk = sk; }
+    });
+    return lepSk > 0 ? lep : null;
+  }
+  function stredObce(obec, okres) {
+    var st = (window.ULICE && window.ULICE._stredy || {})[obec];
+    if (st) return st;
+    var l = (window.LOKALITY || []).find(function (x) { return !x[5] && normLok(x[0]) === normLok(obec) && (!okres || x[1] === okres); }) ||
+      (window.LOKALITY || []).find(function (x) { return !x[5] && normLok(x[0]) === normLok(obec) && OKRESY_MAPA.indexOf(x[1]) >= 0; });
+    return l ? [l[3], l[4]] : null;
+  }
+  function posun(id, ll, rMin, rMax) {
+    var h = hashCislo(id), uhol = (h % 360) * Math.PI / 180, r = rMin + ((h >>> 8) % 100) / 100 * (rMax - rMin);
+    return [ll[0] + Math.sin(uhol) * r, ll[1] + Math.cos(uhol) * r * 1.5];
+  }
+  // poloha inzerátu: presná (GPS z portálu) → ulica → časť obce → stred obce
+  var PRESNOST = { gps: "presná poloha z portálu", ulica: "podľa ulice v inzeráte", cast: "podľa časti obce v inzeráte", obec: "len obec – orientačne" };
+  function polohaInzeratu(z) {
+    var obec = z.obec || obecZTextu(z), podlaUlice = null;
+    if (!obec && (podlaUlice = obecPodlaUlice([z.nazov, z.popis].join(" \n ")))) obec = podlaUlice.obec;
+    var stred = obec ? stredObce(obec, z.okres) : null;
+    var gps = z.lat && z.lon ? [Number(z.lat), Number(z.lon)] : null;
+    // rovnaký bod pri viacerých inzerátoch = portál dal len stred obce, nie adresu
+    if (gps && S.gpsPocty && S.gpsPocty[gps[0].toFixed(5) + "," + gps[1].toFixed(5)] > 2) gps = null;
+    if (gps && stred && Math.abs(gps[0] - stred[0]) + Math.abs(gps[1] - stred[1]) > 0.15) gps = null;
+    if (gps) return { ll: gps, presnost: "gps", presna: true, obec: obec, ulica: z.ulica || null };
+    if (!obec) return null;
+    var u = najdiUlicu(obec, [z.nazov, z.popis].join(" \n "), z.ulica);
+    if (u) return { ll: posun(z.id, u.ll, u.druh === "c" ? 0.0006 : 0.0002, u.druh === "c" ? 0.0018 : 0.0007), presnost: u.druh === "c" ? "cast" : "ulica", presna: u.druh !== "c", obec: obec, ulica: u.meno };
+    if (!stred) return null;
+    return { ll: posun(z.id, stred, 0.0015, 0.006), presnost: "obec", presna: false, obec: obec, ulica: null };
+  }
+  function ulozMapu() {
+    try { localStorage.setItem("typek-mapa", JSON.stringify({ F: S.mapaF, pohlad: S.mapaPohlad || null, podklad: (S.realVrstvy || {}).podklad || null })); } catch (e) { /* bez úložiska */ }
+  }
+  function nacitajUlozenuMapu() {
+    if (S.mapaNacitana) return; S.mapaNacitana = true;
+    try { var u = JSON.parse(localStorage.getItem("typek-mapa") || "null"); if (u) { if (u.F) S.mapaF = u.F; if (u.pohlad) S.mapaPohlad = u.pohlad; if (u.podklad && PODKLADY[u.podklad]) S.realVrstvy = { podklad: u.podklad, parcely: false }; } } catch (e) { /* nič */ }
+  }
+  function pocetText(n, a, b, c) { return n + " " + (n === 1 ? a : n >= 2 && n <= 4 ? b : c); }
   function vykresliMapu() {
     var el = $("#obsah"); if (!el) return;
+    nacitajUlozenuMapu();
     var F = S.mapaF = S.mapaF || { ponuky: true, sukr: true, rk: false, typ: "" };
     var TYPY_M = [["", "Všetko"], ["byt", "Byty"], ["dom", "Domy"], ["pozemok", "Pozemky"], ["chata", "Chaty"], ["garaz", "Garáže"]];
+    var vek = maSekciu("inzeraty") ? skenerStoji() : null;
     el.innerHTML = '<div class="box mapa-box"><div class="vykon-hlava"><h3>🗺️ Realitná mapa</h3><span class="meta" id="mapa-pocet"></span></div>' +
+      (vek ? '<div class="sk-stav zle" role="status"><span>⚠️ Skener ' + vekText(vek) + " nekontroloval portály – na mape sú inzeráty z poslednej kontroly " + datum((S.meta || {}).posledna_kontrola, true) + "." + (admin() ? " Opravíte ho v Realitnom skeneri tlačidlom „Opraviť skener“." : " Dajte vedieť administrátorovi.") + "</span></div>" : "") +
       '<div class="mapa-filtre">' +
       '<label class="toggle mf-ponuky"><input type="checkbox" data-mf="ponuky"' + (F.ponuky ? " checked" : "") + '> <i></i>Naše ponuky</label>' +
       (maSekciu("inzeraty") ? '<label class="toggle mf-sukr"><input type="checkbox" data-mf="sukr"' + (F.sukr ? " checked" : "") + '> <i></i>Súkromní predajcovia</label>' +
         '<label class="toggle mf-rk"><input type="checkbox" data-mf="rk"' + (F.rk ? " checked" : "") + "> <i></i>Inzeráty RK</label>" : "") +
-      '<div class="seg" role="group">' + TYPY_M.map(function (t) { return '<button type="button" data-mtyp="' + t[0] + '" aria-pressed="' + (F.typ === t[0]) + '">' + t[1] + "</button>"; }).join("") + "</div></div>" +
+      '<div class="seg" role="group">' + TYPY_M.map(function (t) { return '<button type="button" data-mtyp="' + t[0] + '" aria-pressed="' + (F.typ === t[0]) + '">' + t[1] + "</button>"; }).join("") + "</div>" +
+      '<button type="button" class="btn ghost mapa-cela" data-mapa-cela title="Zobraziť všetky body na mape">⤢ Celý región</button></div>' +
       '<div id="realitna-mapa" class="realitna-mapa"></div>' +
-      '<p class="meta">Inzeráty bez presnej adresy sú na mape približne – v obci, kde sa nachádzajú (krúžok s prerušovaným okrajom). Presnú polohu doplní skener, keď ju portál zverejní.</p></div>';
-    el.querySelectorAll("[data-mf]").forEach(function (c) { c.onchange = function () { F[c.dataset.mf] = c.checked; kresliRealitnuMapu(); }; });
-    el.querySelectorAll("[data-mtyp]").forEach(function (b) { b.onclick = function () { F.typ = b.dataset.mtyp; el.querySelectorAll("[data-mtyp]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); kresliRealitnuMapu(); }; });
-    Promise.all([nacitajCluster(), nacitajLokality()]).then(function () {
+      '<div class="mapa-legenda meta"><span><i class="lg presna"></i>presnejšia poloha (adresa z portálu alebo ulica v inzeráte)</span><span><i class="lg priblizna"></i>približne – časť obce alebo len obec</span></div>' +
+      '<p class="meta mapa-pozn"><b>Poloha je orientačná.</b> Vychádza z ponúk, pri ktorých bola poloha pridaná – presná adresa z portálu, ulica alebo časť obce uvedená v inzeráte. Ostatné sú približne v obci, kde sa nachádzajú (prerušovaný okraj). Ťuknutím na názov obce ju priblížite.</p></div>';
+    el.querySelectorAll("[data-mf]").forEach(function (c) { c.onchange = function () { F[c.dataset.mf] = c.checked; ulozMapu(); kresliRealitnuMapu(); }; });
+    el.querySelectorAll("[data-mtyp]").forEach(function (b) { b.onclick = function () { F.typ = b.dataset.mtyp; el.querySelectorAll("[data-mtyp]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); ulozMapu(); kresliRealitnuMapu(); }; });
+    el.querySelector("[data-mapa-cela]").onclick = function () { if (S.realMapa && S.realBody && S.realBody.length) S.realMapa.fitBounds(S.realBody, { padding: [30, 30], maxZoom: 14 }); };
+    Promise.all([nacitajCluster(), nacitajLokality(), nacitajUlice()]).then(function () {
       var box = $("#realitna-mapa"); if (!box) return;
-      var mapa = L.map(box, { scrollWheelZoom: true }).setView([48.98, 20.6], 11);
-      ovladanieVrstiev(mapa, "realVrstvy", "mapa");
-      S.realMapa = mapa; kresliRealitnuMapu(true);
+      var p = S.mapaPohlad;
+      var mapa = L.map(box, { scrollWheelZoom: true }).setView(p ? p.c : [48.98, 20.6], p ? p.z : 11);
+      ovladanieVrstiev(mapa, "realVrstvy", "mapa", ulozMapu);
+      mapa.createPane("obce"); mapa.getPane("obce").style.zIndex = 450;
+      mapa.on("moveend zoomend", function () {
+        var c = mapa.getCenter(); S.mapaPohlad = { c: [+c.lat.toFixed(5), +c.lng.toFixed(5)], z: mapa.getZoom() }; ulozMapu();
+        box.classList.toggle("zoom-daleko", mapa.getZoom() < 11); box.classList.toggle("zoom-blizko", mapa.getZoom() >= 13);
+      });
+      box.classList.toggle("zoom-daleko", mapa.getZoom() < 11); box.classList.toggle("zoom-blizko", mapa.getZoom() >= 13);
+      mapa.on("popupopen", function () { box.classList.add("bublina"); }); mapa.on("popupclose", function () { box.classList.remove("bublina"); });
+      S.realMapa = mapa; kresliRealitnuMapu(!p);
       setTimeout(function () { mapa.invalidateSize(); }, 200);
     }, function () { $("#realitna-mapa").innerHTML = '<div class="meta" style="padding:20px">Mapu sa nepodarilo načítať.</div>'; });
   }
-  function kresliRealitnuMapu(prisposob) {
+  var MESTA_MAPA = ["Spišská Nová Ves", "Levoča", "Krompachy", "Spišské Vlachy", "Spišské Podhradie", "Smižany", "Spišský Štvrtok", "Markušovce", "Hrabušice"];
+  function kresliRealitnuMapu(prisposob, zObnovy) {
     var mapa = S.realMapa, F = S.mapaF; if (!mapa || !document.body.contains(mapa.getContainer())) return;
+    if (zObnovy && mapa._popup && mapa.hasLayer(mapa._popup)) return;   // otvorená bublina – pri obnove dát ju nezatvárame
     if (S.realVrstva) mapa.removeLayer(S.realVrstva);
-    var vrstva = L.markerClusterGroup ? L.markerClusterGroup({ maxClusterRadius: 40, showCoverageOnHover: false }) : L.layerGroup();
-    var body = [], n = { ponuky: 0, sukr: 0, rk: 0 };
+    if (S.realObce) mapa.removeLayer(S.realObce);
+    var vrstva = L.markerClusterGroup ? L.markerClusterGroup({ maxClusterRadius: 40, showCoverageOnHover: false, spiderfyOnMaxZoom: true }) : L.layerGroup();
+    var body = [], n = { ponuky: 0, sukr: 0, rk: 0 }, naObec = {};
     var KAT_TYP = { byty: "byt", domy: "dom", pozemky: "pozemok", chaty: "chata", garaze: "garaz" };
+    // body, ktoré portál dal viacerým inzerátom naraz (stred obce), nepovažujeme za presnú adresu
+    var gp = {}; (S.inz || []).forEach(function (z) { if (z.lat && z.lon) { var k = Number(z.lat).toFixed(5) + "," + Number(z.lon).toFixed(5); gp[k] = (gp[k] || 0) + 1; } }); S.gpsPocty = gp;
     function ikonka(trieda, text, priblizne) {
       return L.divIcon({ className: "", html: '<span class="rm-pin ' + trieda + (priblizne ? " priblizne" : "") + '">' + esc(text) + "</span>", iconSize: null, iconAnchor: [0, 0] });
     }
-    function kratkaCena(c) { return c ? (c >= 1e6 ? (Math.round(c / 1e5) / 10) + " mil." : c >= 1000 ? Math.round(c / 1000) + " tis." : c + " €") : "?"; }
+    function kratkaCena(c) { return c ? (c >= 1e6 ? (Math.round(c / 1e5) / 10).toLocaleString("sk-SK") + " mil." : c >= 1000 ? Math.round(c / 1000) + " tis." : c + " €") : "dohodou"; }
+    function riadokPolohy(q, obec, popis) {
+      return '<span class="rm-poloha">📍 ' + esc([q.ulica, obec].filter(Boolean).join(", ") || "Poloha neznáma") + "<small>" + esc(popis || PRESNOST[q.presnost]) + "</small></span>";
+    }
     if (F.ponuky) (S.ponuky || []).forEach(function (p) {
       if (["aktivne", "rezervovane"].indexOf(p.stav) < 0 || (F.typ && KAT_TYP[p.kategoria] !== F.typ)) return;
-      var ll = p.lat && p.lon ? [p.lat, p.lon] : null, pr = false;
-      if (!ll) { var q = polohaInzeratu({ id: "p" + p.id, obec: p.obec, okres: p.okres }); if (!q) return; ll = q.ll; pr = true; }
-      var f = (p.fotky || [])[0];
-      var mk = L.marker(ll, { icon: ikonka("ponuka", kratkaCena(p.cena), pr) }).bindPopup('<div class="rm-pop">' + (f ? '<img src="' + esc(fotkaUrl(f)) + '" alt="">' : "") +
-        '<span class="rm-zn ponuka">Naša ponuka</span><b>' + esc(nazovPonuky(p)) + "</b><span>" + esc([p.cast_obce, p.obec].filter(Boolean).join(", ")) + '</span><span class="rm-cena">' + esc(cenaPonuky(p)) + "</span>" +
-        '<span class="meta">' + esc(meno(p.makler_id)) + '</span><span class="rm-odkazy"><button type="button" class="btn" data-mapa-ponuka="' + p.id + '">Detail ponuky</button>' +
-        '<a class="btn ghost" href="' + esc(pr ? katasterOdkaz({ obec: p.obec, okres: p.okres }) : zbgisOdkaz(ll[0], ll[1], 19)) + '" target="_blank" rel="noopener">📐 Kataster</a></span></div>');
-      vrstva.addLayer(mk); body.push(ll); n.ponuky++;
+      var q = p.lat && p.lon ? { ll: [Number(p.lat), Number(p.lon)], presnost: "gps", presna: true, ulica: p.ulica || null, obec: p.obec } :
+        polohaInzeratu({ id: "p" + p.id, obec: p.obec, okres: p.okres, ulica: p.ulica, nazov: [p.cast_obce, p.ulica].filter(Boolean).join(" ") });
+      if (!q) return;
+      var f = (p.fotky || [])[0], odkaz = "#nehnutelnosti/" + p.id;
+      var mk = L.marker(q.ll, { icon: ikonka("ponuka", kratkaCena(p.cena), !q.presna), zIndexOffset: 500 }).bindPopup('<div class="rm-pop">' + (f ? '<a href="' + odkaz + '" target="_blank" rel="noopener"><img src="' + esc(fotkaUrl(f)) + '" alt=""></a>' : "") +
+        '<span class="rm-zn ponuka">Naša ponuka' + (p.stav === "rezervovane" ? " · rezervované" : "") + '</span><a class="rm-nazov" href="' + odkaz + '" target="_blank" rel="noopener">' + esc(nazovPonuky(p)) + "</a>" +
+        (q.presnost === "gps" ? riadokPolohy({ ulica: [p.cast_obce, p.ulica].filter(Boolean).join(", ") }, p.obec, "poloha zadaná v ponuke") : riadokPolohy(q, p.obec)) + '<span class="rm-cena">' + esc(cenaPonuky(p)) + "</span>" +
+        '<span class="meta">' + esc(meno(p.makler_id)) + '</span><span class="rm-odkazy"><a class="btn primary" href="' + odkaz + '" target="_blank" rel="noopener">Detail ponuky ↗</a>' +
+        '<a class="btn" href="' + esc(q.presnost === "gps" ? zbgisOdkaz(q.ll[0], q.ll[1], 19) : katasterOdkaz({ obec: p.obec, okres: p.okres })) + '" target="_blank" rel="noopener">📐 Kataster</a></span></div>');
+      vrstva.addLayer(mk); body.push(q.ll); n.ponuky++; if (p.obec) naObec[p.obec] = (naObec[p.obec] || 0) + 1;
     });
-    if ((F.sukr || F.rk) && maSekciu("inzeraty")) S.inz.forEach(function (z) {
+    if ((F.sukr || F.rk) && maSekciu("inzeraty")) (S.inz || []).forEach(function (z) {
       if (!z.aktivny || z.duplikat_z || (F.typ && z.typ !== F.typ)) return;
       var rk = ptyp(z) === "rk"; if ((rk && !F.rk) || (!rk && !F.sukr)) return;
       var q = polohaInzeratu(z); if (!q) return;
-      var pr = S.prev[z.id];
-      var mk = L.marker(q.ll, { icon: ikonka(rk ? "rk" : "sukr", kratkaCena(z.cena), !q.presna) }).bindPopup('<div class="rm-pop">' + (z.foto ? '<img src="' + esc(z.foto) + '" alt="" referrerpolicy="no-referrer">' : "") +
-        '<span class="rm-zn ' + (rk ? "rk" : "sukr") + '">' + (rk ? "RK" : "Súkromný predajca") + "</span><b>" + esc(z.nazov) + "</b><span>" + esc(z.obec || "") + (z.ulica ? ", " + esc(z.ulica) : "") + (q.presna ? "" : " · poloha približne") + "</span>" +
-        '<span class="rm-cena">' + eur(z.cena) + (z.plocha ? " · " + nf.format(z.plocha) + " m²" : "") + "</span>" +
-        (pr && pr.makler_id ? '<span class="meta">Prevzal ' + esc(meno(pr.makler_id)) + "</span>" : '<span class="meta">' + (rk ? esc(z.predajca || "") : "Voľný") + "</span>") +
-        '<span class="rm-odkazy"><button type="button" class="btn" data-mapa-inz="' + esc(z.id) + '">V skeneri</button><a class="btn ghost" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(PORTAL[z.portal] || "Portál") + "</a>" +
-        '<a class="btn ghost" href="' + esc(q.presna ? zbgisOdkaz(q.ll[0], q.ll[1], 19) : katasterOdkaz(z)) + '" target="_blank" rel="noopener" title="Kataster">📐</a></span></div>');
-      vrstva.addLayer(mk); body.push(q.ll); n[rk ? "rk" : "sukr"]++;
+      var pr = (S.prev || {})[z.id], vSkeneri = "#inzeraty/" + encodeURIComponent(z.id);
+      var mk = L.marker(q.ll, { icon: ikonka(rk ? "rk" : "sukr", kratkaCena(z.cena), !q.presna) }).bindPopup('<div class="rm-pop">' + (z.foto ? '<a href="' + esc(z.url) + '" target="_blank" rel="noopener"><img src="' + esc(z.foto) + '" alt="" referrerpolicy="no-referrer"></a>' : "") +
+        '<span class="rm-zn ' + (rk ? "rk" : "sukr") + '">' + (rk ? "RK" + (z.predajca ? " · " + esc(z.predajca) : "") : "Súkromný predajca") + '</span><a class="rm-nazov" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(z.nazov) + "</a>" +
+        riadokPolohy(q, q.obec) + '<span class="rm-cena">' + eur(z.cena) + (z.plocha ? " · " + nf.format(z.plocha) + " m²" : "") + "</span>" +
+        (pr && pr.makler_id ? '<span class="meta">Prevzal ' + esc(meno(pr.makler_id)) + "</span>" : rk ? "" : '<span class="meta">Voľný – zatiaľ ho nikto neprevzal</span>') +
+        '<span class="rm-odkazy"><a class="btn primary" href="' + vSkeneri + '" target="_blank" rel="noopener">V skeneri ↗</a><a class="btn" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(PORTAL[z.portal] || "Portál") + " ↗</a>" +
+        '<a class="btn" href="' + esc(q.presnost === "gps" ? zbgisOdkaz(q.ll[0], q.ll[1], 19) : katasterOdkaz({ obec: q.obec, okres: z.okres })) + '" target="_blank" rel="noopener">📐 Kataster</a></span></div>');
+      vrstva.addLayer(mk); body.push(q.ll); n[rk ? "rk" : "sukr"]++; naObec[q.obec] = (naObec[q.obec] || 0) + 1;
     });
-    vrstva.addTo(mapa); S.realVrstva = vrstva;
-    var pc = $("#mapa-pocet"); if (pc) pc.textContent = [F.ponuky ? n.ponuky + " ponúk" : "", F.sukr ? n.sukr + " súkromných" : "", F.rk ? n.rk + " RK" : ""].filter(Boolean).join(" · ");
+    vrstva.addTo(mapa); S.realVrstva = vrstva; S.realBody = body;
+    // názvy obcí – vidno ich aj na leteckej mape; ťuknutím obec priblížite
+    var obce = L.layerGroup();
+    (window.LOKALITY || []).forEach(function (x) {
+      if (x[5] || (x[1] !== "Spišská Nová Ves" && x[1] !== "Levoča")) return;
+      var ll = stredObce(x[0], x[1]), pocet = naObec[x[0]] || 0, mesto = MESTA_MAPA.indexOf(x[0]) >= 0;
+      var t = L.marker(ll, { pane: "obce", keyboard: false, title: x[0] + (pocet ? " – " + pocetText(pocet, "bod", "body", "bodov") + " na mape" : ""),
+        icon: L.divIcon({ className: "", iconSize: null, iconAnchor: [0, 0], html: '<span class="rm-obec' + (mesto ? " mesto" : "") + (pocet ? "" : " prazdna") + '">' + esc(x[0]) + (pocet ? "<b>" + pocet + "</b>" : "") + "</span>" }) });
+      t.on("click", function () { mapa.setView(ll, Math.max(mapa.getZoom() + 1, x[0] === "Spišská Nová Ves" || x[0] === "Levoča" ? 14 : 15)); });
+      obce.addLayer(t);
+    });
+    obce.addTo(mapa); S.realObce = obce;
+    var pc = $("#mapa-pocet"); if (pc) pc.textContent = [F.ponuky ? pocetText(n.ponuky, "naša ponuka", "naše ponuky", "našich ponúk") : "", F.sukr ? pocetText(n.sukr, "súkromný", "súkromné", "súkromných") : "", F.rk ? pocetText(n.rk, "inzerát RK", "inzeráty RK", "inzerátov RK") : ""].filter(Boolean).join(" · ");
     if (prisposob && body.length) mapa.fitBounds(body, { padding: [30, 30], maxZoom: 14 });
   }
-  document.addEventListener("click", function (e) {
-    var b = e.target.closest("[data-mapa-ponuka]");
-    if (b) { S.tab = "nehnutelnosti"; S.ponukaEdit = null; S.ponukaDetail = Number(b.dataset.mapaPonuka); history.pushState({ tab: "nehnutelnosti", detail: S.ponukaDetail }, "", "#nehnutelnosti"); vykresli(); window.scrollTo(0, 0); return; }
-    var c = e.target.closest("[data-mapa-inz]");
-    if (c) prejdi("inzeraty", c.dataset.mapaInz);
-  });
 
   // ------------------------------------------------------------ KATASTER
   var KAT_ODKAZY = {
@@ -3923,7 +4074,7 @@
     v.on("tileerror", function () { zle++; if (zle === 6 && !ok && naChybu) naChybu(); });
     return v;
   }
-  function ovladanieVrstiev(mapa, kluc, pred) {
+  function ovladanieVrstiev(mapa, kluc, pred, poZmene) {
     var st = S[kluc] = S[kluc] || { podklad: pred || "mapa", parcely: false };
     var podklad = PODKLADY[st.podklad][2]().addTo(mapa), parcely = null;
     function nastavParcely() {
@@ -3946,6 +4097,7 @@
           b.onclick = function () {
             st.podklad = b.dataset.podklad; mapa.removeLayer(podklad); podklad = PODKLADY[st.podklad][2]().addTo(mapa); podklad.bringToBack();
             d.querySelectorAll("[data-podklad]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+            if (poZmene) poZmene();
           };
         });
         d.querySelector("[data-parcely]").onclick = function () { st.parcely = !st.parcely; this.setAttribute("aria-pressed", String(st.parcely)); nastavParcely(); };

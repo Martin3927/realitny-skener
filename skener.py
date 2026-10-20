@@ -659,9 +659,19 @@ def gps_z_lokality(loc):
                 return r
         return None
     r = najdi(loc or {})
-    if r and 47.6 < r[0] < 49.7 and 16.8 < r[1] < 22.6:   # len body na Slovensku
+    # len body v našom regióne (okresy Spišská Nová Ves a Levoča s rezervou) – portál občas pošle polohu úplne inde
+    if r and 48.70 < r[0] < 49.20 and 20.15 < r[1] < 21.05:
         return round(r[0], 6), round(r[1], 6)
     return None, None
+
+
+def ulica_z_lokality(loc, obec):
+    """Ulica z údajov portálu – buď samostatné pole, alebo prvá časť názvu lokality („Hnilecká cesta, Spišská Nová Ves, okres …“)."""
+    u = loc.get("street") or loc.get("streetName")
+    if not isinstance(u, str) or not u.strip():
+        prva = str(loc.get("name") or "").split(",")[0].strip()
+        u = prva if prva and prva != "-" and prva != (obec or "") and not prva.startswith("okres") else None
+    return u.strip() if isinstance(u, str) and u.strip() else None
 
 
 def norm_nehn(ad):
@@ -702,7 +712,7 @@ def norm_nehn(ad):
         publikovane=(ad.get("createdAt") or "")[:10] or None,
         podtyp=podtyp_pozemku(ad.get("title", ""), par.get("area"), sub) if typ == "pozemok" else None,
         lat=gps_z_lokality(loc)[0], lon=gps_z_lokality(loc)[1],
-        ulica=(loc.get("street") or loc.get("streetName") or None) if isinstance(loc.get("street") or loc.get("streetName"), str) else None,
+        ulica=ulica_z_lokality(loc, obec),
     )
 
 

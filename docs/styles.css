@@ -1084,7 +1084,36 @@ pre.kod { width: 100%; margin: 0; background: var(--graphite); color: #e9e4d6; b
 .rm-zn { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em }
 .rm-zn.ponuka { color: var(--gold) } .rm-zn.sukr { color: #1a8a4a } .rm-zn.rk { color: #6b6e74 }
 .rm-odkazy { display: flex; gap: 6px; margin-top: 4px }
-.rm-pop .btn { text-decoration: none; color: #1e2a35 }
+.rm-pop .btn { text-decoration: none; color: var(--ink); background: var(--surface-2); display: inline-flex; align-items: center }
+.rm-pop .btn.primary { background: var(--gold-strong); border-color: var(--gold-strong); color: var(--on-accent) }
+.rm-pop .rm-nazov { font-weight: 700; font-size: 14px; line-height: 1.3; color: var(--ink); text-decoration: none }
+.rm-pop .rm-nazov:hover { text-decoration: underline }
+.rm-pop a img { display: block }
+.rm-poloha { display: grid; font-size: 13px; color: var(--ink) }
+.rm-poloha small { color: var(--muted); font-size: 11.5px }
+/* bublina na mape v farbách aplikácie – v tmavom režime nebola biela bublina s tmavými tlačidlami čitateľná */
+.realitna-mapa .leaflet-popup-content-wrapper, .realitna-mapa .leaflet-popup-tip { background: var(--surface); color: var(--ink); box-shadow: 0 8px 24px rgba(0,0,0,.25) }
+.realitna-mapa .leaflet-popup-content { margin: 12px 14px }
+.realitna-mapa a.leaflet-popup-close-button { color: var(--muted) }
+.realitna-mapa .leaflet-bar a { background: var(--surface); color: var(--ink); border-bottom-color: var(--line) }
+.realitna-mapa .leaflet-control-attribution { background: color-mix(in srgb, var(--surface) 80%, transparent); color: var(--muted) }
+.realitna-mapa .leaflet-control-attribution a { color: var(--muted) }
+/* názvy obcí */
+.rm-obec { position: absolute; transform: translate(-50%, 14px); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer;
+  font: 700 11.5px var(--body); color: #1e2a35; background: rgba(255,253,248,.88); border: 1px solid rgba(30,42,53,.18); border-radius: 999px; padding: 2px 8px; box-shadow: 0 1px 4px rgba(0,0,0,.18) }
+.rm-obec.mesto { font-size: 13px; font-weight: 800; padding: 3px 10px }
+.rm-obec b { background: #1e2a35; color: #fff; border-radius: 999px; font-size: 10.5px; padding: 0 6px; line-height: 16px }
+.rm-obec.prazdna { color: #4a6074; font-weight: 600 }
+.realitna-mapa.zoom-daleko .rm-obec:not(.mesto) { display: none }
+.realitna-mapa:not(.zoom-blizko) .rm-obec.prazdna:not(.mesto) { display: none }
+.mapa-legenda { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px }
+.mapa-legenda span { display: inline-flex; align-items: center; gap: 6px }
+.mapa-legenda .lg { width: 22px; height: 12px; border-radius: 999px; background: #1a8a4a; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25) }
+.mapa-legenda .lg.priblizna { border-style: dashed }
+.mapa-pozn { margin-top: 6px }
+.mapa-cela { margin-left: auto }
+.mapa-box .sk-stav { margin-bottom: 10px }
+@media (max-width: 700px) { .realitna-mapa.bublina .leaflet-top { opacity: 0; pointer-events: none; transition: opacity .15s } }
 .marker-cluster div { font: 700 12px var(--body) }
 
 /* ---------- AI asistent */
