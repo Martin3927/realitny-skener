@@ -1,0 +1,88 @@
+name: Nasadenie na realitnytypek.sk
+
+# Po každej zmene v priečinku docs/ nahrá súbory na hosting Websupport:
+#   realitnytypek.sk      ← docs/web  (predajný web)
+#   app.realitnytypek.sk  ← docs      (softvér pre maklérov)
+# Prístup na FTP sa nastavuje v Settings → Secrets and variables → Actions: FTP_SERVER, FTP_USER, FTP_HESLO.
+# Kým nie sú vyplnené, nasadenie sa preskočí (stránka beží ďalej na GitHub Pages).
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", ".github/workflows/nasadenie.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nasadenie
+  cancel-in-progress: false
+
+jobs:
+  nahraj:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MA_FTP: ${{ secrets.FTP_HESLO != '' }}
+      APP: https://app.realitnytypek.sk/
+    steps:
+      - name: Prístup na FTP
+        if: env.MA_FTP != 'true'
+        run: echo "::notice::FTP prístup ešte nie je nastavený – nasadenie preskakujem."
+
+      - uses: actions/checkout@v4
+        if: env.MA_FTP == 'true'
+
+      - name: Príprava súborov
+        if: env.MA_FTP == 'true'
+        run: |
+          mkdir -p build/app build/web
+          cp -r docs/. build/app/ && rm -rf build/app/web
+          cp -r docs/web/. build/web/
+          # predajný web je na hlavnej doméne – odkaz „Prihlásiť sa / Vyskúšať“ vedie do aplikácie
+          sed -i 's#href="\.\./"#href="'"$APP"'"#g' build/web/*.html
+          cat > build/app/.htaccess <<'EOF'
+          RewriteEngine On
+          RewriteCond %{HTTPS} off
+          RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+          <IfModule mod_headers.c>
+            <FilesMatch "\.(html|webmanifest)$|^sw\.js$">
+              Header set Cache-Control "no-cache"
+            </FilesMatch>
+          </IfModule>
+          EOF
+          cat > build/web/.htaccess <<'EOF'
+          RewriteEngine On
+          RewriteCond %{HTTPS} off [OR]
+          RewriteCond %{HTTP_HOST} ^www\. [NC]
+          RewriteRule ^ https://realitnytypek.sk%{REQUEST_URI} [L,R=301]
+          RewriteRule ^app/?(.*)$ https://app.realitnytypek.sk/$1 [L,R=301]
+          <IfModule mod_headers.c>
+            <FilesMatch "\.html$">
+              Header set Cache-Control "no-cache"
+            </FilesMatch>
+          </IfModule>
+          EOF
+
+      - name: Nahrať aplikáciu (app.realitnytypek.sk)
+        if: env.MA_FTP == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_HESLO }}
+          protocol: ftps
+          local-dir: ./build/app/
+          server-dir: ${{ vars.FTP_DIR_APP || '/sub/app/' }}
+
+      - name: Nahrať web (realitnytypek.sk)
+        if: env.MA_FTP == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_HESLO }}
+          protocol: ftps
+          local-dir: ./build/web/
+          server-dir: ${{ vars.FTP_DIR_WEB || '/web/' }}
