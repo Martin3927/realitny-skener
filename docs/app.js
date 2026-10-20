@@ -2286,7 +2286,7 @@
     izby: ["Počet izieb", ""], poschodie: ["Poschodie", "0 = prízemie"], pocet_podlazi: ["Počet podlaží budovy", ""], rok_vystavby: ["Rok výstavby / kolaudácie", ""] };
   var VYBERY = { vlastnictvo: ["Vlastníctvo", VLASTNICTVO], stav_objektu: ["Stav", STAV_OBJ], konstrukcia: ["Konštrukcia", KONSTRUKCIA],
     energ_certifikat: ["Energetický certifikát", ENERG], kurenie: ["Kúrenie", KURENIE] };
-  var KROKY = [["druh", "Druh a cena"], ["lokalita", "Lokalita"], ["parametre", "Parametre"], ["fotky", "Fotky a text"], ["interne", "Interné a uloženie"]];
+  var KROKY = [["druh", "Druh a cena"], ["lokalita", "Lokalita"], ["parametre", "Parametre"], ["fotky", "Fotky, video a text"], ["interne", "Interné a uloženie"]];
 
   async function nacitajPonuky() {
     var r = await vsetkyRiadky("nehnutelnosti", "*", "id");
@@ -2510,8 +2510,6 @@
           VYBAVENIE.filter(function (g) { return p.kategoria !== "pozemky" || g[0] === "Inžinierske siete" || g[0] === "Komunikácie"; }).map(function (g) {
             return "<h4>" + g[0] + "</h4>" + cipy("vybavenie", g[1], p.vybavenie);
           }).join("") +
-          '<div class="form-grid">' + text1("Virtuálna prehliadka (odkaz)", "virtualna_prehliadka", p.virtualna_prehliadka, { typ: "url", ph: "https://…" }) +
-          text1("Video (YouTube)", "video", p.video, { typ: "url", ph: "https://youtube.com/…" }) + "</div>" +
           (p.transakcia === "prenajom" ? '<div class="pf-prepinace">' + prepinac("Vhodné pre študentov", "vhodne_pre_studentov", p.vhodne_pre_studentov) + "</div>" : "");
       }
     }
@@ -2529,6 +2527,7 @@
             '<button type="button" data-foto-akcia="vpravo" title="Posunúť dozadu">▶</button><button type="button" data-foto-akcia="zmaz" title="Odstrániť">✕</button></div></div>';
         }).join("") + "</div>" : '<div class="pf-drop-text">Potiahnite sem fotky alebo použite tlačidlá vyššie.<br><small>Najlepšie fotky na šírku, aspoň 800 × 600. Fotky sa automaticky zmenšia.</small></div>') +
         '<div class="pf-nahravanie" id="pf-nahravanie" hidden></div></div>' +
+        sekciaMediiFormulara(E) +
         '<div class="pf-text-hlava"><h4>Text ponuky</h4><button class="btn" type="button" data-pf="navrh">✨ Navrhnúť text</button></div>' +
         text1("Názov", "nazov", p.nazov, { max: 60, ph: "napr. Slnečný 3-izbový byt s balkónom" }) +
         '<label class="field"><span>Intro – krátky popis pre sociálne siete <small class="meta" data-pocitadlo="intro">' + String(p.intro || "").length + '/160</small></span><textarea data-p="intro" rows="2" maxlength="160">' + esc(p.intro || "") + "</textarea></label>" +
@@ -2566,6 +2565,67 @@
       '<div class="seg" role="group">' + [["eur", "€"], ["pct", "%"]].map(function (x) {
         return '<button type="button" data-prov="' + pole + '_typ" data-v="' + x[0] + '" aria-pressed="' + (typ === x[0]) + '">' + x[1] + "</button>";
       }).join("") + "</div></div></div>";
+  }
+  // ---------- formulár: videá a virtuálna prehliadka
+  function sekciaMediiFormulara(E) {
+    var p = E.p, TM = window.TYPEK_MEDIA;
+    if (!E.videa) E.videa = TM.zoznam(p.video);
+    if (!E.videa.length) E.videa = [""];
+    return '<section class="pf-media"><h4>🎬 Video a virtuálna prehliadka</h4>' +
+      '<div class="pf-media-pole"><span>Virtuálna prehliadka 3D – Matterport, Kuula a iné</span><div class="pf-3d-riadok">' +
+      '<input type="url" data-p="virtualna_prehliadka" value="' + esc(p.virtualna_prehliadka || "") + '" placeholder="https://my.matterport.com/show/?m=…">' +
+      '<button class="btn" type="button" data-pf-3d-nahlad>👁 Náhľad</button></div>' +
+      '<div class="pf-video-info" id="pf-3d-info">' + info3d(p.virtualna_prehliadka) + '</div><div class="pf-3d-nahlad" id="pf-3d-nahlad"></div></div>' +
+      '<div class="pf-media-pole"><span>Videá – YouTube, Shorts, Vimeo, TikTok, Instagram Reels <small class="meta">· najviac 10</small></span>' +
+      E.videa.map(function (u, n) {
+        return '<div class="pf-video-riadok"><span class="pf-video-nahlad">🎬</span><div class="pf-video-stred">' +
+          '<input type="url" data-video-i="' + n + '" value="' + esc(u) + '" placeholder="https://youtube.com/… alebo https://youtube.com/shorts/…">' +
+          '<span class="pf-video-info"></span></div>' +
+          '<button type="button" class="pf-video-zmaz" data-video-zmaz="' + n + '" title="Odstrániť video" aria-label="Odstrániť video">✕</button></div>';
+      }).join("") +
+      (E.videa.length < 10 ? '<div><button class="btn" type="button" data-video-pridat>+ Pridať ďalšie video</button></div>' : "") + "</div></section>";
+  }
+  function info3d(u) {
+    if (!String(u || "").trim()) return "Po vložení odkazu sa prehliadka zobrazí priamo v ponuke a hneď sa spustí.";
+    var t = window.TYPEK_MEDIA.prehliadka(u);
+    return t ? "✓ <b>" + esc(t.zdroj) + "</b> · zobrazí sa priamo v ponuke" : '<span class="zle-text">⚠️ Odkaz nevyzerá správne</span>';
+  }
+  function obnovRiadokVidea(r, u) {
+    var TM = window.TYPEK_MEDIA, nh = r.querySelector(".pf-video-nahlad"), inf = r.querySelector(".pf-video-info");
+    u = String(u || "").trim(); r.dataset.url = u;
+    nh.classList.remove("vysoke"); nh.style.backgroundImage = ""; nh.textContent = "🎬"; inf.classList.remove("zle");
+    if (!u) { inf.textContent = "Vložte odkaz na video – rozpoznám, či je to Shorts alebo klasické video."; return; }
+    var v = TM.video(u);
+    if (v.typ === "odkaz") { inf.classList.add("zle"); inf.textContent = "⚠️ Toto nevyzerá ako video – v ponuke sa ukáže len ako odkaz."; return; }
+    function kresli(vysoke, nazov) {
+      nh.classList.toggle("vysoke", vysoke);
+      if (v.nahlad) { nh.style.backgroundImage = "url('" + (vysoke && v.typ === "youtube" ? "https://i.ytimg.com/vi/" + v.id + "/oardefault.jpg" : v.nahlad) + "')"; nh.textContent = ""; }
+      inf.innerHTML = "✓ <b>" + esc(nazov) + "</b> · " + (vysoke ? "zobrazí sa na výšku (9:16)" : "zobrazí sa na šírku (16:9)");
+    }
+    kresli(v.vysoke, v.nazov);
+    if (v.typ === "youtube" && !v.istota) {
+      inf.innerHTML = "✓ <b>YouTube</b> · zisťujem, či ide o Shorts…";
+      TM.jeShorts(v.id).then(function (sh) { if (r.dataset.url === u) kresli(sh, sh ? "YouTube Shorts" : "YouTube video"); });
+    }
+  }
+  function napojMediaFormulara(el, E, zmena) {
+    var TM = window.TYPEK_MEDIA, p = E.p;
+    el.querySelectorAll("[data-video-i]").forEach(function (inp) {
+      var r = inp.closest(".pf-video-riadok"); obnovRiadokVidea(r, inp.value);
+      inp.addEventListener("input", function () { E.videa[Number(inp.dataset.videoI)] = inp.value; p.video = TM.spoj(E.videa); obnovRiadokVidea(r, inp.value); zmena(); });
+    });
+    el.querySelectorAll("[data-video-zmaz]").forEach(function (b) {
+      b.onclick = function () { E.videa.splice(Number(b.dataset.videoZmaz), 1); p.video = TM.spoj(E.videa); zmena(); vykresliFormularPonuky(); };
+    });
+    var pr = el.querySelector("[data-video-pridat]");
+    if (pr) pr.onclick = function () { E.videa.push(""); vykresliFormularPonuky(); var x = $("#obsah").querySelectorAll("[data-video-i]"); if (x.length) x[x.length - 1].focus(); };
+    var t3 = el.querySelector('[data-p="virtualna_prehliadka"]'), nb = el.querySelector("[data-pf-3d-nahlad]"), nbox = $("#pf-3d-nahlad");
+    if (t3) t3.addEventListener("input", function () { $("#pf-3d-info").innerHTML = info3d(t3.value); nbox.innerHTML = ""; });
+    if (nb) nb.onclick = function () {
+      if (nbox.innerHTML) { nbox.innerHTML = ""; return; }
+      if (!t3.value.trim()) return toast("Najprv vložte odkaz na virtuálnu prehliadku.", true);
+      nbox.innerHTML = TM.htmlPrehliadka(t3.value); TM.napoj(nbox);
+    };
   }
   function napojFormularPonuky() {
     var el = $("#obsah"), E = S.ponukaEdit, p = E.p, i = E.i;
@@ -2606,6 +2666,7 @@
     });
     el.querySelectorAll("[data-krok]").forEach(function (b) { b.onclick = function () { E.krok = Number(b.dataset.krok); ulozKoncept(); vykresliFormularPonuky(); window.scrollTo(0, 0); }; });
     el.querySelectorAll("[data-pf]").forEach(function (b) { b.onclick = function () { akciaFormulara(b.dataset.pf, b); }; });
+    napojMediaFormulara(el, E, zmena);
     var ci = el.querySelector('[data-p="cislo"]');
     if (ci && !p.cislo) rpc("navrh_cisla_ponuky", { p_makler: p.makler_id || S.me.id }).then(function (c) { if (c && document.body.contains(ci)) ci.placeholder = "pridelí sa automaticky: " + c; }, function () {});
     var mk = el.querySelector('select[data-p="makler_id"]');
@@ -2858,6 +2919,12 @@
   }
 
   // ---------- detail ponuky
+  function galeriaDetailu(F, g) {
+    if (!F.length) return '<div class="pd-bez">Bez fotiek</div>';
+    return '<div class="pd-hlavna"><img src="' + esc(fotkaUrl(F[g])) + '" alt="">' +
+      (F.length > 1 ? '<button type="button" class="pd-sip l" data-gal="-1" aria-label="Predchádzajúca">‹</button><button type="button" class="pd-sip r" data-gal="1" aria-label="Ďalšia">›</button><span class="pd-poc">' + (g + 1) + " / " + F.length + "</span>" : "") + "</div>" +
+      '<div class="pd-nahlady">' + F.map(function (f, n) { return '<button type="button" data-gal-i="' + n + '"' + (n === g ? ' aria-current="true"' : "") + '><img loading="lazy" src="' + esc(fotkaUrl(f)) + '" alt=""></button>'; }).join("") + "</div>";
+  }
   function vykresliDetailPonuky() {
     var el = $("#obsah"), p = S.ponuky.find(function (x) { return x.id === S.ponukaDetail; });
     if (!p) { S.ponukaDetail = null; return vykresliNehnutelnosti(); }
@@ -2873,10 +2940,7 @@
       }).join("") + '</select><button class="btn primary" type="button" data-ponuka="upravit">✏️ Upraviť</button></div>' : "") + "</div>" +
       nastrojePonuky(p, mozem) +
       (mozem && p.makler_id === S.me.id && !S.me.telefon ? '<div class="note">📞 Doplňte si telefón v <a href="#" data-act-profil>Mojom profile</a> – klient ho uvidí na stránke ponuky a na letáku.</div>' : "") +
-      '<div class="pd-grid"><div class="pd-galeria">' + (F.length ? '<div class="pd-hlavna"><img src="' + esc(fotkaUrl(F[g])) + '" alt="">' +
-        (F.length > 1 ? '<button type="button" class="pd-sip l" data-gal="-1" aria-label="Predchádzajúca">‹</button><button type="button" class="pd-sip r" data-gal="1" aria-label="Ďalšia">›</button><span class="pd-poc">' + (g + 1) + " / " + F.length + "</span>" : "") + "</div>" +
-        '<div class="pd-nahlady">' + F.map(function (f, n) { return '<button type="button" data-gal-i="' + n + '"' + (n === g ? ' aria-current="true"' : "") + '><img loading="lazy" src="' + esc(fotkaUrl(f)) + '" alt=""></button>'; }).join("") + "</div>" :
-        '<div class="pd-bez">Bez fotiek</div>') + "</div>" +
+      '<div class="pd-grid"><div class="pd-galeria">' + galeriaDetailu(F, g) + "</div>" +
       '<div class="pd-info"><div class="pd-cipy"><span class="chip ' + st[1] + '">' + st[0] + '</span><span class="chip">' + (p.transakcia === "prenajom" ? "Prenájom" : "Predaj") + "</span>" +
         (p.exkluzivne ? '<span class="chip won">Exkluzívne</span>' : "") + (p.specialne || []).map(function (s) { return '<span class="chip">' + esc(s) + "</span>"; }).join("") + "</div>" +
         "<h2>" + esc(nazovPonuky(p)) + "</h2>" +
@@ -2888,8 +2952,7 @@
       ((p.vybavenie || []).length ? '<h4>Vybavenie</h4><div class="cipy">' + p.vybavenie.map(function (v) { return '<span class="cip" aria-pressed="true">' + esc(v) + "</span>"; }).join("") + "</div>" : "") +
       (p.intro ? '<p class="pd-intro">' + esc(p.intro) + "</p>" : "") +
       (p.popis ? '<div class="pd-popis">' + esc(p.popis) + "</div>" : "") +
-      (p.virtualna_prehliadka || p.video ? '<div class="pd-odkazy">' + (p.virtualna_prehliadka ? '<a class="btn" href="' + esc(p.virtualna_prehliadka) + '" target="_blank" rel="noopener">🧭 Virtuálna prehliadka</a>' : "") +
-        (p.video ? '<a class="btn" href="' + esc(p.video) + '" target="_blank" rel="noopener">▶️ Video</a>' : "") + "</div>" : "") +
+      (p.virtualna_prehliadka || p.video ? '<section class="pd-media"><h4>🎬 Video a virtuálna prehliadka</h4>' + window.TYPEK_MEDIA.htmlVsetko(p) + "</section>" : "") +
       (p.lat && p.lon ? '<div id="pd-mapa" class="pf-mapa"></div>' : "") +
       (I ? '<section class="pd-interne"><h4>🔒 Interné údaje</h4><dl class="pd-par">' +
         (I.majitel_meno || I.majitel_telefon ? "<dt>Majiteľ</dt><dd>" + esc(I.majitel_meno || "") + (I.majitel_telefon ? ' · <a class="tel" href="tel:' + esc(String(I.majitel_telefon).replace(/[^\d+]/g, "")) + '">' + esc(I.majitel_telefon) + "</a>" : "") +
@@ -2906,8 +2969,14 @@
       '<p class="meta">Vytvorené ' + datum(p.vytvorene, true) + " · upravené " + datum(p.upravene, true) + (p.zdroj_inzerat ? " · prenesené zo skenera" : "") + "</p></div>";
     el.innerHTML = h;
     napojHistoriu(el);
-    el.querySelectorAll("[data-gal]").forEach(function (b) { b.onclick = function () { S.galeria = (g + Number(b.dataset.gal) + F.length) % F.length; vykresliDetailPonuky(); }; });
-    el.querySelectorAll("[data-gal-i]").forEach(function (b) { b.onclick = function () { S.galeria = Number(b.dataset.galI); vykresliDetailPonuky(); }; });
+    window.TYPEK_MEDIA.napoj(el);
+    function napojGaleriu() {
+      var box = el.querySelector(".pd-galeria");
+      function ukaz(n) { S.galeria = n; box.innerHTML = galeriaDetailu(F, n); napojGaleriu(); }
+      box.querySelectorAll("[data-gal]").forEach(function (b) { b.onclick = function () { ukaz((Math.min(S.galeria || 0, F.length - 1) + Number(b.dataset.gal) + F.length) % F.length); }; });
+      box.querySelectorAll("[data-gal-i]").forEach(function (b) { b.onclick = function () { ukaz(Number(b.dataset.galI)); }; });
+    }
+    napojGaleriu();
     var sel = $("#pd-stav");
     if (sel) sel.onchange = async function () {
       try { await rpc("zmenit_stav_nehnutelnosti", { p_id: p.id, p_stav: sel.value }); p.stav = sel.value; toast("Stav: " + STAVY_P[sel.value][0]); if (sel.value === "predane") konfety({ pocet: 160 }); vykresliDetailPonuky(); }

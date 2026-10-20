@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="verejne.css?v=202610192100">
+<link rel="stylesheet" href="media.css?v=202610201600">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 </head>
 <body>
@@ -24,6 +25,7 @@
 <script src="config.js?v=202610182100"></script>
 <script src="supabase.min.js"></script>
 <script src="verejne.js?v=202610191700"></script>
+<script src="media.js?v=202610201600"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, id = Number(T.param("id")), P = null, g = 0;
@@ -75,12 +77,10 @@
       '<div class="v-cena">' + esc(T.cena(P)) + (m2 || P.text_k_cene ? "<small>" + esc([m2, P.text_k_cene].filter(Boolean).join(" · ")) + "</small>" : "") + "</div>" +
       ((P.exkluzivne || (P.specialne || []).length) ? '<div class="v-cipy">' + (P.exkluzivne ? '<span class="v-cip">Exkluzívne</span>' : "") + (P.specialne || []).filter(function (s) { return s !== "Exkluzívne"; }).map(function (s) { return '<span class="v-cip">' + esc(s) + "</span>"; }).join("") + "</div>" : "") +
       (kluc.length ? '<div class="v-kluc">' + kluc.map(function (k) { return "<div><b>" + esc(k[0]) + "</b><span>" + esc(k[1]) + "</span></div>"; }).join("") + "</div>" : "") + "</section>" +
+      (P.virtualna_prehliadka || P.video ? '<section class="v-media" aria-label="Video a virtuálna prehliadka">' + window.TYPEK_MEDIA.htmlVsetko(P) + "</section>" : "") +
       (P.intro || P.popis ? '<section class="v-box"><h2>Popis</h2>' + (P.intro ? '<p class="v-intro">' + esc(P.intro) + "</p>" : "") + (P.popis ? '<div class="v-popis">' + esc(P.popis) + "</div>" : "") + "</section>" : "") +
       (par.length ? '<section class="v-box"><h2>Parametre</h2><dl class="v-par">' + par.map(function (x) { return "<div><dt>" + esc(x[0]) + "</dt><dd>" + esc(x[1]) + "</dd></div>"; }).join("") + "</dl></section>" : "") +
       ((P.vybavenie || []).length ? '<section class="v-box"><h2>Vybavenie a siete</h2><div class="v-vyb">' + P.vybavenie.map(function (v) { return "<span>" + esc(v) + "</span>"; }).join("") + "</div></section>" : "") +
-      (P.virtualna_prehliadka || P.video ? '<section class="v-box"><h2>Prehliadka</h2><div class="v-odkazy">' +
-        (P.virtualna_prehliadka ? '<a class="v-btn" href="' + esc(P.virtualna_prehliadka) + '" target="_blank" rel="noopener">🧭 Virtuálna prehliadka 3D</a>' : "") +
-        (P.video ? '<a class="v-btn" href="' + esc(P.video) + '" target="_blank" rel="noopener">▶️ Video</a>' : "") + "</div></section>" : "") +
       (P.lat && P.lon ? '<section class="v-box"><h2>Poloha</h2><div class="v-mapa" id="mapa"></div><p class="v-lok" style="margin:8px 0 0;font-size:14px">Poloha je orientačná.</p></section>' : "") +
       '</div><aside class="v-side">' + makler() + "</aside></div>" +
       '<div class="v-mob-lista">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Volať</a><a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(mk.telefon)) + '" target="_blank" rel="noopener">WhatsApp</a>' :
@@ -96,7 +96,7 @@
         '<span class="v-poc">' + (g + 1) + " / " + F.length + "</span>";
     }
     function posun(k) { g = (g + k + F.length) % F.length; kresli(); }
-    function zavri() { lb.remove(); document.removeEventListener("keydown", kl); vykresli(); }
+    function zavri() { lb.remove(); document.removeEventListener("keydown", kl); obnovGaleriu(); }
     function kl(e) { if (e.key === "Escape") zavri(); if (e.key === "ArrowRight") posun(1); if (e.key === "ArrowLeft") posun(-1); }
     lb.addEventListener("click", function (e) {
       var b = e.target.closest("[data-lb]"); if (b) { posun(Number(b.dataset.lb)); return; }
@@ -108,11 +108,19 @@
     document.addEventListener("keydown", kl);
     kresli(); document.body.appendChild(lb);
   }
+  function obnovGaleriu() {
+    var st = document.querySelector(".v-gal"); if (!st) return;
+    var d = document.createElement("div"); d.innerHTML = galeria(); st.replaceWith(d.firstChild); napojGaleriu();
+  }
+  function napojGaleriu() {
+    document.querySelectorAll("[data-g]").forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); g = (g + Number(b.dataset.g) + P.fotky.length) % P.fotky.length; obnovGaleriu(); }; });
+    document.querySelectorAll("[data-gi]").forEach(function (b) { b.onclick = function () { g = Number(b.dataset.gi); obnovGaleriu(); }; });
+    var hl = document.getElementById("gal-hl"); if (hl) hl.addEventListener("click", function (e) { if (!e.target.closest(".v-sip")) lightbox(); });
+  }
   function napoj() {
     document.querySelectorAll("[data-zdielat]").forEach(function (b) { b.onclick = zdielat; });
-    document.querySelectorAll("[data-g]").forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); g = (g + Number(b.dataset.g) + P.fotky.length) % P.fotky.length; vykresli(); }; });
-    document.querySelectorAll("[data-gi]").forEach(function (b) { b.onclick = function () { g = Number(b.dataset.gi); vykresli(); }; });
-    var hl = document.getElementById("gal-hl"); if (hl) hl.addEventListener("click", function (e) { if (!e.target.closest(".v-sip")) lightbox(); });
+    napojGaleriu();
+    window.TYPEK_MEDIA.napoj(document.getElementById("obsah"));
     var mapa = document.getElementById("mapa");
     if (mapa) nacitajLeaflet().then(function () {
       var m = L.map(mapa, { scrollWheelZoom: false }).setView([P.lat, P.lon], 14);

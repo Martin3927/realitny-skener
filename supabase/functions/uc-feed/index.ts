@@ -146,7 +146,7 @@ async function zostav(db: any, urlDb: string) {
       utility_lines: [vyb.some((v) => /vodovod|studňa/.test(v)) ? 686 : 0, vyb.some((v) => /elektrina/.test(v)) ? 687 : 0, vyb.includes("plyn") ? 688 : 0,
         vyb.some((v) => /kanalizácia/.test(v)) ? 689 : 0].filter(Boolean),
       type_of_house: TYP_DOMU[p.typ] || null, type_of_parking: PARKOVANIE[p.typ] ? [PARKOVANIE[p.typ]] : [],
-      video_url: p.video ? [p.video] : [],
+      video_url: String(p.video || "").split(/[\r\n]+/).map((v: string) => v.trim()).filter(Boolean).slice(0, 10),
       street: ulica ? ulica.nazov : (ulTxt || p.obec || ""), street_number: cisloDomu(p.ulica), show_street: !!p.ulica,
       location: { state_id: 1, county_id: okres ? okres.county_id : 0, district_id: okres ? okres.district_id : 0, region_id: obec ? obec.region_id : 0,
         citypart_id: cast ? cast.citypart_id : null, street_id: ulica ? ulica.street_id : 0 },

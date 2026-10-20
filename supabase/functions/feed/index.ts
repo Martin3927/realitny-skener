@@ -28,7 +28,10 @@ Deno.serve(async (req) => {
     url: WEB + "ponuka.html?id=" + p.id,
     // deno-lint-ignore no-explicit-any
     fotky: (p.fotky || []).map((f: any) => f.url || base + f.cesta),
+    // videá sú v stĺpci uložené po riadkoch – do feedu idú ako zoznam (prvé zostáva aj v poli `video`)
+    videa: String(p.video || "").split(/[\r\n]+/).map((v: string) => v.trim()).filter(Boolean),
   }));
+  for (const p of ponuky) p.video = p.videa[0] || null;
   if (u.searchParams.get("format") === "json") {
     return Response.json({ kancelaria: "Alpha Reality", vygenerovane: new Date().toISOString(), pocet: ponuky.length, ponuky }, { headers: hl });
   }
@@ -42,7 +45,7 @@ ${ponuky.map((p) => `  <ponuka id="${p.id}">
     <parametre>${["plocha_uzitkova", "plocha_zastavana", "plocha_pozemku", "izby", "poschodie", "pocet_podlazi", "rok_vystavby", "vlastnictvo", "stav_objektu", "konstrukcia", "energ_certifikat", "kurenie"].map((k) => el(k, p[k])).join("")}${el("exkluzivne", p.exkluzivne ? "1" : "")}</parametre>
     <vybavenie>${(p.vybavenie || []).map((v: string) => el("polozka", v)).join("")}</vybavenie>
     <fotky>${p.fotky.map((f: string, i: number) => `<foto poradie="${i + 1}">${x(f)}</foto>`).join("")}</fotky>
-    ${el("virtualna_prehliadka", p.virtualna_prehliadka)}${el("video", p.video)}
+    ${el("virtualna_prehliadka", p.virtualna_prehliadka)}${el("video", p.videa[0])}<videa>${p.videa.map((v: string) => el("video", v)).join("")}</videa>
     <makler>${el("meno", p.makler?.meno)}${el("telefon", p.makler?.telefon)}${el("email", p.makler?.email)}</makler>
     ${el("url", p.url)}${el("upravene", p.upravene)}
   </ponuka>`).join("\n")}

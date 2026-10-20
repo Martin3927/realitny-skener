@@ -1,0 +1,69 @@
+/* Videá a virtuálne prehliadky – spoločné okná pre aplikáciu aj verejnú stránku ponuky */
+.tm-media { display: grid; gap: 14px }
+.tm-okno { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(20,22,26,.04), 0 10px 28px -18px rgba(20,22,26,.35) }
+.tm-hlava { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-bottom: 1px solid var(--line) }
+.tm-ik { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--gold-soft); color: var(--gold) }
+.tm-tit { display: grid; min-width: 0; flex: 1; line-height: 1.25 }
+.tm-tit b { font-family: var(--display); font-size: 15px; color: var(--ink) }
+.tm-tit small { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.tm-akcie { display: flex; gap: 6px; flex: 0 0 auto }
+.tm-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; transition: border-color .15s, background .15s }
+.tm-btn:hover { border-color: var(--gold-strong); background: var(--gold-soft) }
+
+.tm-ramec { position: relative; width: 100%; background: #12151a; overflow: hidden }
+.tm-169 { aspect-ratio: 16 / 9 }
+.tm-916 { aspect-ratio: 9 / 16 }
+.tm-3d-ramec { aspect-ratio: 16 / 10; max-height: 78vh }
+.tm-ramec iframe, .tm-ramec video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: transparent }
+.tm-ramec:fullscreen { aspect-ratio: auto; max-height: none; border-radius: 0 }
+.tm-nacitava { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; color: rgba(255,255,255,.75); font-size: 13px; pointer-events: none }
+.tm-hotovo .tm-nacitava { display: none }
+.tm-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255,255,255,.18); border-top-color: var(--gold-strong); animation: tm-tocit .8s linear infinite }
+@keyframes tm-tocit { to { transform: rotate(360deg) } }
+@media (prefers-reduced-motion: reduce) { .tm-spin { animation-duration: 2.4s } }
+
+/* videá: klasické cez celú šírku, Shorts / Reels na výšku vedľa seba */
+.tm-videa { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start }
+.tm-video { flex: 1 1 100% }
+.tm-video.tm-vysoke { flex: 0 1 280px; max-width: 280px }
+.tm-video figcaption { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; font-size: 13px }
+.tm-typ { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--ink) }
+.tm-typ svg { color: var(--gold) }
+.tm-vysoke .tm-typ svg { color: #e0457b }
+.tm-von { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); text-decoration: none; font-weight: 600 }
+.tm-von:hover { color: var(--gold) }
+.tm-odkaz { display: flex; align-items: center; gap: 10px; padding: 12px 14px; text-decoration: none; color: var(--ink); flex: 1 1 100% }
+.tm-odkaz:hover { border-color: var(--gold-strong) }
+
+@media (max-width: 640px) {
+  .tm-btn span { display: none }
+  .tm-btn { padding: 6px 9px }
+  .tm-3d-ramec { aspect-ratio: 4 / 5; max-height: 70vh }
+  .tm-video.tm-vysoke { flex: 1 1 calc(50% - 7px); max-width: calc(50% - 7px) }
+  .tm-video.tm-vysoke:only-child { flex-basis: 78%; max-width: 78%; margin: 0 auto }
+  .tm-vysoke figcaption { flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px }
+}
+
+/* detail ponuky v aplikácii */
+.pd-media { margin: 18px 0 }
+.pd-media h4 { margin: 0 0 10px }
+
+/* formulár ponuky: zoznam videí */
+.pf-media { display: grid; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line) }
+.pf-media h4 { margin: 0 }
+.pf-media-pole { display: grid; gap: 6px }
+.pf-media-pole > span { font-size: 13px; font-weight: 600; color: var(--muted) }
+.pf-video-riadok { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface) }
+.pf-video-nahlad { width: 64px; height: 48px; border-radius: 8px; background: var(--gold-soft) center / cover no-repeat; display: grid; place-items: center; color: var(--gold); font-size: 20px }
+.pf-video-nahlad.vysoke { width: 36px; height: 64px; justify-self: center }
+.pf-video-stred { display: grid; gap: 4px; min-width: 0 }
+.pf-video-stred input { width: 100% }
+.pf-video-info { font-size: 12px; color: var(--muted) }
+.pf-video-info b { color: var(--ink) }
+.pf-video-info.zle { color: var(--bad, #b4442d) }
+.pf-video-zmaz { border: 0; background: none; cursor: pointer; font-size: 18px; color: var(--muted); padding: 6px 8px; border-radius: 8px }
+.pf-video-zmaz:hover { background: var(--gold-soft); color: var(--ink) }
+.pf-3d-riadok { display: flex; gap: 8px; align-items: center }
+.pf-3d-riadok input { flex: 1; min-width: 0 }
+.pf-3d-nahlad { margin-top: 6px }
