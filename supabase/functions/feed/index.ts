@@ -5,7 +5,7 @@
 // Obsahuje len údaje, ktoré sa zverejňujú (bez majiteľa, zmluvy, provízie, internej adresy).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const WEB = (Deno.env.get("APP_URL") || "https://martin3927.github.io/realitny-skener/").replace(/\/?$/, "/");
+const WEB = (Deno.env.get("APP_URL") || "https://app.realitnytypek.sk/").replace(/\/?$/, "/");
 
 function x(s: unknown) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]!));

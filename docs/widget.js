@@ -2,13 +2,13 @@
  * Realitný týpek – ponuky na web realitnej kancelárie alebo osobný web makléra.
  * Vloženie do stránky:
  *   <div data-typek-ponuky data-filtre="1"></div>
- *   <script src="https://martin3927.github.io/realitny-skener/widget.js" async></script>
+ *   <script src="https://app.realitnytypek.sk/widget.js" async></script>
  * Voliteľné: data-makler="<id makléra>", data-transakcia="predaj|prenajom", data-kategoria="byty|domy|…",
  *            data-limit="12", data-filtre="1" (prepínače nad ponukami), data-tema="tmava"
  */
 (function () {
   var skript = document.currentScript;
-  var BASE = skript ? skript.src.replace(/[^/]*$/, "") : "https://martin3927.github.io/realitny-skener/";
+  var BASE = skript ? skript.src.replace(/[^/]*$/, "") : "https://app.realitnytypek.sk/";
   var CFG = window.SKENER_CONFIG || { supabaseUrl: "https://uwxziqapghlyktwpipjd.supabase.co", supabaseKey: "sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf" };
   var nf = new Intl.NumberFormat("sk-SK");
   var KAT = [["", "Všetko"], ["byty", "Byty"], ["domy", "Domy"], ["pozemky", "Pozemky"], ["chaty", "Chaty"], ["priestory", "Priestory"], ["objekty", "Objekty"], ["garaze", "Garáže"]];

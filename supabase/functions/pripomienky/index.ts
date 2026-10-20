@@ -5,7 +5,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import nodemailer from "npm:nodemailer@6.9.16";
 
-const APP_URL = Deno.env.get("APP_URL") || "https://martin3927.github.io/realitny-skener/";
+const APP_URL = Deno.env.get("APP_URL") || "https://app.realitnytypek.sk/";
 
 function esc(s: unknown) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));

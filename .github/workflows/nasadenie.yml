@@ -74,7 +74,7 @@ jobs:
           password: ${{ secrets.FTP_HESLO }}
           protocol: ftps
           local-dir: ./build/app/
-          server-dir: ${{ vars.FTP_DIR_APP || '/sub/app/' }}
+          server-dir: ${{ vars.FTP_DIR_APP || '/realitnytypek.sk/sub/app/' }}
 
       - name: Nahrať web (realitnytypek.sk)
         if: env.MA_FTP == 'true'
@@ -85,4 +85,4 @@ jobs:
           password: ${{ secrets.FTP_HESLO }}
           protocol: ftps
           local-dir: ./build/web/
-          server-dir: ${{ vars.FTP_DIR_WEB || '/web/' }}
+          server-dir: ${{ vars.FTP_DIR_WEB || '/realitnytypek.sk/web/' }}
