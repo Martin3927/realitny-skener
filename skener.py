@@ -5,11 +5,13 @@ Sleduje Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality.sk v okresoch Spišsk
 rozlišuje súkromných predajcov od RK, hľadá podhodnotené ponuky a posiela emailové upozornenia.
 
 Spustenie:  python skener.py            (bežná kontrola – prvé strany výsledkov)
+            python skener.py --rychly  (rýchla kontrola – len 1. strana, každých 10 min)
             python skener.py --plny     (prejde všetky strany)
             python skener.py --bez-emailu
 """
 import json
 import os
+import random
 import re
 import smtplib
 import statistics
@@ -21,7 +23,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from html import escape, unescape
 from pathlib import Path
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -151,16 +153,30 @@ def get(url, **kw):
     return _get(url, **kw)
 
 
+# portály, ktoré nás dočasne obmedzili (403/429) – do uvedeného času ich skener vynechá, aby nedostal ban
+PAUZA_PORTALU = {}
+PAUZA_PO_OBMEDZENI = timedelta(hours=2)
+
+
 def _get(url, **kw):
+    host = urlparse(url).netloc
+    if host in PAUZA_PORTALU and datetime.now(timezone.utc) < PAUZA_PORTALU[host]:
+        return None
+    obmedzene = 0
     for pokus in range(3):
         try:
             r = SESSION.get(url, timeout=30, **kw)
-            time.sleep(PAUZA)
+            time.sleep(PAUZA + random.uniform(0, PAUZA))  # nepravidelná pauza ako u človeka
             if r.status_code == 200:
                 return r.text
             log(f"  ! {r.status_code} {url}")
-            if r.status_code in (403, 429):
-                time.sleep(10 * (pokus + 1))
+            if r.status_code in (403, 429, 503):
+                obmedzene += 1
+                if obmedzene >= 2:
+                    PAUZA_PORTALU[host] = datetime.now(timezone.utc) + PAUZA_PO_OBMEDZENI
+                    log(f"  ! {host} obmedzil prístup – skener ho {int(PAUZA_PO_OBMEDZENI.total_seconds() // 3600)} h vynechá")
+                    return None
+                time.sleep(15 * (pokus + 1))
         except requests.RequestException as e:
             log(f"  ! chyba spojenia {url}: {e}")
             time.sleep(5 * (pokus + 1))
@@ -1162,16 +1178,16 @@ def archiv_topreality(url, pid):
     return {"popis": popis.get_text("\n", strip=True) if popis else None, "parametre": par, "fotky_portal": fotky}
 
 
-def archivuj(plny):
+def archivuj(plny, rychly=False):
     """Uloží popis a fotky inzerátov, ktoré ešte nie sú v archíve (najprv súkromné a rozpracované)."""
     if not POUZI_DB:
         return
-    zoznam = _rpc("skener_na_archiv", p_kluc=SKENER_KLUC, p_pocet=150 if plny else 40) or []
+    zoznam = _rpc("skener_na_archiv", p_kluc=SKENER_KLUC, p_pocet=150 if plny else 15 if rychly else 40) or []
     if not zoznam:
         return
     start, hotovo, fotiek = time.time(), 0, 0
     for z in zoznam:
-        if time.time() - start > (20 if plny else 7) * 60:
+        if time.time() - start > (20 if plny else 3 if rychly else 7) * 60:
             break
         try:
             if z["id"].startswith("bazos:"):
@@ -1214,11 +1230,20 @@ def main():
     meta = stav["meta"]
     prvy_beh = not inzeraty
     posledny_plny = meta.get("posledny_plny")
-    plny = ("--plny" in args or prvy_beh or not posledny_plny
-            or NOW - datetime.fromisoformat(posledny_plny) > timedelta(hours=20))
-    max_stran = int(CONFIG.get("stranok_pri_beznej_kontrole", 3))
+    # rýchla kontrola (každých 10 min): len prvá strana výsledkov – nové inzeráty sú vždy na nej
+    rychly = "--rychly" in args and not prvy_beh
+    plny = not rychly and ("--plny" in args or prvy_beh or not posledny_plny
+                           or NOW - datetime.fromisoformat(posledny_plny) > timedelta(hours=20))
+    max_stran = 1 if rychly else int(CONFIG.get("stranok_pri_beznej_kontrole", 3))
+    for host, do in (meta.get("pauza_portalov") or {}).items():
+        try:
+            if datetime.fromisoformat(do) > NOW:
+                PAUZA_PORTALU[host] = datetime.fromisoformat(do)
+                log(f"{host} je ešte v pauze do {do} – vynechávam ho")
+        except (TypeError, ValueError):
+            pass
     portaly = set(CONFIG["portaly"])
-    log(f"Skener štart {NOW_ISO} | {'PLNÝ' if plny else 'bežný'} beh | v databáze {len(inzeraty)} inzerátov")
+    log(f"Skener štart {NOW_ISO} | {'PLNÝ' if plny else 'rýchly' if rychly else 'bežný'} beh | v databáze {len(inzeraty)} inzerátov")
 
     najdene = []
     chyby = []
@@ -1258,6 +1283,12 @@ def main():
         for r in surove:
             if r.get("uzivatel_id"):
                 pocty[r["uzivatel_id"]] = pocty.get(r["uzivatel_id"], 0) + 1
+        # koľko inzerátov má predajca, vieme presne len z plnej kontroly – pri kratších kontrolách použijeme zapamätaný počet
+        if plny and surove:
+            meta["bazos_pocty"] = {k: v for k, v in pocty.items() if v >= 2}
+        else:
+            for k, v in (meta.get("bazos_pocty") or {}).items():
+                pocty[k] = max(pocty.get(k, 0), v)
         # celý popis stiahneme len pri nových inzerátoch z našich okresov
         detailov = 0
         for r in surove:
@@ -1368,7 +1399,9 @@ def main():
         "posledny_plny": NOW_ISO if plny else meta.get("posledny_plny"),
         "okresy": OKRESY,
         "pocet_aktivnych": sum(1 for z in inzeraty.values() if z.get("aktivny") and not z.get("duplikat_z")),
-        "chyby": chyby,
+        "chyby": chyby + [f"{h} dočasne obmedzil prístup – skener ho vynechá do {t.astimezone().strftime('%H:%M')}"
+                          for h, t in PAUZA_PORTALU.items() if t > datetime.now(timezone.utc)],
+        "pauza_portalov": {h: t.isoformat(timespec="seconds") for h, t in PAUZA_PORTALU.items() if t > datetime.now(timezone.utc)},
         "podhodnotene_o_percent": CONFIG["podhodnotene_o_percent"],
     })
     if prvy_beh:
@@ -1376,7 +1409,7 @@ def main():
     uloz_stav(stav)
 
     try:
-        archivuj(plny)
+        archivuj(plny, rychly)
     except Exception as e:  # noqa – archív nesmie zastaviť upozornenia
         log(f"! archív zlyhal: {e}")
 

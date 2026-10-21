@@ -2,8 +2,11 @@ name: Realitný skener
 
 on:
   schedule:
-    # každých 30 minút cez deň (GitHub počíta v UTC: v lete 6:00–23:30, v zime 5:00–22:30 slovenského času)
-    - cron: "*/30 4-21 * * *"
+    # GitHub počíta v UTC: v lete 6:00–23:59, v zime 5:00–22:59 slovenského času
+    # bežná kontrola (3 strany výsledkov) každú pol hodinu
+    - cron: "0,30 4-21 * * *"
+    # rýchla kontrola (len 1. strana – tam sú nové inzeráty) medzi nimi, ~20 požiadaviek s nepravidelnými pauzami
+    - cron: "10,20,40,50 4-21 * * *"
     # plná kontrola v noci
     - cron: "17 1 * * *"
   workflow_dispatch:
@@ -52,6 +55,8 @@ jobs:
         run: |
           if [ "${{ github.event.schedule }}" = "17 1 * * *" ] || [ "${{ inputs.plny }}" = "true" ]; then
             python skener.py --plny
+          elif [ "${{ github.event.schedule }}" = "10,20,40,50 4-21 * * *" ]; then
+            python skener.py --rychly
           else
             python skener.py
           fi
