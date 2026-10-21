@@ -429,7 +429,12 @@ def bazos_detail(url):
     return p.get_text("\n", strip=True) if p else None
 
 
-def skenuj_bazos(plny, max_stran):
+BAZOS_MAX_STRAN_KRATKA = 10  # poistka pri bežnej/rýchlej kontrole
+
+
+def skenuj_bazos(plny, max_stran, zname=frozenset()):
+    """Pri plnej kontrole prejde všetky strany. Pri kratšej kontrole listuje, kým nenarazí na netopovaný
+    inzerát, ktorý už pozná – Bazoš dáva topované inzeráty na prvé strany, nové súkromné bývajú až za nimi."""
     vysledky = {}
     for typ in TYPY:
         kat = BAZOS_KAT[typ]
@@ -441,8 +446,13 @@ def skenuj_bazos(plny, max_stran):
                 for r in riadky:
                     r["typ"] = typ
                     vysledky.setdefault(r["pid"], r)
-                if not riadky or offset + 20 >= celkom or (not plny and strana >= max_stran) or strana >= 40:
+                if not riadky or offset + 20 >= celkom or strana >= 40:
                     break
+                if not plny:
+                    netop = [r for r in riadky if not r.get("top")]
+                    dosiahol_zname = any(r["pid"] in zname for r in netop)
+                    if (dosiahol_zname and strana >= max_stran) or strana >= BAZOS_MAX_STRAN_KRATKA or (not zname and strana >= max_stran):
+                        break
                 offset += 20
     log(f"Bazoš: {len(vysledky)} inzerátov v okolí")
     return list(vysledky.values())
@@ -1278,7 +1288,8 @@ def main():
             if z:
                 najdene.append(z)
     if "bazos" in portaly:
-        surove = bezpecne("Bazoš", lambda: skenuj_bazos(plny, max_stran), "bazos")
+        zname_bazos = frozenset(k.split(":", 1)[1] for k in inzeraty if k.startswith("bazos:"))
+        surove = bezpecne("Bazoš", lambda: skenuj_bazos(plny, max_stran, zname_bazos), "bazos")
         pocty = {}
         for r in surove:
             if r.get("uzivatel_id"):
