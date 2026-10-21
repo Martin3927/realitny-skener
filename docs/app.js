@@ -963,7 +963,7 @@
         '<b>' + esc(aktualna[1]) + '</b><span class="tab-n" data-chat-n hidden></span><span class="menu-btn-hint">Menu ▾</span></button>' +
       '<div class="user">' +
       '<span class="odhl" id="odhl" hidden title="Automatické odhlásenie pri nečinnosti – odpočet sa vynuluje pri každej vašej aktivite">⏱ <b id="odhl-cas"></b></span>' +
-      '<button type="button" class="bell" data-act="zvoncek" id="zvon-btn" aria-label="Pripomienky">🔔<span class="badge" id="zvon-n" hidden></span></button>' +
+      '<button type="button" class="bell" data-act="zvoncek" id="zvon-btn" aria-label="Upozornenia a pripomienky">🔔<span class="badge" id="zvon-n" hidden></span></button>' +
       '<button type="button" class="heslo-btn" data-pomoc="heslo" title="Zmeniť heslo"><span aria-hidden="true">🔑</span><span class="heslo-btn-t">Zmeniť heslo</span></button>' +
       '<button type="button" class="me-btn" data-act="profil" title="Môj profil">' + avatar(S.me.id, 28) + '<span class="email">' + esc(S.me.meno || S.me.email) + (admin() ? " · admin" : "") + "</span></button>" +
       '<button type="button" class="theme-btn" data-act="tema" id="tema-btn"></button>' +
@@ -5385,7 +5385,7 @@
     if (maSekciu("nehnutelnosti")) K.push({ t: "Nehnuteľnosti", x: "Tu pridáte ponuku kancelárie krok za krokom. Pri ponuke nájdete leták, report pre majiteľa, príspevok na Facebook a Instagram aj odkaz pre klienta.", c: ciel("nehnutelnosti") });
     if (maSekciu("klienti")) K.push({ t: "Klienti", x: "Zapíšte, čo klient hľadá. Keď sa objaví ponuka alebo inzerát, ktorý sedí, dám vám vedieť do zvončeka.", c: ciel("klienti") });
     K.push({ t: "Pripomienky", x: "Zvonček vám pripomenie, komu máte zavolať a čo vás dnes čaká.", c: "#zvon-btn" });
-    if (maSekciu("chat")) K.push({ t: "Chat tímu", x: "Správa celému tímu alebo súkromne len jednému kolegovi – vyberiete ho v zozname. Nové správy vám vyskočia v rohu obrazovky aj s rýchlou odpoveďou.", c: ciel("chat") });
+    if (maSekciu("chat")) K.push({ t: "Chat tímu", x: "Správa celému tímu alebo súkromne len jednému kolegovi – vyberiete ho v zozname. Pri novej správe vyskočí obálka – prečítate hneď, pripomeniem neskôr alebo ignorujete. Nové správy sú aj vo zvončeku.", c: ciel("chat") });
     if (maSekciu("provizie")) K.push({ t: "Moje provízie", x: "Prehľad vašich obchodov a toho, čo vám kancelária ešte vyplatí.", c: ciel("provizie") });
     K.push({ t: "Zmena hesla", x: "Zlaté tlačidlo s kľúčom hore otvorí zmenu hesla – kedykoľvek si heslo zmeníte jedným klikom.", c: ".heslo-btn" });
     K.push({ t: "Môj profil", x: "Doplňte si telefón, fotku a text SMS. Telefón uvidia klienti na ponukách a letákoch.", c: ".me-btn" });
@@ -5556,15 +5556,19 @@
   async function nacitajChat() {
     var r = await Promise.all([
       sb.from("spravy").select("*").order("id", { ascending: false }).limit(300),
-      sb.from("sukromne_spravy").select("*").order("id", { ascending: false }).limit(1000)
+      sb.from("sukromne_spravy").select("*").order("id", { ascending: false }).limit(1000),
+      sb.from("chat_reakcie").select("*").order("id", { ascending: false }).limit(400)
     ]);
-    var t = r[0], d = r[1];
+    var t = r[0], d = r[1], rk = r[2];
+    S.reak = S.reak || [];
+    if (!rk.error) pridajReakcie(rk.data.reverse());
     if (!t.error) {
       t.data.reverse();
       S.chat = t.data.filter(function (m) { return !m.zmazane; });
       S.chatMax = t.data.length ? t.data[t.data.length - 1].id : 0;
     }
     if (!d.error) { S.dm = d.data.reverse(); S.dmMax = S.dm.length ? S.dm[S.dm.length - 1].id : 0; }
+    if (!S.obalkyStart) { S.obalkyStart = true; setTimeout(obalkyPoSpusteni, 2600); }
   }
   function partner(m) { return m.od_id === S.me.id ? m.komu_id : m.od_id; }
   function normDm(m) { return { id: m.id, makler_id: m.od_id, komu_id: m.komu_id, text: m.text, vytvorene: m.vytvorene, precitane: m.precitane, dm: true }; }
@@ -5585,9 +5589,17 @@
     if (!S.me) return;
     var r = await Promise.all([
       sb.from("spravy").select("*").gt("id", S.chatMax).order("id", { ascending: true }).limit(200),
-      sb.from("sukromne_spravy").select("*").gt("id", S.dmMax).order("id", { ascending: true }).limit(200)
+      sb.from("sukromne_spravy").select("*").gt("id", S.dmMax).order("id", { ascending: true }).limit(200),
+      sb.from("chat_reakcie").select("*").gt("id", S.reakMax || 0).order("id", { ascending: true }).limit(200)
     ]);
     var rt = r[0], rd = r[1], noveT = [], noveD = [];
+    if (!r[2].error && r[2].data.length) {
+      var noveR = pridajReakcie(r[2].data);
+      ohlasIgnoracie(noveR);
+      if (S.tab === "chat") znackaPrecitania();
+      obnovZvoncek();
+    }
+    skontrolujOdlozene();
     if (S.tab === "chat") await synchChat();
     if (!rt.error && rt.data.length) {
       S.chatMax = rt.data[rt.data.length - 1].id;
@@ -5624,62 +5636,299 @@
       o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.4);
     } catch (e) { /* zvuk nie je dostupný */ }
   }
-  function upozornNaSpravy(nove) {
+  // ---------- obálka: okno pri novej správe (Prečítať / Pripomenúť neskôr / Ignorovať)
+  // S.reak = moje odloženia a oznámenia o ignorovaní mojich správ, S.obalky = rad okien (jedno na konverzáciu)
+  function lsKluc(k) { return "typek-obalka-" + k + "-" + S.me.id; }
+  function citajLS(k) { try { return Number(localStorage.getItem(lsKluc(k))) || 0; } catch (e) { return 0; } }
+  function pisLS(k, v) { try { if (v > citajLS(k)) localStorage.setItem(lsKluc(k), String(v)); } catch (e) { /* nič */ } }
+  function rod(id, muz, zena) { var m = S.mById[id]; return m && m.pohlavie === "zena" ? zena : muz; }
+  function systemoveUpozornenie(titul, text, tag, adresa) {
+    if (!document.hidden || !("Notification" in window) || Notification.permission !== "granted" || !navigator.serviceWorker) return;
+    navigator.serviceWorker.ready.then(function (reg) {
+      reg.showNotification(titul, { body: String(text || "").slice(0, 180), icon: "ikona-192.png", badge: "favicon-32.png", tag: tag, renotify: true,
+        data: { url: location.href.split("#")[0] + "#" + adresa } });
+    }).catch(function () {});
+  }
+  // neprečítané správy konverzácie ("" = celý tím, inak id kolegu)
+  function neprecitaneKonv(konv) {
+    if (!konv) {
+      var od = S.me.chat_precitane ? new Date(S.me.chat_precitane).getTime() : 0;
+      return S.chat.filter(function (m) { return m.makler_id !== S.me.id && new Date(m.vytvorene).getTime() > od; });
+    }
+    return S.dm.filter(function (m) { return m.komu_id === S.me.id && m.od_id === konv && !m.precitane; }).map(normDm);
+  }
+  function odlozeneCakajuce() { return S.reak.filter(function (r) { return r.makler_id === S.me.id && r.akcia === "neskor" && !r.vybavene; }); }
+  function odlozenaKonv(konv) {
+    return odlozeneCakajuce().filter(function (r) { return konv ? r.druh === "dm" && r.autor_id === konv : r.druh === "tim"; })[0];
+  }
+  function ignoracieNevidene() { return S.reak.filter(function (r) { return r.akcia === "ignorovane" && r.autor_id === S.me.id && !r.videne_autorom; }); }
+  function pridajReakcie(rows) {
+    var ma = {}; S.reak.forEach(function (r) { ma[r.id] = true; });
+    var nove = rows.filter(function (r) { return !ma[r.id]; });
+    S.reak = S.reak.concat(nove).slice(-600);
+    rows.forEach(function (r) { S.reakMax = Math.max(S.reakMax || 0, r.id); });
+    return nove;
+  }
+  // konverzácia je prečítaná → odložené pripomenutia sa zrušia a jej obálka z radu zmizne
+  function vybavKonv(konv) {
+    var druh = konv ? "dm" : "tim", bolo = false, t = new Date().toISOString();
+    S.reak.forEach(function (r) {
+      if (r.makler_id === S.me.id && r.akcia === "neskor" && !r.vybavene && r.druh === druh && (druh === "tim" || r.autor_id === konv)) { r.vybavene = t; bolo = true; }
+    });
+    if (bolo) rpc("vybavit_odlozene", { p_druh: druh, p_autor: konv || null }).catch(function () {});
+    if (S.obalky) S.obalky = S.obalky.filter(function (e) { return e === S.obalkaAkt || e.konv !== (konv || ""); });
+  }
+  function upozornNaSpravy(nove, o) {
+    o = o || {};
     var cudzie = nove.filter(function (m) { return m.makler_id !== S.me.id; });
-    if (!cudzie.length || !maSekciu("chat") || !nastChat("popup")) return;
+    if (!cudzie.length || !maSekciu("chat")) return;
+    cudzie.forEach(function (m) { pisLS(m.dm ? "dm" : "tim", m.id); });
     var m = cudzie[cudzie.length - 1];
-    S.chatPop = S.chatPop || { pocet: 0 };
-    S.chatPop.pocet += cudzie.length; S.chatPop.m = m;
-    kresliChatPop();
-    if (nastChat("zvuk")) cinknut();
-    if (document.hidden && "Notification" in window && Notification.permission === "granted" && navigator.serviceWorker) {
-      var titul = m.dm ? meno(m.makler_id) + " · Súkromná správa" : m.makler_id ? meno(m.makler_id) + " · Chat tímu" : "Realitný týpek · Chat tímu";
-      navigator.serviceWorker.ready.then(function (reg) {
-        reg.showNotification(titul, { body: String(m.text || "").slice(0, 180) + (cudzie.length > 1 ? "  (+" + (cudzie.length - 1) + " ďalšie)" : ""),
-          icon: "ikona-192.png", badge: "favicon-32.png", tag: m.dm ? "typek-dm-" + m.makler_id : "typek-chat", renotify: true,
-          data: { url: location.href.split("#")[0] + "#chat" + (m.dm ? "/" + m.makler_id : "") } });
-      }).catch(function () {});
+    if (!o.ticho && nastChat("zvuk")) cinknut();
+    if (!o.ticho) systemoveUpozornenie(m.dm ? "✉️ Nová správa od: " + meno(m.makler_id) : "✉️ Nová správa v spoločnom chate" + (m.makler_id ? " · " + meno(m.makler_id) : ""),
+      m.text + (cudzie.length > 1 ? "  (+" + (cudzie.length - 1) + " ďalšie)" : ""), m.dm ? "typek-dm-" + m.makler_id : "typek-chat", "chat" + (m.dm ? "/" + m.makler_id : ""));
+    obnovZvoncek();
+    if (!nastChat("popup")) return;
+    S.obalky = S.obalky || [];
+    cudzie.forEach(function (x) {
+      var k = x.dm ? x.makler_id : "", e = S.obalky.find(function (y) { return y.konv === k; });
+      if (!e) { e = { konv: k, spravy: [], pripomienka: !!o.pripomienka }; S.obalky.push(e); }
+      if (!e.spravy.some(function (y) { return y.id === x.id; })) e.spravy.push(x);
+      if (!o.pripomienka) e.pripomienka = false;
+    });
+    ukazObalku();
+  }
+  function jeNeprecitana(m) {
+    if (m.dm) { var d = S.dm.find(function (x) { return x.id === m.id; }); return !!d && !d.precitane; }
+    var od = S.me.chat_precitane ? new Date(S.me.chat_precitane).getTime() : 0;
+    return new Date(m.vytvorene).getTime() > od && S.chat.some(function (x) { return x.id === m.id; });
+  }
+  function ukazObalku() {
+    var o = $("#obalka");
+    if (o) { if (o.dataset.stav === "zavreta" && S.obalkaAkt) kresliObalku(); return; }
+    if (!S.obalky || !S.obalky.length || !S.me) return;
+    var vidi = S.tab === "chat" && !document.hidden && $("#chat-spravy");
+    S.obalky = S.obalky.filter(function (e) {
+      e.spravy = e.spravy.filter(jeNeprecitana);
+      return e.spravy.length && !(vidi && (S.chatS || "") === e.konv);
+    });
+    if (!S.obalky.length) return;
+    if (S.spr || document.querySelector(".pochvala-var")) { clearTimeout(S.obalkaT); S.obalkaT = setTimeout(ukazObalku, 2500); return; }
+    S.obalkaAkt = S.obalky[0];
+    kresliObalku();
+  }
+  function kresliObalku() {
+    var E = S.obalkaAkt; if (!E) return;
+    var o = $("#obalka"), nove = !o;
+    if (nove) { o = document.createElement("div"); o.id = "obalka"; o.className = "pochvala-var obalka-var"; o.dataset.stav = "zavreta"; document.body.appendChild(o); }
+    var dm = !!E.konv, n = E.spravy.length, m = E.spravy[n - 1];
+    var autori = []; E.spravy.forEach(function (x) { if (x.makler_id && autori.indexOf(x.makler_id) < 0) autori.push(x.makler_id); });
+    var pecat = dm ? avatar(E.konv, 46) : autori.length === 1 ? avatar(autori[0], 46) : '<span class="ob-pecat-tim">' + ikona("chat") + "</span>";
+    var nadpis = E.pripomienka ? "⏰ Pripomínam správu od:" : dm ? (n > 1 ? n + (n <= 4 ? " nové správy" : " nových správ") + " od:" : "Nová správa od:") :
+      (n > 1 ? n + (n <= 4 ? " nové správy" : " nových správ") : "Nová správa") + " – spoločný chat";
+    var kto = dm ? '<div class="ob-od">' + esc(meno(E.konv)) + "</div>" :
+      '<div class="ob-od ob-od-tim">' + (autori.length ? "od " + esc(autori.map(function (a) { return a === S.me.id ? "vás" : meno(a); }).join(", ")) : "Tím Alpha Reality") + "</div>";
+    var komuIgn = dm ? krstneMeno(E.konv) : autori.map(krstneMeno).join(" a ");
+    o.innerHTML = '<div class="pochvala-karta obalka-karta' + (nove ? " prisla" : "") + '" role="dialog" aria-modal="true" aria-labelledby="ob-n">' +
+      '<button type="button" class="nov-x" data-ob="zavriet" aria-label="Zavrieť">×</button>' +
+      '<div class="ob-scena" aria-hidden="true"><div class="ob-obalka">' +
+        '<div class="ob-zadna"></div><div class="ob-list"><i></i><i></i><i></i></div><div class="ob-predna"></div><div class="ob-chlopna"></div>' +
+        '<div class="ob-pecat">' + pecat + "</div>" + (n > 1 ? '<span class="ob-pocet">' + (n > 9 ? "9+" : n) + "</span>" : "") + "</div></div>" +
+      '<div class="ob-text"><span class="ob-stitok' + (dm ? " dm" : "") + '">' + (dm ? "🔒 Súkromná správa" : "👥 Spoločný chat tímu") + "</span>" +
+        '<h3 id="ob-n">' + esc(nadpis) + "</h3>" + kto +
+        '<span class="meta">' + esc(casKonverzacie(m.vytvorene)) + (E.pripomienka ? " · odložili ste si ju na teraz" : "") + "</span></div>" +
+      '<div class="ob-akcie" data-ob-panel="akcie"><button class="btn primary wide ob-citat" type="button" data-ob="citat">📖 Prečítať</button>' +
+        '<div class="ob-rad"><button class="btn" type="button" data-ob="neskor">⏰ Pripomenúť neskôr</button>' +
+        '<button class="btn ghost" type="button" data-ob="ignorovat">🙈 Ignorovať</button></div>' +
+        (komuIgn ? '<small class="meta ob-hint">Pri ignorovaní dostane ' + esc(komuIgn) + " oznámenie.</small>" : "") + "</div>" +
+      '<div class="ob-neskor" data-ob-panel="neskor" hidden><b>Kedy vám ju mám pripomenúť?</b><div class="ob-chipy">' +
+        [["15", "O 15 minút"], ["60", "O hodinu"], ["180", "O 3 hodiny"], ["rano", "Zajtra ráno"]].map(function (x) {
+          return '<button class="btn" type="button" data-ob-kedy="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>" +
+        '<button class="btn ghost" type="button" data-ob="spat">← Späť</button></div>' +
+      '<div class="ob-precitane" data-ob-panel="list" hidden></div></div>';
+    if (nove) {
+      setTimeout(function () { var b = o.querySelector(".ob-citat"); if (b) b.focus({ preventScroll: true }); }, 50);
+      o.addEventListener("click", klikObalka);
+      S.obalkaEsc = function (e) { if (e.key === "Escape") zavriObalku(); };
+      document.addEventListener("keydown", S.obalkaEsc);
     }
   }
-  function kresliChatPop() {
-    var P = S.chatPop; if (!P) return;
-    var box = $("#chat-pop");
-    if (!box) { box = document.createElement("div"); box.id = "chat-pop"; box.setAttribute("aria-live", "polite"); document.body.appendChild(box); }
-    var m = P.m, sys = !m.makler_id, koncept = box.querySelector(".cpop-odp input") ? box.querySelector(".cpop-odp input").value : "";
-    box.innerHTML = '<div class="cpop' + (m.dm ? " dm" : "") + '" role="alert"><button type="button" class="cpop-x" data-cpop="zavriet" aria-label="Zavrieť">×</button>' +
-      '<button type="button" class="cpop-hl" data-cpop="otvor">' + (sys ? '<span class="cpop-sys">🎉</span>' : avatar(m.makler_id, 40)) +
-      "<span><b>" + esc(sys ? "Tím Alpha Reality" : meno(m.makler_id)) + "</b><small>" + (m.dm ? "🔒 Súkromná správa pre vás" : "💬 Chat tímu") + " · " +
-      new Date(m.vytvorene).toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" }) + "</small></span></button>" +
-      '<button type="button" class="cpop-text" data-cpop="otvor">' + esc(m.text) + "</button>" +
-      (P.pocet > 1 ? '<div class="cpop-viac">+ ' + (P.pocet - 1) + (P.pocet - 1 === 1 ? " ďalšia nová správa" : P.pocet - 1 <= 4 ? " ďalšie nové správy" : " ďalších nových správ") + "</div>" : "") +
-      '<form class="cpop-odp"><input type="text" maxlength="2000" placeholder="' + esc(m.dm ? "Rýchla odpoveď…" : "Rýchla odpoveď tímu…") + '" aria-label="Rýchla odpoveď" value="' + esc(koncept) + '">' +
+  function panelObalky(k) {
+    var o = $("#obalka"); if (!o) return;
+    o.querySelectorAll("[data-ob-panel]").forEach(function (p) { p.hidden = p.dataset.obPanel !== k; });
+  }
+  async function klikObalka(e) {
+    var E = S.obalkaAkt; if (!E) return;
+    var o = $("#obalka"), b = e.target.closest("[data-ob],[data-ob-kedy]"); if (!b) return;
+    var dm = !!E.konv, posl = E.spravy[E.spravy.length - 1], a = b.dataset.ob;
+    if (a === "zavriet") return zavriObalku();
+    if (a === "neskor") return panelObalky("neskor");
+    if (a === "spat") return panelObalky("akcie");
+    if (a === "otvor") { zavriObalku(); return otvorKonverzaciu(E.konv || null); }
+    if (a === "citat") return citajObalku();
+    if (b.dataset.obKedy) {
+      var k = b.dataset.obKedy, d = new Date();
+      if (k === "rano") { d.setDate(d.getDate() + 1); d.setHours(8, 0, 0, 0); } else d = new Date(Date.now() + Number(k) * 60000);
+      o.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
+      try {
+        var id = await rpc("odlozit_spravu", { p_druh: dm ? "dm" : "tim", p_sprava: posl.id, p_kedy: d.toISOString() });
+        var t = new Date().toISOString();
+        S.reak.forEach(function (r) { if (r.makler_id === S.me.id && r.akcia === "neskor" && !r.vybavene && r.druh === (dm ? "dm" : "tim") && (!dm || r.autor_id === E.konv)) r.vybavene = t; });
+        if (id) pridajReakcie([{ id: id, makler_id: S.me.id, autor_id: posl.makler_id || null, druh: dm ? "dm" : "tim", sprava_id: posl.id, akcia: "neskor", pripomenut: d.toISOString(), vybavene: null }]);
+        toast("⏰ Pripomeniem " + (k === "rano" ? "zajtra o 8:00" : "o " + d.toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" })) + ".");
+        zavriObalku(); obnovZvoncek();
+      } catch (err) { o.querySelectorAll("button").forEach(function (x) { x.disabled = false; }); toast(chybaText(err), true); }
+      return;
+    }
+    if (a === "ignorovat") {
+      o.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
+      try {
+        var mena = [];
+        if (dm) { await rpc("ignorovat_spravu", { p_druh: "dm", p_sprava: posl.id }); oznacLokalnePrecitane(E.konv); mena.push(krstneMeno(E.konv)); }
+        else {
+          var posledne = {};
+          E.spravy.forEach(function (x) { posledne[x.makler_id || "sys"] = x; });
+          var zoz = Object.keys(posledne).map(function (k) { return posledne[k]; });
+          for (var i = 0; i < zoz.length; i++) { await rpc("ignorovat_spravu", { p_druh: "tim", p_sprava: zoz[i].id }); if (zoz[i].makler_id) mena.push(krstneMeno(zoz[i].makler_id)); }
+          var najnov = E.spravy.reduce(function (x, y) { return new Date(x.vytvorene) > new Date(y.vytvorene) ? x : y; }).vytvorene;
+          if (!S.me.chat_precitane || new Date(S.me.chat_precitane) < new Date(najnov)) S.me.chat_precitane = najnov;
+        }
+        vybavKonv(E.konv);
+        toast("🙈 Správa je ignorovaná" + (mena.length ? " – " + mena.join(" a ") + (mena.length > 1 ? " dostanú" : " dostane") + " oznámenie." : "."));
+        zavriObalku(); popisChat(); kresliKonverzacie(); obnovZvoncek();
+      } catch (err) { o.querySelectorAll("button").forEach(function (x) { x.disabled = false; }); toast(chybaText(err), true); }
+    }
+  }
+  // obálka sa otvorí, list vyjde von a ukážu sa správy aj s rýchlou odpoveďou
+  function citajObalku() {
+    var E = S.obalkaAkt, o = $("#obalka"); if (!E || !o) return;
+    var dm = !!E.konv;
+    o.dataset.stav = "otvorena";
+    o.querySelector(".obalka-karta").classList.add("otvorena");
+    if (dm) { oznacLokalnePrecitane(E.konv); rpc("sukromne_precitane", { p_od: E.konv }).catch(function () {}); }
+    else { S.me.chat_precitane = new Date().toISOString(); rpc("chat_precitane", {}).catch(function () {}); }
+    vybavKonv(E.konv); popisChat(); kresliKonverzacie(); obnovZvoncek();
+    var zoz = E.spravy.slice(-4), p = o.querySelector('[data-ob-panel="list"]');
+    p.innerHTML = (E.spravy.length > 4 ? '<div class="meta ob-viac">+ ' + (E.spravy.length - 4) + " starších v konverzácii</div>" : "") +
+      '<div class="ob-spravy">' + zoz.map(function (m) {
+        return '<div class="ob-sprava">' + (!dm ? '<b class="ob-kto">' + esc(m.makler_id ? meno(m.makler_id) : "Tím Alpha Reality") + "</b>" : "") +
+          "<p>" + textSpravy(m.text) + '</p><time class="meta">' + esc(casKonverzacie(m.vytvorene)) + "</time></div>";
+      }).join("") + "</div>" +
+      '<form class="ob-odp"><input type="text" maxlength="2000" placeholder="' + esc(dm ? "Odpovedať " + krstneMeno(E.konv) + "…" : "Odpovedať tímu…") + '" aria-label="Rýchla odpoveď">' +
       '<button type="submit" aria-label="Odoslať"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z" fill="currentColor"/></svg></button></form>' +
-      '<button type="button" class="cpop-otvor" data-cpop="otvor">' + (m.dm ? "Otvoriť konverzáciu →" : "Otvoriť chat →") + "</button></div>";
-    box.hidden = false;
-    var karta = box.querySelector(".cpop"); karta.classList.add("prisla");
-    box.querySelectorAll("[data-cpop]").forEach(function (b) {
-      b.onclick = function () { var a = b.dataset.cpop; zavriChatPop(); if (a === "otvor") otvorKonverzaciu(m.dm ? m.makler_id : null); };
-    });
-    box.querySelector(".cpop-odp").onsubmit = async function (e) {
+      '<div class="ob-rad"><button class="btn" type="button" data-ob="otvor">Otvoriť konverzáciu →</button><button class="btn ghost" type="button" data-ob="zavriet">Zavrieť</button></div>';
+    panelObalky("list");
+    var inp = p.querySelector("input");
+    if (window.matchMedia("(pointer: fine)").matches) setTimeout(function () { inp.focus({ preventScroll: true }); }, 450);
+    p.querySelector(".ob-odp").onsubmit = async function (e) {
       e.preventDefault();
-      var inp = e.target.querySelector("input"), v = inp.value.trim(); if (!v) return;
+      var v = inp.value.trim(); if (!v) return;
       inp.disabled = true;
       try {
-        if (m.dm) { await rpc("poslat_sukromnu_spravu", { p_komu: m.makler_id, p_text: v }); oznacLokalnePrecitane(m.makler_id); }
-        else { await rpc("poslat_spravu", { p_text: v }); S.me.chat_precitane = new Date().toISOString(); rpc("chat_precitane", {}).catch(function () {}); }
-        zavriChatPop(); toast(m.dm ? "🔒 Odpoveď je odoslaná." : "💬 Odpoveď je odoslaná."); chatNove();
+        if (dm) await rpc("poslat_sukromnu_spravu", { p_komu: E.konv, p_text: v });
+        else { await rpc("poslat_spravu", { p_text: v }); S.me.chat_precitane = new Date().toISOString(); }
+        toast(dm ? "🔒 Odpoveď pre " + krstneMeno(E.konv) + " je odoslaná." : "💬 Odpoveď je odoslaná.");
+        zavriObalku(); chatNove();
       } catch (err) { inp.disabled = false; toast(chybaText(err), true); }
     };
-    clearTimeout(S.chatPopT);
-    var casovac = function () { S.chatPopT = setTimeout(function () { if (box.matches(":hover") || box.contains(document.activeElement)) return casovac(); zavriChatPop(); }, 15000); };
-    casovac();
   }
-  function zavriChatPop() {
-    clearTimeout(S.chatPopT); S.chatPop = null;
-    var box = $("#chat-pop"); if (!box || box.hidden) return;
-    var k = box.querySelector(".cpop"); if (k) k.classList.add("odchadza");
-    setTimeout(function () { if (!S.chatPop) { box.hidden = true; box.innerHTML = ""; } }, 200);
+  function zavriObalku() {
+    var o = $("#obalka"), E = S.obalkaAkt;
+    S.obalky = (S.obalky || []).filter(function (e) { return e !== E; });
+    S.obalkaAkt = null;
+    if (S.obalkaEsc) { document.removeEventListener("keydown", S.obalkaEsc); S.obalkaEsc = null; }
+    if (o) { o.classList.add("odchadza"); setTimeout(function () { o.remove(); setTimeout(ukazObalku, 350); }, 220); }
+    else setTimeout(ukazObalku, 350);
   }
+  // pri otvorení aplikácie: správy, ktoré prišli, kým bola zatvorená (každá vyskočí len raz na zariadení)
+  function obalkyPoSpusteni() {
+    if (!S.me || !maSekciu("chat")) return;
+    var lt = citajLS("tim"), ld = citajLS("dm");
+    if (!lt) pisLS("tim", S.chatMax || 1);
+    var od = S.me.chat_precitane ? new Date(S.me.chat_precitane).getTime() : 0;
+    var t = lt ? S.chat.filter(function (m) { return m.makler_id !== S.me.id && m.id > lt && new Date(m.vytvorene).getTime() > od; }) : [];
+    var d = S.dm.filter(function (m) { return m.komu_id === S.me.id && !m.precitane && m.id > ld; }).map(normDm);
+    pisLS("dm", S.dmMax || 1);
+    var vsetky = t.concat(d).sort(function (a, b) { return new Date(a.vytvorene) - new Date(b.vytvorene); });
+    if (vsetky.length) upozornNaSpravy(vsetky, { ticho: true });
+    var ign = ignoracieNevidene();
+    if (ign.length) toast("🙈 " + (ign.length === 1 ? meno(ign[0].makler_id) + " " + rod(ign[0].makler_id, "ignoroval", "ignorovala") + " vašu správu" :
+      ign.length + " vaše správy boli ignorované") + " – pozrite zvonček 🔔");
+    skontrolujOdlozene();
+  }
+  function skontrolujOdlozene() {
+    var t = Date.now();
+    odlozeneCakajuce().filter(function (r) { return new Date(r.pripomenut).getTime() <= t; }).forEach(async function (r) {
+      r.vybavene = new Date().toISOString();
+      var ok = await rpc("vybavit_odlozenu", { p_id: r.id }).catch(function () { return false; });
+      if (!ok) return;
+      var zoz = neprecitaneKonv(r.druh === "dm" ? r.autor_id : "");
+      if (!zoz.length) return obnovZvoncek();
+      if (nastChat("zvuk")) cinknut();
+      upozornNaSpravy(zoz, { pripomienka: true, ticho: true });
+    });
+  }
+  // nové oznámenia, že niekto ignoroval moju správu
+  function ohlasIgnoracie(nove) {
+    nove.filter(function (r) { return r.akcia === "ignorovane" && r.autor_id === S.me.id && !r.videne_autorom; }).forEach(function (r) {
+      var kto = meno(r.makler_id), slovo = rod(r.makler_id, "ignoroval", "ignorovala");
+      toast("🙈 " + kto + " " + slovo + " vašu správu" + (r.druh === "tim" ? " v spoločnom chate" : "") + ".");
+      if (nastChat("zvuk")) cinknut();
+      systemoveUpozornenie("🙈 " + kto + " " + slovo + " vašu správu", textIgnorovanej(r), "typek-ign-" + r.id, "chat" + (r.druh === "dm" ? "/" + r.makler_id : ""));
+    });
+  }
+  function textIgnorovanej(r) {
+    var m = r.druh === "dm" ? S.dm.find(function (x) { return x.id === r.sprava_id; }) : S.chat.find(function (x) { return x.id === r.sprava_id; });
+    return m ? m.text : "";
+  }
+  function kedyOdlozene(iso) {
+    var d = new Date(iso), dnes = new Date(); dnes.setHours(0, 0, 0, 0);
+    var cas = d.toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" }), dni = Math.round((new Date(d).setHours(0, 0, 0, 0) - dnes) / 864e5);
+    return dni <= 0 ? "dnes o " + cas : dni === 1 ? "zajtra o " + cas : datum(iso, true);
+  }
+  // ---------- správy vo zvončeku
+  function pocetDoZvoncka() { return maSekciu("chat") ? pocetNeprecitanych() + ignoracieNevidene().length : 0; }
+  function obnovZvoncek() { popisZvoncek(); if (S.zvonOpen && !S.pripForm) vykresliZvoncek(); }
+  function zvonSpravyHtml() {
+    if (!S.me || !maSekciu("chat")) return "";
+    var konv = [];
+    var t = neprecitaneKonv("");
+    if (t.length) konv.push(["", t]);
+    var kol = {};
+    S.dm.forEach(function (m) { if (m.komu_id === S.me.id && !m.precitane) (kol[m.od_id] = kol[m.od_id] || []).push(normDm(m)); });
+    Object.keys(kol).forEach(function (k) { konv.push([k, kol[k]]); });
+    konv.sort(function (a, b) { return new Date(b[1][b[1].length - 1].vytvorene) - new Date(a[1][a[1].length - 1].vytvorene); });
+    var ign = ignoracieNevidene().slice().reverse();
+    if (!konv.length && !ign.length) return "";
+    var n = konv.reduce(function (s, k) { return s + k[1].length; }, 0);
+    var h = '<div class="zvon-spravy">';
+    if (konv.length) h += "<h4>✉️ Nové správy (" + n + ")</h4>" + konv.map(function (k) {
+      var id = k[0], zoz = k[1], m = zoz[zoz.length - 1], odl = odlozenaKonv(id), c = zoz.length;
+      return '<div class="zs-pol">' + (id ? avatar(id, 36) : '<span class="zs-tim">' + ikona("chat") + "</span>") +
+        '<div class="zs-text"><div class="zs-hl"><b>' + esc(id ? meno(id) : "Spoločný chat") + '</b><span class="meta">' + c + (c === 1 ? " nová" : c <= 4 ? " nové" : " nových") + " · " + esc(casKonverzacie(m.vytvorene)) + "</span></div>" +
+        '<div class="zs-nahlad">' + (id ? "🔒 " : m.makler_id ? esc(krstneMeno(m.makler_id)) + ": " : "") + esc(m.text) + "</div>" +
+        (odl ? '<div class="zs-odl">⏰ Pripomeniem ' + esc(kedyOdlozene(odl.pripomenut)) + "</div>" : "") + "</div>" +
+        '<button class="btn primary" type="button" data-zvon-konv="' + esc(id) + '">Prečítať</button></div>';
+    }).join("");
+    if (ign.length) h += '<h4>🙈 Ignorované vaše správy (' + ign.length + ")</h4>" + ign.map(function (r) {
+      var txt = textIgnorovanej(r);
+      return '<div class="zs-pol zs-ign">' + avatar(r.makler_id, 36) + '<div class="zs-text"><div class="zs-hl"><span><b>' + esc(meno(r.makler_id)) + "</b> " + rod(r.makler_id, "ignoroval", "ignorovala") +
+        " vašu správu" + (r.druh === "tim" ? " v spoločnom chate" : "") + '</span><span class="meta">' + esc(casKonverzacie(r.vytvorene)) + "</span></div>" +
+        (txt ? '<div class="zs-nahlad">„' + esc(txt) + "“</div>" : "") + "</div>" +
+        '<button class="btn ghost" type="button" data-zvon-ign="' + r.id + '">OK</button></div>';
+    }).join("") + (ign.length > 1 ? '<button class="btn ghost zs-vsetky" type="button" data-zvon-ign="vsetky">Vymazať všetky oznámenia</button>' : "");
+    return h + "</div>";
+  }
+  document.addEventListener("click", function (e) {
+    var k = e.target.closest("[data-zvon-konv]");
+    if (k) { S.zvonOpen = false; vykresliZvoncek(); otvorKonverzaciu(k.dataset.zvonKonv || null); return; }
+    var g = e.target.closest("[data-zvon-ign]");
+    if (!g) return;
+    var vsetky = g.dataset.zvonIgn === "vsetky", id = Number(g.dataset.zvonIgn), t = new Date().toISOString();
+    S.reak.forEach(function (r) { if (r.akcia === "ignorovane" && r.autor_id === S.me.id && !r.videne_autorom && (vsetky || r.id === id)) r.videne_autorom = t; });
+    rpc("ignoracie_videne", { p_ids: vsetky ? null : [id] }).catch(function () {});
+    obnovZvoncek();
+  });
   // správy, ktoré niekto medzičasom zmazal, zmiznú aj u ostatných; odosielateľ uvidí, že kolega správu prečítal
   async function synchChat() {
     if (Date.now() - (S.chatSynch || 0) < 12000) return;
@@ -5719,6 +5968,7 @@
   function popisChat() {
     var n = S.me ? pocetNeprecitanych() : 0;
     document.querySelectorAll("[data-chat-n]").forEach(function (b) { b.hidden = n === 0; b.textContent = n > 99 ? "99+" : String(n); });
+    popisZvoncek();
   }
   function oznacLokalnePrecitane(od) {
     var t = new Date().toISOString();
@@ -5726,6 +5976,7 @@
   }
   function oznacPrecitane() {
     if (document.hidden) return;
+    if (S.reak) vybavKonv(S.chatS || "");
     if (!S.chatS) {
       if (neprecTim() === 0) return;
       S.me.chat_precitane = new Date().toISOString();
@@ -5735,7 +5986,7 @@
       oznacLokalnePrecitane(S.chatS);
       rpc("sukromne_precitane", { p_od: S.chatS }).catch(function () {});
     }
-    popisChat(); kresliKonverzacie();
+    popisChat(); kresliKonverzacie(); obnovZvoncek();
   }
   function denSpravy(iso) {
     var d = new Date(iso), dnes = new Date(); dnes.setHours(0, 0, 0, 0);
@@ -5783,6 +6034,8 @@
     var zoz = oknoSpravy(), m = zoz[zoz.length - 1];
     if (!m || m.makler_id !== S.me.id) return;
     var el = box.querySelector('[data-sprava="' + m.id + '"]'); if (!el) return;
+    var ign = (S.reak || []).find(function (r) { return r.akcia === "ignorovane" && r.druh === "dm" && r.autor_id === S.me.id && r.makler_id === S.chatS && r.sprava_id === m.id; });
+    if (ign) return el.insertAdjacentHTML("afterend", '<div class="sprava-stav ign">🙈 ' + rod(S.chatS, "Ignoroval", "Ignorovala") + " " + esc(casKonverzacie(ign.vytvorene)) + "</div>");
     el.insertAdjacentHTML("afterend", '<div class="sprava-stav' + (m.precitane ? " prec" : "") + '">' + (m.precitane ? "✓✓ Prečítané " +
       casKonverzacie(m.precitane) : "✓ Doručené") + "</div>");
   }
@@ -5855,7 +6108,7 @@
       '<div class="chat-hlavny"><div class="chat-hlava">' + hlava +
       '<button type="button" class="chat-nast-btn" id="chat-nast-btn" aria-expanded="' + !!S.chatNast + '" title="Upozornenia" aria-label="Nastavenia upozornení">🔔</button></div>' +
       (S.chatNast ? '<div class="chat-nast"><b>Upozornenia na nové správy</b>' +
-        '<label class="toggle"><input type="checkbox" data-chat-nast="popup"' + (nastChat("popup") ? " checked" : "") + "> Vyskakovacie okno v aplikácii</label>" +
+        '<label class="toggle"><input type="checkbox" data-chat-nast="popup"' + (nastChat("popup") ? " checked" : "") + "> Okno s obálkou pri novej správe</label>" +
         '<label class="toggle"><input type="checkbox" data-chat-nast="zvuk"' + (nastChat("zvuk") ? " checked" : "") + "> Zvuk pri novej správe</label>" +
         ("Notification" in window ? (Notification.permission === "granted" ? '<span class="meta">✅ Upozornenia mimo aplikácie sú povolené (keď je Týpek otvorený na pozadí).</span>' :
           Notification.permission === "denied" ? '<span class="meta">Upozornenia mimo aplikácie sú v prehliadači zablokované – povoľte ich v nastaveniach stránky.</span>' :
@@ -5908,7 +6161,6 @@
       btn.disabled = false; t.focus();
     });
     oznacPrecitane();
-    zavriChatPop();
   }
   // chat vyplní obrazovku – pole na písanie je vždy vidno (aj na mobile s klávesnicou)
   function vyskaChatu() {
@@ -6255,11 +6507,18 @@
   }
 
   function popisZvoncek() {
-    var n = splatne().length, b = $("#zvon-n");
-    if (!b) return;
+    var b = $("#zvon-n");
+    if (!b || !S.me) return;
+    var p = splatne().length, sp = S.reak ? pocetDoZvoncka() : 0, n = p + sp;
+    var ni = S.reak && maSekciu("chat") ? ignoracieNevidene().length : 0, ns = sp - ni;
     b.hidden = n === 0; b.textContent = n > 9 ? "9+" : String(n);
     $("#zvon-btn").classList.toggle("ring", n > 0);
-    $("#zvon-btn").title = n ? n + (n === 1 ? " pripomienka čaká" : " pripomienky čakajú") : "Pripomienky";
+    $("#zvon-btn").classList.toggle("ma-spravu", sp > 0);
+    var t = [];
+    if (ns) t.push(ns + (ns === 1 ? " nová správa" : ns <= 4 ? " nové správy" : " nových správ"));
+    if (ni) t.push(ni + (ni === 1 ? " ignorovaná správa" : " ignorované správy"));
+    if (p) t.push(p + (p === 1 ? " pripomienka čaká" : " pripomienky čakajú"));
+    $("#zvon-btn").title = t.length ? t.join(", ") : "Upozornenia a pripomienky";
   }
 
   function vykresliZvoncek() {
@@ -6290,7 +6549,8 @@
     function sekcia(nadpis, zoznam, cudzia) {
       return zoznam.length ? "<h4>" + nadpis + " (" + zoznam.length + ")</h4>" + zoznam.map(function (p) { return riadok(p, cudzia); }).join("") : "";
     }
-    var h = '<div class="box zvon-box"><div class="zvon-hlava"><h3>🔔 Moje pripomienky</h3>' +
+    var spr = zvonSpravyHtml();
+    var h = '<div class="box zvon-box">' + spr + '<div class="zvon-hlava"><h3>🔔 Moje pripomienky</h3>' +
       '<button class="btn primary" type="button" data-act="prip-nova">+ Nová pripomienka</button></div>';
     if (S.pripForm) h += formPripomienka(S.pripForm);
     h += sekcia("Po termíne", po) + sekcia("Dnes", dnes) + sekcia("Neskôr", neskor);
