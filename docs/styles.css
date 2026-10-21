@@ -84,6 +84,8 @@ nav.tabs button .n { color: var(--gold-strong); font-weight: 700; margin-left: 4
 .stat b { display: block; font-family: var(--display); font-size: 22px; color: #f7f2e8; font-variant-numeric: tabular-nums }
 .stat small { color: #b9b6ad; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em }
 .stat.gold b { color: var(--gold-strong) }
+.stat[aria-pressed="true"] { background: rgb(var(--accent-rgb) / .2); border-color: var(--gold-strong); box-shadow: inset 0 -3px 0 var(--gold-strong) }
+.stat[aria-pressed="true"] small { color: #f7f2e8 }
 
 /* ---------- filtre */
 .filters { background: var(--bg); border-bottom: 1px solid var(--line) }
@@ -91,8 +93,10 @@ nav.tabs button .n { color: var(--gold-strong); font-weight: 700; margin-left: 4
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); max-width: 100%; overflow-x: auto }
 .seg button { border: 0; background: transparent; font-size: 13px; padding: 7px 10px; cursor: pointer; border-right: 1px solid var(--line); white-space: nowrap }
 .seg button:last-child { border-right: 0 }
-.seg button[aria-pressed="true"] { background: var(--gold-soft); font-weight: 700 }
+.seg button:hover:not([aria-pressed="true"]) { background: var(--surface-2) }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); font-weight: 700; border-right-color: var(--ink) }
 .seg .n { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums }
+.seg button[aria-pressed="true"] .n { color: inherit; opacity: .75 }
 select, input[type="search"], input[type="text"], input[type="email"], input[type="password"], input[type="tel"], input[type="number"], input[type="date"], input[type="datetime-local"], input[type="url"], textarea {
   font-size: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0
 }
@@ -930,7 +934,7 @@ pre.kod { width: 100%; margin: 0; background: var(--graphite); color: #e9e4d6; b
 .sch-pohlad .sp-txt { display: grid; gap: 2px; min-width: 0 }
 .sch-pohlad b { font-family: var(--display); font-weight: 800; font-size: clamp(18px, 3.6vw, 22px); line-height: 1.15 }
 .sch-pohlad small { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-.sch-pohlad button[aria-pressed="true"] { background: var(--graphite); border-color: var(--graphite); color: #fff; box-shadow: 0 6px 18px rgba(30,42,53,.22) }
+.sch-pohlad button[aria-pressed="true"] { background: var(--graphite); border-color: var(--gold-strong); color: #fff; box-shadow: 0 6px 18px rgba(30,42,53,.22); transform: none; cursor: default }
 .sch-pohlad button[aria-pressed="true"] small { color: var(--accent-light) }
 .sch-pohlad button[aria-pressed="true"] b { color: #fff }
 @media (max-width: 520px) { .sch-pohlad button { padding: 12px; gap: 8px } .sch-pohlad .sp-ik { font-size: 24px } }
@@ -1080,7 +1084,8 @@ pre.kod { width: 100%; margin: 0; background: var(--graphite); color: #e9e4d6; b
 .kal-legenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted) }
 .kal-legenda i { margin-right: 5px }
 .kal-agenda { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 8px }
-.kal-agenda h4 { margin: 0; text-transform: capitalize }
+.kal-agenda h4 { margin: 0 }
+.kal-agenda h4::first-letter { text-transform: uppercase }
 .kal-pol { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); border-left: 4px solid var(--info) }
 .kal-pol.kp-obhliadka { border-left-color: var(--good) } .kal-pol.kp-pripomienka { border-left-color: var(--warn) } .kal-pol.kp-zmluva { border-left-color: var(--bad) }
 .kal-cas { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums }
@@ -1635,8 +1640,14 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
   .mk-detail-hl h2 { font-size: 19px }
   /* filtre provízií a ďalších sekcií sa zalomia namiesto pretečenia */
   .nehn-filtre > select { flex: 1 1 140px; min-width: 0 }
-  .nehn-filtre .seg { display: flex; flex-wrap: wrap; width: 100%; overflow: visible }
-  .nehn-filtre .seg button { flex: 1 1 auto; border-bottom: 1px solid var(--line) }
+  .nehn-filtre .seg:not(.pohlad-seg) { display: flex; flex-wrap: wrap; width: 100%; overflow: visible }
+  .nehn-filtre .seg:not(.pohlad-seg) button { flex: 1 1 auto; border-bottom: 1px solid var(--line) }
+  /* prepínač mriežka / zoznam ostane malý, ikony v strede */
+  .nehn-filtre .pohlad-seg button { justify-content: center; min-width: 46px }
+  /* filtre skenera sa na mobile zalomia, nič neodreže okraj */
+  .filters .seg { flex-wrap: wrap; overflow: visible }
+  .filters .seg button { flex: 1 1 auto; border-bottom: 1px solid var(--line); margin-bottom: -1px }
+  .kl-pohlad small { white-space: normal }
   .vykon-hlava .nehn-akcie, .vykon-hlava .nehn-akcie .btn { flex: 1 1 auto }
   .prov-dlazdice { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
   .prov-r-akcie .btn { flex: 1 1 auto }

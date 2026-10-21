@@ -1308,7 +1308,25 @@
       h += '<button class="stat" type="button" data-act="preset" data-v="under"><b>' + nf.format(under) + "</b><small>Podhodnotené</small></button>";
     }
     el.innerHTML = h;
+    oznacStaty();
     if (document.body.hasAttribute("data-anim")) animujCisla(el);
+  }
+  // dlaždica hore ostane označená, kým platí jej výber (Súkromní, Moje, Nové…)
+  function aktPredvolba() {
+    var f = S.f;
+    if (f.q || f.typ || f.okres || f.kto) return "";
+    var pr = f.predajca || "vsetci", pc = f.praca || "vsetky", nv = f.novost || "", un = !!f.under;
+    if (pr === "vsetci" && pc === "vsetky" && !nv && !un) return "vsetky";
+    if (pr === "sukr" && pc === "vsetky" && !nv && !un) return "sukr";
+    if (pr === "vsetci" && pc === "moje" && !nv && !un) return "moje";
+    if (pr === "vsetci" && pc === "vsetky" && nv === "1" && !un) return "nove";
+    if (pr === "vsetci" && pc === "vsetky" && !nv && un) return "under";
+    return "";
+  }
+  function oznacStaty() {
+    var el = $("#stats"); if (!el) return;
+    var v = aktPredvolba();
+    el.querySelectorAll('[data-act="preset"]').forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === v)); });
   }
 
   // kedy bol inzerát zverejnený na portáli (dátum z portálu, inak kedy ho skener prvýkrát videl)
@@ -1395,6 +1413,7 @@
     });
   }
   function vykresliZoznam() {
+    oznacStaty();
     var el = $("#obsah"); if (!el) return;
     if (!S.jedenId && pozera()) inzeratyVidene();
     var r = filtruj(), out = r.out;
