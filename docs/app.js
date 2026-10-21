@@ -942,6 +942,7 @@
       '<div class="user">' +
       '<span class="odhl" id="odhl" hidden title="Automatické odhlásenie pri nečinnosti – odpočet sa vynuluje pri každej vašej aktivite">⏱ <b id="odhl-cas"></b></span>' +
       '<button type="button" class="bell" data-act="zvoncek" id="zvon-btn" aria-label="Pripomienky">🔔<span class="badge" id="zvon-n" hidden></span></button>' +
+      '<button type="button" class="heslo-btn" data-pomoc="heslo" title="Zmeniť heslo"><span aria-hidden="true">🔑</span><span class="heslo-btn-t">Zmeniť heslo</span></button>' +
       '<button type="button" class="me-btn" data-act="profil" title="Môj profil">' + avatar(S.me.id, 28) + '<span class="email">' + esc(S.me.meno || S.me.email) + (admin() ? " · admin" : "") + "</span></button>" +
       '<button type="button" class="theme-btn" data-act="tema" id="tema-btn"></button>' +
       '<button type="button" data-act="odhlasit" title="Odhlásiť" aria-label="Odhlásiť"><svg class="odhl-ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg><span class="odhl-txt">Odhlásiť</span></button></div>' +
@@ -1141,7 +1142,7 @@
     el.innerHTML = '<div class="box"><h3>Môj profil</h3>' + fotoVolba("ja", S.me.id) +
       '<div class="prof-odkazy"><button class="btn" type="button" data-prof="heslo">🔑 Zmeniť heslo</button><button class="btn" type="button" data-prof="sprievodca">🧭 Sprievodca</button>' +
         '<button class="btn" type="button" data-prof="novinky">✨ Čo je nové</button></div></div>' +
-      '<form class="box" id="f-pwd"><h3>🔑 Zmena hesla</h3><p class="meta">Nové heslo platí hneď. Ťuknutím na 👁 si ho skontrolujete.</p><div class="form-grid">' +
+      '<form class="box heslo-box" id="f-pwd"><h3>🔑 Zmena hesla</h3><p class="meta">Nové heslo platí hneď. Ťuknutím na 👁 si ho skontrolujete.</p><div class="form-grid">' +
       '<label class="field"><span>Nové heslo (aspoň 8 znakov)</span><input type="password" id="pw1" minlength="8" autocomplete="new-password" required></label>' +
       '<label class="field"><span>Zopakujte heslo</span><input type="password" id="pw2" minlength="8" autocomplete="new-password" required></label></div>' +
       '<div class="form-actions"><button class="btn primary" type="submit">Uložiť nové heslo</button></div></form>' +
@@ -2019,6 +2020,8 @@
       '<p class="meta">Každému maklérovi pri najbližšom otvorení vyskočí okno – ako pochvala (s konfetami) alebo dôležitý oznam.</p>' +
       '<textarea id="vsetkym-text" rows="2" maxlength="800" placeholder="napr. Tím, rekordný mesiac – 12 nových zmlúv! Ďakujem každému z vás 🙌"></textarea>' +
       '<div class="form-actions"><button class="btn primary" type="button" data-vsetkym="tim">⭐ Pochváliť celý tím</button><button class="btn" type="button" data-vsetkym="oznam">📣 Poslať oznam všetkým</button></div></form>' +
+      '<div class="box mk-spr-vsetci"><div><h3>🧭 Prehliadka aplikácie pre všetkých</h3><p class="meta">Každému maklérovi sa pri najbližšom otvorení aplikácie znova spustí sprievodca. Jednotlivo ju zapnete v detaile makléra.</p></div>' +
+        '<button class="btn primary" type="button" id="spr-vsetkym">Zapnúť prehliadku všetkým</button></div>' +
       '<div class="box"><h3>✨ Novinky v aplikácii</h3><p class="meta">Keď pribudne nová funkcia, napíšte ju sem. Každému maklérovi pri ďalšom otvorení vyskočí okno „Ahoj, máš nové funkcie“ s tlačidlom, ktoré ho na funkciu rovno zavedie.</p>' +
       '<div id="novinky-adm"></div></div></details>';
     var hTim = h; h = "";
@@ -2050,6 +2053,9 @@
           '<div class="mk-pristup"><span class="meta">Vidí sekcie</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor vidí všetko vrátane Výkonu a Maklérov.</span>' :
             SEKCIE.map(function (x) { return '<button type="button" class="cip" data-pristup="' + x[0] + '" aria-pressed="' + ((m.pristup || []).indexOf(x[0]) >= 0) + '">' + x[1] + "</button>"; }).join("")) + "</div></div>" +
           '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
+          '<div class="mk-spr"><img src="typek-hlava.png" alt="" width="40" height="40"><div><b>🧭 Prehliadka aplikácie</b><small class="meta">' +
+            (m.sprievodca_videny ? "Videl" + (rodMaklera(m) === "zena" ? "a" : "") + " ju " + datum(m.sprievodca_videny) : "Spustí sa pri najbližšom otvorení aplikácie.") + "</small></div>" +
+            (m.sprievodca_videny ? '<button class="btn primary" type="button" data-m-act="sprievodca">Zapnúť prehliadku znova</button>' : '<span class="chip">✓ Zapnutá</span>') + "</div>" +
           '<div class="mk-osobne"><label class="field"><span>Oslovenie na hlavnej obrazovke</span><input type="text" data-f="oslovenie" maxlength="40" value="' + esc(m.oslovenie || "") + '" placeholder="' + esc(String(m.meno || "").trim().split(/\s+/)[0] || "napr. Tina") + '"></label>' +
           '<label class="field"><span>Motivačné vety – každá na nový riadok, najviac 5 (každý deň sa ukáže iná)</span><textarea data-f="motivacia" rows="3" placeholder="napr. Každé „nie“ ťa posúva bližšie k „áno“.">' +
           esc(((S.osobne || {})[m.id] || {}).motivacia || "") + "</textarea>" + reakcieNaVety(m.id) + "</label></div>" +
@@ -2099,6 +2105,13 @@
         b.disabled = false;
       };
     });
+    if ($("#spr-vsetkym")) $("#spr-vsetkym").onclick = async function () {
+      if (!confirm2("Zapnúť prehliadku aplikácie znova všetkým maklérom? Spustí sa im pri najbližšom otvorení.")) return;
+      this.disabled = true;
+      try { var n = await rpc("obnovit_sprievodcu", { p_id: null }); await nacitajMaklerov(); toast("🧭 Prehliadka je zapnutá " + n + (n === 1 ? " maklérovi." : " maklérom.")); }
+      catch (err) { toast(chybaText(err), true); }
+      this.disabled = false;
+    };
     if ($("#f-odkaz")) $("#f-odkaz").addEventListener("submit", async function (e) {
       e.preventDefault();
       var t = $("#odkaz-text").value, z = $("#odkaz-zap").checked;
@@ -5041,6 +5054,7 @@
     K.push({ t: "Pripomienky", x: "Zvonček vám pripomenie, komu máte zavolať a čo vás dnes čaká.", c: "#zvon-btn" });
     if (maSekciu("chat")) K.push({ t: "Chat tímu", x: "Správa celému tímu alebo súkromne len jednému kolegovi – vyberiete ho v zozname. Nové správy vám vyskočia v rohu obrazovky aj s rýchlou odpoveďou.", c: ciel("chat") });
     if (maSekciu("provizie")) K.push({ t: "Moje provízie", x: "Prehľad vašich obchodov a toho, čo vám kancelária ešte vyplatí.", c: ciel("provizie") });
+    K.push({ t: "Zmena hesla", x: "Zlaté tlačidlo s kľúčom hore otvorí zmenu hesla – kedykoľvek si heslo zmeníte jedným klikom.", c: ".heslo-btn" });
     K.push({ t: "Môj profil", x: "Doplňte si telefón, fotku a text SMS. Telefón uvidia klienti na ponukách a letákoch.", c: ".me-btn" });
     if (admin()) K.push({ t: "Správa kancelárie", x: "Ako administrátor máte navyše Výkon, Maklérov, Vzhľad (farby a logo) a Históriu zmien. Export do Realsoftu nájdete v Nehnuteľnostiach → Web a export.", c: mob ? ".menu-btn" : '.bocne [data-tab="makleri"]' });
     K.push({ t: "Pomoc", x: "Sprievodcu, novinky a zmenu hesla nájdete v menu v časti Pomoc. Keď pribudne nová funkcia, ukážem vám ju hneď po prihlásení.", c: mob ? ".menu-btn" : ".bocne .menu-pomoc" });
@@ -5838,6 +5852,12 @@
         await nacitajMaklerov(); toast("Uložené.");
       } catch (err) { toast(chybaText(err), true); }
       vykresliMaklerov();
+    }
+    if (b.dataset.mAct === "sprievodca") {
+      b.disabled = true;
+      try { await rpc("obnovit_sprievodcu", { p_id: id }); await nacitajMaklerov(); toast("🧭 " + (m.meno || "Maklérovi") + " sa prehliadka spustí pri najbližšom otvorení aplikácie."); }
+      catch (err) { toast(chybaText(err), true); }
+      vykresliMaklerov(); return;
     }
     if (b.dataset.mAct === "pochvala") { S.pochvalaEdit = id; vykresliMaklerov(); var pt = document.querySelector("[data-pochvala-text]"); if (pt) pt.focus(); return; }
     if (b.dataset.mAct === "pochvala-zrus") { S.pochvalaEdit = null; vykresliMaklerov(); return; }

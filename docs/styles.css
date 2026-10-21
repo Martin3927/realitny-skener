@@ -1640,3 +1640,21 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
   .lepkave .btn.ulozit { flex: 1 1 auto }
   .nov-adm-zoz li { flex-wrap: wrap }
 }
+
+/* ---------- výrazná zmena hesla v hornej lište */
+.user .heslo-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--gold-strong); border-color: var(--gold-strong); color: var(--on-accent);
+  font-weight: 700; font-size: 13.5px; border-radius: 999px; padding: 6px 14px; box-shadow: 0 4px 12px rgb(219 149 34 / .35) }
+.user .heslo-btn:hover { filter: brightness(1.06) }
+.heslo-box { border: 2px solid var(--gold-strong); background: var(--gold-soft) }
+.heslo-box h3 { font-size: 19px }
+.heslo-box .form-actions .btn.primary { width: 100% }
+@media (max-width: 640px) {
+  .user .heslo-btn { padding: 5px 9px }
+  .heslo-btn-t { display: none }
+}
+
+/* ---------- prehliadka aplikácie znova (admin) */
+.mk-spr { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--gold-soft); border-radius: 12px; padding: 10px 12px }
+.mk-spr > div { display: grid; flex: 1 1 200px; min-width: 0 }
+.mk-spr-vsetci { grid-template-columns: minmax(0, 1fr) auto; align-items: center }
+@media (max-width: 640px) { .mk-spr-vsetci { grid-template-columns: minmax(0, 1fr) } .mk-spr .btn { flex: 1 1 auto } }
