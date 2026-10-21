@@ -1501,7 +1501,7 @@
     h += '<button class="btn ghost" type="button" data-act="zvon" title="Nastaviť pripomienku">🔔 Pripomenúť</button>';
     if (ptyp(z) !== "rk" && (moj || admin())) h += '<button class="btn ghost" type="button" data-act="do-ponuky" title="Preniesť do Nehnuteľností – predvyplní formulár">➕ Do ponuky</button>';
     if (ozn && ozn.predajca_typ === "rk") h += '<button class="btn ghost" type="button" data-act="oznac-zrus" title="Vrátiť rozpoznanie skenera">Nie je RK</button>';
-    else if (ptyp(z) !== "rk") h += '<button class="btn ghost" type="button" data-act="oznac-rk" title="Presunúť medzi realitné kancelárie">Je to RK</button>';
+    else if (ptyp(z) !== "rk") h += '<button class="btn ghost" type="button" data-act="oznac-rk" title="Presunúť medzi realitné kancelárie – platí aj pre ďalšie inzeráty s rovnakým číslom">Je to RK</button>';
     h += '<button class="btn ghost" type="button" data-act="detail">Detail</button>';
     h += '<button class="btn ghost" type="button" data-act="hist">História</button>';
     if (maj && (moj || admin())) h += '<button class="btn ghost" type="button" data-act="uvolnit">Uvoľniť</button>';
@@ -1622,9 +1622,10 @@
     }
     if (act === "oznac-rk" || act === "oznac-zrus") {
       try {
+        var kp = S.predInz && S.predInz[id], ine = kp ? kp.inzeraty.length - 1 : 0;
         await rpc("oznacit_predajcu", { p_inzerat: id, p_typ: act === "oznac-rk" ? "rk" : null });
-        await nacitajOznacenia();
-        toast(act === "oznac-rk" ? "Označené ako realitná kancelária – presunuté mimo súkromných." : "Označenie zrušené.");
+        await Promise.all([nacitajOznacenia(), nacitajPredajcov().catch(function () {})]);
+        toast(act === "oznac-rk" ? "Označené ako realitná kancelária – presunuté mimo súkromných" + (ine === 1 ? " aj s ďalším inzerátom s rovnakým číslom." : ine > 1 ? " aj s ďalšími " + ine + " inzerátmi s rovnakým číslom." : ".") : "Označenie zrušené.");
       } catch (err) { toast(chybaText(err), true); }
       vykresliStaty(); return vykresliZoznam();
     }
@@ -3600,21 +3601,24 @@
     }
     if (S.predDetail) return vykresliDetailPredajcu();
     var F = S.predF = S.predF || { filter: "vsetci", q: "", n: 60 };
-    var sukr = S.pred.filter(function (k) { return k.sukromny; });
+    var sukr = S.pred.filter(function (k) { return k.sukromny && !k.rk; }), realitky = S.pred.filter(function (k) { return k.rk; });
     var FILTRE = [["vsetci", "Všetci", function () { return true; }],
       ["historia", "Volali sme", function (k) { return !!k.posledny_kontakt; }],
       ["viac", "Viac inzerátov", function (k) { return k.pocet > 1; }],
-      ["nevolat", "Nevolať", function (k) { return k.nevolat; }]];
+      ["nevolat", "Nevolať", function (k) { return k.nevolat; }],
+      ["rk", "Realitky", null]];
     var q = norm(F.q), qd = /\d/.test(F.q) ? F.q.replace(/\D/g, "").replace(/^(00)?421/, "0") : "";
     var fx = (FILTRE.find(function (x) { return x[0] === F.filter; }) || FILTRE[0])[2];
-    var zoz = sukr.filter(function (k) { return fx(k) && (!q || predHladanie(k).indexOf(q) >= 0 || (qd.length >= 4 && k.tel.indexOf(qd) >= 0)); });
+    var zaklad = F.filter === "rk" ? realitky : sukr;
+    var zoz = zaklad.filter(function (k) { return (!fx || fx(k)) && (!q || predHladanie(k).indexOf(q) >= 0 || (qd.length >= 4 && k.tel.indexOf(qd) >= 0)); });
     var h = prepinacKlientov() + '<div class="box nehn pred-box"><div class="vykon-hlava"><h3>📇 Predávajúci zo skenera</h3></div>' +
       '<p class="meta">Každý predávajúci podľa telefónneho čísla – so všetkými inzerátmi a celou históriou hovorov. Ostáva tu, aj keď inzerát z portálu zmizne. Číslo sa berie z textu inzerátu alebo z „＋ Telefón predajcu“ v skeneri.</p>' +
       '<div class="nehn-filtre"><div class="seg" role="group">' + FILTRE.map(function (x) {
-        var n = sukr.filter(x[2]).length;
+        var n = x[2] ? sukr.filter(x[2]).length : realitky.length;
         return '<button type="button" data-predf="' + x[0] + '" aria-pressed="' + (F.filter === x[0]) + '">' + x[1] + ' <span class="n">' + n + "</span></button>"; }).join("") + "</div>" +
       '<input type="search" id="pred-q" placeholder="Hľadať: meno, telefón, obec…" value="' + esc(F.q) + '"></div>';
-    if (!zoz.length) h += '<div class="prazdne"><span class="dl-ikona velka">' + ikona("klienti") + "</span><b>" + (q || qd ? "Nič sa nenašlo" : "Zatiaľ tu nikto nie je") + '</b><span class="meta">Predávajúci sa sem pridávajú sami, keď má súkromný inzerát v skeneri telefónne číslo.</span></div>';
+    if (!zoz.length) h += '<div class="prazdne"><span class="dl-ikona velka">' + ikona("klienti") + "</span><b>" + (q || qd ? "Nič sa nenašlo" : F.filter === "rk" ? "Žiadne označené realitky" : "Zatiaľ tu nikto nie je") + '</b><span class="meta">' +
+      (F.filter === "rk" ? "Keď pri predávajúcom stlačíte „Je to RK“, presunie sa sem a jeho inzeráty sa v skeneri presunú medzi realitky." : "Predávajúci sa sem pridávajú sami, keď má súkromný inzerát v skeneri telefónne číslo.") + "</span></div>";
     else {
       h += '<div class="dopyty">' + zoz.slice(0, F.n).map(function (k) {
         var pk = k.posledny_kontakt, akt = k.inzeraty.filter(function (i) { return i.aktivny; }).length;
@@ -3625,7 +3629,7 @@
           (k.poznamka ? '<span class="meta dk-text">📝 ' + esc(k.poznamka.slice(0, 100)) + "</span>" : "") +
           '<span class="dk-zhody"><span class="chip">' + k.pocet + " " + tvarInz(k.pocet) + (akt !== k.pocet ? " · " + akt + " na portáli" : "") + "</span>" +
           (k.hovorov ? '<span class="chip">📞 ' + k.hovorov + "× volané</span>" : '<span class="chip na">zatiaľ nevolané</span>') +
-          (k.nevolat ? '<span class="chip lost">Nevolať</span>' : "") + (k.asi_rk ? '<span class="chip maybe">možno realitka</span>' : "") + "</span></button>";
+          (k.nevolat ? '<span class="chip lost">Nevolať</span>' : "") + (k.rk ? '<span class="chip">🏢 realitka</span>' : k.asi_rk ? '<span class="chip maybe">možno realitka</span>' : "") + "</span></button>";
       }).join("") + "</div>";
       if (zoz.length > F.n) h += '<button class="btn more" type="button" data-pred-viac>Zobraziť ďalších (' + (zoz.length - F.n) + ")</button>";
     }
@@ -3641,12 +3645,14 @@
     var nazvy = {}; k.inzeraty.forEach(function (i) { nazvy[i.id] = i.nazov; });
     var cislo = String(k.telefon || k.tel).replace(/[^\d+]/g, "");
     var h = '<div class="box pred-detail"><div class="pd-hlava"><button class="btn ghost" type="button" data-predd="spat">← Všetci predávajúci</button>' +
-      (k.nevolat ? "" : '<div class="pd-akcie"><a class="btn primary" href="tel:' + esc(cislo) + '">📞 Zavolať</a></div>') + "</div>" +
+      '<div class="pd-akcie">' + (k.rk ? '<button class="btn" type="button" data-predd="nie-rk">Nie je RK</button>' : '<button class="btn" type="button" data-predd="je-rk">🏢 Je to RK</button>') +
+      (k.nevolat || k.rk ? "" : '<a class="btn primary" href="tel:' + esc(cislo) + '">📞 Zavolať</a>') + "</div></div>" +
       '<div class="dd-hl"><span class="pred-av velky">' + (k.nevolat ? "🚫" : "📇") + "</span><div><h2>" + esc(k.meno || "Bez mena") + '</h2><div class="meta"><a class="tel" href="tel:' + esc(cislo) + '">' + esc(k.telefon) + "</a>" +
       (k.meno_portal && k.meno_vlastne && k.meno_portal !== k.meno_vlastne ? " · na portáli „" + esc(k.meno_portal) + "“" : "") +
       " · " + k.pocet + " " + tvarInz(k.pocet) + " · " + (k.hovorov ? k.hovorov + "× volané" : "zatiaľ nevolané") + "</div></div></div>" +
       (k.nevolat ? '<div class="note zle">🚫 <b>Nevolať.</b> Predávajúci si neželá kontakt od realitnej kancelárie' + (k.upravil ? " – označil " + esc(meno(k.upravil)) + " " + datum(k.upravene) : "") + ".</div>" : "") +
-      (k.asi_rk ? '<div class="note">Toto číslo je vo viacerých inzerátoch naraz – môže ísť o realitku, ktorá inzeruje ako súkromník. Ak áno, označte inzeráty v skeneri tlačidlom „Je to RK“.</div>' : "");
+      (k.rk ? '<div class="note">🏢 <b>Realitná kancelária.</b> Označil ' + esc(meno(k.rk_oznacil)) + " " + datum(k.rk_oznacene) + ". Všetky inzeráty s týmto číslom sú v skeneri medzi RK – aj nové, ktoré sa objavia.</div>" :
+        k.asi_rk ? '<div class="note">Toto číslo je vo viacerých inzerátoch naraz – môže ísť o realitku, ktorá inzeruje ako súkromník. Ak áno, stlačte hore „Je to RK“.</div>' : "");
 
     // údaje, ktoré dopíšu makléri
     h += '<form class="pd-sekcia pred-form" id="f-pred"><div class="pd-sek-hlava"><h4>📝 Meno a poznámka</h4></div><div class="form-grid">' +
@@ -3697,6 +3703,20 @@
         vykresliDetailPredajcu();
       } catch (err) { toast(chybaText(err), true); btn.disabled = false; }
     };
+    el.querySelectorAll('[data-predd="je-rk"], [data-predd="nie-rk"]').forEach(function (b) {
+      b.onclick = async function () {
+        var rk = b.dataset.predd === "je-rk";
+        if (rk && !confirm2("Označiť " + (k.meno || k.telefon) + " ako realitnú kanceláriu? Všetky jeho inzeráty (" + k.pocet + ") sa v skeneri presunú medzi RK a nové s týmto číslom sa označia samé.")) return;
+        b.disabled = true;
+        try {
+          var n = await rpc("oznacit_predajcu_rk", { p_telefon: k.tel, p_rk: rk });
+          await Promise.all([nacitajPredajcov(), nacitajOznacenia()]);
+          toast(rk ? "🏢 Označené ako realitka – " + n + " " + tvarInz(n) + " v skeneri " + (n === 1 ? "presunutý" : n >= 2 && n <= 4 ? "presunuté" : "presunutých") + " medzi RK." : "Označenie zrušené – inzeráty sú znova podľa rozpoznania skenera.");
+          if (rk) { S.predDetail = null; history.pushState({ tab: "klienti", kl: "predavajuci" }, "", "#klienti"); vykresliKlientov(); window.scrollTo(0, 0); }
+          else vykresliDetailPredajcu();
+        } catch (err) { toast(chybaText(err), true); b.disabled = false; }
+      };
+    });
     var vym = el.querySelector('[data-predd="vymazat"]');
     if (vym) vym.onclick = async function () {
       if (!confirm2("Naozaj vymazať číslo " + k.telefon + " zo všetkých inzerátov a z adresára? Nedá sa to vrátiť.")) return;
