@@ -889,9 +889,10 @@
   function ptyp(z) { var o = S.ozn[z.id]; return o ? o.predajca_typ : z.predajca_typ; }
   async function nacitajSchrankovanie() {
     var w = await Promise.all([vsetkyRiadky("schrankovanie", "*", "id"),
-      vsetkyRiadky("sidliska", "*", "id").catch(function () { return []; }), vsetkyRiadky("schrankovanie_akcie", "*", "id").catch(function () { return []; })]);
+      vsetkyRiadky("sidliska", "*", "id").catch(function () { return []; }), vsetkyRiadky("schrankovanie_akcie", "*", "id").catch(function () { return []; }),
+      vsetkyRiadky("sidliska_poznamky", "*", "id").catch(function () { return []; })]);
     S.sch = w[0].sort(function (a, b) { return String(b.vytvorene).localeCompare(String(a.vytvorene)); });
-    S.sidliska = w[1]; S.akcie = w[2];
+    S.sidliska = w[1]; S.akcie = w[2]; S.sidPozn = w[3];
   }
   async function nacitajPripomienky() {
     var rows = await vsetkyRiadky("pripomienky", "*", "id");
@@ -1694,8 +1695,13 @@
   // ------------------------------------------------------------ SCHRÁNKOVANIE
   function vykresliFiltreSch() {
     var sf = S.sf, poh = sf.pohlad || "sidliska";
-    var prep = '<div class="seg sch-pohlad" role="group">' + [["sidliska", "🏘️ Sídliská"], ["kontakty", "📇 Kontakty"]].map(function (x) {
-      return '<button type="button" data-sch-pohlad="' + x[0] + '" aria-pressed="' + (poh === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>";
+    var aktS = (S.sidliska || []).filter(function (s) { return s.aktivne; });
+    var volneS = aktS.filter(function (s) { return !akciaCasti(s.id); }).length;
+    var prep = '<div class="sch-pohlad" role="group">' + [
+      ["sidliska", "🏘️", "Sídliská", volneS + " z " + aktS.length + " voľných"],
+      ["kontakty", "📇", "Kontakty", nf.format((S.sch || []).length) + " záznamov"]].map(function (x) {
+      return '<button type="button" data-sch-pohlad="' + x[0] + '" aria-pressed="' + (poh === x[0]) + '"><span class="sp-ik" aria-hidden="true">' + x[1] +
+        '</span><span class="sp-txt"><b>' + x[2] + "</b><small>" + x[3] + "</small></span></button>"; }).join("") + "</div>";
     if (poh === "sidliska") {
       $("#filters").innerHTML = '<div class="filters"><div class="wrap">' + prep + "</div></div>";
       napojPohladSch(); return;
@@ -1830,20 +1836,48 @@
 
   // ------------------------------------------------------------ SCHRÁNKOVANIE PO SÍDLISKÁCH
   var REZ_DNI = 7;      // rezervácia bez zapísaného dátumu platí 7 dní
+  var BLOK_DNI = 14;    // po prepadnutí si to isté sídlisko ten istý maklér nemôže rezervovať 14 dní
   function datumPlus2m(d) { var x = new Date(d + "T12:00:00"); x.setMonth(x.getMonth() + 2); return x; }
   function akciaBlokuje(a) {
     if (a.zrusene) return false;
     if (!a.datum) return new Date(a.rezervovane).getTime() > Date.now() - REZ_DNI * 864e5;
     return datumPlus2m(a.datum).getTime() > Date.now();
   }
+  // prepadnutá rezervácia → dokedy je sídlisko zamknuté pre toho maklera (inak null)
+  function blokaciaDo(a) {
+    if (a.zrusene || a.datum) return null;
+    var t = new Date(a.rezervovane).getTime();
+    if (t > Date.now() - REZ_DNI * 864e5) return null;
+    var koniec = t + (REZ_DNI + BLOK_DNI) * 864e5;
+    return koniec > Date.now() ? new Date(koniec) : null;
+  }
+  function zaciatokTyzdna() { var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; }
+  function buducPondelok() { var d = zaciatokTyzdna(); d.setDate(d.getDate() + 7); return d; }
+  // rezervácia, ktorá tento týždeň vyčerpala limit (administrátor limit nemá)
+  function tyzdennaRezervacia() {
+    if (admin()) return null;
+    var od = zaciatokTyzdna().getTime();
+    return (S.akcie || []).filter(function (a) {
+      if (a.makler_id !== S.me.id || new Date(a.rezervovane).getTime() < od) return false;
+      if (!a.zrusene) return true;
+      return a.zrusil === a.makler_id && new Date(a.zrusene).getTime() - new Date(a.rezervovane).getTime() > 30 * 6e4;
+    }).sort(function (a, b) { return String(b.rezervovane).localeCompare(String(a.rezervovane)); })[0] || null;
+  }
+  function mojaBlokacia(sid) {
+    if (admin()) return null;
+    var max = null;
+    (S.akcie || []).forEach(function (a) { var d = a.sidlisko_id === sid && a.makler_id === S.me.id ? blokaciaDo(a) : null; if (d && (!max || d > max)) max = d; });
+    return max;
+  }
   function akciaCasti(sid) {
     return (S.akcie || []).filter(function (a) { return a.sidlisko_id === sid && akciaBlokuje(a); })
       .sort(function (a, b) { return String(b.rezervovane).localeCompare(String(a.rezervovane)); })[0] || null;
   }
   function poslednaAkcia(sid) {
-    return (S.akcie || []).filter(function (a) { return a.sidlisko_id === sid && a.datum && !akciaBlokuje(a); })
+    return (S.akcie || []).filter(function (a) { return a.sidlisko_id === sid && !a.zrusene && a.datum && !akciaBlokuje(a); })
       .sort(function (a, b) { return String(b.datum).localeCompare(String(a.datum)); })[0] || null;
   }
+  function nazovSidliska(id) { var s = (S.sidliska || []).find(function (x) { return x.id === id; }); return s ? s.nazov + " (" + s.mesto + ")" : "sídlisko"; }
   function sklon(m, muz, zena) { return rodMaklera(S.mById[m] || {}) === "zena" ? zena : muz; }
   function dnes() { return lokalnyCas(new Date()).slice(0, 10); }
   function vykresliSidliska() {
@@ -1851,34 +1885,60 @@
     (S.sidliska || []).filter(function (s) { return s.aktivne; }).forEach(function (s) { (mesta[s.mesto] = mesta[s.mesto] || []).push(s); });
     var poradieMiest = ["Spišská Nová Ves", "Smižany", "Levoča"];
     var mn = Object.keys(mesta).sort(function (a, b) { var x = poradieMiest.indexOf(a), y = poradieMiest.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.localeCompare(b, "sk"); });
-    var moje = (S.akcie || []).filter(function (a) { return a.makler_id === S.me.id && akciaBlokuje(a); }).length;
-    var h = '<div class="box sid-box"><div class="vykon-hlava"><h3>🏘️ Sídliská na schránkovanie</h3><span class="meta">' + (moje ? "Máte " + moje + (moje === 1 ? " aktívnu rezerváciu" : moje <= 4 ? " aktívne rezervácie" : " aktívnych rezervácií") : "") + "</span></div>" +
-      '<p class="meta">Pred schránkovaním si sídlisko rezervujte, aby ste sa s kolegami nestretli. Po schránkovaní zapíšte dátum – sídlisko bude 2 mesiace obsadené pre všetkých. Rezervácia bez zapísaného dátumu platí ' + REZ_DNI + " dní.</p>" +
-      '<div class="sid-legenda"><span class="sid-b volne"></span>voľné<span class="sid-b rez"></span>rezervované<span class="sid-b obs"></span>schránkované (2 mesiace)</div>';
+    var tyz = tyzdennaRezervacia(), stav;
+    if (admin()) stav = '<div class="sid-limit info">👑 Ako administrátor nemáte týždenný limit a môžete zrušiť akúkoľvek rezerváciu aj blokáciu.</div>';
+    else if (tyz) stav = '<div class="sid-limit pouzite">📌 Tento týždeň máte rezervované: <b>' + esc(nazovSidliska(tyz.sidlisko_id)) + "</b>. Ďalšie sídlisko si môžete rezervovať od pondelka <b>" + datum(buducPondelok().toISOString()) + "</b>.</div>";
+    else stav = '<div class="sid-limit volne">✅ Tento týždeň si môžete rezervovať <b>1 sídlisko</b>.</div>';
+    var h = '<div class="box sid-box"><div class="vykon-hlava"><h3>🏘️ Sídliská na schránkovanie</h3></div>' + stav +
+      '<div class="sid-legenda"><span class="sid-b volne"></span>voľné<span class="sid-b rez"></span>rezervované (7 dní)<span class="sid-b obs"></span>schránkované (2 mesiace)<button type="button" class="btn-link" data-sid-pravidla>Ako to funguje? ↓</button></div>';
     mn.forEach(function (m) {
-      h += '<h4 class="sid-mesto">' + esc(m) + '</h4><div class="sid-grid">' + mesta[m].sort(function (a, b) { return a.poradie - b.poradie; }).map(kartaSidliska).join("") + "</div>";
+      var zoz = mesta[m].sort(function (a, b) { return a.poradie - b.poradie; });
+      var volne = zoz.filter(function (s) { return !akciaCasti(s.id); }).length;
+      h += '<div class="sid-mesto"><h4>' + esc(m) + '</h4><span class="sid-mesto-poc">' + volne + " z " + zoz.length + " voľných</span></div>" +
+        '<div class="sid-grid">' + zoz.map(kartaSidliska).join("") + "</div>";
     });
     if (admin()) h += '<form class="sid-novy" id="f-sid-novy"><b>Pridať sídlisko</b><input type="text" name="mesto" placeholder="Obec, napr. Krompachy" required list="dl-sid-mesta">' +
       '<input type="text" name="nazov" placeholder="Názov sídliska" required><button class="btn" type="submit">Pridať</button>' +
       '<datalist id="dl-sid-mesta">' + mn.map(function (m) { return '<option value="' + esc(m) + '">'; }).join("") + "</datalist></form>";
-    el.innerHTML = h + "</div>";
+    var skryte = admin() ? (S.sidliska || []).filter(function (s) { return !s.aktivne; }) : [];
+    if (skryte.length) h += '<div class="sid-skryte"><b>Skryté sídliská:</b>' + skryte.map(function (s) {
+      return '<button class="btn ghost" type="button" data-sid-vratit="' + s.id + '">↩ ' + esc(s.nazov + " (" + s.mesto + ")") + "</button>"; }).join("") + "</div>";
+    h += "</div>" + pravidlaSidlisk();
+    el.innerHTML = h;
     napojSidliska();
+  }
+  function pravidlaSidlisk() {
+    return '<div class="box sid-pravidla" id="sid-pravidla"><h3>📋 Ako funguje schránkovanie</h3><ol>' +
+      "<li><b>Najprv si sídlisko rezervujte.</b> Tak sa s kolegami nestretnete na rovnakom mieste. Rezervácia platí " + REZ_DNI + " dní a ostatní ju vidia na oranžovo.</li>" +
+      "<li><b>Jedno sídlisko za týždeň.</b> Každý maklér si môže rezervovať jedno sídlisko od pondelka do nedele. Ak sa pomýlite a rezerváciu zrušíte do 30 minút, nepočíta sa.</li>" +
+      "<li><b>Sídlisko sa berie vždy celé.</b> Platí to aj pre Centrum sever a Centrum juh, každé z nich sa schránkuje celé.</li>" +
+      "<li><b>Po schránkovaní zapíšte dátum.</b> Ťuknite na „✓ Schránkované – zapísať dátum“. Sídlisko potom 2 mesiace svieti na červeno s vaším menom a dátumom a nikto iný si ho nevezme.</li>" +
+      "<li><b>Keď to nestihnete:</b> ak do " + REZ_DNI + " dní dátum nezapíšete, rezervácia prepadne. Sídlisko je hneď voľné pre ostatných maklérov, vy si ho znova môžete rezervovať až o 2 týždne.</li>" +
+      "<li><b>Kontakty a poznámky.</b> Ľudí, ktorí sa ozvali, pridáte tlačidlom „+ Kontakt“. Poznámky pri sídlisku, napríklad „vchod 12 nechce letáky“, vidia všetci makléri.</li>" +
+      "<li><b>Administrátor</b> môže zrušiť akúkoľvek rezerváciu, záznam aj blokáciu.</li></ol></div>";
   }
   function kartaSidliska(s) {
     var akcia = akciaCasti(s.id);
-    var bloky = [blokCasti(s, "cele", akcia)];
     var stav = akcia ? (akcia.datum ? "obs" : "rez") : "volne";
     var f = S.sidForm && S.sidForm.sidlisko_id === s.id ? S.sidForm : null;
     return '<div class="sid-karta ' + stav + '" data-sid="' + s.id + '"><div class="sid-hl"><b>' + esc(s.nazov) + "</b>" +
       (admin() ? '<button type="button" class="btn-link" data-sid-skryt="' + s.id + '" title="Skryť sídlisko zo zoznamu">skryť</button>' : "") + "</div>" +
-      bloky.join("") + (f ? formSidliska(s, f) : "") + "</div>";
+      blokCasti(s, akcia) + (f && f.mode !== "pozn" ? formSidliska(s, f) : "") + poznamkySidliska(s, f && f.mode === "pozn") + "</div>";
   }
-  function blokCasti(s, cast, a) {
+  function blokCasti(s, a) {
     var h = '<div class="sid-cast ' + (!a ? "volne" : a.datum ? "obs" : "rez") + '">';
     if (!a) {
-      var p = poslednaAkcia(s.id);
-      h += '<div class="sid-stav">✅ Voľné' + (p ? '<small class="meta d-block">naposledy ' + esc(meno(p.makler_id)) + " · " + datum(p.datum) + "</small>" : "") + "</div>" +
-        '<div class="sid-akcie"><button class="btn primary" type="button" data-sid-akt="rez" data-sid-id="' + s.id + '" data-cast="' + cast + '">Rezervovať</button></div>';
+      var p = poslednaAkcia(s.id), blok = mojaBlokacia(s.id), tyz = tyzdennaRezervacia();
+      h += '<div class="sid-stav">✅ Voľné' + (p ? '<small class="meta d-block">naposledy ' + esc(meno(p.makler_id)) + " · " + datum(p.datum) + "</small>" : "") + "</div>";
+      if (blok) h += '<div class="sid-blok">⏳ Toto sídlisko ste nestihli vyschránkovať. Znova si ho môžete rezervovať od <b>' + datum(blok.toISOString()) + "</b>. Pre ostatných je voľné.</div>";
+      else h += '<div class="sid-akcie"><button class="btn primary" type="button" data-sid-akt="rez" data-sid-id="' + s.id + '"' +
+        (tyz ? ' disabled title="Tento týždeň už máte rezervované sídlisko"' : "") + ">Rezervovať</button>" +
+        (tyz ? '<small class="meta">ďalšie od pondelka ' + datum(buducPondelok().toISOString()) + "</small>" : "") + "</div>";
+      if (admin()) (S.akcie || []).forEach(function (x) {
+        var d = x.sidlisko_id === s.id ? blokaciaDo(x) : null;
+        if (d) h += '<div class="sid-blok">⏳ ' + esc(meno(x.makler_id)) + " " + sklon(x.makler_id, "nestihol", "nestihla") + " – pre " + sklon(x.makler_id, "neho", "ňu") +
+          " zamknuté do " + datum(d.toISOString()) + ' <button class="btn ghost" type="button" data-sid-akt="odblokovat" data-akcia="' + x.id + '">Zrušiť blokáciu</button></div>';
+      });
       return h + "</div>";
     }
     var moja = a.makler_id === S.me.id, smiem = moja || admin();
@@ -1903,17 +1963,35 @@
       '<button class="btn ghost danger" type="button" data-sid-akt="zrusit" data-akcia="' + a.id + '">' + (a.datum ? "Zrušiť záznam" : "Zrušiť rezerváciu") + "</button></div>";
     return h + "</div>";
   }
+  function poznamkySidliska(s, form) {
+    var P = (S.sidPozn || []).filter(function (p) { return p.sidlisko_id === s.id; })
+      .sort(function (a, b) { return String(b.vytvorene).localeCompare(String(a.vytvorene)); });
+    function li(p) {
+      var smiem = admin() || p.makler_id === S.me.id;
+      return '<li><div class="sid-pozn-text">' + esc(p.text) + '</div><small class="meta">' + esc(meno(p.makler_id)) + " · " + datum(p.vytvorene) +
+        (smiem ? ' · <button type="button" class="btn-link" data-sid-pozn-zmaz="' + p.id + '">zmazať</button>' : "") + "</small></li>";
+    }
+    var h = '<div class="sid-poznamky"><div class="sid-pozn-hl"><span>💬 Poznámky' + (P.length ? " (" + P.length + ")" : "") + "</span>" +
+      (form ? "" : '<button type="button" class="btn-link" data-sid-akt="pozn" data-sid-id="' + s.id + '">+ Pridať poznámku</button>') + "</div>";
+    if (P.length) h += "<ul>" + P.slice(0, 2).map(li).join("") + "</ul>" +
+      (P.length > 2 ? '<details><summary class="meta">Zobraziť staršie (' + (P.length - 2) + ")</summary><ul>" + P.slice(2).map(li).join("") + "</ul></details>" : "");
+    if (form) h += '<form class="sid-form" id="f-sid"><label class="field"><span>Poznámka pre všetkých maklérov</span>' +
+      '<textarea name="text" rows="2" maxlength="1000" required placeholder="napr. vchod Hutnícka 12 nechce letáky, nová schránka pri obchode"></textarea></label>' +
+      '<div class="form-actions"><button class="btn primary" type="submit">Pridať poznámku</button><button class="btn ghost" type="button" data-sid-akt="zavriet">Zrušiť</button></div></form>';
+    return h + "</div>";
+  }
   function formSidliska(s, f) {
     if (f.mode === "rez") {
       return '<form class="sid-form" id="f-sid">' +
-        '<label class="field"><span>Poznámka <small class="meta">nepovinné</small></span><input type="text" name="poznamka" placeholder="napr. začínam od Hutníckej"></label>' +
+        '<label class="field"><span>Ktoré ulice / vchody <small class="meta">nepovinné</small></span><input type="text" name="poznamka" placeholder="napr. začínam od Hutníckej"></label>' +
         '<label class="field"><span>Už schránkované dňa <small class="meta">nechajte prázdne, ak len rezervujete</small></span><input type="date" name="datum" max="' + dnes() + '"></label>' +
+        (admin() ? "" : '<p class="meta">Týmto využijete svoju rezerváciu na tento týždeň.</p>') +
         '<div class="form-actions"><button class="btn primary" type="submit">Rezervovať</button><button class="btn ghost" type="button" data-sid-akt="zavriet">Zrušiť</button></div></form>';
     }
     if (f.mode === "datum") {
       var a = (S.akcie || []).find(function (x) { return x.id === f.akcia_id; }) || {};
       return '<form class="sid-form" id="f-sid"><label class="field"><span>Dátum schránkovania</span><input type="date" name="datum" required max="' + dnes() + '" value="' + esc(a.datum || dnes()) + '"></label>' +
-        '<label class="field"><span>Poznámka</span><input type="text" name="poznamka" value="' + esc(a.poznamka || "") + '"></label>' +
+        '<label class="field"><span>Ktoré ulice / vchody</span><input type="text" name="poznamka" value="' + esc(a.poznamka || "") + '"></label>' +
         '<div class="form-actions"><button class="btn primary" type="submit">Uložiť dátum</button><button class="btn ghost" type="button" data-sid-akt="zavriet">Zrušiť</button></div></form>';
     }
     if (f.mode === "kontakt") {
@@ -1934,16 +2012,36 @@
       b.onclick = async function () {
         var akt = b.dataset.sidAkt;
         if (akt === "zavriet") { S.sidForm = null; return vykresliSidliska(); }
-        if (akt === "rez") { S.sidForm = { mode: "rez", sidlisko_id: Number(b.dataset.sidId), cast: b.dataset.cast }; return vykresliSidliska(); }
+        if (akt === "rez" || akt === "pozn") { S.sidForm = { mode: akt, sidlisko_id: Number(b.dataset.sidId) }; return vykresliSidliska(); }
         var a = (S.akcie || []).find(function (x) { return x.id === Number(b.dataset.akcia); });
         if (!a) return;
         if (akt === "datum" || akt === "kontakt") { S.sidForm = { mode: akt, sidlisko_id: a.sidlisko_id, akcia_id: a.id }; return vykresliSidliska(); }
-        if (akt === "zrusit") {
-          if (!confirm2(a.datum ? "Zrušiť záznam o schránkovaní? Sídlisko bude znova voľné." : "Zrušiť rezerváciu?")) return;
-          try { await rpc("zrusit_akciu_schrankovania", { p_id: a.id }); await nacitajSchrankovanie(); toast("Zrušené – sídlisko je voľné."); }
+        if (akt === "zrusit" || akt === "odblokovat") {
+          var otazka = akt === "odblokovat" ? "Zrušiť blokáciu? " + meno(a.makler_id) + " si bude môcť sídlisko hneď znova rezervovať." :
+            a.datum ? "Zrušiť záznam o schránkovaní? Sídlisko bude znova voľné." : "Zrušiť rezerváciu? Sídlisko bude znova voľné.";
+          if (!confirm2(otazka)) return;
+          try { await rpc("zrusit_akciu_schrankovania", { p_id: a.id }); await nacitajSchrankovanie(); toast(akt === "odblokovat" ? "Blokácia je zrušená." : "Zrušené – sídlisko je voľné."); }
           catch (err) { toast(chybaText(err), true); }
           vykresliSidliska();
         }
+      };
+    });
+    var bp = el.querySelector("[data-sid-pravidla]");
+    if (bp) bp.onclick = function () { var c = $("#sid-pravidla"); if (c) c.scrollIntoView({ behavior: "smooth", block: "start" }); };
+    el.querySelectorAll("[data-sid-pozn-zmaz]").forEach(function (b) {
+      b.onclick = async function () {
+        if (!confirm2("Zmazať poznámku?")) return;
+        try { await rpc("zmazat_poznamku_sidliska", { p_id: Number(b.dataset.sidPoznZmaz) }); await nacitajSchrankovanie(); toast("Poznámka je zmazaná."); }
+        catch (err) { toast(chybaText(err), true); }
+        vykresliSidliska();
+      };
+    });
+    el.querySelectorAll("[data-sid-vratit]").forEach(function (b) {
+      b.onclick = async function () {
+        var s = S.sidliska.find(function (x) { return x.id === Number(b.dataset.sidVratit); });
+        if (!s) return;
+        try { await rpc("ulozit_sidlisko", { p_id: s.id, p_mesto: s.mesto, p_nazov: s.nazov, p_aktivne: true }); await nacitajSchrankovanie(); toast("Sídlisko je späť v zozname."); vykresliSidliska(); }
+        catch (err) { toast(chybaText(err), true); }
       };
     });
     el.querySelectorAll("[data-sid-skryt]").forEach(function (b) {
@@ -1962,7 +2060,7 @@
     };
     var f = $("#f-sid");
     if (f) {
-      var prve = f.querySelector('input[type="text"], input[type="date"]'); if (prve && S.sidForm.mode !== "rez") prve.focus();
+      var prve = f.querySelector('input[type="text"], input[type="date"], textarea'); if (prve && S.sidForm.mode !== "rez") prve.focus();
       f.onsubmit = async function (e) {
         e.preventDefault();
         var F = S.sidForm, btn = f.querySelector('[type="submit"]'); btn.disabled = true;
@@ -1980,6 +2078,10 @@
               p_stav: null, p_poznamky: f.poznamky.value, p_makler: null, p_kontakt: f.kontakt.value });
             await rpc("priradit_kontakt_akcii", { p_zaznam: id, p_akcia: F.akcia_id });
             toast("📇 Kontakt je uložený.");
+          }
+          if (F.mode === "pozn") {
+            await rpc("pridat_poznamku_sidliska", { p_sidlisko: F.sidlisko_id, p_text: f.text.value });
+            toast("💬 Poznámka je pridaná.");
           }
           S.sidForm = null; await nacitajSchrankovanie(); vykresliSidliska();
         } catch (err) { toast(chybaText(err), true); btn.disabled = false; }
