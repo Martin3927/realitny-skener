@@ -6588,7 +6588,7 @@
       '<small class="meta">V nastavenom čase sa ukáže pri zvončeku a príde aj emailom.</small></form>';
   }
 
-  // ikona karty v prehliadači: logo, pri novej správe červený zvonček
+  // ikona karty v prehliadači: logo, pri novej správe alebo pripomienke červený zvonček
   function ikonaKarty(zvon) {
     if (S.ikonaZvon === zvon) return;
     S.ikonaZvon = zvon;
@@ -6616,7 +6616,7 @@
     b.hidden = n === 0; b.textContent = n > 9 ? "9+" : String(n);
     $("#zvon-btn").classList.toggle("ring", n > 0);
     $("#zvon-btn").classList.toggle("ma-spravu", sp > 0);
-    ikonaKarty(sp > 0);
+    ikonaKarty(n > 0);
     var t = [];
     if (ns) t.push(ns + (ns === 1 ? " nová správa" : ns <= 4 ? " nové správy" : " nových správ"));
     if (ni) t.push(ni + (ni === 1 ? " ignorovaná správa" : " ignorované správy"));
