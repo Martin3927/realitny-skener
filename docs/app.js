@@ -1915,7 +1915,7 @@
       "<li><b>Po schránkovaní zapíšte dátum.</b> Ťuknite na „✓ Schránkované – zapísať dátum“. Sídlisko potom 2 mesiace svieti na červeno s vaším menom a dátumom a nikto iný si ho nevezme.</li>" +
       "<li><b>Keď to nestihnete:</b> ak do " + REZ_DNI + " dní dátum nezapíšete, rezervácia prepadne. Sídlisko je hneď voľné pre ostatných maklérov, vy si ho znova môžete rezervovať až o 2 týždne.</li>" +
       "<li><b>Kontakty a poznámky.</b> Ľudí, ktorí sa ozvali, pridáte tlačidlom „+ Kontakt“. Poznámky pri sídlisku, napríklad „vchod 12 nechce letáky“, vidia všetci makléri.</li>" +
-      "<li><b>Administrátor</b> môže zrušiť akúkoľvek rezerváciu, záznam aj blokáciu.</li></ol></div>";
+      "<li><b>Administrátor</b> môže zapísať schránkovanie za ktoréhokoľvek makléra (aj spätne), zmeniť kto a kedy schránkoval a zrušiť akúkoľvek rezerváciu, záznam aj blokáciu.</li></ol></div>";
   }
   function kartaSidliska(s) {
     var akcia = akciaCasti(s.id);
@@ -1932,7 +1932,7 @@
       h += '<div class="sid-stav">✅ Voľné' + (p ? '<small class="meta d-block">naposledy ' + esc(meno(p.makler_id)) + " · " + datum(p.datum) + "</small>" : "") + "</div>";
       if (blok) h += '<div class="sid-blok">⏳ Toto sídlisko ste nestihli vyschránkovať. Znova si ho môžete rezervovať od <b>' + datum(blok.toISOString()) + "</b>. Pre ostatných je voľné.</div>";
       else h += '<div class="sid-akcie"><button class="btn primary" type="button" data-sid-akt="rez" data-sid-id="' + s.id + '"' +
-        (tyz ? ' disabled title="Tento týždeň už máte rezervované sídlisko"' : "") + ">Rezervovať</button>" +
+        (tyz ? ' disabled title="Tento týždeň už máte rezervované sídlisko"' : "") + ">" + (admin() ? "Rezervovať / zapísať" : "Rezervovať") + "</button>" +
         (tyz ? '<small class="meta">ďalšie od pondelka ' + datum(buducPondelok().toISOString()) + "</small>" : "") + "</div>";
       if (admin()) (S.akcie || []).forEach(function (x) {
         var d = x.sidlisko_id === s.id ? blokaciaDo(x) : null;
@@ -1959,7 +1959,7 @@
     if (smiem) h += '<div class="sid-akcie">' +
       (!a.datum ? '<button class="btn primary" type="button" data-sid-akt="datum" data-akcia="' + a.id + '">✓ Schránkované – zapísať dátum</button>' : "") +
       '<button class="btn" type="button" data-sid-akt="kontakt" data-akcia="' + a.id + '">+ Kontakt</button>' +
-      (a.datum ? '<button class="btn ghost" type="button" data-sid-akt="datum" data-akcia="' + a.id + '">Zmeniť dátum</button>' : "") +
+      (a.datum ? '<button class="btn ghost" type="button" data-sid-akt="datum" data-akcia="' + a.id + '">' + (admin() ? "Upraviť (kto, kedy)" : "Zmeniť dátum") + "</button>" : "") +
       '<button class="btn ghost danger" type="button" data-sid-akt="zrusit" data-akcia="' + a.id + '">' + (a.datum ? "Zrušiť záznam" : "Zrušiť rezerváciu") + "</button></div>";
     return h + "</div>";
   }
@@ -1980,9 +1980,15 @@
       '<div class="form-actions"><button class="btn primary" type="submit">Pridať poznámku</button><button class="btn ghost" type="button" data-sid-akt="zavriet">Zrušiť</button></div></form>';
     return h + "</div>";
   }
+  function vyberMaklera(vybrany, popis) {
+    if (!admin()) return "";
+    return '<label class="field"><span>' + popis + '</span><select name="makler">' + S.makleri.filter(function (m) { return m.aktivny || m.id === vybrany; }).map(function (m) {
+      return '<option value="' + m.id + '"' + (m.id === vybrany ? " selected" : "") + ">" + esc(m.meno || m.email) + (m.id === S.me.id ? " (ja)" : "") + "</option>";
+    }).join("") + "</select></label>";
+  }
   function formSidliska(s, f) {
     if (f.mode === "rez") {
-      return '<form class="sid-form" id="f-sid">' +
+      return '<form class="sid-form" id="f-sid">' + vyberMaklera(S.me.id, "Maklér, ktorý schránkuje / schránkoval") +
         '<label class="field"><span>Ktoré ulice / vchody <small class="meta">nepovinné</small></span><input type="text" name="poznamka" placeholder="napr. začínam od Hutníckej"></label>' +
         '<label class="field"><span>Už schránkované dňa <small class="meta">nechajte prázdne, ak len rezervujete</small></span><input type="date" name="datum" max="' + dnes() + '"></label>' +
         (admin() ? "" : '<p class="meta">Týmto využijete svoju rezerváciu na tento týždeň.</p>') +
@@ -1990,7 +1996,7 @@
     }
     if (f.mode === "datum") {
       var a = (S.akcie || []).find(function (x) { return x.id === f.akcia_id; }) || {};
-      return '<form class="sid-form" id="f-sid"><label class="field"><span>Dátum schránkovania</span><input type="date" name="datum" required max="' + dnes() + '" value="' + esc(a.datum || dnes()) + '"></label>' +
+      return '<form class="sid-form" id="f-sid">' + vyberMaklera(a.makler_id, "Kto schránkoval") + '<label class="field"><span>Dátum schránkovania</span><input type="date" name="datum" required max="' + dnes() + '" value="' + esc(a.datum || dnes()) + '"></label>' +
         '<label class="field"><span>Ktoré ulice / vchody</span><input type="text" name="poznamka" value="' + esc(a.poznamka || "") + '"></label>' +
         '<div class="form-actions"><button class="btn primary" type="submit">Uložiť dátum</button><button class="btn ghost" type="button" data-sid-akt="zavriet">Zrušiť</button></div></form>';
     }
@@ -2065,11 +2071,17 @@
         e.preventDefault();
         var F = S.sidForm, btn = f.querySelector('[type="submit"]'); btn.disabled = true;
         try {
-          if (F.mode === "rez") {
+          if (F.mode === "rez" && f.makler) {
+            await rpc("admin_zapisat_schrankovanie", { p_id: null, p_sidlisko: F.sidlisko_id, p_makler: f.makler.value, p_datum: f.datum.value || null, p_poznamka: f.poznamka.value });
+            toast(f.datum.value ? "✅ Zapísané: " + meno(f.makler.value) + ", " + datum(f.datum.value) + "." : "📌 Rezervované pre " + meno(f.makler.value) + ".");
+          } else if (F.mode === "rez") {
             await rpc("rezervovat_sidlisko", { p_sidlisko: F.sidlisko_id, p_polovica: "cele", p_datum: f.datum.value || null, p_poznamka: f.poznamka.value });
             toast(f.datum.value ? "✅ Schránkovanie je zapísané – 2 mesiace obsadené." : "📌 Rezervované na " + REZ_DNI + " dní. Po schránkovaní zapíšte dátum.");
           }
-          if (F.mode === "datum") {
+          if (F.mode === "datum" && f.makler) {
+            await rpc("admin_zapisat_schrankovanie", { p_id: F.akcia_id, p_sidlisko: null, p_makler: f.makler.value, p_datum: f.datum.value, p_poznamka: f.poznamka.value });
+            toast("✅ Uložené: " + meno(f.makler.value) + ", " + datum(f.datum.value) + ".");
+          } else if (F.mode === "datum") {
             await rpc("zapisat_datum_schrankovania", { p_id: F.akcia_id, p_datum: f.datum.value, p_poznamka: f.poznamka.value });
             toast("✅ Dátum je zapísaný – sídlisko je obsadené 2 mesiace.");
           }
