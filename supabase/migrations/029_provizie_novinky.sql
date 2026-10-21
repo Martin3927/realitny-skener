@@ -35,7 +35,7 @@ end $$;
 -- ---------------------------------------------------------------- 1) prístup k Províziám
 alter table public.makleri alter column pristup set default '{inzeraty,schrankovanie,nehnutelnosti,klienti,chat,kalendar,mapa,kataster,asistent,web,recenzie,provizie}';
 -- doteraz videl Provízie každý – nikomu ich teraz nevypíname
-update public.makleri set pristup = pristup || '{provizie}'::text[] where not ('provizie' = any(pristup));
+update public.makleri set pristup = array_append(pristup, 'provizie') where not ('provizie' = any(pristup));
 
 create or replace function public.nastavit_pristup_maklera(p_id uuid, p_pristup text[]) returns void
 language plpgsql security definer set search_path = public as $$
@@ -76,7 +76,9 @@ revoke all on public.novinky from anon, authenticated;
 grant select on public.novinky to authenticated;
 
 -- kedy maklér naposledy videl novinky (nový maklér nedostane staré novinky – dostane sprievodcu)
-alter table public.makleri add column if not exists novinky_videne timestamptz not null default now();
+-- doterajší makléri dostanú dnešné novinky (hodnota pre existujúcich = o minútu skôr), noví makléri nie
+alter table public.makleri add column if not exists novinky_videne timestamptz not null default (now() - interval '1 minute');
+alter table public.makleri alter column novinky_videne set default now();
 
 create or replace function public.novinky_videne() returns void
 language plpgsql security definer set search_path = public as $$
@@ -118,6 +120,4 @@ select * from (values
   ('Novinky pre tím píšeš sám', 'V Makléroch → Nastavenia tímu → Novinky v aplikácii pridáš novú funkciu. Každému maklérovi pri ďalšom otvorení vyskočí okno s tým, čo je nové.', 'makleri', 'admin')
 ) v(nazov, popis, ciel, pre_koho)
 where not exists (select 1 from public.novinky);
--- doterajší makléri tieto novinky ešte nevideli
-update public.makleri set novinky_videne = now() - interval '1 minute';
 
