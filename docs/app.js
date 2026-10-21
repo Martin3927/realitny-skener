@@ -3655,7 +3655,7 @@
   function vykresliKlientov() {
     var el = $("#obsah"); if (!el) return;
     if (S.dopytEdit) return vykresliFormDopytu();
-    if (S.klPohlad === "predavajuci" && maSekciu("inzeraty") && !S.predNedostupne) return vykresliPredavajucich();
+    if (!S.dopytDetail && klPohlad() === "predavajuci") return vykresliPredavajucich();
     if (!S.dopyty) { el.innerHTML = '<div class="box"><div class="meta">Načítavam klientov…</div></div>'; nacitajDopyty().then(vykresliKlientov, function (e) { toast(chybaText(e), true); S.dopyty = []; S.dopytyK = {}; vykresliKlientov(); }); return; }
     if (S.dopytDetail) return vykresliDetailDopytu();
     var F = S.klF = S.klF || { kto: admin() ? "vsetci" : "moji", stav: "aktivny", q: "" };
@@ -3686,11 +3686,21 @@
     var t; $("#klienti-q").addEventListener("input", function () { var v = this.value; clearTimeout(t); t = setTimeout(function () { F.q = v; vykresliKlientov(); var i = $("#klienti-q"); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } }, 200); });
   }
   // ------------------------------------------------------------ PREDÁVAJÚCI ZO SKENERA
+  // predvolene sú Predávajúci zo skenera (ak má maklér prístup k skeneru)
+  function klPohlad() {
+    if (!maSekciu("inzeraty") || S.predNedostupne) return "dopyty";
+    return S.klPohlad || "predavajuci";
+  }
   function prepinacKlientov() {
     if (!maSekciu("inzeraty") || S.predNedostupne) return "";
-    var p = S.klPohlad === "predavajuci" ? "predavajuci" : "dopyty";
-    return '<div class="seg kl-pohlad" role="group" aria-label="Klienti">' + [["dopyty", "🎯 Dopyty klientov"], ["predavajuci", "📇 Predávajúci zo skenera"]].map(function (x) {
-      return '<button type="button" data-kl-pohlad="' + x[0] + '" aria-pressed="' + (p === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>";
+    var p = klPohlad();
+    var nPred = S.pred ? S.pred.filter(function (k) { return k.sukromny && !k.rk; }).length : null;
+    var nDop = S.dopyty ? S.dopyty.filter(function (d) { return d.stav === "aktivny"; }).length : null;
+    return '<div class="sch-pohlad kl-pohlad" role="group" aria-label="Klienti">' + [
+      ["predavajuci", "📇", "Predávajúci zo skenera", nPred == null ? "kontakty z inzerátov" : nf.format(nPred) + " " + (nPred === 1 ? "predávajúci" : "predávajúcich")],
+      ["dopyty", "🎯", "Dopyty klientov", nDop == null ? "čo hľadajú vaši klienti" : nf.format(nDop) + " " + (nDop === 1 ? "aktívny dopyt" : nDop >= 2 && nDop <= 4 ? "aktívne dopyty" : "aktívnych dopytov")]].map(function (x) {
+      return '<button type="button" data-kl-pohlad="' + x[0] + '" aria-pressed="' + (p === x[0]) + '"><span class="sp-ik" aria-hidden="true">' + x[1] +
+        '</span><span class="sp-txt"><b>' + x[2] + "</b><small>" + x[3] + "</small></span></button>"; }).join("") + "</div>";
   }
   function viazPrepinacKlientov(el) {
     el.querySelectorAll("[data-kl-pohlad]").forEach(function (b) {
@@ -3849,11 +3859,12 @@
   });
 
   function otvorDopyt(id) {
-    S.dopytDetail = id; S.dopytEdit = null; S.dopVyber = {};
+    S.klPohlad = "dopyty"; S.dopytDetail = id; S.dopytEdit = null; S.dopVyber = {};
     if (S.tab !== "klienti") S.tab = "klienti";
     history.pushState({ tab: "klienti", dopyt: id }, "", "#klienti"); vykresli(); window.scrollTo(0, 0);
   }
   function novyDopyt(zaklad) {
+    S.klPohlad = "dopyty";
     S.dopytEdit = { d: Object.assign({ transakcia: "predaj", kategorie: [], typy: [], obce: [], okresy: [], makler_id: S.me.id, stav: "aktivny" }, zaklad || {}), k: {} };
     S.tab = "klienti"; history.pushState({ tab: "klienti", dform: 1, dopyt: S.dopytDetail }, "", "#klienti"); vykresli(); window.scrollTo(0, 0);
   }
@@ -3992,7 +4003,7 @@
           var data = Object.assign({}, d); delete data.vytvorene; delete data.upravene; delete data.kancelaria;
           var id = await rpc("ulozit_dopyt", { p: data, p_k: k });
           await nacitajDopyty();
-          S.dopytEdit = null; S.dopytDetail = id; S.dopVyber = {};
+          S.dopytEdit = null; S.dopytDetail = id; S.dopVyber = {}; S.klPohlad = "dopyty";
           var nd = S.dopyty.find(function (x) { return x.id === id; });
           var nP = nd ? ponukyPreDopyt(nd).length : 0, nI = nd ? inzeratyPreDopyt(nd).length : 0;
           toast("✅ Dopyt je uložený" + (nP || nI ? " – nájdené: " + nP + " " + (nP === 1 ? "ponuka" : nP >= 2 && nP <= 4 ? "ponuky" : "ponúk") + " a " + nI + " " + (nI === 1 ? "inzerát" : nI >= 2 && nI <= 4 ? "inzeráty" : "inzerátov") + "." : "."));

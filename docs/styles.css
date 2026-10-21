@@ -1687,8 +1687,7 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .mk-spr-vsetci { grid-template-columns: minmax(0, 1fr) auto; align-items: center }
 @media (max-width: 640px) { .mk-spr-vsetci { grid-template-columns: minmax(0, 1fr) } .mk-spr .btn { flex: 1 1 auto } }
 /* ---------- predávajúci zo skenera */
-.kl-pohlad { margin-bottom: 12px }
-.kl-pohlad button { font-weight: 600 }
+.kl-pohlad { margin-bottom: 14px }
 .pred-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; margin: 4px 0 2px; padding: 6px 10px; border-radius: 8px; background: var(--gold-soft); font-size: 13px; line-height: 1.45 }
 .pred-row > span { flex: 1 1 220px; min-width: 0 }
 .pred-row .chip { margin: 0 2px }
@@ -1712,8 +1711,6 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .pi-akcie .btn { font-size: 13px; padding: 6px 10px }
 .pred-gdpr h4 { margin: 0 }
 @media (max-width: 640px) {
-  .kl-pohlad { display: flex; width: 100% }
-  .kl-pohlad button { flex: 1 1 50%; white-space: normal; line-height: 1.25 }
   .pi-riadok { grid-template-columns: 64px minmax(0, 1fr); gap: 10px }
   .pi-riadok > img, .pi-bez { width: 64px; height: 56px; font-size: 22px }
 }
