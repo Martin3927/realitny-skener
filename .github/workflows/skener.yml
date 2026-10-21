@@ -1,20 +1,19 @@
 name: Realitný skener
 
 on:
+  # Cez deň skener spúšťa Supabase presne každých 10 minút (pg_cron → workflow_dispatch) a radar Bazoša
+  # pri novom inzeráte. GitHub plánovač je len záloha (beží len vtedy, keď posledná kontrola bola pred 25+ min)
+  # a nočná plná kontrola. GitHub počíta v UTC.
   schedule:
-    # GitHub počíta v UTC: v lete 6:00–23:59, v zime 5:00–22:59 slovenského času
-    # bežná kontrola (3 strany výsledkov) každú pol hodinu
-    - cron: "0,30 4-21 * * *"
-    # rýchla kontrola (len 1. strana – tam sú nové inzeráty) medzi nimi, ~20 požiadaviek s nepravidelnými pauzami
-    - cron: "10,20,40,50 4-21 * * *"
-    # plná kontrola v noci
+    - cron: "45 4-21 * * *"
     - cron: "17 1 * * *"
   workflow_dispatch:
     inputs:
-      plny:
-        description: "Prejsť všetky strany (plná kontrola)"
-        type: boolean
-        default: false
+      rezim:
+        description: "Režim kontroly"
+        type: choice
+        options: [bezny, rychly, plny]
+        default: bezny
 
 permissions:
   contents: read
@@ -52,10 +51,14 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           DASHBOARD_URL: https://app.realitnytypek.sk/
+          PLAN: ${{ github.event.schedule }}
+          REZIM: ${{ inputs.rezim }}
         run: |
-          if [ "${{ github.event.schedule }}" = "17 1 * * *" ] || [ "${{ inputs.plny }}" = "true" ]; then
+          if [ "$PLAN" = "17 1 * * *" ] || [ "$REZIM" = "plny" ]; then
             python skener.py --plny
-          elif [ "${{ github.event.schedule }}" = "10,20,40,50 4-21 * * *" ]; then
+          elif [ -n "$PLAN" ]; then
+            python skener.py --zaloha
+          elif [ "$REZIM" = "rychly" ]; then
             python skener.py --rychly
           else
             python skener.py

@@ -1836,3 +1836,6 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .kal-kolega:has(input:checked) { border-color: var(--gold-strong); background: var(--gold-soft, #F2E4C6) }
 .kal-kolega.admin { font-weight: 700 }
 @media (max-width: 899px) { .kal-den .kal-prvy { display: none } .kal-mena, .kal-viac { display: none } }
+/* ---------- upozornenia do mobilu */
+.push-stav { display: grid; gap: 8px }
+.push-ok { margin: 0; font-weight: 600; color: var(--good) }

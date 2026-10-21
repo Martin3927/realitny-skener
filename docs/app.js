@@ -453,6 +453,68 @@
   }
   var instalacia = null;
   window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); instalacia = e; if (S.pwdOpen) vykresliHeslo(); });
+  // ---------- upozornenia do mobilu (Web Push) na nové súkromné inzeráty
+  function pushPodpora() { return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window; }
+  function jeIos() { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+  function naPloche() { return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true; }
+  function b64Bajty(b) {
+    var p = "=".repeat((4 - b.length % 4) % 4), r = atob((b + p).replace(/-/g, "+").replace(/_/g, "/")), o = new Uint8Array(r.length);
+    for (var i = 0; i < r.length; i++) o[i] = r.charCodeAt(i);
+    return o;
+  }
+  function boxUpozornenia() {
+    if (!maSekciu("inzeraty")) return "";
+    var obce = S.me.obce || [];
+    var co = obce.length ? "nové súkromné inzeráty z Vašich obcí (" + obce.length + ": " + esc(obce.slice(0, 4).join(", ")) + (obce.length > 4 ? "…" : "") + ")" : "všetky nové súkromné inzeráty z oboch okresov – obmedzíte ich nižšie v Mojich obciach";
+    return '<div class="box" id="box-push"><h3>🔔 Upozornenia do mobilu</h3><p class="meta">Keď skener nájde nový súkromný inzerát, pípne vám telefón, aj keď je aplikácia zatvorená. Chodia vám ' + co + ".</p>" +
+      '<div id="push-stav" class="push-stav"><span class="meta">Zisťujem…</span></div></div>';
+  }
+  async function napojUpozornenia() {
+    var el = $("#push-stav"); if (!el) return;
+    function kresli(h) { var x = $("#push-stav"); if (x) x.innerHTML = h; }
+    if (!pushPodpora()) {
+      return kresli(jeIos() && !naPloche() ?
+        '<p class="note">Na iPhone fungujú upozornenia len z aplikácie na ploche: v Safari ťuknite na <b>Zdieľať</b> → <b>Pridať na plochu</b>, otvorte Realitného týpka z ikony na ploche a tu ich zapnite.</p>' :
+        '<p class="note">Tento prehliadač upozornenia nepodporuje. Otvorte aplikáciu v Chrome (Android, počítač) alebo z ikony na ploche iPhonu.</p>');
+    }
+    if (Notification.permission === "denied") {
+      return kresli('<p class="note zle">Upozornenia sú pre túto aplikáciu zablokované. Povoľte ich v nastaveniach telefónu (Nastavenia → Upozornenia → Realitný týpek, prípadne v nastaveniach stránky v Chrome) a potom ich tu zapnite.</p>');
+    }
+    var reg = await Promise.race([navigator.serviceWorker.ready, new Promise(function (ok) { setTimeout(function () { ok(null); }, 5000); })]).catch(function () { return null; });
+    if (!reg) return kresli('<p class="note">Upozornenia sa nedajú zapnúť – obnovte stránku a skúste znova.</p>');
+    var sub = reg ? await reg.pushManager.getSubscription().catch(function () { return null; }) : null;
+    var r = sub ? await sb.from("push_odbery").select("id").eq("endpoint", sub.endpoint).maybeSingle() : { data: null };
+    var zapnute = !!(sub && r.data);
+    kresli(zapnute ?
+      '<p class="push-ok">✅ Na tomto zariadení sú upozornenia zapnuté.</p><div class="form-actions"><button class="btn ghost" type="button" id="push-vyp">Vypnúť na tomto zariadení</button></div>' :
+      (jeIos() && !naPloche() ? '<p class="note">Na iPhone fungujú upozornenia len z aplikácie na ploche: v Safari ťuknite na <b>Zdieľať</b> → <b>Pridať na plochu</b>, otvorte ju z ikony a tu ich zapnite.</p>' : "") +
+      '<div class="form-actions"><button class="btn primary" type="button" id="push-zap">🔔 Zapnúť upozornenia</button></div>');
+    var zap = $("#push-zap"), vyp = $("#push-vyp");
+    if (zap) zap.onclick = async function () {
+      zap.disabled = true;
+      try {
+        var kluc = await rpc("push_kluc", {});
+        if (!kluc) throw new Error("Upozornenia sa ešte pripravujú – skúste to o 10 minút.");
+        var p = await Notification.requestPermission();
+        if (p !== "granted") throw new Error("Upozornenia ste nepovolili. Ak ste ťukli na Nepovoliť, zapnete ich v nastaveniach telefónu.");
+        var rg = await navigator.serviceWorker.ready;
+        var s = await rg.pushManager.getSubscription();
+        if (!s) s = await rg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64Bajty(kluc) });
+        var j = s.toJSON();
+        await rpc("ulozit_push_odber", { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth,
+          p_zariadenie: (jeIos() ? "iPhone" : /android/i.test(navigator.userAgent) ? "Android" : "Počítač") + (naPloche() ? " (aplikácia)" : "") });
+        rg.showNotification("🔔 Upozornenia sú zapnuté", { body: "Takto vám príde správa o novom súkromnom inzeráte.", icon: "ikona-192.png", badge: "favicon-32.png", tag: "push-test" });
+        toast("🔔 Upozornenia sú zapnuté.");
+      } catch (err) { toast(chybaText(err), true); }
+      napojUpozornenia();
+    };
+    if (vyp) vyp.onclick = async function () {
+      vyp.disabled = true;
+      try { await rpc("zrusit_push_odber", { p_endpoint: sub.endpoint }); await sub.unsubscribe().catch(function () {}); toast("Upozornenia sú na tomto zariadení vypnuté."); }
+      catch (err) { toast(chybaText(err), true); }
+      napojUpozornenia();
+    };
+  }
   function boxPlocha() {
     var nainst = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
     if (nainst) return "";
@@ -1085,6 +1147,7 @@
     try {
       await rpc("ulozit_moje_obce", { p_obce: obce }); S.me.obce = obce; await nacitajMaklerov();
       var b = $("#box-obce"); if (b) { b.outerHTML = boxObce(); napojObce(); }
+      var bp = $("#box-push"); if (bp) { bp.outerHTML = boxUpozornenia(); napojUpozornenia(); }
       if (S.tab === "domov") vykresliDomov(); else if (S.tab === "inzeraty") vykresliFiltreInz();
     }
     catch (err) { toast(chybaText(err), true); }
@@ -1173,7 +1236,7 @@
       '<div class="form-actions"><button class="btn primary" type="submit">Uložiť nové heslo</button></div></form>' +
       '<form class="box" id="f-tel"><h3>📞 Môj telefón</h3><p class="meta">Zobrazí sa klientom na stránke ponuky, na letáku a v reporte pre majiteľa.</p>' +
       '<div class="form-grid"><label class="field"><span>Telefón</span><input id="moj-tel" type="tel" inputmode="tel" maxlength="30" value="' + esc(S.me.telefon || "") + '" placeholder="napr. 0905 123 456"></label></div>' +
-      '<div class="form-actions"><button class="btn primary" type="submit">Uložiť telefón</button></div></form>' + boxObce() + formSms() + boxPlocha() +
+      '<div class="form-actions"><button class="btn primary" type="submit">Uložiť telefón</button></div></form>' + boxUpozornenia() + boxObce() + formSms() + boxPlocha() +
       '<div class="box spr-znova"><img src="typek-hlava.png" alt="" width="48" height="48"><div><h3>🧭 Sprievodca aplikáciou</h3><p class="meta">Realitný týpek vás znova prevedie hlavnými časťami aplikácie.</p></div>' +
         '<button class="btn" type="button" id="spr-znova">Spustiť sprievodcu</button></div>' +
       '<div class="prof-zavriet"><button class="btn ghost" type="button" id="pw-x">Zavrieť profil</button></div>';
@@ -1185,6 +1248,7 @@
     });
     napojFormSms();
     napojObce();
+    napojUpozornenia();
     if ($("#plocha-btn")) $("#plocha-btn").onclick = async function () {
       instalacia.prompt(); await instalacia.userChoice.catch(function () {}); instalacia = null; vykresliHeslo();
     };
@@ -5611,7 +5675,7 @@
     var nove = noveNovinky();
     if (nove.length) ukazNovinky(nove, true);
   }
-  var CIELE_NOVINIEK = { heslo: "Zmena hesla", pomoc: "Menu → Pomoc", predavajuci: "Klienti → Predávajúci" };
+  var CIELE_NOVINIEK = { heslo: "Zmena hesla", pomoc: "Menu → Pomoc", predavajuci: "Klienti → Predávajúci", upozornenia: "Upozornenia do mobilu" };
   function nazovCiela(c) {
     if (!c) return "";
     if (CIELE_NOVINIEK[c]) return CIELE_NOVINIEK[c];
@@ -5650,6 +5714,11 @@
   }
   function ukazCiel(c) {
     if (c === "heslo") return otvorHeslo();
+    if (c === "upozornenia") {
+      zavriMenu(); S.zvonOpen = false; vykresliZvoncek(); S.pwdOpen = true; vykresliHeslo();
+      var bx = $("#box-push"); if (bx) { bx.scrollIntoView({ behavior: "smooth", block: "center" }); bx.classList.add("zvyrazni"); setTimeout(function () { bx.classList.remove("zvyrazni"); }, 2600); }
+      return;
+    }
     if (c === "predavajuci") { if (!tabPovoleny("klienti") || !maSekciu("inzeraty")) return; S.klPohlad = "predavajuci"; S.predDetail = null; S.dopytDetail = null; if (S.tab !== "klienti") return prejdi("klienti"); history.pushState({ tab: "klienti", kl: "predavajuci" }, "", "#klienti"); vykresliKlientov(); window.scrollTo(0, 0); return; }
     if (c === "pomoc") {
       var desk = window.matchMedia("(min-width: 1100px)").matches;
@@ -5671,7 +5740,7 @@
       S.novinkyAdm = r.error ? [] : r.data;
       box = $("#novinky-adm"); if (!box) return;
     }
-    var ciele = [["", "— nikam —"], ["heslo", "Zmena hesla"], ["pomoc", "Menu → Pomoc"], ["predavajuci", "Klienti → Predávajúci"]].concat(SEKCIE.map(function (x) { return [x[0], x[1]]; }),
+    var ciele = [["", "— nikam —"], ["heslo", "Zmena hesla"], ["pomoc", "Menu → Pomoc"], ["predavajuci", "Klienti → Predávajúci"], ["upozornenia", "Upozornenia do mobilu"]].concat(SEKCIE.map(function (x) { return [x[0], x[1]]; }),
       [["domov", "Prehľad"], ["vykon", "Výkon (admin)"], ["makleri", "Makléri (admin)"], ["vzhlad", "Vzhľad (admin)"]]);
     box.innerHTML = '<form id="f-novinka" class="nov-form"><div class="form-grid">' +
       '<label class="field"><span>Názov novinky</span><input type="text" name="nazov" maxlength="120" required placeholder="napr. Provízie sa dajú vypnúť"></label>' +

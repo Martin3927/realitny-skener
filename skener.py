@@ -432,11 +432,11 @@ def bazos_detail(url):
 BAZOS_MAX_STRAN_KRATKA = 10  # poistka pri bežnej/rýchlej kontrole
 
 
-def skenuj_bazos(plny, max_stran, zname=frozenset()):
+def skenuj_bazos(plny, max_stran, zname=frozenset(), typy=None):
     """Pri plnej kontrole prejde všetky strany. Pri kratšej kontrole listuje, kým nenarazí na netopovaný
     inzerát, ktorý už pozná – Bazoš dáva topované inzeráty na prvé strany, nové súkromné bývajú až za nimi."""
     vysledky = {}
-    for typ in TYPY:
+    for typ in (typy if typy is not None else TYPY):
         kat = BAZOS_KAT[typ]
         for psc, okruh in BAZOS_HLADANIA:
             offset, strana = 0, 0
@@ -1231,6 +1231,76 @@ def archivuj(plny, rychly=False):
     log(f"Archív: uložených {hotovo} inzerátov, {fotiek} fotiek")
 
 
+# ---------------------------------------------------------------- upozornenia do mobilu (Web Push)
+
+PUSH_KONTAKT = "https://app.realitnytypek.sk"
+
+
+def _b64u(b):
+    import base64
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+
+
+def vapid_kluce():
+    """Kľúče pre upozornenia. Ak ešte neexistujú, vytvorí ich (raz) a uloží do databázy."""
+    if not POUZI_DB:
+        return None
+    k = _rpc("skener_vapid", p_kluc=SKENER_KLUC) or {}
+    if k.get("public") and k.get("private"):
+        return k
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    pk = ec.generate_private_key(ec.SECP256R1())
+    priv = _b64u(pk.private_numbers().private_value.to_bytes(32, "big"))
+    pub = _b64u(pk.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint))
+    log("Upozornenia: vytváram kľúče VAPID")
+    return _rpc("skener_ulozit_vapid", p_kluc=SKENER_KLUC, p_public=pub, p_private=priv)
+
+
+def text_push(i):
+    typ = {"byt": "byt", "dom": "dom", "pozemok": "pozemok", "chata": "chata", "garaz": "garáž"}.get(i.get("typ"), "nehnuteľnosť")
+    if i.get("typ") == "byt" and i.get("izby"):
+        typ = f"{i['izby']}-izbový byt"
+    kde = i.get("obec") or (f"okres {i['okres']}" if i.get("okres") else "")
+    cena = f"{int(i['cena']):,} €".replace(",", " ") if i.get("cena") else "cena neuvedená"
+    return {"title": f"🔎 Nový súkromný inzerát – {typ}" + (f", {kde}" if kde else ""),
+            "body": f"{i.get('nazov') or ''}\n{cena} · {PORTAL_NAZOV.get(i.get('portal'), '')}".strip(),
+            "url": f"./#inzeraty/{i['id']}", "tag": i["id"]}
+
+
+PORTAL_NAZOV = {"bazos": "Bazoš", "nehnutelnosti": "Nehnuteľnosti.sk", "reality": "Reality.sk", "topreality": "TopReality.sk"}
+
+
+def posli_push(ids):
+    if not POUZI_DB:
+        return
+    k = vapid_kluce()
+    if not ids or not k or not k.get("private"):
+        return
+    ciele = _rpc("skener_push_ciele", p_kluc=SKENER_KLUC, p_ids=ids) or []
+    if not ciele:
+        return
+    from pywebpush import WebPushException, webpush
+    ok, zrusit, poslane = [], [], 0
+    for c in ciele:
+        data = json.dumps(text_push(c["inzerat"]), ensure_ascii=False)
+        for o in c.get("odbery") or []:
+            try:
+                webpush({"endpoint": o["endpoint"], "keys": {"p256dh": o["p256dh"], "auth": o["auth"]}}, data,
+                        vapid_private_key=k["private"], vapid_claims={"sub": PUSH_KONTAKT}, ttl=6 * 3600, timeout=15)
+                ok.append(o["id"]); poslane += 1
+            except WebPushException as e:
+                kod = getattr(e.response, "status_code", None)
+                if kod in (404, 410):
+                    zrusit.append(o["id"])   # telefón odber zrušil
+                else:
+                    log(f"  ! upozornenie neodoslané ({kod}): {str(e)[:120]}")
+            except Exception as e:  # noqa
+                log(f"  ! upozornenie neodoslané: {str(e)[:120]}")
+    _rpc("skener_push_vysledok", p_kluc=SKENER_KLUC, p_ok=sorted(set(ok)), p_zrusit=sorted(set(zrusit)))
+    log(f"Upozornenia do mobilu: odoslané {poslane}" + (f", zrušené odbery {len(set(zrusit))}" if zrusit else ""))
+
+
 # ---------------------------------------------------------------- hlavný beh
 
 def main():
@@ -1240,8 +1310,32 @@ def main():
     meta = stav["meta"]
     prvy_beh = not inzeraty
     posledny_plny = meta.get("posledny_plny")
-    # rýchla kontrola (každých 10 min): len prvá strana výsledkov – nové inzeráty sú vždy na nej
+    # záložný beh z plánovača GitHubu: ak Supabase spúšťa skener načas, netreba nič robiť
+    if "--zaloha" in args and meta.get("posledna_kontrola"):
+        pred = NOW - datetime.fromisoformat(meta["posledna_kontrola"])
+        if pred < timedelta(minutes=25):
+            log(f"Záložný beh: posledná kontrola pred {int(pred.total_seconds() // 60)} min – netreba.")
+            return
+    # rýchla kontrola (každých 10 min): prvá strana výsledkov; Bazoš len kategórie, kde radar videl nový inzerát
     rychly = "--rychly" in args and not prvy_beh
+    radar = {}
+    if POUZI_DB:
+        try:
+            radar = _rpc("skener_radar", p_kluc=SKENER_KLUC) or {}
+        except Exception as e:  # noqa – radar je doplnok, skener beží aj bez neho
+            log(f"! radar: {e}")
+    if rychly and radar.get("zdravy"):
+        bazos_typy = [t for t in (radar.get("kategorie") or []) if t in TYPY]
+        log(f"Radar Bazoša beží – Bazoš: {', '.join(bazos_typy) or 'nič nové'}")
+    else:
+        bazos_typy = None  # všetky kategórie
+    if POUZI_DB:
+        try:
+            vapid_kluce()   # aby si makléri mohli zapnúť upozornenia hneď
+        except Exception as e:  # noqa
+            log(f"! kľúče upozornení: {e}")
+    if radar.get("chyba") or (radar.get("pauza_do") and datetime.fromisoformat(radar["pauza_do"]) > NOW):
+        log(f"! radar: {radar.get('chyba') or 'pauza'}")
     plny = not rychly and ("--plny" in args or prvy_beh or not posledny_plny
                            or NOW - datetime.fromisoformat(posledny_plny) > timedelta(hours=20))
     max_stran = 1 if rychly else int(CONFIG.get("stranok_pri_beznej_kontrole", 3))
@@ -1287,9 +1381,14 @@ def main():
             z = norm_topreality(r)
             if z:
                 najdene.append(z)
-    if "bazos" in portaly:
+    if "bazos" in portaly and bazos_typy != []:
         zname_bazos = frozenset(k.split(":", 1)[1] for k in inzeraty if k.startswith("bazos:"))
-        surove = bezpecne("Bazoš", lambda: skenuj_bazos(plny, max_stran, zname_bazos), "bazos")
+        surove = bezpecne("Bazoš", lambda: skenuj_bazos(plny, max_stran, zname_bazos, bazos_typy), "bazos")
+        if surove and POUZI_DB:
+            try:
+                _rpc("skener_radar_vybavene", p_kluc=SKENER_KLUC, p_kategorie=[BAZOS_KAT[t] for t in (bazos_typy or TYPY)], p_od=NOW_ISO)
+            except Exception as e:  # noqa
+                log(f"! radar: {e}")
         pocty = {}
         for r in surove:
             if r.get("uzivatel_id"):
@@ -1411,7 +1510,8 @@ def main():
         "okresy": OKRESY,
         "pocet_aktivnych": sum(1 for z in inzeraty.values() if z.get("aktivny") and not z.get("duplikat_z")),
         "chyby": chyby + [f"{h} dočasne obmedzil prístup – skener ho vynechá do {t.astimezone().strftime('%H:%M')}"
-                          for h, t in PAUZA_PORTALU.items() if t > datetime.now(timezone.utc)],
+                          for h, t in PAUZA_PORTALU.items() if t > datetime.now(timezone.utc)]
+                 + ([f"Radar Bazoša: {radar['chyba']}"] if radar.get("chyba") else []),
         "pauza_portalov": {h: t.isoformat(timespec="seconds") for h, t in PAUZA_PORTALU.items() if t > datetime.now(timezone.utc)},
         "podhodnotene_o_percent": CONFIG["podhodnotene_o_percent"],
     })
@@ -1423,6 +1523,12 @@ def main():
         archivuj(plny, rychly)
     except Exception as e:  # noqa – archív nesmie zastaviť upozornenia
         log(f"! archív zlyhal: {e}")
+
+    if not prvy_beh:
+        try:
+            posli_push([z["id"] for z in nove_ok if z["predajca_typ"] in ("sukromny", "asi_sukromny")])
+        except Exception as e:  # noqa – upozornenia nesmú zastaviť skener
+            log(f"! upozornenia do mobilu: {e}")
 
     if "--bez-emailu" in args:
         posli = False

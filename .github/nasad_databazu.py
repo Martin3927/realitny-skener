@@ -64,6 +64,22 @@ def main():
         print(f"✔ {p.name} je v databáze")
         nove += 1
     print(f"Hotovo – nových zmien: {nove}")
+    uloz_kluc_githubu()
+
+
+def uloz_kluc_githubu():
+    """Kľúč GitHubu (tajomstvo GH_SPUSTANIE_TOKEN), ktorým Supabase spúšťa skener presne každých 10 minút, uloží do Vaultu."""
+    tok = (os.environ.get("GH_SPUSTANIE_TOKEN") or "").strip()
+    if not tok:
+        print("Kľúč GH_SPUSTANIE_TOKEN nie je nastavený – presné spúšťanie zo Supabase sa preskočí.")
+        return
+    if not re.fullmatch(r"[A-Za-z0-9_]{20,255}", tok):
+        raise RuntimeError("GH_SPUSTANIE_TOKEN má neočakávaný tvar")
+    q("do $$ declare v uuid; begin "
+      "select id into v from vault.secrets where name = 'gh_spustanie_token'; "
+      f"if v is null then perform vault.create_secret({lit(tok)}, 'gh_spustanie_token', 'GitHub – spúšťanie skenera'); "
+      f"else perform vault.update_secret(v, {lit(tok)}); end if; end $$;")
+    print("✔ Kľúč na spúšťanie skenera je uložený v Supabase")
 
 
 if __name__ == "__main__":

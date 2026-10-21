@@ -36,5 +36,6 @@ jobs:
         if: env.MA_KLUC == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GH_SPUSTANIE_TOKEN: ${{ secrets.GH_SPUSTANIE_TOKEN }}
           SUPABASE_PROJEKT: ${{ vars.SUPABASE_PROJEKT || 'uwxziqapghlyktwpipjd' }}
         run: python3 .github/nasad_databazu.py

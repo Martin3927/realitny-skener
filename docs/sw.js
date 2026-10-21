@@ -13,3 +13,13 @@ self.addEventListener("notificationclick", function (e) {
     return self.clients.openWindow(url);
   }));
 });
+
+// upozornenie zo skenera (nový súkromný inzerát) – príde aj keď je aplikácia zatvorená
+self.addEventListener("push", function (e) {
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (x) { d = { title: "Realitný týpek", body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.registration.showNotification(d.title || "Realitný týpek", {
+    body: d.body || "", icon: "ikona-192.png", badge: "favicon-32.png", tag: d.tag || undefined, renotify: !!d.tag,
+    data: { url: d.url || "./#inzeraty" }
+  }));
+});
