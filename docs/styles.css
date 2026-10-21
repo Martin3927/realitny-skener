@@ -1658,3 +1658,39 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .mk-spr > div { display: grid; flex: 1 1 200px; min-width: 0 }
 .mk-spr-vsetci { grid-template-columns: minmax(0, 1fr) auto; align-items: center }
 @media (max-width: 640px) { .mk-spr-vsetci { grid-template-columns: minmax(0, 1fr) } .mk-spr .btn { flex: 1 1 auto } }
+/* ---------- predávajúci zo skenera */
+.kl-pohlad { margin-bottom: 12px }
+.kl-pohlad button { font-weight: 600 }
+.pred-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; margin: 4px 0 2px; padding: 6px 10px; border-radius: 8px; background: var(--gold-soft); font-size: 13px; line-height: 1.45 }
+.pred-row > span { flex: 1 1 220px; min-width: 0 }
+.pred-row .chip { margin: 0 2px }
+.pred-row.nevolat { background: var(--bad-soft); color: var(--bad) }
+.pred-row.nevolat b { color: var(--bad) }
+.pred-av { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--gold-soft); font-size: 17px }
+.pred-av.velky { width: 48px; height: 48px; font-size: 24px }
+.pred-karta.nevolat { border-color: var(--bad-soft) }
+.pred-karta.nevolat .pred-av { background: var(--bad-soft) }
+.pred-karta .dk-text .av { vertical-align: -3px }
+.pred-detail .note { margin-top: 10px }
+.note.zle { background: var(--bad-soft); border-color: transparent; color: var(--bad) }
+.pred-form textarea { width: 100%; resize: vertical }
+.pred-form .form-actions { align-items: center }
+.pred-inz { display: grid; gap: 10px }
+.pi-riadok { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 10px; align-items: start }
+.pi-riadok > img, .pi-bez { width: 96px; height: 76px; object-fit: cover; border-radius: 8px; display: grid; place-items: center; background: var(--gold-soft); font-size: 28px }
+.pi-telo { display: grid; gap: 3px; min-width: 0 }
+.pi-telo .chip { margin: 0 6px 0 0 }
+.pi-akcie { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px }
+.pi-akcie .btn { font-size: 13px; padding: 6px 10px }
+.pred-gdpr h4 { margin: 0 }
+@media (max-width: 640px) {
+  .kl-pohlad { display: flex; width: 100% }
+  .kl-pohlad button { flex: 1 1 50%; white-space: normal; line-height: 1.25 }
+  .pi-riadok { grid-template-columns: 64px minmax(0, 1fr); gap: 10px }
+  .pi-riadok > img, .pi-bez { width: 64px; height: 56px; font-size: 22px }
+}
+.pred-karta .dk-text { display: block; line-height: 1.45 }
+.pred-karta .dk-text b { color: var(--ink) }
+.pred-detail .dd-hl .meta { display: block; line-height: 1.5 }
+.pred-detail a.btn { text-decoration: none }
+.pi-telo .meta.d-block { line-height: 1.5 }
