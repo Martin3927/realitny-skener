@@ -2,10 +2,10 @@ name: Realitný skener
 
 on:
   # Cez deň skener spúšťa Supabase presne každých 10 minút (pg_cron → workflow_dispatch) a radar Bazoša
-  # pri novom inzeráte. GitHub plánovač je len záloha (beží len vtedy, keď posledná kontrola bola pred 25+ min)
+  # pri novom inzeráte. GitHub plánovač je len záloha každú pol hodinu (kontroluje len vtedy, keď posledná kontrola bola pred 25+ min)
   # a nočná plná kontrola. GitHub počíta v UTC.
   schedule:
-    - cron: "45 4-21 * * *"
+    - cron: "15,45 4-21 * * *"
     - cron: "17 1 * * *"
   workflow_dispatch:
     inputs:
