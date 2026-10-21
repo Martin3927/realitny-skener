@@ -806,7 +806,14 @@
   // predávajúci zo skenera – podľa telefónneho čísla, so všetkými inzerátmi a históriou kontaktov
   async function nacitajPredajcov() {
     if (!maSekciu("inzeraty")) { S.pred = []; S.predTel = {}; S.predInz = {}; return; }
-    var d = await rpc("kontakty_predajcov", {});
+    var d;
+    try { d = await rpc("kontakty_predajcov", {}); }
+    catch (e) {
+      // databáza ešte nemá zmenu pre predávajúcich – záložku zatiaľ nezobrazujeme, aplikácia beží ďalej
+      if (e && (e.code === "PGRST202" || /Could not find the function/i.test(e.message || ""))) { S.predNedostupne = true; S.pred = []; S.predTel = {}; S.predInz = {}; return; }
+      throw e;
+    }
+    S.predNedostupne = false;
     var t = {}, i = {};
     (d || []).forEach(function (k) { t[k.tel] = k; k.inzeraty.forEach(function (x) { i[x.id] = k; }); });
     S.pred = d || []; S.predTel = t; S.predInz = i; S.predNacitane = Date.now();
@@ -3533,7 +3540,7 @@
   function vykresliKlientov() {
     var el = $("#obsah"); if (!el) return;
     if (S.dopytEdit) return vykresliFormDopytu();
-    if (S.klPohlad === "predavajuci" && maSekciu("inzeraty")) return vykresliPredavajucich();
+    if (S.klPohlad === "predavajuci" && maSekciu("inzeraty") && !S.predNedostupne) return vykresliPredavajucich();
     if (!S.dopyty) { el.innerHTML = '<div class="box"><div class="meta">Načítavam klientov…</div></div>'; nacitajDopyty().then(vykresliKlientov, function (e) { toast(chybaText(e), true); S.dopyty = []; S.dopytyK = {}; vykresliKlientov(); }); return; }
     if (S.dopytDetail) return vykresliDetailDopytu();
     var F = S.klF = S.klF || { kto: admin() ? "vsetci" : "moji", stav: "aktivny", q: "" };
@@ -3565,7 +3572,7 @@
   }
   // ------------------------------------------------------------ PREDÁVAJÚCI ZO SKENERA
   function prepinacKlientov() {
-    if (!maSekciu("inzeraty")) return "";
+    if (!maSekciu("inzeraty") || S.predNedostupne) return "";
     var p = S.klPohlad === "predavajuci" ? "predavajuci" : "dopyty";
     return '<div class="seg kl-pohlad" role="group" aria-label="Klienti">' + [["dopyty", "🎯 Dopyty klientov"], ["predavajuci", "📇 Predávajúci zo skenera"]].map(function (x) {
       return '<button type="button" data-kl-pohlad="' + x[0] + '" aria-pressed="' + (p === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>";
