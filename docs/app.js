@@ -1547,6 +1547,7 @@
       h += '<form class="panel" data-form="hovor"><h4>Ako dopadol hovor</h4><div class="form-grid">' +
         '<label class="field"><span>Výsledok</span><select name="vysledok" required><option value="">Vyberte…</option>' +
         VYSLEDKY.map(function (v) { return "<option>" + esc(v) + "</option>"; }).join("") + "</select></label></div>" +
+        (ptyp(z) !== "rk" && !S.tel[z.id] ? '<label class="field"><span>Telefón predajcu <small class="meta">aby sa uložil medzi Predávajúcich v Klientoch</small></span><input type="tel" name="telefon" inputmode="tel" autocomplete="off" placeholder="0905 123 456"></label>' : "") +
         '<label class="field"><span>Poznámka (čo povedal, kedy znova volať…)</span><textarea name="poznamka" rows="2"></textarea></label>' +
         '<div class="form-actions"><button class="btn primary" type="submit">Uložiť hovor</button><button class="btn ghost" type="button" data-act="zavriet">Zrušiť</button></div>' +
         (!maj ? '<small class="meta">Uložením hovoru si inzerát prevezmete.</small>' : "") + "</form>";
@@ -1704,9 +1705,11 @@
     if (!f) return;
     e.preventDefault();
     var id = f.closest(".card").dataset.id;
-    var vys = f.vysledok.value, pozn = f.poznamka.value;
+    var vys = f.vysledok.value, pozn = f.poznamka.value, tel = f.telefon ? f.telefon.value.trim() : "";
+    if (tel && tel.replace(/\D/g, "").length < 9) { toast("Telefónne číslo musí mať aspoň 9 číslic.", true); f.telefon.focus(); return; }
     f.querySelector('button[type="submit"]').disabled = true;
     akcia(id, async function () {
+      if (tel) { await rpc("ulozit_telefon", { p_inzerat: id, p_telefon: tel }); await nacitajTelefony(); }
       await rpc("zapisat_hovor", { p_inzerat: id, p_vysledok: vys, p_poznamka: pozn });
       S.open[id] = null;
       if (vys === "Získaný do ponuky") { konfety({ pocet: 240 }); toast("🎉 Gratulujeme! Tím sa to dozvie v chate."); chatNove(); nacitajOslavy(); }

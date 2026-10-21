@@ -252,7 +252,7 @@ IZBY_NEHN = {
 ROZSAH = {"byt": (12, 300), "dom": (35, 400), "pozemok": (40, 2_000_000),
           "chata": (10, 250), "garaz": (8, 150)}
 
-DOPYT = re.compile(r"^\W*(hladam|hladame|kupim|kupime|mam zaujem|mame zaujem|dopyt|dostali sme dopyt|vymenim)\b|\bkupa\b|"
+DOPYT = re.compile(r"^\W*(hladam|hladame|kupim|kupime|mam zaujem|mame zaujem|dopyt|dostali sme dopyt|vymenim)\b|\bkupa\b|\bna kupu\b|"
                    r"dostali sme dopyt|hladame pre (nasho |nasich )?klient")
 
 
