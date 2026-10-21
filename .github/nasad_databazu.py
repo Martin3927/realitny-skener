@@ -27,7 +27,7 @@ def q(sql):
     req = urllib.request.Request(
         f"https://api.supabase.com/v1/projects/{os.environ['SUPABASE_PROJEKT']}/database/query",
         data=json.dumps({"query": sql}).encode(), method="POST",
-        headers={"Authorization": "Bearer " + os.environ["SUPABASE_ACCESS_TOKEN"], "Content-Type": "application/json",
+        headers={"Authorization": "Bearer " + os.environ["SUPABASE_ACCESS_TOKEN"].strip(), "Content-Type": "application/json",
                  "User-Agent": "realitny-typek-nasadenie"})
     try:
         with urllib.request.urlopen(req, timeout=120) as r:
@@ -83,6 +83,9 @@ def uloz_kluc_githubu():
 
 
 if __name__ == "__main__":
+    t = (os.environ.get("SUPABASE_ACCESS_TOKEN") or "").strip()
+    if not os.environ.get("LOKALNE"):
+        print(f"Kľúč Supabase: {len(t)} znakov, začína „{t[:4]}…“")
     try:
         main()
     except Exception as e:
