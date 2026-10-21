@@ -1796,3 +1796,9 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .zs-foto { flex: none; width: 52px; height: 40px; border-radius: 8px; object-fit: cover; background: var(--gold-soft) }
 .zvon-inz .zs-tim { font-size: 18px }
 .zs-tlacidla { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end }
+
+/* ---------- predávajúci: maklér, nový predávajúci */
+.pred-makler { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px }
+.pred-makler .av { vertical-align: middle }
+.pred-novy { margin: 12px 0 0; display: grid; gap: 10px }
+.pred-novy h4 { margin: 0 }
