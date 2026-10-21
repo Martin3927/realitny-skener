@@ -1777,3 +1777,19 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .zs-ign { background: transparent }
 .zs-vsetky { justify-self: end }
 .sprava-stav.ign { color: #c0392b; font-weight: 600 }
+/* chat: veľké oznámenie „Vašu správu ignoroval/a“ – obálka sa vráti s pečiatkou */
+.ign-karta.prisla { animation: obKarta .45s cubic-bezier(.2,.9,.25,1.15) both, ignTras .4s ease-in-out 1.05s }
+@keyframes ignTras { 0%, 100% { transform: none } 20% { transform: translateX(-6px) } 40% { transform: translateX(5px) } 60% { transform: translateX(-3px) } 80% { transform: translateX(2px) } }
+.ob-obalka.ob-vratena { animation: ignPrilet .8s cubic-bezier(.25,.9,.3,1.1) both }
+@keyframes ignPrilet { 0% { opacity: 0; transform: translate(120px, -40px) rotate(18deg) scale(.7) } 70% { opacity: 1; transform: translate(-6px, 2px) rotate(-3deg) } 100% { transform: none } }
+.ob-vratena .ob-zadna, .ob-vratena .ob-predna, .ob-vratena .ob-chlopna { filter: saturate(.55) brightness(.97) }
+.ob-vratena .ob-pecat { animation: none; filter: grayscale(.3) }
+.ob-razitko { position: absolute; left: 50%; top: 74%; z-index: 6; transform: translate(-50%, -50%) rotate(-14deg); padding: 4px 12px; border: 3px solid #d32f2f; border-radius: 8px;
+  color: #d32f2f; background: rgba(255,255,255,.82); font-family: var(--display); font-weight: 900; font-size: 19px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15); animation: ignRazitko .35s cubic-bezier(.3,1.6,.5,1) .8s both }
+@keyframes ignRazitko { from { opacity: 0; transform: translate(-50%, -50%) rotate(-24deg) scale(2.6) } }
+.ob-stitok.ign { color: #d32f2f; border-color: #e8a19c; background: color-mix(in srgb, #d32f2f 8%, var(--surface)) }
+.ob-citat-ign { text-align: left; background: var(--surface-2); border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; font-size: 14.5px; line-height: 1.45;
+  white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); max-height: 30vh; overflow-y: auto }
+.ign-karta .ob-akcie .btn:not(.primary) { text-align: center; white-space: normal }
+@media (prefers-reduced-motion: reduce) { .ign-karta.prisla, .ob-obalka.ob-vratena, .ob-razitko { animation: none !important } }

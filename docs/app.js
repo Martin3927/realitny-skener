@@ -5745,10 +5745,11 @@
   }
   function ukazObalku() {
     var o = $("#obalka");
-    if (o) { if (o.dataset.stav === "zavreta" && S.obalkaAkt) kresliObalku(); return; }
+    if (o) { if (o.dataset.stav === "zavreta" && S.obalkaAkt && !S.obalkaAkt.ign) kresliObalku(); return; }
     if (!S.obalky || !S.obalky.length || !S.me) return;
     var vidi = S.tab === "chat" && pozera() && $("#chat-spravy");
     S.obalky = S.obalky.filter(function (e) {
+      if (e.ign) return !e.ign.videne_autorom;
       e.spravy = e.spravy.filter(jeNeprecitana);
       return e.spravy.length && !(vidi && (S.chatS || "") === e.konv);
     });
@@ -5759,6 +5760,7 @@
   }
   function kresliObalku() {
     var E = S.obalkaAkt; if (!E) return;
+    if (E.ign) return kresliIgnoraciu(E);
     var o = $("#obalka"), nove = !o, panel = "";
     if (o) { var vid = o.querySelector("[data-ob-panel]:not([hidden])"); panel = vid ? vid.dataset.obPanel : ""; }
     if (nove) { o = document.createElement("div"); o.id = "obalka"; o.className = "pochvala-var obalka-var"; o.dataset.stav = "zavreta"; document.body.appendChild(o); }
@@ -5795,6 +5797,29 @@
       document.addEventListener("keydown", S.obalkaEsc);
     }
   }
+  function kresliIgnoraciu(E) {
+    var r = E.ign, o = $("#obalka");
+    if (!o) {
+      o = document.createElement("div"); o.id = "obalka"; o.className = "pochvala-var obalka-var"; o.dataset.stav = "zavreta"; document.body.appendChild(o);
+      o.addEventListener("click", klikObalka);
+      S.obalkaEsc = function (e) { if (e.key === "Escape") zavriObalku(); };
+      document.addEventListener("keydown", S.obalkaEsc);
+    }
+    var txt = textIgnorovanej(r);
+    o.innerHTML = '<div class="pochvala-karta obalka-karta ign-karta prisla" role="dialog" aria-modal="true" aria-labelledby="ob-n">' +
+      '<button type="button" class="nov-x" data-ob="zavriet" aria-label="Zavrieť">×</button>' +
+      '<div class="ob-scena" aria-hidden="true"><div class="ob-obalka ob-vratena">' +
+        '<div class="ob-zadna"></div><div class="ob-list"><i></i><i></i><i></i></div><div class="ob-predna"></div><div class="ob-chlopna"></div>' +
+        '<div class="ob-pecat">' + avatar(r.makler_id, 46) + '</div><div class="ob-razitko">Ignorované</div></div></div>' +
+      '<div class="ob-text"><span class="ob-stitok ign">🙈 ' + (r.druh === "tim" ? "Spoločný chat tímu" : "Súkromná správa") + "</span>" +
+        '<h3 id="ob-n">Vašu správu ' + rod(r.makler_id, "ignoroval", "ignorovala") + ":</h3>" +
+        '<div class="ob-od">' + esc(meno(r.makler_id)) + "</div>" +
+        '<span class="meta">' + esc(casKonverzacie(r.vytvorene)) + "</span></div>" +
+      (txt ? '<div class="ob-citat-ign">„' + textSpravy(txt) + "“</div>" : "") +
+      '<div class="ob-akcie"><button class="btn primary wide ob-citat" type="button" data-ob="ign-ok">👍 Beriem na vedomie</button>' +
+        '<button class="btn" type="button" data-ob="ign-napisat">💬 Napísať ' + rod(r.makler_id, "mu", "jej") + " súkromne</button></div></div>";
+    setTimeout(function () { var b = o.querySelector(".ob-citat"); if (b) b.focus({ preventScroll: true }); }, 50);
+  }
   function panelObalky(k) {
     var o = $("#obalka"); if (!o) return;
     o.querySelectorAll("[data-ob-panel]").forEach(function (p) { p.hidden = p.dataset.obPanel !== k; });
@@ -5802,6 +5827,15 @@
   async function klikObalka(e) {
     var E = S.obalkaAkt; if (!E) return;
     var o = $("#obalka"), b = e.target.closest("[data-ob],[data-ob-kedy]"); if (!b) return;
+    if (E.ign) {
+      var ak = b.dataset.ob;
+      if (ak === "zavriet") return zavriObalku();
+      E.ign.videne_autorom = new Date().toISOString();
+      rpc("ignoracie_videne", { p_ids: [E.ign.id] }).catch(function () {});
+      zavriObalku(); obnovZvoncek();
+      if (ak === "ign-napisat") otvorKonverzaciu(E.ign.makler_id);
+      return;
+    }
     var dm = !!E.konv, posl = E.spravy[E.spravy.length - 1], a = b.dataset.ob;
     if (a === "zavriet") return zavriObalku();
     if (a === "neskor") return panelObalky("neskor");
@@ -5893,9 +5927,8 @@
     pisLS("dm", S.dmMax || 1);
     var vsetky = t.concat(d).sort(function (a, b) { return new Date(a.vytvorene) - new Date(b.vytvorene); });
     if (vsetky.length) upozornNaSpravy(vsetky, { ticho: true });
-    var ign = ignoracieNevidene();
-    if (ign.length) toast("🙈 " + (ign.length === 1 ? meno(ign[0].makler_id) + " " + rod(ign[0].makler_id, "ignoroval", "ignorovala") + " vašu správu" :
-      ign.length + " vaše správy boli ignorované") + " – pozrite zvonček 🔔");
+    var li = citajLS("ign");
+    ignoracieNevidene().filter(function (r) { return r.id > li; }).forEach(zaradIgnoraciu);
     skontrolujOdlozene();
   }
   function skontrolujOdlozene() {
@@ -5914,10 +5947,18 @@
   function ohlasIgnoracie(nove) {
     nove.filter(function (r) { return r.akcia === "ignorovane" && r.autor_id === S.me.id && !r.videne_autorom; }).forEach(function (r) {
       var kto = meno(r.makler_id), slovo = rod(r.makler_id, "ignoroval", "ignorovala");
-      toast("🙈 " + kto + " " + slovo + " vašu správu" + (r.druh === "tim" ? " v spoločnom chate" : "") + ".");
       if (nastChat("zvuk")) cinknut();
+      zaradIgnoraciu(r);
       systemoveUpozornenie("🙈 " + kto + " " + slovo + " vašu správu", textIgnorovanej(r), "typek-ign-" + r.id, "chat" + (r.druh === "dm" ? "/" + r.makler_id : ""));
     });
+  }
+  function zaradIgnoraciu(r) {
+    pisLS("ign", r.id);
+    if (!nastChat("popup")) return toast("🙈 " + meno(r.makler_id) + " " + rod(r.makler_id, "ignoroval", "ignorovala") + " vašu správu – pozrite zvonček 🔔");
+    S.obalky = S.obalky || [];
+    if (S.obalky.some(function (e) { return e.ign && e.ign.id === r.id; })) return;
+    S.obalky.push({ konv: "ign:" + r.id, ign: r, spravy: [] });
+    ukazObalku();
   }
   function textIgnorovanej(r) {
     var m = r.druh === "dm" ? S.dm.find(function (x) { return x.id === r.sprava_id; }) : S.chat.find(function (x) { return x.id === r.sprava_id; });
@@ -6547,6 +6588,26 @@
       '<small class="meta">V nastavenom čase sa ukáže pri zvončeku a príde aj emailom.</small></form>';
   }
 
+  // ikona karty v prehliadači: logo, pri novej správe červený zvonček
+  function ikonaKarty(zvon) {
+    if (S.ikonaZvon === zvon) return;
+    S.ikonaZvon = zvon;
+    var linky = document.querySelectorAll('link[rel="icon"]');
+    linky.forEach(function (l) { if (!l.dataset.povodna) l.dataset.povodna = l.getAttribute("href"); });
+    if (!zvon) { linky.forEach(function (l) { l.href = l.dataset.povodna; }); return; }
+    if (!S.ikonaZvonUrl) {
+      try {
+        var c = document.createElement("canvas"); c.width = c.height = 64;
+        var g = c.getContext("2d");
+        g.fillStyle = "#2b2f36"; g.beginPath(); if (g.roundRect) g.roundRect(0, 0, 64, 64, 14); else g.rect(0, 0, 64, 64); g.fill();
+        g.save(); g.translate(5, 4); g.scale(2.25, 2.25); g.fillStyle = "#e53935";
+        g.fill(new Path2D("M12 2a1.6 1.6 0 0 0-1.6 1.6v.7A6.6 6.6 0 0 0 5.4 10.7V15l-2.1 2.6v1.2h17.4v-1.2L18.6 15v-4.3a6.6 6.6 0 0 0-5-6.4v-.7A1.6 1.6 0 0 0 12 2zm-2.7 18a2.7 2.7 0 0 0 5.4 0z"));
+        g.restore();
+        S.ikonaZvonUrl = c.toDataURL("image/png");
+      } catch (e) { return; }
+    }
+    linky.forEach(function (l) { l.href = S.ikonaZvonUrl; });
+  }
   function popisZvoncek() {
     var b = $("#zvon-n");
     if (!b || !S.me) return;
@@ -6555,6 +6616,7 @@
     b.hidden = n === 0; b.textContent = n > 9 ? "9+" : String(n);
     $("#zvon-btn").classList.toggle("ring", n > 0);
     $("#zvon-btn").classList.toggle("ma-spravu", sp > 0);
+    ikonaKarty(sp > 0);
     var t = [];
     if (ns) t.push(ns + (ns === 1 ? " nová správa" : ns <= 4 ? " nové správy" : " nových správ"));
     if (ni) t.push(ni + (ni === 1 ? " ignorovaná správa" : " ignorované správy"));
