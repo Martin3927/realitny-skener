@@ -1232,16 +1232,19 @@
       ((S.me.obce || []).length ? '<option value="moje">📍 Moje obce (' + S.me.obce.length + ")</option>" : "") +
       '<optgroup label="Obec">' + S.obce.map(function (o) { return '<option value="' + esc(o[0]) + '">' + esc(o[0]) + " (" + o[1] + ")</option>"; }).join("") + "</optgroup></select>" +
       '<select id="f-stav" aria-label="Stav inzerátu"><option value="aktivne">Aktívne na portáloch</option><option value="zmiznute">Zmiznuté z portálov (archív)</option><option value="vsetky">Aktívne aj zmiznuté</option></select>' +
-      '<select id="f-novost" aria-label="Kedy pribudli"><option value="">Kedykoľvek</option><option value="1">Nové za 24 h</option>' +
-      '<option value="3">Nové za 3 dni</option><option value="7">Nové za 7 dní</option><option value="30">Nové za 30 dní</option></select>' +
+      '<select id="f-novost" aria-label="Vek inzerátu"><option value="">Kedykoľvek zverejnené</option>' +
+      '<optgroup label="Nové v skeneri"><option value="1">Nové za 24 h</option><option value="3">Nové za 3 dni</option><option value="7">Nové za 7 dní</option></optgroup>' +
+      '<optgroup label="Zverejnené na portáli"><option value="p30">Zverejnené do 30 dní</option><option value="p90">Zverejnené do 90 dní</option>' +
+      '<option value="s30">Staršie ako 30 dní</option><option value="s60">Staršie ako 60 dní</option><option value="s90">Staršie ako 90 dní</option></optgroup></select>' +
       (S.canUnder ? '<label class="chk"><input type="checkbox" id="f-under"' + (f.under ? " checked" : "") + "> Len podhodnotené</label>" : "") +
       '<select id="f-sort" aria-label="Zoradiť"><option value="novy">Najnovšie</option>' +
       (S.canUnder ? '<option value="under">Najviac pod cenou</option>' : "") +
-      '<option value="cena">Najlacnejšie</option><option value="cenam2">Najnižšia cena/m²</option><option value="hovor">Naposledy volané</option></select>' +
+      '<option value="stare">Najdlhšie na portáli</option><option value="cena">Najlacnejšie</option><option value="cenam2">Najnižšia cena/m²</option><option value="hovor">Naposledy volané</option></select>' +
       "</div></div>";
     if (!S.canUnder) { f.under = false; if (f.sort === "under") f.sort = "novy"; }
     $("#f-okres").value = f.okres; if ($("#f-okres").value !== f.okres) f.okres = "";
-    $("#f-novost").value = f.novost; $("#f-sort").value = f.sort; $("#f-stav").value = f.stav || "aktivne";
+    if (f.novost === "30") f.novost = "p30";
+    $("#f-novost").value = f.novost; if ($("#f-novost").value !== f.novost) f.novost = ""; $("#f-sort").value = f.sort; $("#f-stav").value = f.stav || "aktivne";
     var fl = $("#filters");
     fl.addEventListener("click", function (e) {
       var b = e.target.closest(".seg button"); if (!b) return;
@@ -1301,8 +1304,16 @@
     if (document.body.hasAttribute("data-anim")) animujCisla(el);
   }
 
+  // kedy bol inzerát zverejnený na portáli (dátum z portálu, inak kedy ho skener prvýkrát videl)
+  function zverejnene(z) {
+    var t = new Date(z.prvy_krat).getTime();
+    if (z.publikovane) { var p = new Date(z.publikovane + "T12:00:00").getTime(); if (p < t) t = p; }
+    return t;
+  }
+  function dniNaPortali(z) { return Math.floor((Date.now() - zverejnene(z)) / 864e5); }
   function filtruj() {
-    var f = S.f, q = norm(f.q).trim(), qd = /\d/.test(q) ? telCifry(q) : "", lim = f.novost ? Date.now() - Number(f.novost) * 864e5 : 0, me = S.me.id;
+    var f = S.f, q = norm(f.q).trim(), qd = /\d/.test(q) ? telCifry(q) : "", nv = f.novost || "", lim = /^\d+$/.test(nv) ? Date.now() - Number(nv) * 864e5 : 0, me = S.me.id;
+    var vekDo = nv.charAt(0) === "p" ? Number(nv.slice(1)) : 0, vekNad = nv.charAt(0) === "s" ? Number(nv.slice(1)) : 0;
     var zaklad = viditelne(), pocty = {};
     if (S.jedenId) return { out: S.inz.filter(function (z) { return z.id === S.jedenId; }), pocty: pocty };
     function pridaj(k) { pocty[k] = (pocty[k] || 0) + 1; }
@@ -1314,6 +1325,7 @@
       var okIne = (!f.typ || z.typ === f.typ) &&
         (!f.okres || (f.okres === "moje" ? (S.me.obce || []).indexOf(z.obec) >= 0 : f.okres.indexOf("o:") === 0 ? z.okres === f.okres.slice(2) : z.obec === f.okres)) &&
         (!lim || new Date(z.prvy_krat).getTime() >= lim) &&
+        (!vekDo || dniNaPortali(z) <= vekDo) && (!vekNad || dniNaPortali(z) > vekNad) &&
         (!f.under || (S.odh[z.id] && S.odh[z.id].podhodnotene)) &&
         (!q || z._t.indexOf(q) >= 0 || (qd.length >= 4 && S.tel[z.id] && telCifry(S.tel[z.id].telefon).indexOf(qd) >= 0));
       if (okIne && okPr) { pridaj("predajca:vsetci"); pridaj(pt !== "rk" ? "predajca:sukr" : "predajca:rk"); }
@@ -1325,6 +1337,7 @@
       if (s === "under") return ((S.odh[a.id] || {}).rozdiel_pct ?? 999) - ((S.odh[b.id] || {}).rozdiel_pct ?? 999);
       if (s === "cena") return (a.cena || 9e12) - (b.cena || 9e12);
       if (s === "cenam2") return (a.cena_m2 || 9e12) - (b.cena_m2 || 9e12);
+      if (s === "stare") return zverejnene(a) - zverejnene(b);
       if (s === "hovor") return String((S.prev[b.id] || {}).posledny_hovor || "").localeCompare(String((S.prev[a.id] || {}).posledny_hovor || ""));
       return String(b.prvy_krat).localeCompare(String(a.prvy_krat)) || String(b.publikovane || "").localeCompare(String(a.publikovane || ""));
     });
@@ -1467,7 +1480,8 @@
       '<div class="row"><a class="thumb-link" href="' + esc(z.url) + '" target="_blank" rel="noopener" aria-label="Otvoriť inzerát">' + foto + '</a><div class="body">' +
       '<a class="title" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(z.nazov) + "</a>" +
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
-      (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + "<span>v skeneri " + ago(z.prvy_krat) + "</span></div>" +
+      (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + (dniNaPortali(z) - Math.floor((Date.now() - new Date(z.prvy_krat).getTime()) / 864e5) >= 2 ?
+        '<span title="Zverejnené ' + datum(new Date(zverejnene(z)).toISOString()) + ", v skeneri " + ago(z.prvy_krat) + '">na portáli ' + dniNaPortali(z) + (dniNaPortali(z) <= 4 ? " dni" : " dní") + "</span>" : "<span>v skeneri " + ago(z.prvy_krat) + "</span>") + "</div>" +
       telRiadok(z) + predRiadok(z) +
       '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
       '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
