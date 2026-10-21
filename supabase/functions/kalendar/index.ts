@@ -38,7 +38,10 @@ Deno.serve(async (req) => {
   }
   const TYP: Record<string, string> = { stretnutie: "🤝", obhliadka: "🗝️", podpis: "✍️", telefonat: "📞", osobne: "🙂", ine: "📌" };
   // deno-lint-ignore no-explicit-any
-  for (const u of (data.udalosti as any[]) || []) pridaj("u" + u.id, (TYP[u.typ] || "") + " " + u.nazov, u.zaciatok, u.koniec, u.cely_den, u.miesto, u.poznamka, u.cely_den ? 0 : 30);
+  for (const u of (data.udalosti as any[]) || []) {
+    const popis = [u.mena ? "👥 " + u.mena : "", u.poznamka || ""].filter(Boolean).join("\n");
+    pridaj("u" + u.id, (TYP[u.typ] || "") + " " + u.nazov, u.zaciatok, u.koniec, u.cely_den, u.miesto, popis, u.cely_den ? 0 : 30);
+  }
   // deno-lint-ignore no-explicit-any
   for (const o of (data.obhliadky as any[]) || []) pridaj("o" + o.id, "🗝️ Obhliadka: " + o.nazov, o.cas, null, false, o.miesto, [o.klient, o.telefon].filter(Boolean).join(", "), 60);
   // deno-lint-ignore no-explicit-any

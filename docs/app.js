@@ -18,7 +18,7 @@
     "Záujem – stretnutie dohodnuté": "won", "Získaný do ponuky": "won",
     "Nemá záujem o RK": "lost", "Predáva cez inú RK": "lost", "Už predané": "lost",
   };
-  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️" };
+  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️", udalost: "📅" };
   // výsledky hovoru, pri ktorých sa inzerát automaticky neuvoľní
   var CHRANENE_VYSLEDKY = ["Záujem – stretnutie dohodnuté", "Získaný do ponuky"];
   var SMS_ZAKLAD = "Dobrý deň, volám sa {makler} z realitnej kancelárie Alpha Reality. {Všimol|Všimla} som si Váš inzerát – {nehnutelnost}, {lokalita}. " +
@@ -4106,8 +4106,9 @@
     (S.udalosti || []).forEach(function (u) {
       if (u.zrusene) return;
       var t = TYPY_UDALOSTI.find(function (x) { return x[0] === u.typ; }) || TYPY_UDALOSTI[5];
+      var ludia = [u.makler_id].concat((u.ucastnici || []).filter(function (x) { return x !== u.makler_id; }));
       out.push({ druh: "udalost", id: u.id, ikona: t[1], nazov: u.nazov, od: u.zaciatok, do: u.koniec, celyDen: u.cely_den, miesto: u.miesto, pozn: u.poznamka,
-        cudzia: u.makler_id !== ja, makler: u.makler_id, zdielane: u.zdielane, u: u });
+        cudzia: ludia.indexOf(ja) < 0, makler: u.makler_id, ludia: ludia, sAdminom: ludia.some(jeAdminId), zdielane: u.zdielane, u: u, ponuka: u.nehnutelnost_id || null });
     });
     (S.obhliadky || []).forEach(function (o) {
       if (o.zrusena) return;
@@ -4127,6 +4128,12 @@
       out.push({ druh: "zmluva", id: p.id, ikona: "📝", nazov: "Končí zmluva: " + nazovPonuky(p), od: I.zmluva_do + "T08:00:00", celyDen: true, ponuka: p.id });
     });
     return out.sort(function (a, b) { return String(a.od).localeCompare(String(b.od)); });
+  }
+  function jeAdminId(id) { var m = S.mById && S.mById[id]; return !!(m && m.rola === "admin"); }
+  // krátke mená ľudí na udalosti, admin (Martin) prvý
+  function menaPolozky(x) {
+    if (!x.ludia) return "";
+    return x.ludia.slice().sort(function (a, b) { return jeAdminId(b) - jeAdminId(a); }).map(krstneMeno).join(", ");
   }
   function casPolozky(x) {
     if (x.celyDen) return "celý deň";
@@ -4168,7 +4175,11 @@
       var k = denKluc(d), pol = poDnoch[k] || [];
       bunky += '<button type="button" class="kal-den' + (d.getMonth() !== mes.getMonth() ? " mimo" : "") + (k === denKluc(dnes) ? " dnes" : "") + (k === vyb ? " vybrany" : "") + '" data-kal-den="' + k + '">' +
         '<span class="kal-c">' + d.getDate() + "</span>" + (pol.length ? '<span class="kal-body">' + pol.slice(0, 3).map(function (x) { return '<i class="kb-' + x.druh + '"></i>'; }).join("") + "</span>" +
-        '<span class="kal-prvy">' + esc(pol[0].ikona + " " + pol[0].nazov) + (pol.length > 1 ? " +" + (pol.length - 1) : "") + "</span>" : "") + "</button>";
+        pol.slice(0, 3).map(function (x) {
+          var mn = menaPolozky(x);
+          return '<span class="kal-prvy kp-' + x.druh + (x.sAdminom ? " s-adminom" : "") + '">' + esc((x.celyDen ? "" : casPolozky(x).slice(0, 5) + " ") + x.nazov) +
+            (mn ? '<em class="kal-mena">' + (x.sAdminom ? "★ " : "") + esc(mn) + "</em>" : "") + "</span>";
+        }).join("") + (pol.length > 3 ? '<span class="kal-viac">+ ďalšie ' + (pol.length - 3) + "</span>" : "") : "") + "</button>";
     }
     var denP = poDnoch[vyb] || [], vd = new Date(vyb + "T12:00:00");
     var f = S.kalForm;
@@ -4181,16 +4192,19 @@
       '<button class="btn ghost" type="button" data-kal="dnes">Dnes</button></div>' +
       '<div class="kal-tyz">' + ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map(function (x) { return "<span>" + x + "</span>"; }).join("") + "</div>" +
       '<div class="kal-mriezka">' + bunky + "</div>" +
-      '<div class="kal-legenda"><span><i class="kb-udalost"></i>udalosť</span><span><i class="kb-obhliadka"></i>obhliadka</span><span><i class="kb-pripomienka"></i>pripomienka</span><span><i class="kb-zmluva"></i>koniec zmluvy</span></div></div>' +
+      '<div class="kal-legenda"><span><i class="kb-udalost"></i>udalosť</span><span><i class="kb-obhliadka"></i>obhliadka</span><span><i class="kb-pripomienka"></i>pripomienka</span><span><i class="kb-zmluva"></i>koniec zmluvy</span><span class="leg-admin">★ s ' + esc(menoAdmina()) + "</span></div></div>" +
       '<div class="kal-agenda"><h4>' + esc(vd.toLocaleDateString("sk-SK", { weekday: "long", day: "numeric", month: "long" })) + "</h4>" +
       (denP.length ? denP.map(polozkaAgendy).join("") : '<p class="meta">V tento deň nemáte nič naplánované.</p>') +
       '<button class="btn ghost" type="button" data-kal="nova-den">+ Pridať na tento deň</button></div></div>';
     el.innerHTML = h;
     napojKalendar();
   }
+  function menoAdmina() { var a = (S.makleri || []).find(function (m) { return m.rola === "admin" && m.aktivny; }); return a ? krstneMeno(a.id) : "administrátorom"; }
   function polozkaAgendy(x) {
-    return '<div class="kal-pol kp-' + x.druh + '"><div class="kal-cas">' + esc(casPolozky(x)) + "</div><div><b>" + esc(x.ikona + " " + x.nazov) + "</b>" +
-      (x.cudzia ? ' <span class="meta">· ' + avatar(x.makler, 16) + " " + esc(meno(x.makler)) + "</span>" : "") +
+    return '<div class="kal-pol kp-' + x.druh + (x.sAdminom ? " s-adminom" : "") + '"><div class="kal-cas">' + esc(casPolozky(x)) + "</div><div><b>" + esc(x.ikona + " " + x.nazov) + "</b>" +
+      (x.ludia ? '<div class="kal-ludia">' + x.ludia.map(function (id, i) {
+        return '<span class="kal-clovek' + (jeAdminId(id) ? " admin" : "") + '" title="' + esc(meno(id) + (i === 0 ? " – zapísal(a)" : "")) + '">' + avatar(id, 18) + " " + esc(krstneMeno(id)) + (jeAdminId(id) ? " ★" : "") + "</span>";
+      }).join("") + "</div>" : "") +
       (x.miesto ? '<div class="meta">📍 ' + esc(x.miesto) + "</div>" : "") + (x.pozn ? '<div class="meta">' + esc(x.pozn) + "</div>" : "") +
       '<div class="kal-akcie"><a class="btn-link" href="' + esc(googleOdkaz(x)) + '" target="_blank" rel="noopener">+ Google</a>' +
       '<button type="button" class="btn-link" data-kal-ics="' + x.druh + ":" + x.id + '">+ Apple / Outlook (.ics)</button>' +
@@ -4209,9 +4223,20 @@
       '<label class="field"><span>Ponuka</span><select name="nehnutelnost_id"><option value="">—</option>' + (S.ponuky || []).filter(function (p) { return ["predane", "archiv"].indexOf(p.stav) < 0; }).map(function (p) {
         return '<option value="' + p.id + '"' + (Number(f.nehnutelnost_id) === p.id ? " selected" : "") + ">" + esc((p.cislo ? p.cislo + " · " : "") + nazovPonuky(p)) + "</option>"; }).join("") + "</select></label></div>" +
       '<label class="field"><span>Poznámka</span><textarea name="poznamka" rows="2">' + esc(f.poznamka || "") + "</textarea></label>" +
+      formKolegovia(f) +
       '<div class="pf-prepinace"><label class="toggle"><input type="checkbox" name="cely_den"' + (f.cely_den ? " checked" : "") + "> Celý deň</label>" +
       '<label class="toggle"><input type="checkbox" name="zdielane"' + (f.zdielane ? " checked" : "") + "> Uvidí celý tím</label></div>" +
       '<div class="form-actions"><button class="btn primary" type="submit">Uložiť</button><button class="btn ghost" type="button" data-kal="zrus-form">Zrušiť</button></div></form>';
+  }
+  function formKolegovia(f) {
+    var autor = f.makler_id || S.me.id, vyb = f.ucastnici || [];
+    var zoz = (S.makleri || []).filter(function (m) { return m.aktivny && m.id !== autor; })
+      .sort(function (a, b) { return (b.rola === "admin") - (a.rola === "admin") || String(a.meno).localeCompare(String(b.meno), "sk"); });
+    if (!zoz.length) return "";
+    return '<fieldset class="kal-kolegovia"><legend>👥 Kolegovia na udalosti</legend><div class="cipy">' + zoz.map(function (m) {
+      return '<label class="kal-kolega' + (m.rola === "admin" ? " admin" : "") + '"><input type="checkbox" name="ucastnik" value="' + esc(m.id) + '"' + (vyb.indexOf(m.id) >= 0 ? " checked" : "") + "> " +
+        avatar(m.id, 20) + " " + esc(m.meno || m.email) + (m.rola === "admin" ? " ★" : "") + "</label>";
+    }).join("") + '</div><p class="meta">🔔 Ty aj označení kolegovia dostanete upozornenie deň vopred o 18:00 a ráno v deň udalosti o 7:00 – v zvončeku aj e-mailom. Udalosť sa im ukáže v kalendári.</p></fieldset>';
   }
   function panelSynchronizacie() {
     var url = S.kalToken ? CFG.supabaseUrl + "/functions/v1/kalendar?t=" + S.kalToken : "", webcal = url.replace(/^https?:/, "webcal:");
@@ -4259,8 +4284,9 @@
       var cd = f.cely_den.checked, z = new Date(f.den.value + "T" + (cd ? "08:00" : f.od.value || "09:00")), k = cd ? null : new Date(f.den.value + "T" + (f.do.value || f.od.value));
       try {
         await rpc("ulozit_udalost", { p: { id: S.kalForm.id || null, nazov: f.nazov.value, typ: f.typ.value, zaciatok: z.toISOString(), koniec: k ? k.toISOString() : null, cely_den: cd,
-          miesto: f.miesto.value, poznamka: f.poznamka.value, nehnutelnost_id: f.nehnutelnost_id.value || null, zdielane: f.zdielane.checked } });
-        S.kalForm = null; S.kalDen = f.den.value; S.kalMesiac = new Date(z.getFullYear(), z.getMonth(), 1).toISOString();
+          miesto: f.miesto.value, poznamka: f.poznamka.value, nehnutelnost_id: f.nehnutelnost_id.value || null, zdielane: f.zdielane.checked,
+          ucastnici: Array.prototype.map.call(f.querySelectorAll('[name="ucastnik"]:checked'), function (c) { return c.value; }) } });
+        S.kalForm = null; nacitajPripomienky().then(popisZvoncek).catch(function () {}); S.kalDen = f.den.value; S.kalMesiac = new Date(z.getFullYear(), z.getMonth(), 1).toISOString();
         await nacitajUdalosti(); toast("📅 Udalosť je uložená."); vykresliKalendar();
       } catch (err) { toast(chybaText(err), true); }
     };
@@ -4272,7 +4298,8 @@
     var P = polozkyKalendara().filter(function (x) { var k = denKluc(x.od); return (k === dnes || k === zajtra) && (x.celyDen || new Date(x.od).getTime() > Date.now() - 3600e3 || k === zajtra); });
     return '<section class="box kal-domov"><div class="vykon-hlava"><h3>📅 Dnes a zajtra</h3><button class="btn ghost" type="button" data-domov="kalendar">Otvoriť kalendár →</button></div>' +
       (P.length ? P.slice(0, 6).map(function (x) {
-        return '<div class="kal-pol kp-' + x.druh + '"><div class="kal-cas">' + (denKluc(x.od) === zajtra ? "zajtra " : "") + esc(casPolozky(x)) + "</div><div><b>" + esc(x.ikona + " " + x.nazov) + "</b>" +
+        return '<div class="kal-pol kp-' + x.druh + (x.sAdminom ? " s-adminom" : "") + '"><div class="kal-cas">' + (denKluc(x.od) === zajtra ? "zajtra " : "") + esc(casPolozky(x)) + "</div><div><b>" + esc(x.ikona + " " + x.nazov) + "</b>" +
+          (x.ludia && x.ludia.length > 1 ? '<div class="meta">👥 ' + esc(menaPolozky(x)) + "</div>" : "") +
           (x.miesto ? '<div class="meta">📍 ' + esc(x.miesto) + "</div>" : "") + "</div></div>";
       }).join("") : '<p class="meta">Dnes ani zajtra nemáte nič naplánované. Udalosti pridáte v Kalendári.</p>') + "</section>";
   }
@@ -6802,6 +6829,7 @@
       var ciel = "";
       if (p.inzerat_id) { var z = S.inz.find(function (x) { return x.id === p.inzerat_id; }); ciel = '<a href="#" data-prip-inz="' + esc(p.inzerat_id) + '">' + esc(z ? z.nazov : "inzerát") + "</a>"; }
       if (p.nehnutelnost_id) { var pn = (S.ponuky || []).find(function (x) { return x.id === p.nehnutelnost_id; }); ciel = '<a href="#" data-prip-nehn="' + p.nehnutelnost_id + '">🏠 ' + esc(pn ? nazovPonuky(pn) : "ponuka") + "</a>"; }
+      if (p.udalost_id) { var ud = (S.udalosti || []).find(function (x) { return x.id === p.udalost_id; }); if (ud) ciel = '<a href="#" data-prip-udalost="' + esc(denKluc(ud.zaciatok)) + '">📅 Otvoriť v kalendári</a>'; }
       if (p.schrankovanie_id) { var r = S.sch.find(function (x) { return x.id === p.schrankovanie_id; }); ciel = '<a href="#" data-prip-sch="' + p.schrankovanie_id + '">Schránkovanie: ' + esc(r ? r.lokalita : "záznam") + "</a>"; }
       var splatna = new Date(p.cas).getTime() <= t;
       return '<div class="prip' + (splatna ? " due" : "") + '" data-prip="' + p.id + '">' +
@@ -6872,6 +6900,13 @@
       e.preventDefault();
       S.zvonOpen = false;
       prejdi("inzeraty", li.dataset.pripInz);
+      return;
+    }
+    var lu = e.target.closest("[data-prip-udalost]");
+    if (lu) {
+      e.preventDefault(); S.zvonOpen = false; vykresliZvoncek();
+      var dk = lu.dataset.pripUdalost; S.kalDen = dk; S.kalMesiac = new Date(Number(dk.slice(0, 4)), Number(dk.slice(5, 7)) - 1, 1).toISOString();
+      prejdi("kalendar");
       return;
     }
     var ln = e.target.closest("[data-prip-nehn]");
