@@ -440,8 +440,9 @@
     var chatTik = 0;
     setInterval(function () {
       chatTik++;
-      if ((S.tab === "chat" && !document.hidden) || chatTik % 3 === 0) chatNove();
-    }, 5000);
+      if (!document.hidden || chatTik % 4 === 0) chatNove();
+    }, 4000);
+    window.addEventListener("focus", function () { chatNove(); if (S.tab === "chat") oznacPrecitane(); });
     document.addEventListener("visibilitychange", function () { if (!document.hidden) obnov(); });
   }
 
@@ -5599,7 +5600,29 @@
     S.chatS = id || null;
     if (S.tab === "chat") vykresliChat(); else prejdi("chat");
   }
-  async function chatNove() {
+  var chatBezi = null, chatZnova = false;
+  function chatNove() {
+    if (chatBezi) { chatZnova = true; return chatBezi; }
+    chatBezi = chatNoveRaz().catch(function () { /* skúsime o chvíľu */ }).then(function () {
+      chatBezi = null;
+      if (chatZnova) { chatZnova = false; return chatNove(); }
+    });
+    return chatBezi;
+  }
+  // človek sa práve pozerá na Týpka (okno je vpredu, nie len otvorené na pozadí)
+  function pozera() { return !document.hidden && (typeof document.hasFocus !== "function" || document.hasFocus()); }
+  // čas poslednej správy tímu, ktorú aplikácia má (čas servera – nezávisí od hodín v počítači)
+  function posledneTim() {
+    var t = S.me.chat_precitane || null, tm = t ? new Date(t).getTime() : 0;
+    S.chat.forEach(function (m) { var x = new Date(m.vytvorene).getTime(); if (x > tm) { tm = x; t = m.vytvorene; } });
+    return t;
+  }
+  function timPrecitany() {
+    var t = posledneTim(); if (!t) return;
+    S.me.chat_precitane = t;
+    rpc("chat_precitane_do", { p_cas: t }).catch(function () { return rpc("chat_precitane", {}); }).catch(function () {});
+  }
+  async function chatNoveRaz() {
     if (!S.me) return;
     var r = await Promise.all([
       sb.from("spravy").select("*").gt("id", S.chatMax).order("id", { ascending: true }).limit(200),
@@ -5628,10 +5651,12 @@
     if (!noveT.length && !noveD.length) return popisChat();
     var okno = S.tab === "chat" && !!$("#chat-spravy");
     var doOkna = S.chatS ? noveD.filter(function (m) { return partner(m) === S.chatS; }).map(normDm) : noveT;
-    if (okno) { pridajSpravy(doOkna); kresliKonverzacie(); if (!document.hidden) oznacPrecitane(); }
-    else if (S.tab === "domov") vykresliDomov();
+    try {
+      if (okno) { pridajSpravy(doOkna); kresliKonverzacie(); oznacPrecitane(); }
+      else if (S.tab === "domov") vykresliDomov();
+    } catch (e) { /* obálka musí vyskočiť aj keby sa nepodarilo prekresliť stránku */ }
     // vyskočí len to, čo človek práve nemá pred očami
-    var vidi = okno && !document.hidden;
+    var vidi = okno && pozera();
     var upoz = noveT.filter(function () { return !(vidi && !S.chatS); })
       .concat(noveD.filter(function (m) { return m.komu_id === S.me.id && !(vidi && S.chatS === m.od_id); }).map(normDm));
     upoz.sort(function (a, b) { return new Date(a.vytvorene) - new Date(b.vytvorene); });
@@ -5705,7 +5730,8 @@
     if (!nastChat("popup")) return;
     S.obalky = S.obalky || [];
     cudzie.forEach(function (x) {
-      var k = x.dm ? x.makler_id : "", e = S.obalky.find(function (y) { return y.konv === k; });
+      var otvorena = S.obalkaAkt && $("#obalka") && $("#obalka").dataset.stav !== "zavreta" ? S.obalkaAkt : null;
+      var k = x.dm ? x.makler_id : "", e = S.obalky.find(function (y) { return y.konv === k && y !== otvorena; });
       if (!e) { e = { konv: k, spravy: [], pripomienka: !!o.pripomienka }; S.obalky.push(e); }
       if (!e.spravy.some(function (y) { return y.id === x.id; })) e.spravy.push(x);
       if (!o.pripomienka) e.pripomienka = false;
@@ -5721,7 +5747,7 @@
     var o = $("#obalka");
     if (o) { if (o.dataset.stav === "zavreta" && S.obalkaAkt) kresliObalku(); return; }
     if (!S.obalky || !S.obalky.length || !S.me) return;
-    var vidi = S.tab === "chat" && !document.hidden && $("#chat-spravy");
+    var vidi = S.tab === "chat" && pozera() && $("#chat-spravy");
     S.obalky = S.obalky.filter(function (e) {
       e.spravy = e.spravy.filter(jeNeprecitana);
       return e.spravy.length && !(vidi && (S.chatS || "") === e.konv);
@@ -5733,7 +5759,8 @@
   }
   function kresliObalku() {
     var E = S.obalkaAkt; if (!E) return;
-    var o = $("#obalka"), nove = !o;
+    var o = $("#obalka"), nove = !o, panel = "";
+    if (o) { var vid = o.querySelector("[data-ob-panel]:not([hidden])"); panel = vid ? vid.dataset.obPanel : ""; }
     if (nove) { o = document.createElement("div"); o.id = "obalka"; o.className = "pochvala-var obalka-var"; o.dataset.stav = "zavreta"; document.body.appendChild(o); }
     var dm = !!E.konv, n = E.spravy.length, m = E.spravy[n - 1];
     var autori = []; E.spravy.forEach(function (x) { if (x.makler_id && autori.indexOf(x.makler_id) < 0) autori.push(x.makler_id); });
@@ -5760,6 +5787,7 @@
           return '<button class="btn" type="button" data-ob-kedy="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>" +
         '<button class="btn ghost" type="button" data-ob="spat">← Späť</button></div>' +
       '<div class="ob-precitane" data-ob-panel="list" hidden></div></div>';
+    if (panel === "neskor") panelObalky("neskor");
     if (nove) {
       setTimeout(function () { var b = o.querySelector(".ob-citat"); if (b) b.focus({ preventScroll: true }); }, 50);
       o.addEventListener("click", klikObalka);
@@ -5820,7 +5848,7 @@
     o.dataset.stav = "otvorena";
     o.querySelector(".obalka-karta").classList.add("otvorena");
     if (dm) { oznacLokalnePrecitane(E.konv); rpc("sukromne_precitane", { p_od: E.konv }).catch(function () {}); }
-    else { S.me.chat_precitane = new Date().toISOString(); rpc("chat_precitane", {}).catch(function () {}); }
+    else timPrecitany();
     vybavKonv(E.konv); popisChat(); kresliKonverzacie(); obnovZvoncek();
     var zoz = E.spravy.slice(-4), p = o.querySelector('[data-ob-panel="list"]');
     p.innerHTML = (E.spravy.length > 4 ? '<div class="meta ob-viac">+ ' + (E.spravy.length - 4) + " starších v konverzácii</div>" : "") +
@@ -5840,7 +5868,7 @@
       inp.disabled = true;
       try {
         if (dm) await rpc("poslat_sukromnu_spravu", { p_komu: E.konv, p_text: v });
-        else { await rpc("poslat_spravu", { p_text: v }); S.me.chat_precitane = new Date().toISOString(); }
+        else { await rpc("poslat_spravu", { p_text: v }); S.me.chat_precitane = posledneTim(); }
         toast(dm ? "🔒 Odpoveď pre " + krstneMeno(E.konv) + " je odoslaná." : "💬 Odpoveď je odoslaná.");
         zavriObalku(); chatNove();
       } catch (err) { inp.disabled = false; toast(chybaText(err), true); }
@@ -5989,12 +6017,11 @@
     S.dm.forEach(function (m) { if (m.komu_id === S.me.id && m.od_id === od && !m.precitane) m.precitane = t; });
   }
   function oznacPrecitane() {
-    if (document.hidden) return;
+    if (!pozera()) return;
     if (S.reak) vybavKonv(S.chatS || "");
     if (!S.chatS) {
       if (neprecTim() === 0) return;
-      S.me.chat_precitane = new Date().toISOString();
-      rpc("chat_precitane", {}).catch(function () {});
+      timPrecitany();
     } else {
       if (!neprecOd(S.chatS)) return;
       oznacLokalnePrecitane(S.chatS);
@@ -6169,7 +6196,7 @@
       var komu = S.chatS;
       try {
         if (komu) { await rpc("poslat_sukromnu_spravu", { p_komu: komu, p_text: v }); oznacLokalnePrecitane(komu); }
-        else { await rpc("poslat_spravu", { p_text: v }); S.me.chat_precitane = new Date().toISOString(); }
+        else { await rpc("poslat_spravu", { p_text: v }); S.me.chat_precitane = posledneTim(); }
         t.value = ""; t.style.height = "auto"; await chatNove();
       } catch (err) { toast(chybaText(err), true); }
       btn.disabled = false; t.focus();
