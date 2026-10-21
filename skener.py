@@ -328,12 +328,14 @@ SUKROMNY_SIGNALY = re.compile(
 )
 RK_SIGNALY = re.compile(
     r"realitn\w* kancel|\brk\b|makler|maklerk|provizi|real estate|\breality\b|s\.r\.o|"
-    r"exkluzivne (ponuk|na predaj|v ponuke)|ponukame (vam )?na predaj|ponukame vam|"
+    r"exkluzivne (ponuk|na predaj|v ponuke)|"
     r"v zastupeni|sprostredkovan|nasa spolocnost|nasa kancelar|pre nasich klientov|hladame pre klienta|"
-    r"\bdopyt\b|kupime|\bponukame\b|\bpnukame\b|mame pre vas|mame v ponuke|nasa ponuka|vasa realitn|"
+    r"\bdopyt\b|kupime|mame v ponuke|nasa ponuka|vasa realitn|"
     r"\b3d prehliadk|virtualn\w* prehliadk|obhliadk\w* (je )?mozn\w* (po )?dohod\w* s maklerom"
 )
-MENO_RK = re.compile(r"realit|reality|real\b|s\.\s?r\.\s?o|a\.s\.|estate|invest|home|\brk\b|maklér|makler|group|property|consulting|servis")
+# slabé znaky: „ponúkame na predaj“ píšu aj manželia či rodina („predáme“), samy o sebe RK nedokazujú
+RK_SLABE = re.compile(r"ponukame|pnukame|mame pre vas")
+MENO_RK = re.compile(r"realit|reality|real\b|s\.\s?r\.\s?o|a\.s\.|estate|invest|home|\brk\b|maklér|makler|group|property|consulting|servis|partner|\.sk\b")
 
 
 def klasifikuj_text(text):
@@ -343,6 +345,9 @@ def klasifikuj_text(text):
     m = RK_SIGNALY.search(b)
     if m:
         return "rk", f"v texte: „{m.group(0)}“"
+    m = RK_SLABE.search(b)
+    if m:
+        return "slabe", f"v texte „{m.group(0)}“ – možno RK"
     return None, None
 
 
@@ -632,6 +637,10 @@ def norm_bazos(r, pocty_uzivatelov):
         ptyp = "sukromny"
     elif druh == "rk":
         ptyp = "rk"
+    elif druh == "slabe" and pocet >= 2:
+        ptyp, dovod = "rk", f"{dovod.replace(' – možno RK', '')} a predajca má {pocet} realitné inzeráty"
+    elif druh == "slabe":
+        ptyp = "asi_sukromny"
     elif pocet >= 4:
         ptyp, dovod = "rk", f"predajca má {pocet} realitných inzerátov"
     else:
@@ -691,8 +700,8 @@ def norm_nehn(ad):
     adv = ad.get("advertiser") or {}
     if adv.get("type") == "PRIVATE_PERSON":
         druh, dovod = klasifikuj_text(ad.get("title", ""))
-        ptyp = "asi_sukromny" if druh == "rk" else "sukromny"
-        dovod = "portál: súkromná osoba" + (f" (ale {dovod})" if druh == "rk" else "")
+        ptyp = "asi_sukromny" if druh in ("rk", "slabe") else "sukromny"
+        dovod = "portál: súkromná osoba" + (f" (ale {dovod})" if druh in ("rk", "slabe") else "")
         meno = adv.get("name")
     else:
         ptyp = "rk"
@@ -752,8 +761,8 @@ def norm_topreality(r):
         ptyp, meno, dovod = "rk", r["rk"], "portál: profil RK"
     else:
         druh, dovod = klasifikuj_text(r["nazov"])
-        ptyp = "asi_sukromny" if druh == "rk" else "sukromny"
-        meno, dovod = None, ("portál: bez RK" + (f" (ale {dovod})" if druh == "rk" else ""))
+        ptyp = "asi_sukromny" if druh in ("rk", "slabe") else "sukromny"
+        meno, dovod = None, ("portál: bez RK" + (f" (ale {dovod})" if druh in ("rk", "slabe") else ""))
     d = r.get("datum")
     pub = None
     if d and re.fullmatch(r"\d{1,2}\.\d{1,2}\.\d{4}", d):
