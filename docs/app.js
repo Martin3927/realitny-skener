@@ -3093,14 +3093,25 @@
     if (!S.logoP) S.logoP = new Promise(function (ok) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = function () { ok(null); }; i.crossOrigin = "anonymous"; i.src = logoUrl(); });
     return S.logoP;
   }
+  // poloha loga: 9 pevných miest (ľavo/stred/pravo × hore/stred/dole) alebo vlastná – stred loga v pomere 0–1
+  function vodoznakObdlznik(W, H, lw, lh, n) {
+    var m = Math.round(Math.min(W, H) * 0.03), p = n.pozicia || "pd", x, y;
+    if (p === "vlastna") {
+      x = (+n.x || 0.5) * W - lw / 2; y = (+n.y || 0.5) * H - lh / 2;
+      x = Math.min(Math.max(x, m), W - lw - m); y = Math.min(Math.max(y, m), H - lh - m);
+      return [x, y];
+    }
+    var stlpec = { lh: "l", ld: "l", ls: "l", ph: "p", pd: "p", ps: "p" }[p] || "s";
+    var riadok = { lh: "h", ph: "h", hore: "h", ld: "d", pd: "d", dole: "d" }[p] || "s";
+    x = stlpec === "l" ? m : stlpec === "p" ? W - lw - m : (W - lw) / 2;
+    y = riadok === "h" ? m : riadok === "d" ? H - lh - m : (H - lh) / 2;
+    return [x, y];
+  }
   // vodotlač loga podľa nastavenia kancelárie: poloha, farebná/biela, priehľadnosť, veľkosť
   function kresliVodoznak(g, W, H, logo, n) {
     var lw = Math.round(Math.max(W, H) * n.velkost * (n.pozicia === "stred" ? 1.6 : 1)), lh = Math.round(lw * logo.height / logo.width);
     if (lw > W * 0.9) { lw = Math.round(W * 0.9); lh = Math.round(lw * logo.height / logo.width); }
-    var m = Math.round(Math.min(W, H) * 0.03), x, y;
-    if (n.pozicia === "stred") { x = (W - lw) / 2; y = (H - lh) / 2; }
-    else if (n.pozicia === "dole") { x = (W - lw) / 2; y = H - lh - m; }
-    else { x = n.pozicia.charAt(0) === "l" ? m : W - lw - m; y = n.pozicia.charAt(1) === "h" ? m : H - lh - m; }
+    var r = vodoznakObdlznik(W, H, lw, lh, n), x = r[0], y = r[1];
     var zdroj = logo;
     if (n.styl === "biele") {
       zdroj = document.createElement("canvas"); zdroj.width = lw; zdroj.height = lh;
@@ -4626,7 +4637,8 @@
   }
 
   // ------------------------------------------------------------ VZHĽAD A ZNAČKA (admin)
-  var POZICIE = [["lh", "Vľavo hore"], ["ph", "Vpravo hore"], ["stred", "Stred"], ["ld", "Vľavo dole"], ["dole", "Dole v strede"], ["pd", "Vpravo dole"]];
+  var POZICIE = [["lh", "Vľavo hore"], ["hore", "Hore v strede"], ["ph", "Vpravo hore"], ["ls", "Vľavo v strede"], ["stred", "Stred"], ["ps", "Vpravo v strede"],
+    ["ld", "Vľavo dole"], ["dole", "Dole v strede"], ["pd", "Vpravo dole"]];
   function vykresliVzhlad() {
     var el = $("#obsah"); if (!el || !admin()) return;
     var D = S.vzhladDraft = S.vzhladDraft || JSON.parse(JSON.stringify(Object.assign({ schema: "typek" }, S.vzhlad || {})));
@@ -4655,12 +4667,13 @@
         '<span class="meta">Kde bude logo</span><div class="vz-pozicie">' + POZICIE.map(function (p) {
           return '<button type="button" class="vz-poz p-' + p[0] + '" data-poz="' + p[0] + '" aria-pressed="' + (w.pozicia === p[0]) + '" title="' + p[1] + '" aria-label="' + p[1] + '"><i></i></button>';
         }).join("") + "</div>" +
+        '<span class="meta vz-poz-tip" id="vz-poz-tip">' + (w.pozicia === "vlastna" ? "✋ Vlastná poloha – logo si posunul v náhľade." : "Alebo logo chyť v náhľade a posuň ho, kam chceš.") + "</span>" +
         '<span class="meta">Farba loga</span><div class="seg" role="group"><button type="button" data-styl="farebne" aria-pressed="' + (w.styl === "farebne") + '">🎨 Farebné</button>' +
         '<button type="button" data-styl="biele" aria-pressed="' + (w.styl === "biele") + '">⬜ Biele</button></div>' +
         '<label class="vz-slider"><span>Priehľadnosť <b id="vz-pr-h">' + Math.round((1 - w.priehladnost) * 100) + ' %</b></span><input type="range" id="vz-pr" min="0" max="90" step="5" value="' + Math.round((1 - w.priehladnost) * 100) + '"></label>' +
         '<label class="vz-slider"><span>Veľkosť <b id="vz-vel-h">' + Math.round(w.velkost * 100) + ' %</b></span><input type="range" id="vz-vel" min="8" max="60" step="1" value="' + Math.round(w.velkost * 100) + '"></label>' +
         '<p class="meta">Platí pre nové fotky. Každý maklér si vodotlač pri nahrávaní môže vypnúť.</p></div>' +
-        '<div class="vz-nahlad-foto"><canvas id="vz-canvas" width="960" height="640" aria-label="Náhľad vodotlače"></canvas><span class="meta">Náhľad</span></div></div></section>' +
+        '<div class="vz-nahlad-foto"><canvas id="vz-canvas" width="960" height="540" aria-label="Náhľad vodotlače – logo sa dá posunúť myšou alebo prstom"></canvas><span class="meta">Náhľad · logo môžeš chytiť a posunúť</span></div></div></section>' +
       '<section class="vz-sekcia vz-typek"><img src="typek-postava.png" alt="" width="90" height="101"><div><b>Realitný týpek</b><span class="meta">Softvér pre realitné kancelárie a maklérov. Farby a logo si každá kancelária nastaví po svojom.</span></div></section></div>';
     el.innerHTML = h;
     napojVzhlad();
@@ -4670,9 +4683,12 @@
   async function kresliNahladVodoznaku() {
     var c = $("#vz-canvas"); if (!c) return;
     var g = c.getContext("2d"), W = c.width, H = c.height, D = S.vzhladDraft;
-    var foto = null, p = (S.ponuky || []).find(function (x) { return (x.fotky || []).length; });
-    if (p) foto = await nacitajObr(fotkaUrl(p.fotky[0]));
-    if (!$("#vz-canvas")) return;
+    if (!S.vzNahladFoto) S.vzNahladFoto = nacitajObr("vodotlac-nahlad.jpg?v=202610211700");
+    var logoSrc = D.logo || LOGO_PREDV;
+    if (!S.vzNahladLogo || S.vzNahladLogo.src !== logoSrc) S.vzNahladLogo = { src: logoSrc, p: nacitajObr(logoSrc) };
+    var foto = await S.vzNahladFoto, logo = await S.vzNahladLogo.p;
+    if (!$("#vz-canvas") || S.vzhladDraft !== D) return;
+    g.clearRect(0, 0, W, H);
     if (foto) { var k = Math.max(W / foto.width, H / foto.height); g.drawImage(foto, (W - foto.width * k) / 2, (H - foto.height * k) / 2, foto.width * k, foto.height * k); }
     else {
       var gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, "#8fb8e0"); gr.addColorStop(0.62, "#dce9f3"); gr.addColorStop(0.62, "#7aa35a"); gr.addColorStop(1, "#5b8243");
@@ -4680,8 +4696,7 @@
       g.fillStyle = "#efe7da"; g.fillRect(300, 260, 360, 200); g.fillStyle = "#9b4b36"; g.beginPath(); g.moveTo(270, 270); g.lineTo(480, 140); g.lineTo(690, 270); g.closePath(); g.fill();
       g.fillStyle = "#5c7da0"; [[340, 300], [440, 300], [560, 300]].forEach(function (o) { g.fillRect(o[0], o[1], 60, 60); }); g.fillStyle = "#6b4a33"; g.fillRect(450, 370, 60, 90);
     }
-    var logo = await nacitajObr(D.logo || LOGO_PREDV);
-    if (logo && $("#vz-canvas")) kresliVodoznak(g, W, H, logo, Object.assign({}, VODOZNAK_PREDV, D.vodoznak));
+    if (logo) kresliVodoznak(g, W, H, logo, Object.assign({}, VODOZNAK_PREDV, D.vodoznak));
   }
   function napojVzhlad() {
     var el = $("#obsah"), D = S.vzhladDraft;
@@ -4690,7 +4705,35 @@
     var fa = $("#vz-farba");
     fa.oninput = function () { D.schema = "vlastna"; D.farba = fa.value; nahladVzhladu(); };
     fa.onchange = function () { D.schema = "vlastna"; D.farba = fa.value; zmena(true); };
-    el.querySelectorAll("[data-poz]").forEach(function (b) { b.onclick = function () { D.vodoznak.pozicia = b.dataset.poz; el.querySelectorAll("[data-poz]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); zmena(); }; });
+    function tipPolohy() { var t = $("#vz-poz-tip"); if (t) t.textContent = D.vodoznak.pozicia === "vlastna" ? "✋ Vlastná poloha – logo si posunul v náhľade." : "Alebo logo chyť v náhľade a posuň ho, kam chceš."; }
+    el.querySelectorAll("[data-poz]").forEach(function (b) { b.onclick = function () { D.vodoznak.pozicia = b.dataset.poz; delete D.vodoznak.x; delete D.vodoznak.y; el.querySelectorAll("[data-poz]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); tipPolohy(); zmena(); }; });
+    var cv = $("#vz-canvas"), tahanie = null, cakaKresba = false;
+    function bodVCanvase(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; }
+    function presun(e) {
+      var b = bodVCanvase(e);
+      D.vodoznak.pozicia = "vlastna";
+      D.vodoznak.x = Math.round(Math.min(1, Math.max(0, b[0] - tahanie[0])) * 1000) / 1000;
+      D.vodoznak.y = Math.round(Math.min(1, Math.max(0, b[1] - tahanie[1])) * 1000) / 1000;
+      if (!cakaKresba) { cakaKresba = true; requestAnimationFrame(function () { cakaKresba = false; zmena(); }); }
+    }
+    cv.onpointerdown = async function (e) {
+      var logo = S.vzNahladLogo && await S.vzNahladLogo.p; if (!logo) return;
+      var n = Object.assign({}, VODOZNAK_PREDV, D.vodoznak), W = cv.width, H = cv.height;
+      var lw = Math.round(Math.max(W, H) * n.velkost * (n.pozicia === "stred" ? 1.6 : 1)); if (lw > W * 0.9) lw = Math.round(W * 0.9);
+      var lh = Math.round(lw * logo.height / logo.width), r = vodoznakObdlznik(W, H, lw, lh, n), b = bodVCanvase(e);
+      var sx = (r[0] + lw / 2) / W, sy = (r[1] + lh / 2) / H;
+      var naLogu = Math.abs(b[0] - sx) * W <= lw / 2 + 12 && Math.abs(b[1] - sy) * H <= lh / 2 + 12;
+      // chytené logo sa posúva bez skoku; klik mimo loga ho presunie priamo na to miesto
+      tahanie = naLogu ? [b[0] - sx, b[1] - sy] : [0, 0];
+      // stred zostane stredom – pri posunutí sa už veľkosť nemení
+      if (n.pozicia === "stred") D.vodoznak.velkost = Math.min(0.6, Math.round(n.velkost * 1.6 * 100) / 100);
+      try { cv.setPointerCapture(e.pointerId); } catch (x) { /* nič */ }
+      el.querySelectorAll("[data-poz]").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+      presun(e); tipPolohy();
+      var vel = $("#vz-vel"); if (vel) { vel.value = Math.round(D.vodoznak.velkost * 100); $("#vz-vel-h").textContent = vel.value + " %"; }
+    };
+    cv.onpointermove = function (e) { if (tahanie) presun(e); };
+    cv.onpointerup = cv.onpointercancel = function () { tahanie = null; };
     el.querySelectorAll("[data-styl]").forEach(function (b) { b.onclick = function () { D.vodoznak.styl = b.dataset.styl; el.querySelectorAll("[data-styl]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); zmena(); }; });
     $("#vz-pr").oninput = function () { D.vodoznak.priehladnost = Math.round((1 - this.value / 100) * 100) / 100; $("#vz-pr-h").textContent = this.value + " %"; zmena(); };
     $("#vz-vel").oninput = function () { D.vodoznak.velkost = this.value / 100; $("#vz-vel-h").textContent = this.value + " %"; zmena(); };
