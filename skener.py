@@ -24,6 +24,7 @@ from email.mime.text import MIMEText
 from html import escape, unescape
 from pathlib import Path
 from urllib.parse import quote_plus, urlparse
+from zoneinfo import ZoneInfo
 
 import requests
 from bs4 import BeautifulSoup
@@ -156,6 +157,8 @@ def get(url, **kw):
 # portály, ktoré nás dočasne obmedzili (403/429) – do uvedeného času ich skener vynechá, aby nedostal ban
 PAUZA_PORTALU = {}
 PAUZA_PO_OBMEDZENI = timedelta(hours=2)
+PAUZA_PO_VYPADKU = timedelta(minutes=30)   # portál neprijíma spojenie (výpadok alebo blokuje servery)
+_VYPADKY = {}
 
 
 def _get(url, **kw):
@@ -165,7 +168,8 @@ def _get(url, **kw):
     obmedzene = 0
     for pokus in range(3):
         try:
-            r = SESSION.get(url, timeout=30, **kw)
+            r = SESSION.get(url, timeout=(10, 30), **kw)
+            _VYPADKY.pop(host, None)
             time.sleep(PAUZA + random.uniform(0, PAUZA))  # nepravidelná pauza ako u človeka
             if r.status_code == 200:
                 return r.text
@@ -178,7 +182,13 @@ def _get(url, **kw):
                     return None
                 time.sleep(15 * (pokus + 1))
         except requests.RequestException as e:
-            log(f"  ! chyba spojenia {url}: {e}")
+            log(f"  ! chyba spojenia {url}: {str(e)[:160]}")
+            if isinstance(e, (requests.ConnectionError, requests.ConnectTimeout)):
+                _VYPADKY[host] = _VYPADKY.get(host, 0) + 1
+                if _VYPADKY[host] >= 2:
+                    PAUZA_PORTALU[host] = datetime.now(timezone.utc) + PAUZA_PO_VYPADKU
+                    log(f"  ! {host} neprijíma spojenie – skener ho {int(PAUZA_PO_VYPADKU.total_seconds() // 60)} min vynechá")
+                    return None
             time.sleep(5 * (pokus + 1))
     return None
 
@@ -1357,6 +1367,8 @@ def main():
         try:
             v = fn()
             if portal and not v:
+                if any(portal in h for h in PAUZA_PORTALU):
+                    raise RuntimeError("portál je nedostupný (neprijíma spojenie) – skener ho skúsi znova o 30 minút")
                 raise RuntimeError("portál nevrátil žiadne inzeráty (zmenil sa vzhľad stránky?)")
             return v
         except Exception as e:  # noqa – jeden pokazený portál nesmie zastaviť ostatné
@@ -1509,7 +1521,7 @@ def main():
         "posledny_plny": NOW_ISO if plny else meta.get("posledny_plny"),
         "okresy": OKRESY,
         "pocet_aktivnych": sum(1 for z in inzeraty.values() if z.get("aktivny") and not z.get("duplikat_z")),
-        "chyby": chyby + [f"{h} dočasne obmedzil prístup – skener ho vynechá do {t.astimezone().strftime('%H:%M')}"
+        "chyby": chyby + [f"{h} je nedostupný alebo obmedzil prístup – skener ho skúsi znova o {t.astimezone(ZoneInfo('Europe/Bratislava')).strftime('%H:%M')}"
                           for h, t in PAUZA_PORTALU.items() if t > datetime.now(timezone.utc)]
                  + ([f"Radar Bazoša: {radar['chyba']}"] if radar.get("chyba") else []),
         "pauza_portalov": {h: t.isoformat(timespec="seconds") for h, t in PAUZA_PORTALU.items() if t > datetime.now(timezone.utc)},
