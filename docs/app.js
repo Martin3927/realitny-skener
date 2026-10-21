@@ -4097,6 +4097,8 @@
   var TYPY_UDALOSTI = [["stretnutie", "🤝", "Stretnutie"], ["obhliadka", "🗝️", "Obhliadka"], ["podpis", "✍️", "Podpis zmluvy"], ["telefonat", "📞", "Telefonát"], ["osobne", "🙂", "Osobné"], ["ine", "📌", "Iné"]];
   async function nacitajUdalosti() {
     S.udalosti = await vsetkyRiadky("udalosti", "*", "id").catch(function () { return []; });
+    // kolegovia na udalosti fungujú až po zmene databázy (stĺpec ucastnici)
+    if (S.kalKolegovia === undefined) S.kalKolegovia = await sb.from("udalosti").select("ucastnici").limit(1).then(function (r) { return !r.error; }, function () { return false; });
   }
   function d2(n) { return String(n).padStart(2, "0"); }
   function denKluc(d) { d = new Date(d); return d.getFullYear() + "-" + d2(d.getMonth() + 1) + "-" + d2(d.getDate()); }
@@ -4229,6 +4231,7 @@
       '<div class="form-actions"><button class="btn primary" type="submit">Uložiť</button><button class="btn ghost" type="button" data-kal="zrus-form">Zrušiť</button></div></form>';
   }
   function formKolegovia(f) {
+    if (!S.kalKolegovia) return "";
     var autor = f.makler_id || S.me.id, vyb = f.ucastnici || [];
     var zoz = (S.makleri || []).filter(function (m) { return m.aktivny && m.id !== autor; })
       .sort(function (a, b) { return (b.rola === "admin") - (a.rola === "admin") || String(a.meno).localeCompare(String(b.meno), "sk"); });
