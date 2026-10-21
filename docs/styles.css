@@ -1793,3 +1793,6 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
   white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); max-height: 30vh; overflow-y: auto }
 .ign-karta .ob-akcie .btn:not(.primary) { text-align: center; white-space: normal }
 @media (prefers-reduced-motion: reduce) { .ign-karta.prisla, .ob-obalka.ob-vratena, .ob-razitko { animation: none !important } }
+.zs-foto { flex: none; width: 52px; height: 40px; border-radius: 8px; object-fit: cover; background: var(--gold-soft) }
+.zvon-inz .zs-tim { font-size: 18px }
+.zs-tlacidla { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end }

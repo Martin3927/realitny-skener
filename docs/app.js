@@ -438,10 +438,11 @@
     spustiOdpocet();
     somTu();
     var chatTik = 0;
-    setInterval(function () {
-      chatTik++;
-      if (!document.hidden || chatTik % 4 === 0) chatNove();
-    }, 4000);
+    var tik = function () { chatTik++; if (!document.hidden || chatTik % 2 === 0) chatNove(); };
+    try {
+      var w = new Worker(URL.createObjectURL(new Blob(["setInterval(function(){postMessage(1)},4000)"], { type: "text/javascript" })));
+      w.onmessage = tik;
+    } catch (e) { setInterval(tik, 4000); }
     window.addEventListener("focus", function () { chatNove(); if (S.tab === "chat") oznacPrecitane(); });
     document.addEventListener("visibilitychange", function () { if (!document.hidden) obnov(); });
   }
@@ -771,6 +772,7 @@
     rows.forEach(function (z) { if (z.obec && z.aktivny) obce[z.obec] = (obce[z.obec] || 0) + 1; });
     S.obce = Object.keys(obce).sort(function (a, b) { return a.localeCompare(b, "sk"); }).map(function (o) { return [o, obce[o]]; });
     S.lastInzLoad = Date.now();
+    if (S.me && !S.me.inzeraty_videne) inzeratyVidene();   // prvé spustenie – staré inzeráty nehlásime
   }
   async function nacitajPrevzatia() {
     var rows = await vsetkyRiadky("prevzatia", "*", "inzerat_id");
@@ -925,7 +927,7 @@
     if (obnovuje || !S.me) return;
     obnovuje = true;
     try {
-      var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), chatNove()];
+      var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), chatNove(), inzeratyNoveNacitaj().catch(function () {})];
       if (Date.now() - S.lastInzLoad > 10 * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
       uloha.push(nacitajNastavenia().catch(function () {}), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy());
       if (S.ponuky && !S.ponukaEdit) uloha.push(nacitajPonuky().catch(function () {}));
@@ -1390,6 +1392,7 @@
   }
   function vykresliZoznam() {
     var el = $("#obsah"); if (!el) return;
+    if (!S.jedenId && pozera()) inzeratyVidene();
     var r = filtruj(), out = r.out;
     document.querySelectorAll("[data-n]").forEach(function (n) { n.textContent = nf.format(r.pocty[n.dataset.n] || 0); });
     var h = bannerSkenera() + (S.jedenId ? '<div class="note" style="margin-bottom:10px">Zobrazený je jeden inzerát. <button class="btn" type="button" id="vsetky-inz">Zobraziť všetky inzeráty</button></div>' : "");
@@ -6588,6 +6591,73 @@
       '<small class="meta">V nastavenom čase sa ukáže pri zvončeku a príde aj emailom.</small></form>';
   }
 
+  // ---------- nové súkromné inzeráty zo skenera (zvonček)
+  function maxPrvyKrat() {
+    var t = null, tm = 0;
+    (S.inz || []).forEach(function (z) { var x = new Date(z.prvy_krat).getTime(); if (x > tm) { tm = x; t = z.prvy_krat; } });
+    return t;
+  }
+  function noveInzeraty() {
+    if (!S.me || !S.inz || !maSekciu("inzeraty") || !S.me.inzeraty_videne) return [];
+    var od = new Date(S.me.inzeraty_videne).getTime();
+    return S.inz.filter(function (z) { return z.aktivny && ptyp(z) !== "rk" && new Date(z.prvy_krat).getTime() > od; })
+      .sort(function (a, b) { return new Date(b.prvy_krat) - new Date(a.prvy_krat); });
+  }
+  function inzeratyVidene() {
+    if (!S.me || !maSekciu("inzeraty")) return;
+    var t = maxPrvyKrat(); if (!t) return;
+    if (S.me.inzeraty_videne && new Date(S.me.inzeraty_videne) >= new Date(t)) return;
+    S.me.inzeraty_videne = t;
+    rpc("inzeraty_videne", { p_cas: t }).catch(function () {});
+    obnovZvoncek();
+  }
+  async function inzeratyNoveNacitaj() {
+    if (!S.me || !S.inz || !maSekciu("inzeraty")) return;
+    if (!S.me.inzeraty_videne) return inzeratyVidene();   // prvé spustenie – staré inzeráty nehlásime
+    var od = maxPrvyKrat(); if (!od) return;
+    var r = await sb.from("inzeraty").select("*").is("duplikat_z", null).gt("prvy_krat", od).order("prvy_krat", { ascending: true }).limit(200);
+    if (r.error || !r.data.length) return;
+    var ma = {}; S.inz.forEach(function (z) { ma[z.id] = true; });
+    var nove = r.data.filter(function (z) { return !ma[z.id]; });
+    if (!nove.length) return;
+    nove.forEach(function (z) { z._t = norm([z.nazov, z.obec, z.predajca, z.popis].join(" ")); });
+    S.inz = S.inz.concat(nove);
+    var sukr = nove.filter(function (z) { return z.aktivny && ptyp(z) !== "rk"; });
+    if (sukr.length) {
+      var z = sukr[sukr.length - 1];
+      toast("🏠 " + (sukr.length === 1 ? "Nový súkromný inzerát: " + (z.nazov || "") + (z.obec ? " – " + z.obec : "") : sukr.length + " nové súkromné inzeráty v skeneri") + " 🔔");
+      if (nastChat("zvuk")) cinknut();
+      systemoveUpozornenie("🏠 " + (sukr.length === 1 ? "Nový súkromný inzerát" : sukr.length + " nové súkromné inzeráty"),
+        (z.nazov || "") + (z.obec ? " · " + z.obec : "") + (z.cena ? " · " + eur(z.cena) : ""), "typek-inz", "inzeraty");
+    }
+    if (S.tab === "inzeraty") { vykresliStaty(); vykresliZoznam(); }
+    obnovZvoncek();
+  }
+  function zvonInzeratyHtml() {
+    var zoz = noveInzeraty(); if (!zoz.length) return "";
+    var moje = (S.me.obce || []).length ? zoz.filter(function (z) { return S.me.obce.indexOf(z.obec) >= 0; }).length : -1;
+    return '<div class="zvon-spravy zvon-inz"><h4>🏠 Nové súkromné inzeráty (' + zoz.length + ")" + (moje >= 0 ? " · " + moje + " vo vašich obciach" : "") + "</h4>" +
+      zoz.slice(0, 5).map(function (z) {
+        return '<div class="zs-pol">' + (z.foto ? '<img class="zs-foto" src="' + esc(z.foto) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="zs-tim">🏠</span>') +
+          '<div class="zs-text"><div class="zs-hl"><b>' + esc(z.nazov || TYP[z.typ] || "Inzerát") + '</b><span class="meta">' + esc(casKonverzacie(z.prvy_krat)) + "</span></div>" +
+          '<div class="zs-nahlad">' + esc([z.obec, z.cena ? eur(z.cena) : "", PORTAL[z.portal] || z.portal, (PRED[ptyp(z)] || [""])[0]].filter(Boolean).join(" · ")) + "</div></div>" +
+          '<button class="btn primary" type="button" data-zvon-inz="' + esc(z.id) + '">Otvoriť</button></div>';
+      }).join("") +
+      '<div class="zs-tlacidla">' + (zoz.length > 5 ? '<button class="btn" type="button" data-zvon-inz-vsetky>Zobraziť všetkých ' + zoz.length + " v skeneri</button>" :
+        '<button class="btn" type="button" data-zvon-inz-vsetky>Otvoriť skener</button>') +
+      '<button class="btn ghost" type="button" data-zvon-inz-videne>Označiť ako videné</button></div></div>';
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("[data-zvon-inz],[data-zvon-inz-vsetky],[data-zvon-inz-videne]"); if (!a) return;
+    if (a.hasAttribute("data-zvon-inz-videne")) { inzeratyVidene(); return; }
+    S.zvonOpen = false; vykresliZvoncek();
+    if (a.hasAttribute("data-zvon-inz-vsetky")) {
+      Object.assign(S.f, { predajca: "sukr", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", q: "" }); ulozFiltre();
+      if (S.tab === "inzeraty" && !S.jedenId) { vykresliFiltreInz(); vykresliZoznam(); window.scrollTo(0, 0); } else prejdi("inzeraty");
+      return;
+    }
+    prejdi("inzeraty", a.dataset.zvonInz);
+  });
   // ikona karty v prehliadači: logo, pri novej správe alebo pripomienke červený zvonček
   function ikonaKarty(zvon) {
     if (S.ikonaZvon === zvon) return;
@@ -6612,7 +6682,8 @@
     var b = $("#zvon-n");
     if (!b || !S.me) return;
     var p = splatne().length, sp = S.reak ? pocetDoZvoncka() : 0, n = p + sp;
-    var ni = S.reak && maSekciu("chat") ? ignoracieNevidene().length : 0, ns = sp - ni;
+    var ni = S.reak && maSekciu("chat") ? ignoracieNevidene().length : 0, ns = sp - ni, nz = noveInzeraty().length;
+    n += nz;
     b.hidden = n === 0; b.textContent = n > 9 ? "9+" : String(n);
     $("#zvon-btn").classList.toggle("ring", n > 0);
     $("#zvon-btn").classList.toggle("ma-spravu", sp > 0);
@@ -6620,6 +6691,7 @@
     var t = [];
     if (ns) t.push(ns + (ns === 1 ? " nová správa" : ns <= 4 ? " nové správy" : " nových správ"));
     if (ni) t.push(ni + (ni === 1 ? " ignorovaná správa" : " ignorované správy"));
+    if (nz) t.push(nz + (nz === 1 ? " nový súkromný inzerát" : nz <= 4 ? " nové súkromné inzeráty" : " nových súkromných inzerátov"));
     if (p) t.push(p + (p === 1 ? " pripomienka čaká" : " pripomienky čakajú"));
     $("#zvon-btn").title = t.length ? t.join(", ") : "Upozornenia a pripomienky";
   }
@@ -6652,7 +6724,7 @@
     function sekcia(nadpis, zoznam, cudzia) {
       return zoznam.length ? "<h4>" + nadpis + " (" + zoznam.length + ")</h4>" + zoznam.map(function (p) { return riadok(p, cudzia); }).join("") : "";
     }
-    var spr = zvonSpravyHtml();
+    var spr = zvonSpravyHtml() + zvonInzeratyHtml();
     var h = '<div class="box zvon-box">' + spr + '<div class="zvon-hlava"><h3>🔔 Moje pripomienky</h3>' +
       '<button class="btn primary" type="button" data-act="prip-nova">+ Nová pripomienka</button></div>';
     if (S.pripForm) h += formPripomienka(S.pripForm);
