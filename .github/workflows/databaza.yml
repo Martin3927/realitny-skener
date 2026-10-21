@@ -2,7 +2,8 @@ name: Databáza (Supabase)
 
 # Po každej zmene v supabase/migrations/ spustí nové súbory v databáze Supabase.
 # Prístup sa nastavuje raz: Settings → Secrets and variables → Actions → SUPABASE_ACCESS_TOKEN
-# (osobný kľúč zo supabase.com → Account → Access Tokens). Kým nie je vyplnený, krok sa preskočí.
+# (osobný kľúč zo supabase.com → Account → Access Tokens, prístup Database: Read-write len pre projekt realitny-skener).
+# Kým nie je vyplnený, krok sa preskočí.
 
 on:
   push:
