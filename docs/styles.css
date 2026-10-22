@@ -1988,3 +1988,7 @@ a.dl-menu { text-decoration: none; color: inherit }
 .arch-ver { margin-top: 6px; display: grid; gap: 4px }
 .arch-ver .d-popis { opacity: .85; max-height: 220px }
 .detail .arch-akcie { margin-top: 6px }
+
+/* ---------- história makléra */
+.hm-seg { flex-wrap: wrap; overflow: visible }
+@media (max-width: 640px) { .hm-seg { display: flex; width: 100% } .hm-seg button { flex: 1 1 auto; border-bottom: 1px solid var(--line) } .hm-box #hm-obd { width: 100% } }
