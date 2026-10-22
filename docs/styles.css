@@ -1925,6 +1925,7 @@ a.dl-menu { text-decoration: none; color: inherit }
 .mp-okno-av { display: grid; place-items: center }
 .mp-okno-pozn { justify-content: center }
 .mp-okno-akcie { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.mp-okno-akcie.jedna { grid-template-columns: 1fr }
 .mp-form { display: grid; gap: 10px; text-align: left }
 .mp-form select, .mp-form input { width: 100% }
 .mp-do { font-size: 14px } .mp-do small { color: var(--muted) } .mp-do b { font-size: 16px }

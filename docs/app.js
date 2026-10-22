@@ -4264,11 +4264,11 @@
     document.body.appendChild(a); a.click(); a.remove();
   }
   // ------------------------------------------------------------ MATTERPORT – rezervácia kamery
-  // klik na deň a hodinu = rezervácia na 3 hodiny, svoju si maklér predĺži o hodinu; tím dostane správu v chate
+  // klik na deň a hodinu = rezervácia na 2 hodiny, svoju si maklér raz predĺži o hodinu; tím dostane správu v chate
   var MP_OD = 7, MP_DO = 21, MP_RIADOK = 44;
   async function nacitajMatterport() {
     var od = new Date(); od.setDate(od.getDate() - 14);
-    var r = await sb.from("matterport_rezervacie").select("id, makler_id, zaciatok, koniec, poznamka").gte("koniec", od.toISOString()).order("zaciatok").limit(1000);
+    var r = await sb.from("matterport_rezervacie").select("*").gte("koniec", od.toISOString()).order("zaciatok").limit(1000);
     if (r.error) throw r.error;
     S.mp = r.data || [];
   }
@@ -4284,11 +4284,16 @@
   }
   function mpMoze(r) { return r.makler_id === S.me.id || admin(); }
   function mpTeraz() { var t = new Date(); return (S.mp || []).find(function (r) { return new Date(r.zaciatok) <= t && new Date(r.koniec) > t; }); }
+  // najbližšia rezervácia, ktorá sa ešte dnes začne
+  function mpDnesRez() { var n = new Date(); return (S.mp || []).find(function (r) { return new Date(r.zaciatok) > n && denKluc(r.zaciatok) === denKluc(n); }); }
+  function mpKto(r) { return r.makler_id === S.me.id ? "ty" : krstneMeno(r.makler_id); }
   function mpStavText() {
     var t = mpTeraz(), n = new Date();
-    if (t) return (t.makler_id === S.me.id ? "Teraz ho máš ty" : "Teraz ho má " + krstneMeno(t.makler_id)) + " do " + mpCas(t.koniec);
+    if (t) return "Obsadený – teraz ho " + (t.makler_id === S.me.id ? "máš ty" : "má " + krstneMeno(t.makler_id)) + " do " + mpCas(t.koniec);
+    var d = mpDnesRez();
+    if (d) return "Rezervovaný dnes od " + mpCas(d.zaciatok) + " do " + mpCas(d.koniec) + " (" + mpKto(d) + ")";
     var dalsia = (S.mp || []).filter(function (r) { return new Date(r.zaciatok) > n; })[0];
-    return dalsia ? "Voľný · najbližšie " + (denKluc(dalsia.zaciatok) === denKluc(n) ? "dnes" : mpDen(dalsia.zaciatok, true)) + " o " + mpCas(dalsia.zaciatok) : "Voľný";
+    return dalsia ? "Dnes voľný · najbližšie " + mpDen(dalsia.zaciatok, true) + " o " + mpCas(dalsia.zaciatok) + " (" + mpKto(dalsia) + ")" : "Voľný – žiadne rezervácie";
   }
   function mpMobil() { return window.matchMedia("(max-width: 760px)").matches; }
 
@@ -4309,8 +4314,8 @@
     var dni = mobil ? dniTyz.filter(function (d) { return denKluc(d) === S.mpDen; }) : dniTyz;
     var koniecTyz = dniTyz[6], teraz = new Date(), t = mpTeraz();
     var h = '<div class="box mp-box"><div class="vykon-hlava"><div class="mp-titul"><span class="mp-ik">' + ikona("matterport") + '</span><div><h3>Matterport</h3>' +
-      '<span class="meta">Klikni na deň a hodinu – kamera je tvoja na 3 hodiny. Svoju rezerváciu si predĺžiš o hodinu.</span></div></div>' +
-      '<span class="mp-stav' + (t ? " obsadeny" : "") + '">' + esc(mpStavText()) + "</span></div>" +
+      '<span class="meta">Klikni na deň a hodinu – kamera je tvoja na 2 hodiny. Svoju rezerváciu si môžeš raz predĺžiť o hodinu.</span></div></div>' +
+      '<span class="mp-stav' + (t || mpDnesRez() ? " obsadeny" : "") + '">' + esc(mpStavText()) + "</span></div>" +
       '<div class="mp-nav"><button class="btn ghost" type="button" data-mp="pred" aria-label="Predchádzajúci týždeň"' + (pon <= mpPondelok(dnes) ? " disabled" : "") + '>‹</button>' +
       "<b>" + esc(pon.getDate() + ". " + (pon.getMonth() !== koniecTyz.getMonth() ? (pon.getMonth() + 1) + ". " : "") + "– " + koniecTyz.getDate() + ". " + (koniecTyz.getMonth() + 1) + ". " + koniecTyz.getFullYear()) + "</b>" +
       '<button class="btn ghost" type="button" data-mp="dalsi" aria-label="Ďalší týždeň">›</button>' +
@@ -4363,7 +4368,7 @@
     h += '<div class="mp-zoznam"><h4>Najbližšie rezervácie</h4>' + (nadchadzajuce.length ? nadchadzajuce.map(function (r) {
       return '<div class="mp-riadok' + (r.makler_id === S.me.id ? " moja" : "") + '">' + avatar(r.makler_id, 30) + '<div class="mp-riadok-t"><b>' + esc(mpRozsah(r)) + '</b><span class="meta">' +
         esc(meno(r.makler_id)) + (r.poznamka ? " · " + esc(r.poznamka) : "") + "</span></div>" +
-        (mpMoze(r) ? '<div class="mp-riadok-a"><button class="btn" type="button" data-mp-plus="' + r.id + '">+1 hodina</button><button class="btn ghost" type="button" data-mp-zrus="' + r.id + '">Zrušiť</button></div>' : "") + "</div>";
+        (mpMoze(r) ? '<div class="mp-riadok-a">' + (r.predlzene ? "" : '<button class="btn" type="button" data-mp-plus="' + r.id + '">+1 hodina</button>') + '<button class="btn ghost" type="button" data-mp-zrus="' + r.id + '">Zrušiť</button></div>' : "") + "</div>";
     }).join("") : '<p class="meta">Matterport je zatiaľ voľný. Klikni v kalendári na deň a hodinu.</p>') + "</div></div>";
     el.innerHTML = h;
     napojMatterport();
@@ -4398,6 +4403,7 @@
   }
   function mpPredlzit(id) {
     var r = (S.mp || []).find(function (x) { return x.id === id; }); if (!r) return;
+    if (r.predlzene) return toast("Rezervácia už bola predĺžená – o hodinu sa dá predĺžiť len raz.", true);
     var k = new Date(new Date(r.koniec).getTime() + 36e5), kol = mpKolizia(new Date(r.koniec), k, r.id);
     if (kol) return toast("Predĺžiť sa nedá – od " + mpCas(kol.zaciatok) + " má Matterport " + krstneMeno(kol.makler_id) + ".", true);
     mpAkcia("predlzit_matterport", { p_id: id }, "Predĺžené do " + mpCas(k) + ". Tím dostal správu v chate.");
@@ -4417,23 +4423,24 @@
       var z = new Date(o.nova), moznosti = "";
       for (var m = MP_OD * 60 - 60; m <= MP_DO * 60; m += 30) {
         var c = new Date(z); c.setHours(0, m, 0, 0);
-        if (c.getTime() + 36e5 * 3 <= Date.now()) continue;
+        if (c.getTime() + 36e5 * 2 <= Date.now()) continue;
         moznosti += '<option value="' + c.toISOString() + '"' + (c.getTime() === z.getTime() ? " selected" : "") + ">" + mpCas(c) + "</option>";
       }
       h += '<span class="mp-ik velka">' + ikona("matterport") + '</span><h3 id="mp-okno-n">Rezervovať Matterport</h3><p class="mp-okno-den">' + esc(mpDen(z)) + "</p>" +
         '<form id="f-mp" class="mp-form"><label class="field"><span>Od</span><select name="od">' + moznosti + "</select></label>" +
-        '<div class="mp-do">do <b data-mp-do></b> <small>(3 hodiny)</small></div>' +
+        '<div class="mp-do">do <b data-mp-do></b> <small>(2 hodiny)</small></div>' +
         '<label class="field"><span>Kde fotíš? (nepovinné)</span><input type="text" name="poznamka" maxlength="300" placeholder="napr. 3-izbový byt, Mier"></label>' +
         '<p class="mp-kol" data-mp-kol hidden></p>' +
-        '<button class="btn primary wide" type="submit">📸 Rezervovať na 3 hodiny</button>' +
-        '<p class="meta mp-info">Kolegom príde správa v chate. Ak budeš potrebovať viac času, pridáš si +1 hodinu.</p></form>';
+        '<button class="btn primary wide" type="submit">📸 Rezervovať na 2 hodiny</button>' +
+        '<p class="meta mp-info">Kolegom príde správa v chate. Ak budeš potrebovať viac času, raz si pridáš +1 hodinu.</p></form>';
     } else {
       var r = (S.mp || []).find(function (x) { return x.id === o.rez; });
       if (!r) { S.mpOkno = null; return; }
       var moja = r.makler_id === S.me.id, skoncila = new Date(r.koniec) <= new Date();
       h += '<span class="mp-okno-av">' + avatar(r.makler_id, 64) + '</span><h3 id="mp-okno-n">' + esc(moja ? "Tvoja rezervácia" : meno(r.makler_id)) + "</h3>" +
         '<p class="mp-okno-den">' + esc(mpRozsah(r)) + "</p>" + (r.poznamka ? '<p class="meta mp-okno-pozn">📍 ' + esc(r.poznamka) + "</p>" : "") +
-        (mpMoze(r) && !skoncila ? '<div class="mp-okno-akcie"><button class="btn primary" type="button" data-mpo="plus">+1 hodina</button><button class="btn ghost" type="button" data-mpo="zrus">Zrušiť rezerváciu</button></div>' :
+        (mpMoze(r) && !skoncila ? '<div class="mp-okno-akcie' + (r.predlzene ? " jedna" : "") + '">' + (r.predlzene ? "" : '<button class="btn primary" type="button" data-mpo="plus">+1 hodina</button>') +
+          '<button class="btn ghost" type="button" data-mpo="zrus">Zrušiť rezerváciu</button></div>' + (r.predlzene ? '<p class="meta mp-info">Rezervácia už bola raz predĺžená.</p>' : "") :
           !moja && !skoncila ? '<button class="btn wide" type="button" data-mpo="napisat">Napísať ' + esc(krstneMeno(r.makler_id)) + "</button>" : "") +
         (skoncila ? '<p class="meta">Rezervácia už skončila.</p>' : "");
     }
@@ -4450,7 +4457,7 @@
     var f = w.querySelector("#f-mp");
     if (f) {
       var prepocitaj = function () {
-        var z = new Date(f.od.value), k = new Date(z.getTime() + 3 * 36e5), kol = mpKolizia(z, k);
+        var z = new Date(f.od.value), k = new Date(z.getTime() + 2 * 36e5), kol = mpKolizia(z, k);
         w.querySelector("[data-mp-do]").textContent = mpCas(k) + (denKluc(k) !== denKluc(z) ? " (" + k.toLocaleDateString("sk-SK", { day: "numeric", month: "numeric" }) + ")" : "");
         var p = w.querySelector("[data-mp-kol]");
         p.hidden = !kol;
@@ -4462,7 +4469,7 @@
         e.preventDefault();
         var b = f.querySelector('[type="submit"]'); b.disabled = true; b.textContent = "Rezervujem…";
         mpAkcia("rezervovat_matterport", { p_zaciatok: f.od.value, p_poznamka: f.poznamka.value.trim() || null },
-          "Matterport je tvoj " + mpDen(f.od.value) + " od " + mpCas(f.od.value) + ". Tím dostal správu v chate.").then(function (ok) { if (!ok) { b.disabled = false; b.textContent = "📸 Rezervovať na 3 hodiny"; } });
+          "Matterport je tvoj " + mpDen(f.od.value) + " od " + mpCas(f.od.value) + ". Tím dostal správu v chate.").then(function (ok) { if (!ok) { b.disabled = false; b.textContent = "📸 Rezervovať na 2 hodiny"; } });
       };
       setTimeout(function () { f.poznamka.focus({ preventScroll: true }); }, 50);
     } else { var bb = w.querySelector(".btn"); if (bb) bb.focus({ preventScroll: true }); }
