@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1e2a35">
+<title>Správa zákazníkov – Realitný týpek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css?v=202610221500">
+<link rel="stylesheet" href="sprava.css?v=202610221500">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>try { var t = localStorage.getItem("alpha-skener-tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+</head>
+<body class="sz-stranka">
+<header class="sp-hlava">
+  <div class="wrap sp-hlava-in">
+    <a class="sp-znacka" href="#" title="Prehľad zákazníkov"><img src="typek-hlava.png" alt="" width="40" height="40"><span><b>Realitný týpek</b><small>Správa zákazníkov</small></span></a>
+    <nav class="sp-prepinac" aria-label="Prepnúť">
+      <span class="sp-prep-akt" aria-current="page">Správa zákazníkov</span>
+      <a href="./#domov" class="sp-prep-ina" title="Späť do aplikácie Alpha Reality">Alpha Reality →</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="sp"><div class="boot">Načítavam…</div></main>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="config.js?v=202610201100"></script>
+<script src="supabase.min.js"></script>
+<script src="sprava.js?v=202610221500"></script>
+</body>
+</html>

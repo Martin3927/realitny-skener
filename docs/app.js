@@ -415,6 +415,8 @@
       return obrazovkaLogin(r.data && !r.data.aktivny ? "Váš účet je deaktivovaný. Kontaktujte administrátora." : "Účet sa nenašiel. Kontaktujte administrátora.");
     }
     S.me = r.data;
+    // hlavný správca Realitného týpka – vidí prepínač do správy zákazníkov
+    try { var hs = await sb.rpc("je_hlavny_spravca"); S.hlavny = !hs.error && hs.data === true; } catch (e) { S.hlavny = false; }
     try { await nacitajNastavenia(); } catch (e) { /* predvolené */ }
     // aplikácia bola zatvorená dlhšie, ako je čas odhlásenia → odhlásime
     var posl = poslednaAktivita();
@@ -1029,6 +1031,7 @@
       '<div class="user">' +
       '<span class="odhl" id="odhl" hidden title="Automatické odhlásenie pri nečinnosti – odpočet sa vynuluje pri každej vašej aktivite">⏱ <b id="odhl-cas"></b></span>' +
       '<button type="button" class="bell" data-act="zvoncek" id="zvon-btn" aria-label="Upozornenia a pripomienky">🔔<span class="badge" id="zvon-n" hidden></span></button>' +
+      (S.hlavny ? '<a class="sz-prepni" href="sprava.html" title="Prepnúť do správy zákazníkov Realitného týpka">⇄ <span>Správa zákazníkov</span></a>' : "") +
       '<button type="button" class="heslo-btn" data-pomoc="heslo" title="Zmeniť heslo"><span aria-hidden="true">🔑</span><span class="heslo-btn-t">Zmeniť heslo</span></button>' +
       '<button type="button" class="me-btn" data-act="profil" title="Môj profil">' + avatar(S.me.id, 28) + '<span class="email">' + esc(S.me.meno || S.me.email) + (admin() ? " · admin" : "") + "</span></button>" +
       '<button type="button" class="theme-btn" data-act="tema" id="tema-btn"></button>' +
@@ -1097,7 +1100,9 @@
       [["sprievodca", "Sprievodca aplikáciou", "🧭"], ["novinky", "Čo je nové", "✨"], ["heslo", "Zmeniť heslo", "🔑"]].map(function (x) {
         return '<button type="button" class="dl-menu" data-pomoc="' + x[0] + '"><span class="dl-menu-ik dl-menu-emoji" aria-hidden="true">' + x[2] + "</span><span>" + x[1] + "</span>" +
           (x[0] === "novinky" ? '<span class="tab-n" data-novinky-n hidden></span>' : "") + "</button>";
-      }).join("") + "</div></div>";
+      }).join("") + "</div></div>" +
+      (S.hlavny ? '<div class="menu-skup menu-sprava"><span class="menu-skup-n">Realitný týpek</span><div class="menu-dl">' +
+        '<a class="dl-menu" href="sprava.html"><span class="dl-menu-ik dl-menu-emoji" aria-hidden="true">⇄</span><span>Správa zákazníkov</span></a></div></div>' : "");
   }
   function otvorMenu() {
     var m = $("#menu-sheet"); if (!m) return;

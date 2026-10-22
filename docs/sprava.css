@@ -1,0 +1,113 @@
+/* Správa zákazníkov – samostatná obrazovka hlavného správcu (farby Realitného týpka) */
+body.sz-stranka { min-height: 100vh; padding-bottom: 60px }
+.sz-stranka h1, .sz-stranka h2, .sz-stranka h3 { font-family: var(--display); letter-spacing: -.01em }
+
+/* hlavička: atramentová so zlatým pásom, aby bolo jasné, že nie si v Alpha Reality */
+.sp-hlava { background: var(--graphite); color: #f7f2e8; border-bottom: 3px solid var(--gold-strong); padding-top: env(safe-area-inset-top, 0px); position: sticky; top: 0; z-index: 20 }
+.sp-hlava-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 10px; flex-wrap: wrap }
+.sp-znacka { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none }
+.sp-znacka img { display: block; border-radius: 10px }
+.sp-znacka span { display: grid; line-height: 1.15 }
+.sp-znacka b { font-family: "Montserrat", var(--display); font-weight: 900; font-size: 16px }
+.sp-znacka small { color: var(--gold-strong); font-weight: 700; font-size: 11px; letter-spacing: .14em; text-transform: uppercase }
+.sp-prepinac { display: inline-flex; background: rgba(255,255,255,.08); border-radius: 999px; padding: 3px; gap: 2px; font-size: 13px; font-weight: 700 }
+.sp-prepinac > * { padding: 6px 14px; border-radius: 999px; white-space: nowrap; text-decoration: none }
+.sp-prep-akt { background: var(--gold-strong); color: #1e2a35 }
+.sp-prep-ina { color: #c9d4dd }
+.sp-prep-ina:hover { background: rgba(255,255,255,.1); color: #fff }
+
+.sp-uvod { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin: 22px 0 14px }
+.sp-uvod h1 { margin: 0; font-size: clamp(22px, 4vw, 30px); font-weight: 800 }
+.sp-uvod p { margin: 4px 0 0; color: var(--muted) }
+.sp-novy { padding: 10px 18px; font-size: 14.5px; border-radius: 999px; text-decoration: none }
+.sp-spat { display: inline-block; margin-top: 18px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 14px }
+.sp-spat:hover { color: var(--ink) }
+.sp-sumar { background: var(--surface); border-radius: 12px; padding: 10px 16px; text-align: right; box-shadow: 0 6px 20px rgb(30 42 53 / .06) }
+.sp-sumar span { display: block; font-size: 12px; color: var(--muted) }
+.sp-sumar b { font-family: var(--display); font-size: 22px }
+
+/* dlaždice */
+.sp-dlazdice { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px }
+.sp-dl { background: var(--surface); border-radius: 12px; padding: 14px 16px; display: grid; gap: 2px; box-shadow: 0 6px 20px rgb(30 42 53 / .06) }
+.sp-dl span { font-size: 12.5px; color: var(--muted); font-weight: 600 }
+.sp-dl b { font-family: var(--display); font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums }
+.sp-dl small { font-size: 12px; color: var(--muted) }
+.sp-dl.pozor { background: var(--warn-soft) }
+.sp-dl.pozor b { color: var(--warn) }
+
+.sp-filtre { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px }
+.sp-filtre select { flex: 0 1 220px }
+
+/* zoznam */
+.sp-tab { background: var(--surface); border-radius: 12px; overflow: hidden; box-shadow: 0 6px 20px rgb(30 42 53 / .06) }
+.sp-riadok { display: grid; grid-template-columns: minmax(180px, 2fr) minmax(140px, 1.6fr) minmax(150px, 1.4fr) 100px 100px 90px 100px; gap: 12px; align-items: center;
+  padding: 12px 16px; border-top: 1px solid var(--line); color: inherit; text-decoration: none; font-size: 13.5px }
+.sp-riadok:first-child { border-top: 0 }
+a.sp-riadok:hover { background: var(--surface-2) }
+.sp-th { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: var(--surface-2) }
+.sp-riadok .r { text-align: right; font-variant-numeric: tabular-nums }
+.sp-meno { display: grid; gap: 2px; min-width: 0 }
+.sp-meno b { font-size: 14.5px }
+.sp-meno small { color: var(--muted); font-size: 12px }
+.sp-stav { font-style: normal; display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; line-height: 1.3 }
+.sp-stav.dobry { background: var(--good-soft); color: var(--good) }
+.sp-stav.pozor { background: var(--warn-soft); color: var(--warn) }
+.sp-stav.zly { background: var(--bad-soft); color: var(--bad) }
+.sp-stav.info { background: var(--info-soft); color: var(--info) }
+.sp-stav.sivy { background: var(--line); color: var(--muted) }
+.sp-zamraz { font-style: normal; color: var(--info) }
+.sp-nic { color: var(--muted); padding: 10px 2px; margin: 0 }
+
+.sp-prazdne, .sp-hlaska { text-align: center; background: var(--surface); border-radius: 16px; padding: 32px 20px; display: grid; justify-items: center; gap: 8px; box-shadow: 0 6px 20px rgb(30 42 53 / .06) }
+.sp-hlaska { margin-top: 40px }
+.sp-prazdne h3, .sp-hlaska h2 { margin: 6px 0 0 }
+.sp-prazdne p, .sp-hlaska p { margin: 0 0 8px; color: var(--muted); max-width: 46ch }
+.sp-prazdne .btn, .sp-hlaska .btn { text-decoration: none }
+
+/* detail */
+.sp-akcie { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px }
+.sp-akcie a { text-decoration: none }
+.sp-form { display: grid; gap: 12px }
+.sp-box { background: var(--surface); border-radius: 12px; padding: 16px; display: grid; gap: 12px; box-shadow: 0 6px 20px rgb(30 42 53 / .06) }
+.sp-box h3 { margin: 0; font-size: 16px; font-weight: 800 }
+.sp-box .field input, .sp-box .field select { width: 100% }
+.sp-pozn { margin: 0; font-size: 12.5px; color: var(--muted) }
+.sp-pozn:empty { display: none }
+.sp-seg { display: inline-flex; flex-wrap: wrap; gap: 6px }
+.sp-seg label { cursor: pointer }
+.sp-seg input { position: absolute; opacity: 0; pointer-events: none }
+.sp-seg span { display: inline-block; padding: 7px 14px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 600; font-size: 13.5px }
+.sp-seg input:checked + span { background: var(--ink); color: var(--surface); border-color: var(--ink) }
+.sp-seg input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 2px }
+.sp-moduly { display: flex; flex-wrap: wrap; gap: 6px }
+.sp-s-tl { display: flex; gap: 6px }
+.sp-s-tl input { flex: 1 1 auto; min-width: 0 }
+.sp-uloz { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; position: sticky; bottom: 0; background: var(--bg); padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 5 }
+.sp-uloz .btn.primary { padding: 10px 20px; font-size: 14.5px }
+.sp-uloz a { text-decoration: none }
+.sp-zmaz { margin-left: auto }
+
+.sp-platby, .sp-pristup { margin-top: 12px }
+.sp-pl-form { display: grid; gap: 10px; background: var(--surface-2); border-radius: 10px; padding: 12px }
+.sp-pl-rychle { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); font-weight: 600 }
+.sp-pl-zoznam { display: grid }
+.sp-pl { display: grid; grid-template-columns: 96px 90px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 2px; border-top: 1px solid var(--line); font-size: 13.5px }
+.sp-pl:first-child { border-top: 0 }
+.sp-pl b { font-variant-numeric: tabular-nums }
+.sp-pl-d { color: var(--muted); font-variant-numeric: tabular-nums }
+.sp-pl span:nth-child(3) { color: var(--muted) }
+.sp-pristup p { margin: 0; color: var(--muted); font-size: 13.5px }
+
+@media (max-width: 900px) {
+  .sp-th { display: none }
+  .sp-riadok { grid-template-columns: 1fr 1fr; gap: 6px 12px }
+  .sp-meno { grid-column: 1 / -1 }
+  .sp-riadok > span[data-n]::before { content: attr(data-n); display: block; font-size: 11px; color: var(--muted); font-weight: 600 }
+  .sp-riadok .r { text-align: left }
+}
+@media (max-width: 520px) {
+  .sp-prepinac { width: 100%; justify-content: space-between }
+  .sp-pl { grid-template-columns: 80px 1fr auto; }
+  .sp-pl span:nth-child(3) { grid-column: 1 / -2; grid-row: 2 }
+  .sp-zmaz { margin-left: 0 }
+}
