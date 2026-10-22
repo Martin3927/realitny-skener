@@ -137,6 +137,38 @@ async function tyzdennyPrehlad(db: any) {
   return { ok: chyby.length === 0, odoslane, chyby };
 }
 
+// nové žiadosti o bezplatnú verziu z predajného webu → e-mail hlavnému správcovi
+// deno-lint-ignore no-explicit-any
+async function webZiadosti(db: any) {
+  const { data: rows, error } = await db.from("zakaznici")
+    .update({ web_oznamene: new Date().toISOString() })
+    .eq("zdroj", "web").is("web_oznamene", null)
+    .select("id, email, poznamky");
+  if (error || !rows?.length) return 0;
+  const komu: string[] = [];
+  const { data: sp } = await db.from("hlavni_spravcovia").select("user_id");
+  for (const s of sp ?? []) {
+    const { data: u } = await db.auth.admin.getUserById(s.user_id);
+    if (u?.user?.email) komu.push(u.user.email);
+  }
+  if (!komu.length) return 0;
+  // deno-lint-ignore no-explicit-any
+  const zoz = (rows as any[]).map((z) =>
+    `<li style="margin:0 0 10px"><b>${esc(z.email)}</b><br><span style="font-size:13px;color:#555">${esc(String(z.poznamky || "").split("\n").pop())}</span></li>`).join("");
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35">
+    <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Nová žiadosť o bezplatnú verziu</b></div>
+    <p style="margin:16px 0 8px">Z webu realitnytypek.sk prišlo ${rows.length === 1 ? "nová žiadosť" : rows.length + " nových žiadostí"}:</p>
+    <ul style="padding-left:18px;margin:0">${zoz}</ul>
+    <p style="margin:22px 0"><a href="${esc(WEB_URL + "sprava.html")}" style="background:#db9522;color:#1e2a35;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700">Otvoriť Správu zákazníkov</a></p>
+    <p style="color:#999;font-size:12px">Realitný týpek · posiela sa len hlavnému správcovi</p></div>`;
+  let odoslane = 0;
+  for (const e of komu) {
+    try { await posli(e, "Nová žiadosť o bezplatnú verziu: " + rows[0].email + (rows.length > 1 ? " a ďalší" : ""), html); odoslane++; }
+    catch { /* žiadosť ostáva v Správe zákazníkov */ }
+  }
+  return odoslane;
+}
+
 async function sha256(t: string) {
   const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
   return Array.from(new Uint8Array(h)).map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -206,5 +238,6 @@ Deno.serve(async (req) => {
       await db.from("pripomienky").update({ email_chyba: String((e as Error).message || e).slice(0, 300) }).eq("id", p.id);
     }
   }
-  return Response.json({ ok: true, odoslane });
+  const web = await webZiadosti(db).catch(() => 0);
+  return Response.json({ ok: true, odoslane, web });
 });
