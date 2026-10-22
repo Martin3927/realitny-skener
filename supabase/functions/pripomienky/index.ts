@@ -157,7 +157,7 @@ async function webZiadosti(db: any) {
     `<li style="margin:0 0 10px"><b>${esc(z.email)}</b><br><span style="font-size:13px;color:#555">${esc(String(z.poznamky || "").split("\n").pop())}</span></li>`).join("");
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35">
     <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Nová žiadosť o bezplatnú verziu</b></div>
-    <p style="margin:16px 0 8px">Z webu realitnytypek.sk prišlo ${rows.length === 1 ? "nová žiadosť" : rows.length + " nových žiadostí"}:</p>
+    <p style="margin:16px 0 8px">Z webu realitnytypek.sk ${rows.length === 1 ? "prišla nová žiadosť" : "prišlo " + rows.length + " nových žiadostí"}:</p>
     <ul style="padding-left:18px;margin:0">${zoz}</ul>
     <p style="margin:22px 0"><a href="${esc(WEB_URL + "sprava.html")}" style="background:#db9522;color:#1e2a35;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700">Otvoriť Správu zákazníkov</a></p>
     <p style="color:#999;font-size:12px">Realitný týpek · posiela sa len hlavnému správcovi</p></div>`;
