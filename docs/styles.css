@@ -1859,3 +1859,83 @@ a.dl-menu { text-decoration: none; color: inherit }
 .sch-pozn.skratene { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden }
 .sch-akcie { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end }
 .sch-akcie .btn { padding: 5px 9px; font-size: 13px }
+
+/* ---------- Matterport – rezervácia kamery */
+.mp-titul { display: flex; align-items: center; gap: 12px; min-width: 0 }
+.mp-titul h3 { margin: 0 0 2px }
+.mp-ik { flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--gold-soft); color: var(--gold); display: grid; place-items: center }
+.mp-ik svg { width: 24px; height: 24px }
+.mp-ik.velka { width: 60px; height: 60px; border-radius: 16px; margin: 0 auto }
+.mp-ik.velka svg { width: 32px; height: 32px }
+.mp-stav { border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; background: var(--good-soft); color: var(--good) }
+.mp-stav.obsadeny { background: var(--warn-soft); color: var(--warn) }
+.mp-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap }
+.mp-nav b { min-width: 150px; text-align: center; font-family: var(--display) }
+.mp-nav .btn[disabled] { opacity: .35; cursor: default }
+.mp-dni { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px }
+.mp-den-cip { position: relative; display: grid; justify-items: center; gap: 1px; padding: 6px 2px 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer }
+.mp-den-cip small { font-size: 11px; color: var(--muted); text-transform: capitalize }
+.mp-den-cip b { font-size: 16px }
+.mp-den-cip.dnes b { color: var(--gold) }
+.mp-den-cip.akt { background: var(--graphite); border-color: var(--graphite); color: #fff }
+.mp-den-cip.akt small { color: #c9d4dd } .mp-den-cip.akt b { color: #fff }
+.mp-den-cip.minule { opacity: .5 }
+.mp-den-cip i { position: absolute; bottom: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--gold-strong) }
+.mp-mriezka { display: grid; grid-template-columns: 46px repeat(var(--mp-dni), minmax(0, 1fr)); column-gap: 4px; align-items: start }
+.mp-roh { position: sticky; top: 0 }
+.mp-hlava-dna { padding: 6px 4px 8px; text-align: center; font-size: 12.5px; color: var(--muted); text-transform: capitalize; border-bottom: 1px solid var(--line) }
+.mp-hlava-dna b { color: var(--ink) }
+.mp-hlava-dna.dnes { color: var(--gold) } .mp-hlava-dna.dnes b { color: var(--gold) }
+.mp-hodiny { position: relative; margin-top: 4px }
+.mp-hodiny span { position: absolute; right: 4px; transform: translateY(-50%); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums }
+.mp-hodiny span:first-child { transform: none }
+.mp-stlpec { position: relative; margin-top: 4px; border-radius: 10px; background: var(--surface-2) }
+.mp-stlpec.dnes { background: rgb(var(--accent-rgb) / .07) }
+.mp-bunka { position: absolute; left: 0; right: 0; height: 44px; border: 0; border-top: 1px dashed var(--line); background: transparent; padding: 0; cursor: pointer; font: inherit; color: var(--gold) }
+.mp-bunka:first-child { border-top: 0 }
+.mp-bunka:hover:not([disabled]), .mp-bunka:focus-visible { background: rgb(var(--accent-rgb) / .16); border-radius: 8px }
+.mp-bunka.minula { cursor: default; background: repeating-linear-gradient(135deg, transparent 0 6px, rgb(30 42 53 / .035) 6px 12px) }
+.mp-bunka[disabled]:not(.minula) { cursor: default }
+.mp-plus { opacity: 0; font-size: 12px; font-weight: 700; transition: opacity .12s }
+.mp-bunka:hover .mp-plus, .mp-bunka:focus-visible .mp-plus { opacity: 1 }
+.mp-rez { position: absolute; left: 3px; right: 3px; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; overflow: hidden; text-align: left;
+  border: 0; border-radius: 10px; padding: 5px 7px; background: var(--info-soft); color: var(--ink); border-left: 4px solid var(--info); font: inherit; cursor: pointer;
+  box-shadow: 0 4px 14px rgb(30 42 53 / .1) }
+.mp-rez.moja { background: var(--gold-soft); border-left-color: var(--gold-strong) }
+.mp-rez.skoncila { opacity: .55; box-shadow: none }
+.mp-rez:hover { filter: brightness(.98); box-shadow: 0 6px 18px rgb(30 42 53 / .16) }
+.mp-rez-kto { display: flex; align-items: center; gap: 5px; font-size: 13px; min-width: 0 }
+.mp-rez-kto b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.mp-rez-cas { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums }
+.mp-rez-pozn { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.mp-rez.nizka { flex-direction: row; align-items: center; gap: 6px; padding-top: 2px; padding-bottom: 2px }
+.mp-teraz { position: absolute; left: -2px; right: 0; z-index: 2; height: 2px; background: var(--bad); pointer-events: none }
+.mp-teraz::before { content: ""; position: absolute; left: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad) }
+.mp-zoznam { display: grid; gap: 6px }
+.mp-zoznam h4 { margin: 6px 0 2px }
+.mp-riadok { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); border-left: 4px solid var(--info) }
+.mp-riadok.moja { border-left-color: var(--gold-strong) }
+.mp-riadok-t { flex: 1; min-width: 0; display: grid; gap: 1px }
+.mp-riadok-t b { display: block }
+.mp-riadok-t b::first-letter { text-transform: uppercase }
+.mp-riadok-a { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end }
+.mp-karta { text-align: center; position: relative }
+.mp-okno-den { margin: 0; font-weight: 700; font-size: 16px }
+.mp-okno-den::first-letter { text-transform: uppercase }
+.mp-okno-av { display: grid; place-items: center }
+.mp-okno-pozn { justify-content: center }
+.mp-okno-akcie { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.mp-form { display: grid; gap: 10px; text-align: left }
+.mp-form select, .mp-form input { width: 100% }
+.mp-do { font-size: 14px } .mp-do small { color: var(--muted) } .mp-do b { font-size: 16px }
+.mp-kol { margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); font-size: 13px }
+.mp-info { justify-content: center; text-align: center }
+.mp-form .btn.primary[disabled] { opacity: .5; cursor: default }
+@media (max-width: 760px) {
+  .mp-mriezka { grid-template-columns: 42px minmax(0, 1fr) }
+  .mp-plus { opacity: .55 }
+  .mp-riadok { flex-wrap: wrap }
+  .mp-riadok-a { width: 100% }
+  .mp-riadok-a .btn { flex: 1 }
+  .mp-stav { width: 100%; text-align: center }
+}

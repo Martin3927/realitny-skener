@@ -760,9 +760,9 @@
   });
 
   // ---------- navigácia: každá sekcia je krok v histórii prehliadača (funguje tlačidlo Späť)
-  var TABY = ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat", "mapa", "kataster", "asistent", "web", "recenzie", "provizie", "vykon", "makleri", "vzhlad", "historia"];
+  var TABY = ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat", "matterport", "mapa", "kataster", "asistent", "web", "recenzie", "provizie", "vykon", "makleri", "vzhlad", "historia"];
   var SEKCIE = [["inzeraty", "Realitný skener", "skener"], ["schrankovanie", "Schránkovanie", "sch"], ["nehnutelnosti", "Nehnuteľnosti", "nehn"], ["klienti", "Klienti", "klienti"],
-    ["kalendar", "Kalendár", "kal"], ["chat", "Chat", "chat"], ["mapa", "Realitná mapa", "mapa"], ["kataster", "Kataster", "kataster"], ["asistent", "AI asistent", "ai"], ["web", "Osobný web", "web"], ["recenzie", "Recenzie", "hviezda"], ["provizie", "Provízie", "euro"]];
+    ["kalendar", "Kalendár", "kal"], ["chat", "Chat", "chat"], ["matterport", "Matterport", "matterport"], ["mapa", "Realitná mapa", "mapa"], ["kataster", "Kataster", "kataster"], ["asistent", "AI asistent", "ai"], ["web", "Osobný web", "web"], ["recenzie", "Recenzie", "hviezda"], ["provizie", "Provízie", "euro"]];
   var HLAVNE_SEKCIE = ["inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat"];
   function maSekciu(t) { return admin() || (S.me && (S.me.pristup || SEKCIE.map(function (x) { return x[0]; })).indexOf(t) >= 0); }
   function tabPovoleny(t) {
@@ -984,7 +984,7 @@
     await nacitajMaklerov();
     var meta = sb.from("stav_skenera").select("meta, upravene").maybeSingle().then(function (r) { S.meta = (r.data && r.data.meta) || {}; });
     await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
-      nacitajPredajcov().catch(function () { S.pred = null; })]);
+      nacitajPredajcov().catch(function () { S.pred = null; }), nacitajMatterport().catch(function () { S.mp = null; })]);
   }
   var obnovuje = false;
   async function obnov() {
@@ -997,6 +997,7 @@
       if (S.ponuky && !S.ponukaEdit) uloha.push(nacitajPonuky().catch(function () {}));
       else if (S.dopyty && !S.dopytEdit) uloha.push(nacitajDopyty().catch(function () {}));
       if (S.tab === "inzeraty" || S.tab === "klienti") uloha.push(nacitajPredajcov().catch(function () {}));
+      if (S.mp || S.tab === "matterport") uloha.push(nacitajMatterport().catch(function () {}));
       somTu();
       await Promise.all(uloha);
       if (!S.me.aktivny) return odhlasit();
@@ -1084,7 +1085,7 @@
   }
 
   // menu z dlaždíc – na počítači bočný panel, na mobile/tablete rozbaľovacia plocha
-  var SKUPINY_MENU = [["Práca", ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "provizie"]], ["Tím", ["chat", "recenzie"]],
+  var SKUPINY_MENU = [["Práca", ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "provizie"]], ["Tím", ["chat", "matterport", "recenzie"]],
     ["Nástroje", ["mapa", "kataster", "asistent", "web"]], ["Správa", ["vykon", "makleri", "vzhlad", "historia"]]];
   function menuDlazdice(tabs) {
     var podla = { domov: ["domov", "Prehľad", "domov"] }; tabs.forEach(function (t) { podla[t[0]] = t; });
@@ -1134,6 +1135,8 @@
     else if (S.tab === "web") { if (!$(".web-box")) vykresliWeb(); }
     else if (S.tab === "recenzie") { if (!S.recForm) vykresliRecenzie(); }
     else if (S.tab === "chat") { if (!$("#chat-spravy")) vykresliChat(); else oznacPrecitane(); }
+    else if (S.tab === "matterport") { if (!$(".mp-box") || (!S.mpOkno && !$("#mp-okno"))) vykresliMatterport(); }
+    else if (S.mpOkno || $("#mp-okno")) { S.mpOkno = null; zavriMpOkno(); }
     var m = S.meta || {};
     $("#foot").innerHTML = '<p class="foot-info"></p>' + PRAVA;
     $("#foot .foot-info").textContent = (m.posledna_kontrola ? "Posledná kontrola portálov " + datum(m.posledna_kontrola, true) + ". " : "") +
@@ -2429,6 +2432,7 @@
       skener: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9h5"/><circle cx="16" cy="16" r="3.2"/><path d="m18.4 18.4 2.6 2.6"/>',
       sch: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
       nehn: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+      matterport: '<path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.4"/><path d="M18 11h.01"/>',
       chat: '<path d="M20.5 12a8.5 8.5 0 0 1-12.3 7.6L3.5 21l1.4-4.4A8.5 8.5 0 1 1 20.5 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>',
       zvon: '<path d="M6 9a6 6 0 1 1 12 0c0 6.5 2.5 8 2.5 8h-17S6 15.5 6 9"/><path d="M10.2 20.5a2 2 0 0 0 3.6 0"/>',
       vykon: '<path d="M3 21h18"/><rect x="5" y="11" width="3" height="7" rx=".5"/><rect x="10.5" y="5" width="3" height="13" rx=".5"/><rect x="16" y="13.5" width="3" height="4.5" rx=".5"/>',
@@ -2493,6 +2497,7 @@
       ["nehnutelnosti", "nehn", "Nehnuteľnosti", "Ponuka kancelárie – pridávanie, fotky, majiteľ a zmluva", S.ponuky ? S.ponuky.filter(function (x) { return skupinaStavu(x.stav) === "aktivne"; }).length + " aktívnych ponúk" : "Ponuka kancelárie", "", ""],
       ["klienti", "klienti", "Klienti a dopyty", "Čo hľadajú vaši klienti – samo sa páruje s ponukami a inzerátmi", S.dopyty ? S.dopyty.filter(function (d) { return d.stav === "aktivny" && d.makler_id === S.me.id; }).length + " mojich aktívnych" : "Dopyty klientov", "", ""],
       ["chat", "chat", "Chat", "Správy celému tímu aj súkromne kolegovi", neprec ? neprec + (neprec === 1 ? " neprečítaná správa" : neprec <= 4 ? " neprečítané správy" : " neprečítaných správ") : "Všetko prečítané", "", ""],
+      ["matterport", "matterport", "Matterport", "Rezervácia 3D kamery – klik na deň a hodinu", S.mp ? mpStavText() : "Rezervácia kamery", "", ""],
       ["kalendar", "kal", "Kalendár", "Stretnutia, obhliadky a pripomienky – aj v Google a Apple kalendári", (function () { var n = polozkyKalendara().filter(function (x) { return denKluc(x.od) === denKluc(new Date()); }).length; return n ? n + " dnes" : "Dnes voľno"; })(), "", ""],
       ["mapa", "mapa", "Realitná mapa", "Naše ponuky a súkromní predajcovia na mape", "", "", ""],
       ["kataster", "kataster", "Kataster", "Katastrálna mapa, list vlastníctva, parcela podľa GPS", "", "", ""],
@@ -4258,6 +4263,216 @@
     var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([r.join("\r\n")], { type: "text/calendar" })); a.download = "udalost.ics";
     document.body.appendChild(a); a.click(); a.remove();
   }
+  // ------------------------------------------------------------ MATTERPORT – rezervácia kamery
+  // klik na deň a hodinu = rezervácia na 3 hodiny, svoju si maklér predĺži o hodinu; tím dostane správu v chate
+  var MP_OD = 7, MP_DO = 21, MP_RIADOK = 44;
+  async function nacitajMatterport() {
+    var od = new Date(); od.setDate(od.getDate() - 14);
+    var r = await sb.from("matterport_rezervacie").select("id, makler_id, zaciatok, koniec, poznamka").gte("koniec", od.toISOString()).order("zaciatok").limit(1000);
+    if (r.error) throw r.error;
+    S.mp = r.data || [];
+  }
+  function mpPondelok(d) { d = new Date(d); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
+  function mpCas(d) { d = new Date(d); return d.getHours() + ":" + d2(d.getMinutes()); }
+  function mpDen(d, kratko) { return new Date(d).toLocaleDateString("sk-SK", kratko ? { weekday: "short", day: "numeric", month: "numeric" } : { weekday: "long", day: "numeric", month: "numeric" }); }
+  function mpRozsah(r) {
+    var z = new Date(r.zaciatok), k = new Date(r.koniec);
+    return mpDen(z) + " · " + mpCas(z) + " – " + mpCas(k) + (denKluc(z) !== denKluc(k) ? " (" + k.toLocaleDateString("sk-SK", { day: "numeric", month: "numeric" }) + ")" : "");
+  }
+  function mpKolizia(z, k, okrem) {
+    return (S.mp || []).find(function (r) { return r.id !== okrem && new Date(r.zaciatok) < k && new Date(r.koniec) > z; });
+  }
+  function mpMoze(r) { return r.makler_id === S.me.id || admin(); }
+  function mpTeraz() { var t = new Date(); return (S.mp || []).find(function (r) { return new Date(r.zaciatok) <= t && new Date(r.koniec) > t; }); }
+  function mpStavText() {
+    var t = mpTeraz(), n = new Date();
+    if (t) return (t.makler_id === S.me.id ? "Teraz ho máš ty" : "Teraz ho má " + krstneMeno(t.makler_id)) + " do " + mpCas(t.koniec);
+    var dalsia = (S.mp || []).filter(function (r) { return new Date(r.zaciatok) > n; })[0];
+    return dalsia ? "Voľný · najbližšie " + (denKluc(dalsia.zaciatok) === denKluc(n) ? "dnes" : mpDen(dalsia.zaciatok, true)) + " o " + mpCas(dalsia.zaciatok) : "Voľný";
+  }
+  function mpMobil() { return window.matchMedia("(max-width: 760px)").matches; }
+
+  function vykresliMatterport() {
+    var el = $("#obsah"); if (!el) return;
+    if (!S.mp) {
+      el.innerHTML = '<div class="box"><div class="meta">Načítavam rezervácie Matterportu…</div></div>';
+      nacitajMatterport().then(vykresliMatterport, function (e) { S.mp = []; toast(chybaText(e), true); vykresliMatterport(); });
+      return;
+    }
+    var dnes = new Date(); dnes.setHours(0, 0, 0, 0);
+    var pon = S.mpTyzden ? new Date(S.mpTyzden + "T00:00:00") : mpPondelok(dnes);
+    var dniTyz = []; for (var i = 0; i < 7; i++) { var d = new Date(pon); d.setDate(pon.getDate() + i); dniTyz.push(d); }
+    var mobil = mpMobil();
+    if (!S.mpDen || !dniTyz.some(function (d) { return denKluc(d) === S.mpDen; })) {
+      S.mpDen = denKluc(dniTyz.some(function (d) { return denKluc(d) === denKluc(dnes); }) ? dnes : pon);
+    }
+    var dni = mobil ? dniTyz.filter(function (d) { return denKluc(d) === S.mpDen; }) : dniTyz;
+    var koniecTyz = dniTyz[6], teraz = new Date(), t = mpTeraz();
+    var h = '<div class="box mp-box"><div class="vykon-hlava"><div class="mp-titul"><span class="mp-ik">' + ikona("matterport") + '</span><div><h3>Matterport</h3>' +
+      '<span class="meta">Klikni na deň a hodinu – kamera je tvoja na 3 hodiny. Svoju rezerváciu si predĺžiš o hodinu.</span></div></div>' +
+      '<span class="mp-stav' + (t ? " obsadeny" : "") + '">' + esc(mpStavText()) + "</span></div>" +
+      '<div class="mp-nav"><button class="btn ghost" type="button" data-mp="pred" aria-label="Predchádzajúci týždeň"' + (pon <= mpPondelok(dnes) ? " disabled" : "") + '>‹</button>' +
+      "<b>" + esc(pon.getDate() + ". " + (pon.getMonth() !== koniecTyz.getMonth() ? (pon.getMonth() + 1) + ". " : "") + "– " + koniecTyz.getDate() + ". " + (koniecTyz.getMonth() + 1) + ". " + koniecTyz.getFullYear()) + "</b>" +
+      '<button class="btn ghost" type="button" data-mp="dalsi" aria-label="Ďalší týždeň">›</button>' +
+      (denKluc(pon) !== denKluc(mpPondelok(dnes)) ? '<button class="btn ghost" type="button" data-mp="dnes">Tento týždeň</button>' : "") + "</div>";
+    if (mobil) {
+      h += '<div class="mp-dni" role="group" aria-label="Deň">' + dniTyz.map(function (d) {
+        var k = denKluc(d), n = (S.mp || []).filter(function (r) { return denKluc(r.zaciatok) === k; }).length;
+        return '<button type="button" class="mp-den-cip' + (k === S.mpDen ? " akt" : "") + (k === denKluc(dnes) ? " dnes" : "") + (d < dnes ? " minule" : "") + '" data-mp-den="' + k + '">' +
+          "<small>" + esc(d.toLocaleDateString("sk-SK", { weekday: "short" })) + "</small><b>" + d.getDate() + "</b>" + (n ? '<i aria-label="' + n + ' rezervácií"></i>' : "") + "</button>";
+      }).join("") + "</div>";
+    }
+    // mriežka: stĺpec s hodinami + jeden stĺpec na deň
+    var riadkov = MP_DO - MP_OD, vyska = riadkov * MP_RIADOK;
+    h += '<div class="mp-mriezka" style="--mp-dni:' + dni.length + '"><div class="mp-roh"></div>' + dni.map(function (d) {
+      return '<div class="mp-hlava-dna' + (denKluc(d) === denKluc(dnes) ? " dnes" : "") + '">' + esc(d.toLocaleDateString("sk-SK", { weekday: mobil ? "long" : "short" })) + " <b>" + d.getDate() + "." + (d.getMonth() + 1) + ".</b></div>";
+    }).join("");
+    h += '<div class="mp-hodiny" style="height:' + vyska + 'px">';
+    for (var hd = MP_OD; hd < MP_DO; hd++) h += '<span style="top:' + ((hd - MP_OD) * MP_RIADOK) + 'px">' + hd + ":00</span>";
+    h += "</div>";
+    dni.forEach(function (d) {
+      var k = denKluc(d);
+      h += '<div class="mp-stlpec' + (k === denKluc(dnes) ? " dnes" : "") + '" style="height:' + vyska + 'px">';
+      for (var hd = MP_OD; hd < MP_DO; hd++) {
+        var z = new Date(d); z.setHours(hd, 0, 0, 0);
+        var zk = new Date(z.getTime() + 36e5), minula = zk <= teraz;
+        var obs = mpKolizia(z, zk);
+        h += '<button type="button" class="mp-bunka' + (minula ? " minula" : "") + '" style="top:' + ((hd - MP_OD) * MP_RIADOK) + 'px"' +
+          (minula || obs ? ' tabindex="-1" disabled' : ' data-mp-volny="' + z.toISOString() + '"') + ' aria-label="' + esc(mpDen(z) + " " + hd + ":00") + '">' +
+          (minula || obs ? "" : '<span class="mp-plus">+ ' + hd + ":00</span>") + "</button>";
+      }
+      // rezervácie v tento deň (aj tie, čo cez deň len prechádzajú)
+      var zd = new Date(d); zd.setHours(MP_OD, 0, 0, 0); var kd = new Date(d); kd.setHours(MP_DO, 0, 0, 0);
+      (S.mp || []).filter(function (r) { return new Date(r.zaciatok) < kd && new Date(r.koniec) > zd; }).forEach(function (r) {
+        var a = Math.max(new Date(r.zaciatok), zd), b = Math.min(new Date(r.koniec), kd);
+        var top = (a - zd) / 36e5 * MP_RIADOK, v = Math.max(18, (b - a) / 36e5 * MP_RIADOK - 3);
+        var moja = r.makler_id === S.me.id, skoncila = new Date(r.koniec) <= teraz;
+        h += '<button type="button" class="mp-rez' + (moja ? " moja" : "") + (skoncila ? " skoncila" : "") + (v < 50 ? " nizka" : "") + '" data-mp-rez="' + r.id + '" style="top:' + (top + 1) + "px;height:" + v + 'px"' +
+          ' title="' + esc(meno(r.makler_id) + " · " + mpRozsah(r) + (r.poznamka ? " · " + r.poznamka : "")) + '">' +
+          '<span class="mp-rez-kto">' + avatar(r.makler_id, 20) + "<b>" + esc(moja ? "Ty" : krstneMeno(r.makler_id)) + "</b></span>" +
+          '<span class="mp-rez-cas">' + esc(mpCas(r.zaciatok) + " – " + mpCas(r.koniec)) + "</span>" +
+          (r.poznamka && v >= 70 ? '<span class="mp-rez-pozn">' + esc(r.poznamka) + "</span>" : "") + "</button>";
+      });
+      // čiara „teraz“
+      if (k === denKluc(dnes) && teraz > zd && teraz < kd) h += '<i class="mp-teraz" style="top:' + ((teraz - zd) / 36e5 * MP_RIADOK) + 'px" aria-hidden="true"></i>';
+      h += "</div>";
+    });
+    h += "</div>";
+    // najbližšie rezervácie
+    var nadchadzajuce = (S.mp || []).filter(function (r) { return new Date(r.koniec) > teraz; }).slice(0, 12);
+    h += '<div class="mp-zoznam"><h4>Najbližšie rezervácie</h4>' + (nadchadzajuce.length ? nadchadzajuce.map(function (r) {
+      return '<div class="mp-riadok' + (r.makler_id === S.me.id ? " moja" : "") + '">' + avatar(r.makler_id, 30) + '<div class="mp-riadok-t"><b>' + esc(mpRozsah(r)) + '</b><span class="meta">' +
+        esc(meno(r.makler_id)) + (r.poznamka ? " · " + esc(r.poznamka) : "") + "</span></div>" +
+        (mpMoze(r) ? '<div class="mp-riadok-a"><button class="btn" type="button" data-mp-plus="' + r.id + '">+1 hodina</button><button class="btn ghost" type="button" data-mp-zrus="' + r.id + '">Zrušiť</button></div>' : "") + "</div>";
+    }).join("") : '<p class="meta">Matterport je zatiaľ voľný. Klikni v kalendári na deň a hodinu.</p>') + "</div></div>";
+    el.innerHTML = h;
+    napojMatterport();
+    if (S.mpOkno) mpOkno(S.mpOkno);
+    var m = el.querySelector(".mp-mriezka");
+    if (m && !S.mpPosunute) { S.mpPosunute = true; var p = el.querySelector(".mp-rez:not(.skoncila)") || el.querySelector(".mp-bunka:not(.minula)"); if (p && mobil) p.scrollIntoView({ block: "center" }); }
+  }
+  function napojMatterport() {
+    var el = $("#obsah");
+    el.querySelectorAll("[data-mp]").forEach(function (b) {
+      b.onclick = function () {
+        var a = b.dataset.mp, pon = S.mpTyzden ? new Date(S.mpTyzden + "T00:00:00") : mpPondelok(new Date());
+        if (a === "pred") pon.setDate(pon.getDate() - 7);
+        if (a === "dalsi") pon.setDate(pon.getDate() + 7);
+        if (a === "dnes") pon = mpPondelok(new Date());
+        S.mpTyzden = denKluc(pon); S.mpDen = null;
+        vykresliMatterport();
+      };
+    });
+    el.querySelectorAll("[data-mp-den]").forEach(function (b) { b.onclick = function () { S.mpDen = b.dataset.mpDen; vykresliMatterport(); }; });
+    el.querySelectorAll("[data-mp-volny]").forEach(function (b) { b.onclick = function () { mpOkno({ nova: b.dataset.mpVolny }); }; });
+    el.querySelectorAll("[data-mp-rez]").forEach(function (b) { b.onclick = function () { mpOkno({ rez: Number(b.dataset.mpRez) }); }; });
+    el.querySelectorAll("[data-mp-plus]").forEach(function (b) { b.onclick = function () { mpPredlzit(Number(b.dataset.mpPlus)); }; });
+    el.querySelectorAll("[data-mp-zrus]").forEach(function (b) { b.onclick = function () { mpZrusit(Number(b.dataset.mpZrus)); }; });
+  }
+  async function mpAkcia(fn, args, ok) {
+    try { await rpc(fn, args); } catch (e) { toast(chybaText(e), true); await nacitajMatterport().catch(function () {}); vykresliMatterport(); return false; }
+    S.mpOkno = null; zavriMpOkno();
+    await nacitajMatterport().catch(function () {});
+    vykresliMatterport(); toast(ok); chatNove();
+    return true;
+  }
+  function mpPredlzit(id) {
+    var r = (S.mp || []).find(function (x) { return x.id === id; }); if (!r) return;
+    var k = new Date(new Date(r.koniec).getTime() + 36e5), kol = mpKolizia(new Date(r.koniec), k, r.id);
+    if (kol) return toast("Predĺžiť sa nedá – od " + mpCas(kol.zaciatok) + " má Matterport " + krstneMeno(kol.makler_id) + ".", true);
+    mpAkcia("predlzit_matterport", { p_id: id }, "Predĺžené do " + mpCas(k) + ". Tím dostal správu v chate.");
+  }
+  function mpZrusit(id) {
+    var r = (S.mp || []).find(function (x) { return x.id === id; }); if (!r) return;
+    if (!confirm2("Zrušiť rezerváciu Matterportu " + mpRozsah(r) + (r.makler_id !== S.me.id ? " (" + meno(r.makler_id) + ")" : "") + "?")) return;
+    mpAkcia("zrusit_matterport", { p_id: id }, "Rezervácia je zrušená. Kolegovia vedia, že je Matterport voľný.");
+  }
+  function zavriMpOkno() { var o = $("#mp-okno"); if (o) o.remove(); document.removeEventListener("keydown", mpEsc); }
+  function mpEsc(e) { if (e.key === "Escape") { S.mpOkno = null; zavriMpOkno(); } }
+  function mpOkno(o) {
+    zavriMpOkno(); S.mpOkno = o;
+    var w = document.createElement("div"); w.className = "pochvala-var mp-var"; w.id = "mp-okno";
+    var h = '<div class="pochvala-karta mp-karta" role="dialog" aria-modal="true" aria-labelledby="mp-okno-n"><button type="button" class="nov-x" data-mpo="x" aria-label="Zavrieť">×</button>';
+    if (o.nova) {
+      var z = new Date(o.nova), moznosti = "";
+      for (var m = MP_OD * 60 - 60; m <= MP_DO * 60; m += 30) {
+        var c = new Date(z); c.setHours(0, m, 0, 0);
+        if (c.getTime() + 36e5 * 3 <= Date.now()) continue;
+        moznosti += '<option value="' + c.toISOString() + '"' + (c.getTime() === z.getTime() ? " selected" : "") + ">" + mpCas(c) + "</option>";
+      }
+      h += '<span class="mp-ik velka">' + ikona("matterport") + '</span><h3 id="mp-okno-n">Rezervovať Matterport</h3><p class="mp-okno-den">' + esc(mpDen(z)) + "</p>" +
+        '<form id="f-mp" class="mp-form"><label class="field"><span>Od</span><select name="od">' + moznosti + "</select></label>" +
+        '<div class="mp-do">do <b data-mp-do></b> <small>(3 hodiny)</small></div>' +
+        '<label class="field"><span>Kde fotíš? (nepovinné)</span><input type="text" name="poznamka" maxlength="300" placeholder="napr. 3-izbový byt, Mier"></label>' +
+        '<p class="mp-kol" data-mp-kol hidden></p>' +
+        '<button class="btn primary wide" type="submit">📸 Rezervovať na 3 hodiny</button>' +
+        '<p class="meta mp-info">Kolegom príde správa v chate. Ak budeš potrebovať viac času, pridáš si +1 hodinu.</p></form>';
+    } else {
+      var r = (S.mp || []).find(function (x) { return x.id === o.rez; });
+      if (!r) { S.mpOkno = null; return; }
+      var moja = r.makler_id === S.me.id, skoncila = new Date(r.koniec) <= new Date();
+      h += '<span class="mp-okno-av">' + avatar(r.makler_id, 64) + '</span><h3 id="mp-okno-n">' + esc(moja ? "Tvoja rezervácia" : meno(r.makler_id)) + "</h3>" +
+        '<p class="mp-okno-den">' + esc(mpRozsah(r)) + "</p>" + (r.poznamka ? '<p class="meta mp-okno-pozn">📍 ' + esc(r.poznamka) + "</p>" : "") +
+        (mpMoze(r) && !skoncila ? '<div class="mp-okno-akcie"><button class="btn primary" type="button" data-mpo="plus">+1 hodina</button><button class="btn ghost" type="button" data-mpo="zrus">Zrušiť rezerváciu</button></div>' :
+          !moja && !skoncila ? '<button class="btn wide" type="button" data-mpo="napisat">Napísať ' + esc(krstneMeno(r.makler_id)) + "</button>" : "") +
+        (skoncila ? '<p class="meta">Rezervácia už skončila.</p>' : "");
+    }
+    w.innerHTML = h + "</div>";
+    document.body.appendChild(w);
+    document.addEventListener("keydown", mpEsc);
+    w.addEventListener("click", function (e) {
+      if (e.target === w || e.target.closest('[data-mpo="x"]')) { S.mpOkno = null; return zavriMpOkno(); }
+      var b = e.target.closest("[data-mpo]"); if (!b) return;
+      if (b.dataset.mpo === "plus") mpPredlzit(o.rez);
+      if (b.dataset.mpo === "zrus") mpZrusit(o.rez);
+      if (b.dataset.mpo === "napisat") { var r = (S.mp || []).find(function (x) { return x.id === o.rez; }); S.mpOkno = null; zavriMpOkno(); if (r) otvorKonverzaciu(r.makler_id); }
+    });
+    var f = w.querySelector("#f-mp");
+    if (f) {
+      var prepocitaj = function () {
+        var z = new Date(f.od.value), k = new Date(z.getTime() + 3 * 36e5), kol = mpKolizia(z, k);
+        w.querySelector("[data-mp-do]").textContent = mpCas(k) + (denKluc(k) !== denKluc(z) ? " (" + k.toLocaleDateString("sk-SK", { day: "numeric", month: "numeric" }) + ")" : "");
+        var p = w.querySelector("[data-mp-kol]");
+        p.hidden = !kol;
+        if (kol) p.textContent = "V tom čase už má Matterport " + meno(kol.makler_id) + " (" + mpCas(kol.zaciatok) + " – " + mpCas(kol.koniec) + "). Vyber skorší alebo neskorší čas.";
+        f.querySelector('[type="submit"]').disabled = !!kol;
+      };
+      f.od.onchange = prepocitaj; prepocitaj();
+      f.onsubmit = function (e) {
+        e.preventDefault();
+        var b = f.querySelector('[type="submit"]'); b.disabled = true; b.textContent = "Rezervujem…";
+        mpAkcia("rezervovat_matterport", { p_zaciatok: f.od.value, p_poznamka: f.poznamka.value.trim() || null },
+          "Matterport je tvoj " + mpDen(f.od.value) + " od " + mpCas(f.od.value) + ". Tím dostal správu v chate.").then(function (ok) { if (!ok) { b.disabled = false; b.textContent = "📸 Rezervovať na 3 hodiny"; } });
+      };
+      setTimeout(function () { f.poznamka.focus({ preventScroll: true }); }, 50);
+    } else { var bb = w.querySelector(".btn"); if (bb) bb.focus({ preventScroll: true }); }
+  }
+  var mpMobilBol = null;
+  window.addEventListener("resize", function () {
+    if (S.tab !== "matterport") return;
+    var m = mpMobil(); if (mpMobilBol !== null && m !== mpMobilBol) vykresliMatterport(); mpMobilBol = m;
+  });
+
   function vykresliKalendar() {
     var el = $("#obsah"); if (!el) return;
     if (!S.udalosti) { el.innerHTML = '<div class="box"><div class="meta">Načítavam kalendár…</div></div>'; nacitajUdalosti().then(vykresliKalendar); return; }
