@@ -1898,11 +1898,17 @@
     if (!rows.length) {
       h += '<div class="empty">' + (S.sch.length ? "Nič nezodpovedá filtrom." : "Zatiaľ tu nie je žiadny záznam. Pridajte prvý tlačidlom „+ Pridať záznam“.") + "</div>";
     } else {
-      h += '<div class="tbl-wrap sch"><table><thead><tr><th>Dátum</th><th>Lokalita / adresa</th><th>Meno</th><th>Druh</th><th>Cena</th><th>Telefón</th><th>Stav</th><th>Poznámky</th><th>Maklér</th><th></th></tr></thead><tbody>' +
+      h += '<div class="tbl-wrap sch"><table class="sch-tab"><colgroup><col class="c-kontakt"><col class="c-lok"><col class="c-pozn"><col class="c-makler"><col class="c-akcie"></colgroup>' +
+        "<thead><tr><th>Kontakt</th><th>Lokalita</th><th>Poznámky</th><th>Maklér</th><th></th></tr></thead><tbody>" +
         rows.map(function (r) {
-          return "<tr><td>" + datum(r.vytvorene) + "</td><td>" + esc(r.lokalita) + "</td><td>" + esc(r.kontakt || "") + "</td><td>" + esc(TYP[r.typ] || r.typ || "") + '</td><td class="num">' + (r.cena ? eur(r.cena) : "") +
-            '</td><td style="white-space:nowrap">' + tel(r.telefon) + "</td><td>" + esc(r.stav || "") + "</td><td>" + esc(r.poznamky || "") + "</td><td>" + esc(meno(r.makler_id)) +
-            '</td><td style="white-space:nowrap">' + tlacidla(r) + "</td></tr>";
+          var detail = [TYP[r.typ] || r.typ, r.cena ? eur(r.cena) : "", r.stav].filter(Boolean).map(esc).join(" · ");
+          var dlha = (r.poznamky || "").length > 160 || (r.poznamky || "").split("\n").length > 3;
+          return "<tr><td><b>" + esc(r.kontakt || "—") + '</b><div class="sch-tel">' + tel(r.telefon) + "</div></td>" +
+            "<td>" + esc(r.lokalita) + (detail ? '<div class="meta">' + detail + "</div>" : "") + "</td>" +
+            '<td><div class="sch-pozn' + (dlha ? " skratene" : "") + '">' + esc(r.poznamky || "") + "</div>" +
+            (dlha ? '<button type="button" class="btn-link" data-sch-viac>celé ▾</button>' : "") + "</td>" +
+            "<td>" + esc(meno(r.makler_id)) + '<div class="meta">' + datum(r.vytvorene) + "</div></td>" +
+            '<td><div class="sch-akcie">' + tlacidla(r) + "</div></td></tr>";
         }).join("") + "</tbody></table></div>";
       h += '<div class="sch-cards">' + rows.map(function (r) {
         return '<div class="sch-card"><div class="top"><span>' + esc(r.lokalita) + "</span><span>" + (r.cena ? eur(r.cena) : "") + "</span></div>" +
@@ -1912,6 +1918,9 @@
       }).join("") + "</div>";
     }
     el.innerHTML = h;
+    el.querySelectorAll("[data-sch-viac]").forEach(function (b) {
+      b.onclick = function () { var p = b.previousElementSibling, z = p.classList.toggle("skratene"); b.textContent = z ? "celé ▾" : "menej ▴"; };
+    });
     if (S.schEdit) {
       $("#sch-x").onclick = function () { S.schEdit = null; vykresliSchrankovanie(); };
       $("#f-sch").addEventListener("submit", async function (e) {
