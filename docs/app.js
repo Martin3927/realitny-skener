@@ -4396,9 +4396,9 @@
         var z = new Date(d); z.setHours(hd, 0, 0, 0);
         var zk = new Date(z.getTime() + 36e5), minula = zk <= teraz;
         var obs = mpKolizia(z, zk);
-        h += '<button type="button" class="mp-bunka' + (minula ? " minula" : "") + '" style="top:' + ((hd - MP_OD) * MP_RIADOK) + 'px"' +
+        h += '<button type="button" class="mp-bunka' + (hd % 2 ? " par" : "") + (minula ? " minula" : "") + (obs && !minula ? " obsadena" : "") + '" style="top:' + ((hd - MP_OD) * MP_RIADOK) + 'px"' +
           (minula || obs ? ' tabindex="-1" disabled' : ' data-mp-volny="' + z.toISOString() + '"') + ' aria-label="' + esc(mpDen(z) + " " + hd + ":00") + '">' +
-          (minula || obs ? "" : '<span class="mp-plus">+ ' + hd + ":00</span>") + "</button>";
+          (minula || obs ? "" : '<span class="mp-plus">+ Rezervovať ' + hd + ":00</span>") + "</button>";
       }
       // rezervácie v tento deň (aj tie, čo cez deň len prechádzajú)
       var zd = new Date(d); zd.setHours(MP_OD, 0, 0, 0); var kd = new Date(d); kd.setHours(MP_DO, 0, 0, 0);
@@ -4423,9 +4423,11 @@
       return '<div class="mp-riadok' + (r.makler_id === S.me.id ? " moja" : "") + '">' + avatar(r.makler_id, 30) + '<div class="mp-riadok-t"><b>' + esc(mpRozsah(r)) + '</b><span class="meta">' +
         esc(meno(r.makler_id)) + (r.poznamka ? " · " + esc(r.poznamka) : "") + "</span></div>" +
         (mpMoze(r) ? '<div class="mp-riadok-a">' + mpPlusBtn(r, "", "data-mp-plus") + '<button class="btn ghost" type="button" data-mp-zrus="' + r.id + '">Zrušiť</button></div>' : "") + "</div>";
-    }).join("") : '<p class="meta">Matterport je zatiaľ voľný. Klikni v kalendári na deň a hodinu.</p>') + "</div></div>";
+    }).join("") : '<p class="meta">Matterport je zatiaľ voľný. Klikni v kalendári na deň a hodinu.</p>') + "</div>" +
+      (admin() ? '<div class="mp-stat" id="mp-stat"></div>' : "") + "</div>";
     el.innerHTML = h;
     napojMatterport();
+    if (admin()) vykresliMpStat();
     if (S.mpOkno) mpOkno(S.mpOkno);
     var m = el.querySelector(".mp-mriezka");
     if (m && !S.mpPosunute) { S.mpPosunute = true; var p = el.querySelector(".mp-rez:not(.skoncila)") || el.querySelector(".mp-bunka:not(.minula)"); if (p && mobil) p.scrollIntoView({ block: "center" }); }
@@ -4448,11 +4450,45 @@
     el.querySelectorAll("[data-mp-plus]").forEach(function (b) { b.onclick = function () { mpPredlzit(Number(b.dataset.mpPlus)); }; });
     el.querySelectorAll("[data-mp-zrus]").forEach(function (b) { b.onclick = function () { mpZrusit(Number(b.dataset.mpZrus)); }; });
   }
+  // ---- štatistika pre administrátora: hodiny s kamerou podľa makléra a mesiaca
+  function mpMesiac() { var d = S.mpStatMes ? new Date(S.mpStatMes + "-01T00:00:00") : new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function mpHod(x) { x = Number(x) || 0; return String(x).replace(".", ",") + " h"; }
+  function vykresliMpStat() {
+    var el = $("#mp-stat"); if (!el) return;
+    var m = mpMesiac(), kluc = m.getFullYear() + "-" + d2(m.getMonth() + 1), dalsi = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+    S.mpStat = S.mpStat || {};
+    var data = S.mpStat[kluc];
+    var h = '<div class="vykon-hlava"><h4>📊 Štatistika Matterportu <small class="meta">vidíš len ty</small></h4><div class="mp-nav">' +
+      '<button class="btn ghost" type="button" data-mps="-1" aria-label="Predchádzajúci mesiac">‹</button><b>' + esc(m.toLocaleDateString("sk-SK", { month: "long", year: "numeric" })) + "</b>" +
+      '<button class="btn ghost" type="button" data-mps="1" aria-label="Ďalší mesiac">›</button></div></div>';
+    if (!data) {
+      el.innerHTML = h + '<p class="meta">Načítavam…</p>'; napojMpStat();
+      rpc("matterport_statistika", { p_od: m.toISOString(), p_do: dalsi.toISOString() }).then(function (d) { S.mpStat[kluc] = d || []; vykresliMpStat(); },
+        function (e) { el.innerHTML = h + '<p class="meta">' + esc(chybaText(e)) + "</p>"; napojMpStat(); });
+      return;
+    }
+    var spolu = data.reduce(function (a, x) { a.r += x.rezervacie; a.h += Number(x.hodiny); a.p += x.predlzenia; a.z += x.zrusene; return a; }, { r: 0, h: 0, p: 0, z: 0 });
+    var max = Math.max.apply(null, data.map(function (x) { return Number(x.hodiny); }).concat([1]));
+    h += '<div class="mp-stat-suhrn"><div><b>' + mpHod(Math.round(spolu.h * 10) / 10) + '</b><span>spolu s kamerou</span></div><div><b>' + spolu.r + '</b><span>rezervácií</span></div>' +
+      '<div><b>' + spolu.p + '</b><span>predĺžení o hodinu</span></div><div><b>' + spolu.z + "</b><span>zrušených</span></div></div>";
+    h += data.length ? '<div class="mp-stat-tab" role="table"><div class="mp-stat-r hlava" role="row"><span role="columnheader">Maklér</span><span role="columnheader">Hodiny</span><span role="columnheader">Rezervácie</span><span role="columnheader">Predĺženia</span><span role="columnheader">Zrušené</span></div>' +
+      data.map(function (x) {
+        return '<div class="mp-stat-r" role="row"><span class="mp-stat-kto" role="cell">' + avatar(x.makler_id, 26) + "<b>" + esc(meno(x.makler_id)) + "</b></span>" +
+          '<span role="cell" class="mp-stat-h"><i style="width:' + Math.max(4, Number(x.hodiny) / max * 100) + '%"></i><b>' + mpHod(x.hodiny) + "</b></span>" +
+          '<span role="cell" data-l="Rezervácie">' + x.rezervacie + '</span><span role="cell" data-l="Predĺženia">' + x.predlzenia + '</span><span role="cell" data-l="Zrušené">' + x.zrusene + "</span></div>";
+      }).join("") + "</div>" : '<p class="meta">V tomto mesiaci nemal Matterport nikto rezervovaný.</p>';
+    el.innerHTML = h; napojMpStat();
+  }
+  function napojMpStat() {
+    document.querySelectorAll("#mp-stat [data-mps]").forEach(function (b) {
+      b.onclick = function () { var m = mpMesiac(); m.setMonth(m.getMonth() + Number(b.dataset.mps)); S.mpStatMes = m.getFullYear() + "-" + d2(m.getMonth() + 1); vykresliMpStat(); };
+    });
+  }
   async function mpAkcia(fn, args, ok) {
     try { await rpc(fn, args); } catch (e) { toast(chybaText(e), true); await nacitajMatterport().catch(function () {}); vykresliMatterport(); return false; }
     S.mpOkno = null; zavriMpOkno();
     await nacitajMatterport().catch(function () {});
-    vykresliMatterport(); toast(ok); chatNove();
+    S.mpStat = null; vykresliMatterport(); toast(ok); chatNove();
     return true;
   }
   // +1 hodina: najviac 2×, len keď hneď potom nemá Matterport kolega
