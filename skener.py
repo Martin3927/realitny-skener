@@ -1198,16 +1198,24 @@ def archiv_topreality(url, pid):
     return {"popis": popis.get_text("\n", strip=True) if popis else None, "parametre": par, "fotky_portal": fotky}
 
 
-def archivuj(plny, rychly=False):
-    """Uloží popis a fotky inzerátov, ktoré ešte nie sú v archíve (najprv súkromné a rozpracované)."""
+MAX_FOTIEK = 10   # toľko fotiek uloží archív (viac funkcia archiv neprijme)
+
+
+def archivuj(plny, rychly=False, obnova=False):
+    """Uloží celý popis, parametre, telefón z textu a fotky inzerátov, ktoré ešte nie sú v archíve
+    (najprv súkromné a rozpracované). obnova=True: znova pozrie už uložené súkromné inzeráty
+    (zmenený text, dopísaný telefón) – databáza nové údaje zlúči a staré znenie si nechá."""
     if not POUZI_DB:
         return
-    zoznam = _rpc("skener_na_archiv", p_kluc=SKENER_KLUC, p_pocet=150 if plny else 15 if rychly else 40) or []
+    if obnova:
+        zoznam = _rpc("skener_na_obnovu", p_kluc=SKENER_KLUC, p_pocet=150) or []
+    else:
+        zoznam = _rpc("skener_na_archiv", p_kluc=SKENER_KLUC, p_pocet=150 if plny else 15 if rychly else 40) or []
     if not zoznam:
         return
     start, hotovo, fotiek = time.time(), 0, 0
     for z in zoznam:
-        if time.time() - start > (20 if plny else 3 if rychly else 7) * 60:
+        if time.time() - start > (10 if obnova else 20 if plny else 3 if rychly else 7) * 60:
             break
         try:
             if z["id"].startswith("bazos:"):
@@ -1221,10 +1229,12 @@ def archivuj(plny, rychly=False):
             if not a:
                 continue
             telo = {"inzerat_id": z["id"], **a, "fotky": []}
-            if z.get("sukromny"):
-                telo["telefon"] = najdi_telefon((a.get("popis") or "") + "\n" + json.dumps(a.get("parametre") or {}, ensure_ascii=False))
+            # telefón napísaný v texte inzerátu – pri všetkých (pomáha spoznať aj realitky, ktoré sa tvária ako súkromníci)
+            tel = najdi_telefon((a.get("popis") or "") + "\n" + json.dumps(a.get("parametre") or {}, ensure_ascii=False))
+            if tel:
+                telo["telefon"] = tel
             if z.get("fotky"):
-                for u in a["fotky_portal"][:8]:
+                for u in a["fotky_portal"][:MAX_FOTIEK]:
                     f = _fotka_b64(u)
                     if f:
                         telo["fotky"].append(f)
@@ -1238,7 +1248,7 @@ def archivuj(plny, rychly=False):
                 log(f"  ! archív {z['id']}: {r.status_code} {r.text[:150]}")
         except Exception as e:  # noqa
             log(f"  ! archív {z['id']}: {e}")
-    log(f"Archív: uložených {hotovo} inzerátov, {fotiek} fotiek")
+    log(f"Archív{' – nočná obnova' if obnova else ''}: uložených {hotovo} inzerátov, {fotiek} fotiek")
 
 
 # ---------------------------------------------------------------- upozornenia do mobilu (Web Push)
@@ -1541,6 +1551,12 @@ def main():
             posli_push([z["id"] for z in nove_ok if z["predajca_typ"] in ("sukromny", "asi_sukromny")])
         except Exception as e:  # noqa – upozornenia nesmú zastaviť skener
             log(f"! upozornenia do mobilu: {e}")
+
+    if plny and not prvy_beh:
+        try:
+            archivuj(plny, obnova=True)   # v noci znova pozrieť súkromné inzeráty (zmenený text, dopísaný telefón)
+        except Exception as e:  # noqa
+            log(f"! nočná obnova archívu: {e}")
 
     if "--bez-emailu" in args:
         posli = False

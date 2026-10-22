@@ -1654,26 +1654,58 @@
   }
 
   function fotoUrl(cesta) { return CFG.supabaseUrl + "/storage/v1/object/public/archiv/" + cesta; }
+  // ---------- uložený archív inzerátu (text, parametre, fotky, staršie znenia) – ostane aj po zmazaní z portálu
+  function riadkyParametrov(par) {
+    var riadky = [];
+    par = par || {};
+    if (Array.isArray(par.vlastnosti)) riadky = par.vlastnosti.slice();
+    Object.keys(par).forEach(function (k) {
+      var v = par[k];
+      if (k === "vlastnosti" || k === "Videlo" || v == null || v === "" || typeof v === "object" || typeof v === "boolean") return;
+      riadky.push(k.charAt(0).toUpperCase() + k.slice(1) + ": " + v);
+    });
+    return riadky;
+  }
+  function textNaKopirovanie(id) {
+    var a = S.arch[id] || {}, z = (S.inz || []).find(function (x) { return x.id === id; }) || (S.predInz && S.predInz[id] && S.predInz[id].inzeraty.find(function (x) { return x.id === id; })) || {};
+    return [z.nazov, (z.cena ? eur(z.cena) : ""), riadkyParametrov(a.parametre).join("\n"), a.popis || z.popis || "", z.url ? "Zdroj: " + z.url : ""]
+      .filter(function (x) { return x && String(x).trim(); }).join("\n\n");
+  }
+  function archivHistoria(a) {
+    var hs = (a && a.historia) || [];
+    if (!hs.length) return "";
+    return '<details class="arch-hist"><summary>Predchádzajúce znenie textu (' + hs.length + ")</summary>" + hs.map(function (x) {
+      return '<div class="arch-ver"><div class="meta">platilo do ' + datum(x.do, true) + '</div><div class="d-popis">' + esc(x.popis || "") + "</div></div>";
+    }).join("") + "</details>";
+  }
+  async function nacitajArchivy(ids) {
+    var chyba = ids.filter(function (id) { return !(id in S.arch); });
+    if (!chyba.length) return false;
+    var r = await sb.from("archiv").select("*").in("inzerat_id", chyba);
+    if (r.error) throw r.error;
+    chyba.forEach(function (id) { S.arch[id] = null; });
+    (r.data || []).forEach(function (a) { S.arch[a.inzerat_id] = a; });
+    return true;
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-kopiruj-text]"); if (!b) return;
+    e.preventDefault(); kopiruj(textNaKopirovanie(b.dataset.kopirujText), "📋 Text inzerátu je skopírovaný.");
+  });
   function detailPanel(z) {
     var h = '<div class="panel detail">';
     if (!(z.id in S.arch)) return h + '<div class="meta">Načítavam uložené údaje…</div></div>';
     var a = S.arch[z.id], hist = z.historia_cien || [];
-    var fotky = a ? (a.fotky.length ? a.fotky.map(fotoUrl) : z.aktivny ? a.fotky_portal.slice(0, 8) : []) : [];
+    var fotky = a ? (a.fotky.length ? a.fotky.map(fotoUrl) : z.aktivny ? a.fotky_portal.slice(0, 10) : []) : [];
     h += '<div class="meta">V skeneri od ' + datum(z.prvy_krat, true) + " · " + (z.aktivny ? "na portáli aktívny" : "<b>z portálu zmizol</b>, naposledy videný " + datum(z.naposledy)) +
       (a ? " · uložené " + datum(a.ulozene) + (a.fotky.length ? " s " + a.fotky.length + " fotkami" : "") : "") + "</div>";
     if (fotky.length) h += '<div class="d-fotky">' + fotky.map(function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img loading="lazy" referrerpolicy="no-referrer" src="' + esc(u) + '" alt=""></a>'; }).join("") + "</div>";
     var tt = telefon(z);
     if (tt) h += '<div class="d-tel">📞 ' + telOdkaz(tt.telefon) + " <small>" + (tt.zdroj === "text" ? "z textu inzerátu" : "zadal " + esc(meno(tt.zadal))) + "</small></div>";
-    var par = a && a.parametre ? a.parametre : {}, riadky = [];
-    if (Array.isArray(par.vlastnosti)) riadky = par.vlastnosti.slice();
-    Object.keys(par).forEach(function (k) {
-      var v = par[k];
-      if (k === "vlastnosti" || v == null || v === "" || typeof v === "object" || typeof v === "boolean") return;
-      riadky.push(k.charAt(0).toUpperCase() + k.slice(1) + ": " + v);
-    });
+    var riadky = riadkyParametrov(a && a.parametre);
     if (riadky.length) h += '<div class="d-par">' + riadky.map(function (r) { return "<span>" + esc(r) + "</span>"; }).join("") + "</div>";
     var popis = (a && a.popis) || z.popis;
-    if (popis) h += '<div class="d-popis">' + esc(popis) + "</div>";
+    if (popis) h += '<div class="d-popis">' + esc(popis) + '</div><div class="arch-akcie"><button class="btn ghost" type="button" data-kopiruj-text="' + esc(z.id) + '">📋 Kopírovať text</button></div>';
+    h += archivHistoria(a);
     if (!a) h += '<div class="meta">Celý popis a fotky skener ešte neuložil – urobí to pri najbližšej kontrole portálov.</div>';
     if (hist.length > 1) h += '<div class="meta">Vývoj ceny: ' + hist.map(function (x) { return datum(x[0]) + " " + eur(x[1]); }).join(" → ") + "</div>";
     return h + "</div>";
@@ -3930,9 +3962,29 @@
     }
     var t; $("#pred-q").addEventListener("input", function () { var val = this.value; clearTimeout(t); t = setTimeout(function () { F.q = val; F.n = 60; vykresliKlientov(); var i = $("#pred-q"); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } }, 200); });
   }
+  function archivPredajcu(i, otvorene) {
+    if (!(i.id in S.arch)) return '<p class="meta arch-nacitam">Načítavam uložený text inzerátu…</p>';
+    var a = S.arch[i.id];
+    if (!a || !(a.popis || (a.fotky || []).length)) return '<p class="meta">Text inzerátu sa ešte neuložil – skener ho uloží pri najbližšej kontrole.</p>';
+    var fotky = (a.fotky || []).length ? a.fotky.map(fotoUrl) : i.aktivny ? (a.fotky_portal || []).slice(0, 10) : [];
+    var riadky = riadkyParametrov(a.parametre);
+    var otv = S.archOtv && i.id in S.archOtv ? S.archOtv[i.id] : otvorene;
+    return '<details class="arch-blok" data-arch="' + esc(i.id) + '"' + (otv ? " open" : "") + '><summary>📄 Text a fotky z inzerátu <small class="meta">uložené ' + datum(a.ulozene) +
+      ((a.fotky || []).length ? " · " + a.fotky.length + " fotiek" : "") + (i.aktivny ? "" : " · inzerát už na portáli nie je, ale máme ho") + "</small></summary>" +
+      (fotky.length ? '<div class="d-fotky">' + fotky.map(function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img loading="lazy" referrerpolicy="no-referrer" src="' + esc(u) + '" alt=""></a>'; }).join("") + "</div>" : "") +
+      (a.telefon ? '<div class="d-tel">📞 ' + telOdkaz(a.telefon) + " <small>z textu inzerátu</small></div>" : "") +
+      (riadky.length ? '<div class="d-par">' + riadky.map(function (r) { return "<span>" + esc(r) + "</span>"; }).join("") + "</div>" : "") +
+      (a.popis ? '<div class="d-popis">' + esc(a.popis) + "</div>" : "") +
+      '<div class="arch-akcie"><button class="btn ghost" type="button" data-kopiruj-text="' + esc(i.id) + '">📋 Kopírovať text</button></div>' +
+      archivHistoria(a) + "</details>";
+  }
   function vykresliDetailPredajcu() {
     var el = $("#obsah"), k = S.predTel[S.predDetail];
     if (!k) { S.predDetail = null; toast("Predávajúci sa nenašiel – číslo mohlo byť vymazané.", true); return vykresliPredavajucich(); }
+    var tel = S.predDetail;
+    nacitajArchivy(k.inzeraty.map(function (i) { return i.id; })).then(function (nove) {
+      if (nove && S.predDetail === tel && $(".pred-detail")) vykresliDetailPredajcu();
+    }, function () { k.inzeraty.forEach(function (i) { if (!(i.id in S.arch)) S.arch[i.id] = null; }); });
     var nazvy = {}; k.inzeraty.forEach(function (i) { nazvy[i.id] = i.nazov; });
     var cislo = String(k.telefon || k.tel).replace(/[^\d+]/g, "");
     var h = '<div class="box pred-detail"><div class="pd-hlava"><button class="btn ghost" type="button" data-predd="spat">← Všetci predávajúci</button>' +
@@ -3971,7 +4023,8 @@
         '<span class="pi-akcie">' + (z ? '<button class="btn ghost" type="button" data-pred-inz="' + esc(i.id) + '">🔎 V skeneri</button>' : "") +
         (i.url && i.aktivny ? '<a class="btn ghost" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + esc(PORTAL[i.portal] || "Portál") + " ↗</a>" : "") +
         (i.nehnutelnost_id ? '<button class="btn ghost" type="button" data-ponuka-otvor="' + i.nehnutelnost_id + '">🏠 Otvoriť ponuku</button>' : "") +
-        (mozePonuku ? '<button class="btn" type="button" data-pred-do-ponuky="' + esc(i.id) + '" title="Popis, parametre, fotky a kontakt sa predvyplnia do novej ponuky">➕ Do ponuky</button>' : "") + "</span></div></div>";
+        (mozePonuku ? '<button class="btn" type="button" data-pred-do-ponuky="' + esc(i.id) + '" title="Popis, parametre, fotky a kontakt sa predvyplnia do novej ponuky">➕ Do ponuky</button>' : "") + "</span></div>" +
+        archivPredajcu(i, k.pocet === 1) + "</div>";
     }).join("") + "</div></section>";
 
     // história kontaktov zo všetkých jeho inzerátov
@@ -3987,6 +4040,7 @@
 
     el.querySelector('[data-predd="spat"]').onclick = function () { S.predDetail = null; history.pushState({ tab: "klienti", kl: "predavajuci" }, "", "#klienti"); vykresliKlientov(); window.scrollTo(0, 0); };
     el.querySelectorAll("[data-pred-inz]").forEach(function (b) { b.onclick = function () { prejdi("inzeraty", b.dataset.predInz); }; });
+    el.querySelectorAll("details[data-arch]").forEach(function (d) { d.addEventListener("toggle", function () { S.archOtv = S.archOtv || {}; S.archOtv[d.dataset.arch] = d.open; }); });
     el.querySelectorAll("[data-ponuka-otvor]").forEach(function (b) { b.onclick = function () { otvorPonuku(b.dataset.ponukaOtvor); }; });
     el.querySelectorAll("[data-pred-do-ponuky]").forEach(function (b) {
       b.onclick = function () { var z = S.inz.find(function (x) { return x.id === b.dataset.predDoPonuky; }); if (z) zInzeratu(z).catch(function (e) { toast(chybaText(e), true); }); };

@@ -292,11 +292,11 @@ input[type="datetime-local"] { font-size: 14px; background: var(--surface); bord
 }
 
 /* ---------- detail inzerátu (archív) */
-.detail .d-fotky { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px }
-.detail .d-fotky img { height: 120px; width: auto; border-radius: 6px; display: block; background: var(--gold-soft) }
-.detail .d-par { display: flex; flex-wrap: wrap; gap: 6px }
-.detail .d-par span { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12.5px }
-.detail .d-popis { white-space: pre-line; font-size: 14px; line-height: 1.55; max-height: 320px; overflow: auto; background: var(--surface-2); border-radius: 8px; padding: 10px 12px }
+.detail .d-fotky, .arch-blok .d-fotky { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px }
+.detail .d-fotky img, .arch-blok .d-fotky img { height: 120px; width: auto; border-radius: 6px; display: block; background: var(--gold-soft) }
+.detail .d-par, .arch-blok .d-par { display: flex; flex-wrap: wrap; gap: 6px }
+.detail .d-par span, .arch-blok .d-par span { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12.5px }
+.detail .d-popis, .arch-blok .d-popis, .arch-ver .d-popis { white-space: pre-line; font-size: 14px; line-height: 1.55; max-height: 320px; overflow: auto; background: var(--surface-2); border-radius: 8px; padding: 10px 12px }
 /* telefón predajcu */
 .tel-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; font-size: 14px }
 .tel-row small { color: var(--muted); font-size: 12px }
@@ -304,8 +304,8 @@ a.tel { font-weight: 700; color: var(--ink); text-decoration: none; white-space:
 a.tel:hover { color: var(--gold) }
 .btn-link { background: none; border: 0; padding: 2px 0; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline }
 .btn-link:hover { color: var(--ink) }
-.detail .d-tel { font-size: 15px; margin: 6px 0 }
-.detail .d-tel small { color: var(--muted); font-size: 12px }
+.detail .d-tel, .arch-blok .d-tel { font-size: 15px; margin: 6px 0 }
+.detail .d-tel small, .arch-blok .d-tel small { color: var(--muted); font-size: 12px }
 /* SMS */
 .btn.sms-btn { text-decoration: none; background: var(--good-soft); color: var(--good); border-color: transparent; font-weight: 700 }
 .btn.sms-btn:hover { filter: brightness(.97) }
@@ -1940,3 +1940,15 @@ a.dl-menu { text-decoration: none; color: inherit }
   .mp-riadok-a .btn { flex: 1 }
   .mp-stav { width: 100%; text-align: center }
 }
+/* ---------- uložený text a fotky inzerátu (Klienti → Predávajúci) */
+.arch-blok { grid-column: 1 / -1; margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; display: grid; gap: 8px }
+.arch-blok > summary { cursor: pointer; font-weight: 700; font-size: 14px; list-style-position: outside }
+.arch-blok > summary small { font-weight: 500; margin-left: 4px }
+.arch-blok[open] > summary { margin-bottom: 4px }
+.arch-blok .d-popis { max-height: 360px }
+.arch-akcie { display: flex; gap: 6px; flex-wrap: wrap }
+.arch-hist { font-size: 13px }
+.arch-hist > summary { cursor: pointer; color: var(--muted) }
+.arch-ver { margin-top: 6px; display: grid; gap: 4px }
+.arch-ver .d-popis { opacity: .85; max-height: 220px }
+.detail .arch-akcie { margin-top: 6px }
