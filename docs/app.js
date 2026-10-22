@@ -73,7 +73,7 @@
   var SVG_ZENA = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#ece3cc"/><path d="M16 33c0-13 7-21 16-21s16 8 16 21c0 7-2 12-4 15H20c-2-3-4-8-4-15z" fill="#7d6222"/><circle cx="32" cy="27" r="11" fill="#c9a24a"/><path d="M10 64c2-13 11-20 22-20s20 7 22 20z" fill="#c9a24a"/></svg>';
   function avatar(id, vel) {
     var m = S.mById[id] || (S.me && S.me.id === id ? S.me : null), f = m && m.foto, v = vel || 28;
-    var styl = ' style="width:' + v + "px;height:" + v + "px;font-size:" + Math.round(v * 0.4) + 'px"';
+    var styl = ' data-av="' + esc(id || "") + '" data-v="' + v + '" style="width:' + v + "px;height:" + v + "px;font-size:" + Math.round(v * 0.4) + 'px"';
     if (f && f.indexOf("data:image/") === 0) return '<span class="av"' + styl + '><img src="' + esc(f) + '" alt=""></span>';
     if (f === "avatar:zena") return '<span class="av"' + styl + ">" + SVG_ZENA + "</span>";
     if (f === "avatar:muz") return '<span class="av"' + styl + ">" + SVG_MUZ + "</span>";
@@ -1119,7 +1119,7 @@
   function prekresliObsah() {
     if (S.tab === "inzeraty") { vykresliStaty(); vykresliZoznam(); }
     else if (S.tab === "schrankovanie") { if (!S.schEdit && !S.sidForm) vykresliSchrankovanie(); }
-    else if (S.tab === "makleri") { var fo = document.activeElement; if (!S.mkPohlad && !(fo && fo.closest && fo.closest("#obsah") && /INPUT|TEXTAREA|SELECT/.test(fo.tagName))) vykresliMaklerov(); }
+    else if (S.tab === "makleri") { var fo = document.activeElement, prazdne = !$("#obsah").children.length; if (prazdne || (!S.mkPohlad && !(fo && fo.closest && fo.closest("#obsah") && /INPUT|TEXTAREA|SELECT/.test(fo.tagName)))) vykresliMaklerov(); }
     else if (S.tab === "vykon") vykresliVykon();
     else if (S.tab === "domov") vykresliDomov();
     else if (S.tab === "nehnutelnosti") { if (!$(".ponuka-form") && !$(".ponuka-detail") && !$(".export")) vykresliNehnutelnosti(); }
@@ -7056,11 +7056,12 @@
       '<button class="btn ghost" type="button" data-foto="avatar:muz">' + '<span class="av mini">' + SVG_MUZ + "</span> Muž</button>" +
       '<button class="btn ghost" type="button" data-foto="">Bez fotky</button></div></div>';
   }
+  // fotka sa vymení všade, kde je zobrazená – bez prekreslenia stránky (rozpísané údaje ostanú)
   async function nastavFoto(id, hodnota) {
     await rpc("nastavit_foto", { p_id: id, p_foto: hodnota || null });
     await nacitajMaklerov();
-    toast("Fotka je uložená.");
-    vykresli();
+    document.querySelectorAll('.av[data-av="' + id + '"]').forEach(function (el) { el.outerHTML = avatar(id, Number(el.dataset.v) || 28); });
+    toast(hodnota ? "Fotka je uložená." : "Fotka je odstránená.");
   }
   document.addEventListener("click", function (e) {
     var b = e.target.closest("[data-foto]");
