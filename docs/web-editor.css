@@ -245,3 +245,22 @@ input[type=range]{width:100%;accent-color:var(--c-gold)}
 .dom-stav{font-size:13px;font-weight:600}
 .dom-stav.ok{color:var(--c-ok)} .dom-stav.zle{color:var(--c-danger)}
 .prazdny{padding:26px;text-align:center;color:var(--c-slate);background:var(--c-bg);border-radius:12px;font-size:14px}
+
+/* knižnica ilustračných fotiek a videí */
+.ailib{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.ailib.vid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.aith{border:0;padding:0;background:var(--c-bg);border-radius:8px;overflow:hidden;cursor:pointer;aspect-ratio:4/3;position:relative;box-shadow:0 0 0 1px var(--c-line,rgba(0,0,0,.08))}
+.aith img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
+.aith:hover img{transform:scale(1.06)}
+.aith[aria-pressed="true"]{box-shadow:0 0 0 3px var(--c-gold)}
+.aith span{position:absolute;left:4px;right:4px;bottom:4px;background:rgba(18,23,28,.78);color:#fff;font-size:11px;font-weight:600;border-radius:6px;padding:3px 5px;text-align:center}
+/* ohnisko úvodnej fotky */
+.focbox{position:relative;border-radius:10px;overflow:hidden;cursor:crosshair;line-height:0}
+.focbox img{width:100%;height:auto;display:block}
+.focbox i{position:absolute;width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--c-gold),0 2px 8px rgba(0,0,0,.45);transform:translate(-50%,-50%);pointer-events:none}
+/* QR kód */
+.qrbox{display:flex;gap:14px;align-items:center;background:var(--c-bg);border-radius:12px;padding:12px}
+.qrbox .qr{width:104px;height:104px;flex:none;background:#fff;border-radius:8px;overflow:hidden}
+.qrbox .qr svg{width:100%;height:100%;display:block}
+.qrbox>div:last-child{display:flex;flex-direction:column;gap:6px}
+.qrbtns{display:flex;flex-wrap:wrap;gap:6px}

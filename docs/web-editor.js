@@ -55,11 +55,55 @@ function zmensi(file, max, png) {
         var k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas");
         c.width = Math.max(1, Math.round(im.width * k)); c.height = Math.max(1, Math.round(im.height * k));
         c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
-        c.toBlob(function (b) { b ? res({ blob: b, farby: png ? logoColors(im) : [] }) : rej(new Error("Obrázok sa nepodarilo spracovať.")); }, png ? "image/png" : "image/jpeg", 0.85);
+        var hotovo = function (b, ext) {
+          if (!b) return rej(new Error("Obrázok sa nepodarilo spracovať."));
+          // ak netreba zmenšovať a pôvodný súbor je menší, nahrá sa pôvodný
+          if (k === 1 && !png && /^image\/(jpeg|webp)$/.test(file.type) && file.size <= b.size) { b = file; ext = file.type === "image/webp" ? ".webp" : ".jpg"; }
+          res({ blob: b, ext: ext, farby: png ? logoColors(im) : [] });
+        };
+        if (png) c.toBlob(function (b) { hotovo(b, ".png"); }, "image/png");
+        else c.toBlob(function (b) {
+          // WebP je o tretinu menší; prehliadač, ktorý ho nevie uložiť, vráti PNG, vtedy JPEG
+          if (b && b.type === "image/webp") hotovo(b, ".webp");
+          else c.toBlob(function (j) { hotovo(j, ".jpg"); }, "image/jpeg", 0.85);
+        }, "image/webp", 0.82);
       };
       im.src = r.result;
     };
     r.readAsDataURL(file);
+  });
+}
+// veľké video prekóduje v prehliadači na šírku 1280 px (trvá približne ako dĺžka videa)
+function zmensiVideo(file, priebeh) {
+  return new Promise(function (res) {
+    var mov = /quicktime/.test(file.type), treba = file.size > 12 * 1024 * 1024 || mov;
+    var typy = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+    var typ = window.MediaRecorder && HTMLCanvasElement.prototype.captureStream ? typy.find(function (x) { return MediaRecorder.isTypeSupported(x); }) : null;
+    if (!treba && !typ) return res(file);
+    var url = URL.createObjectURL(file), v = document.createElement("video"), hotovo = false;
+    function koniec(b) { if (hotovo) return; hotovo = true; URL.revokeObjectURL(url); res(b); }
+    v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = url;
+    v.onerror = function () { koniec(file); };
+    v.onloadedmetadata = function () {
+      var siroke = v.videoWidth > 1920;
+      if ((!treba && !siroke) || !typ || !(v.duration > 0) || v.duration > 120) return koniec(file);
+      var k = Math.min(1, 1280 / v.videoWidth), c = document.createElement("canvas"), x = c.getContext("2d");
+      c.width = Math.round(v.videoWidth * k / 2) * 2; c.height = Math.round(v.videoHeight * k / 2) * 2;
+      var rec, casti = [];
+      try { rec = new MediaRecorder(c.captureStream(30), { mimeType: typ, videoBitsPerSecond: 3000000 }); } catch (e) { return koniec(file); }
+      rec.ondataavailable = function (e) { if (e.data && e.data.size) casti.push(e.data); };
+      rec.onstop = function () { var b = new Blob(casti, { type: typ.split(";")[0] }); koniec(b.size > 50000 && (b.size < file.size || mov) ? b : file); };
+      var posl = -1;
+      function kresli() {
+        if (hotovo) return;
+        x.drawImage(v, 0, 0, c.width, c.height);
+        var p = Math.min(99, Math.round(v.currentTime / v.duration * 100)); if (p !== posl) { posl = p; priebeh(p); }
+        if (!v.ended) { if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(kresli); else requestAnimationFrame(kresli); }
+      }
+      v.onended = function () { setTimeout(function () { if (rec.state !== "inactive") rec.stop(); }, 150); };
+      rec.start(1000);
+      v.play().then(kresli, function () { try { rec.stop(); } catch (e) { /* nič */ } koniec(file); });
+    };
   });
 }
 function nahraj(blob, nazov, typ) {
@@ -88,7 +132,7 @@ function upl(label, path, o) {
   o = o || {}; var vOwn = get(path), v = vOwn || (path === "photo" ? T.fotoMaklera() : ""), id = "u-" + path.replace(/\./g, "-");
   var th = v ? (o.video ? '<video src="' + esc(v) + '" muted playsinline></video>' : o.pdf ? "PDF" : '<img src="' + esc(v) + '" alt=""' + (o.logo ? ' style="object-fit:contain;padding:4px"' : "") + ">") : (o.logo ? "bez loga" : o.video ? "bez videa" : o.pdf ? "bez súboru" : "bez fotky");
   return '<div class="up"><div class="th' + (o.round ? " round" : "") + '">' + th + '</div><div><div style="font-size:13px;font-weight:600;margin-bottom:6px">' + label + (o.pdf && S().dl.file ? ": " + esc(S().dl.file) : "") + '</div><div class="act"><label class="fbtn" for="' + id + '">' + (v ? "Zmeniť" : o.logo ? "Nahrať logo" : o.video ? "Nahrať video" : o.pdf ? "Vybrať súbor" : "Nahrať fotku") + "</label>" +
-    '<input type="file" accept="' + (o.video ? "video/mp4,video/webm" : o.pdf ? "application/pdf" : "image/jpeg,image/png,image/webp") + '" id="' + id + '" data-upload="' + path + '" data-max="' + (o.max || 1800) + '"' + (o.logo ? " data-png" : "") + (o.video ? " data-video" : "") + (o.pdf ? " data-pdf" : "") + ">" +
+    '<input type="file" accept="' + (o.video ? "video/mp4,video/webm,video/quicktime" : o.pdf ? "application/pdf" : "image/jpeg,image/png,image/webp") + '" id="' + id + '" data-upload="' + path + '" data-max="' + (o.max || 1800) + '"' + (o.logo ? " data-png" : "") + (o.video ? " data-video" : "") + (o.pdf ? " data-pdf" : "") + ">" +
     (vOwn ? '<button type="button" class="lbtn" data-clear="' + path + '">Odstrániť</button>' : "") + "</div></div></div>";
 }
 function seg(id, items, cur, attr) { $(id).innerHTML = items.map(function (x) { return '<button type="button" class="chip" data-' + attr + '="' + x[0] + '" aria-pressed="' + (cur === x[0]) + '">' + x[1] + "</button>"; }).join(""); }
@@ -161,12 +205,22 @@ function renderPanel() {
   seg("hcols", [["text", "Ako text"], ["a", "Hlavná farba"], ["b", "Doplnková farba"]], s.hcol, "hc");
   $("fonts").innerHTML = T.FONTS.map(function (f) { return '<button type="button" class="chip" data-font="' + f.id + '" aria-pressed="' + (s.font === f.id) + '" style="font-family:' + f.h.replace(/"/g, "'") + ";font-weight:" + Math.min(f.w, 800) + '">' + f.name + "</button>"; }).join("");
   seg("bgs", T.BGS.map(function (b) { return [b.id, b.name]; }).concat([["vlastne", "Vlastné"]]), s.bg, "bg");
-  var hasImg = T.HERO_IMG_TPLS.indexOf(s.tpl) >= 0;
+  var hasImg = T.HERO_IMG_TPLS.indexOf(s.tpl) >= 0, kind = s.tpl === "mestska" ? "mesto" : "dom", video = s.heroMedia === "video";
+  var aiFoto = '<div class="lab" style="grid-column:1/-1">' + (s.heroImg ? "Alebo vyber ilustračnú fotku" : "Ilustračné fotky na výber") + '</div><div class="ailib" style="grid-column:1/-1">' +
+    T.AI_LIB.map(function (n) { var on = !s.heroImg && T.heroAi(kind) === n; return '<button type="button" class="aith" data-aiimg="' + n + '" aria-pressed="' + on + '" title="Použiť túto fotku"><img src="' + T.aiSrc(n, true) + '" alt="" loading="lazy"></button>'; }).join("") + "</div>";
+  var AV = { "video-dom": "dom-novostavba", "video-luxus": "luxus-obyvacka", "video-mesto": "mesto-namestie" }, aktVid = s.heroVideo ? "" : (T.AI_VID_LIB.some(function (v) { return v[0] === s.heroAiVid; }) ? s.heroAiVid : kind === "mesto" ? "video-mesto" : s.tpl === "luxus" ? "video-luxus" : "video-dom");
+  var aiVideo = '<div class="lab" style="grid-column:1/-1">' + (s.heroVideo ? "Alebo vyber ilustračné video" : "Ilustračné videá na výber") + '</div><div class="ailib vid" style="grid-column:1/-1">' +
+    T.AI_VID_LIB.map(function (v) { return '<button type="button" class="aith" data-aivid="' + v[0] + '" aria-pressed="' + (aktVid === v[0]) + '"><img src="' + T.aiSrc(AV[v[0]], true) + '" alt="" loading="lazy"><span>' + esc(v[1]) + "</span></button>"; }).join("") + "</div>";
+  var src = s.heroImg || T.aiSrc(T.heroAi(kind)), f = T.ohnisko(), fx = f ? f.split(" ") : ["50%", "50%"];
+  var foc = hasImg && !video ? '<div class="lab" style="grid-column:1/-1">Čo má byť na fotke vždy vidno</div><div class="focbox" data-focbox style="grid-column:1/-1" title="Klikni na miesto, ktoré má byť vždy vidno"><img src="' + esc(src) + '" alt=""><i style="left:' + fx[0] + ";top:" + fx[1] + '"></i></div>' +
+    '<p class="note">Klikni na fotku, napríklad na dom. Na mobile a úzkych obrazovkách sa fotka oreže okolo tohto miesta.' + (f ? ' <button type="button" class="lbtn" data-focreset>Vrátiť na stred</button>' : "") + "</p>" : "";
+  var pos = hasImg && (s.tpl === "galeria" || s.tpl === "luxus") ? '<div class="lab" style="grid-column:1/-1">Umiestnenie ' + (s.tpl === "galeria" ? "bubliny" : "textu") + '</div><div class="seg" style="grid-column:1/-1">' +
+    [["l", "Vľavo"], ["c", "V strede"], ["r", "Vpravo"]].map(function (x) { return '<button type="button" class="chip" data-hpos="' + x[0] + '" aria-pressed="' + (T.pozicia() === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" : "";
   $("fHero").innerHTML = (hasImg ? "" : '<p class="note">Šablóna ' + T.TPLS.find(function (t) { return t.id === s.tpl; }).name + " nemá veľkú fotku ani video v úvode. Prepni na šablónu s fotkou cez celý úvod:</p>" +
       '<div class="seg" style="grid-column:1/-1">' + T.HERO_IMG_TPLS.map(function (id) { return '<button type="button" class="chip" data-tpl="' + id + '">' + T.TPLS.find(function (t) { return t.id === id; }).name + "</button>"; }).join("") + "</div>") +
     '<div class="seg" style="grid-column:1/-1">' + [["foto", "Fotka"], ["pohyb", "Pomaly sa približuje"], ["video", "Video"]].map(function (x) { return '<button type="button" class="chip" data-hm="' + x[0] + '" aria-pressed="' + (s.heroMedia === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" +
-    (s.heroMedia === "video" ? upl("Video do úvodu", "heroVideo", { video: 1 }) + '<p class="note">Krátke video bez zvuku, napríklad prelet dronom, 10 až 30 sekúnd, najviac 50 MB. Kým nenahráš vlastné, ukáže sa ilustračné video od AI.</p>'
-      : upl("Úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Bez vlastnej fotky sa ukáže ilustračná fotka od AI. Najlepšie fungujú fotky na šírku.</p>');
+    (video ? upl("Vlastné video do úvodu", "heroVideo", { video: 1 }) + '<p class="note">Krátke video bez zvuku, napríklad prelet dronom, 10 až 30 sekúnd. Veľké video zmenším priamo v prehliadači, trvá to asi tak dlho ako samotné video.</p>' + aiVideo
+      : upl("Vlastná úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Najlepšie fungujú fotky na šírku. Pod ilustračnými fotkami od AI sa na webe ukáže poznámka, že sú vytvorené AI.</p>' + aiFoto) + pos + foc;
   seg("btnShape", [["pill", "Pilulka"], ["round", "Zaoblené"], ["square", "Hranaté"]], s.btn, "bs");
   seg("btnFill", [["fill", "Vyplnené"], ["outline", "Obrysové"]], s.btnFill, "bf");
   seg("phStyle", [["plain", "Bez rámika"], ["frame", "S rámikom"], ["shadow", "S tieňom"]], s.ph, "phs");
@@ -224,11 +278,30 @@ function goFix(g) {
   requestAnimationFrame(function () { var el = tab === "sekcie" ? document.querySelector('#secs li[data-k="' + id + '"]') : $(id); if (!el) return; el.scrollIntoView({ behavior: "smooth", block: "center" });
     var f = tab === "sekcie" ? el.querySelector(".body input,.body textarea") : (el.matches("input[type=file]") ? el.closest(".up").querySelector("label") : el); if (f && f.focus) f.focus(); });
 }
+/* QR kód adresy webu */
+function qrModuly(text) { if (!window.qrcode) return null; var q = window.qrcode(0, "M"); q.addData(text); q.make(); return q; }
+function qrSvg(text, tlac) {
+  var q = qrModuly(text); if (!q) return "";
+  var n = q.getModuleCount(), m = 4, d = "";
+  for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += "M" + (c + m) + " " + (r + m) + "h1v1h-1z";
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + (n + 2 * m) + " " + (n + 2 * m) + '"' + (tlac ? ' width="40mm" height="40mm"' : "") + ' shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+}
+function stiahni(blob, nazov) { var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nazov; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+function stiahniQr(druh) {
+  var u = verejnyOdkaz(), q = qrModuly(u), nazov = "qr-" + (WEB.adresa || "web");
+  if (!q) { toast("QR kód sa nepodarilo vytvoriť. Skontroluj pripojenie a skús znova.", true); return; }
+  if (druh === "svg") { stiahni(new Blob([qrSvg(u, true)], { type: "image/svg+xml" }), nazov + ".svg"); return; }
+  var n = q.getModuleCount(), m = 4, k = Math.floor(1200 / (n + 2 * m)), c = document.createElement("canvas"), x = c.getContext("2d");
+  c.width = c.height = k * (n + 2 * m); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.fillStyle = "#000";
+  for (var r = 0; r < n; r++) for (var cc = 0; cc < n; cc++) if (q.isDark(r, cc)) x.fillRect((cc + m) * k, (r + m) * k, k, k);
+  c.toBlob(function (b) { if (b) stiahni(b, nazov + ".png"); }, "image/png");
+}
 function renderPub() {
   if (!WEB) return;
   var u = verejnyOdkaz();
   $("pubBox").innerHTML = (WEB.zverejnene_kedy ? "<b>Web je zverejnený</b><span class=\"sub\">Naposledy " + esc(cas(WEB.zverejnene_kedy)) + (ZMENY ? ". Máš zmeny, ktoré klienti ešte nevidia." : ". Klienti vidia aktuálnu verziu.") + "</span>" +
-      '<div class="linkbox"><input id="pubLink" readonly value="' + esc(u) + '" aria-label="Adresa webu"><button type="button" class="b b-ink b-sm" data-kop="pub">Kopírovať</button><a class="b b-soft b-sm" href="' + esc(u) + '" target="_blank" rel="noopener">Otvoriť</a></div>'
+      '<div class="linkbox"><input id="pubLink" readonly value="' + esc(u) + '" aria-label="Adresa webu"><button type="button" class="b b-ink b-sm" data-kop="pub">Kopírovať</button><a class="b b-soft b-sm" href="' + esc(u) + '" target="_blank" rel="noopener">Otvoriť</a></div>' +
+      '<div class="qrbox"><div class="qr">' + qrSvg(u) + '</div><div><b>QR kód webu</b><span class="sub">Na vizitky, letáky a tabule Predám. Po naskenovaní sa otvorí tvoj web.</span><div class="qrbtns"><button type="button" class="b b-soft b-sm" data-qr="png">Stiahnuť obrázok</button><button type="button" class="b b-soft b-sm" data-qr="svg">Stiahnuť na tlač (SVG)</button></div></div></div>'
     : "<b>Web zatiaľ nie je zverejnený</b><span class=\"sub\">Klienti ho uvidia po kliknutí na Zverejniť web. Dovtedy si ho môžeš pozrieť cez Náhľad.</span>") +
     '<button type="button" class="b b-gold" data-zverejnit>' + (WEB.zverejnene_kedy ? "Zverejniť zmeny" : "Zverejniť web") + "</button>" +
     '<span class="sub">Odkaz na náhľad rozpracovaného webu pre kolegu (musí byť prihlásený v Realitnom týpkovi):</span><div class="linkbox"><input id="nahLink" readonly value="' + esc(nahladOdkaz()) + '" aria-label="Odkaz na náhľad"><button type="button" class="b b-soft b-sm" data-kop="nah">Kopírovať</button></div>';
@@ -305,6 +378,7 @@ document.addEventListener("click", function (e) {
   if (d.ckgo) { goFix(d.ckgo); return; }
   if (d.view) { setView(d.view); return; }
   if (d.zverejnit !== undefined) { zverejnit(); return; }
+  if (d.qr) { stiahniQr(d.qr); return; }
   if (d.kop) { var el = $(d.kop === "pub" ? "pubLink" : "nahLink"); kopiruj(el.value, "Odkaz je skopírovaný", el); return; }
   if (d.adresa !== undefined) { zmenAdresu(); return; }
   if (d.domcheck !== undefined) { overDomenu(); return; }
@@ -315,6 +389,7 @@ document.addEventListener("click", function (e) {
   if (d.tab) s.tab = d.tab; else if (d.tpl) { s.tpl = d.tpl; W.INTRO = true; W.PAGE = { v: "home" }; } else if (d.col) s.color = d.col; else if (d.font) s.font = d.font; else if (d.bg) s.bg = d.bg; else if (d.dev) s.dev = d.dev;
   else if (d.set) { var x = T.SETS.find(function (z) { return z.id === d.set; }); s.color = "vlastna"; s.cc = x.a; s.b2 = x.b; s.hcol = x.h; s.bg = x.bg; }
   else if (d.hc) s.hcol = d.hc; else if (d.bs) s.btn = d.bs; else if (d.bf) s.btnFill = d.bf; else if (d.phs) s.ph = d.phs; else if (d.bub) s.bub = d.bub; else if (d.an !== undefined) { s.anim = d.an === "1"; W.INTRO = s.anim; }
+  else if (d.aiimg) { s.heroAiImg = d.aiimg; s.heroImg = ""; s.heroFoc = ""; } else if (d.aivid) { s.heroAiVid = d.aivid; s.heroVideo = ""; } else if (d.hpos) s.heroPos = d.hpos; else if (d.focreset !== undefined) s.heroFoc = "";
   else if (d.hm) s.heroMedia = d.hm;
   else if (d.up !== undefined) { var i = +d.up, tmp = s.order[i - 1]; s.order[i - 1] = s.order[i]; s.order[i] = tmp; }
   else if (d.dn !== undefined) { var j = +d.dn, tmp2 = s.order[j + 1]; s.order[j + 1] = s.order[j]; s.order[j] = tmp2; }
@@ -330,6 +405,12 @@ document.addEventListener("click", function (e) {
   all();
 });
 $("ready").addEventListener("click", function () { S().tab = "kontrola"; all(); });
+$("panel").addEventListener("click", function (e) {
+  var fb = e.target.closest("[data-focbox]"); if (!fb || e.target.closest("button")) return;
+  var r = fb.querySelector("img").getBoundingClientRect(); if (!r.width) return;
+  var x = Math.max(0, Math.min(100, Math.round((e.clientX - r.left) / r.width * 100))), y = Math.max(0, Math.min(100, Math.round((e.clientY - r.top) / r.height * 100)));
+  S().heroFoc = x + "% " + y + "%"; all();
+});
 $("zverejnit").addEventListener("click", zverejnit);
 $("editTg").addEventListener("click", function () { W.EDIT = !W.EDIT; all(); if (W.EDIT) toast("Klikni na text v ukážke a prepíš ho"); });
 $("addCustom").addEventListener("click", function () { var k = "c" + Date.now().toString(36), s = S(); s.custom[k] = { title: "Vlastná sekcia", text: "Sem napíš, čo chceš návštevníkom povedať.", img: "", btn: "", link: "" }; s.order.push(k); s.on[k] = true; open.add(k); all();
@@ -348,14 +429,23 @@ $("panel").addEventListener("change", function (e) {
   var f = t.files[0], path = t.dataset.upload, lbl = t.closest(".up") && t.closest(".up").querySelector("label");
   if (lbl) lbl.textContent = "Nahrávam…";
   var uloha;
-  if ("video" in t.dataset || "pdf" in t.dataset) {
+  if ("video" in t.dataset) {
+    if (f.size > 400 * 1024 * 1024) { toast("Video je väčšie ako 400 MB. Skús kratšie.", true); renderPanel(); return; }
+    uloha = zmensiVideo(f, function (pct) { var l = document.querySelector('#panel label[for="u-heroVideo"]') || lbl; if (l) l.textContent = "Zmenšujem video… " + pct + " %"; }).then(function (v) {
+      var typ = String(v.type || "").split(";")[0];
+      if (!/^video\/(mp4|webm)$/.test(typ)) throw new Error("tento formát videa web nevie prehrať. Ulož video ako MP4 a skús znova.");
+      if (v.size > 50 * 1024 * 1024) throw new Error("video je aj po zmenšení väčšie ako 50 MB. Skús kratšie video.");
+      var l = document.querySelector('#panel label[for="u-heroVideo"]') || lbl; if (l) l.textContent = "Nahrávam…";
+      return nahraj(v, f.name.replace(/\.[^.]+$/, "") + (typ === "video/webm" ? ".webm" : ".mp4"), typ).then(function (u) { s.heroVideo = u; s.heroMedia = "video"; });
+    });
+  } else if ("pdf" in t.dataset) {
     if (f.size > 50 * 1024 * 1024) { toast("Súbor je väčší ako 50 MB. Skús menší.", true); renderPanel(); return; }
-    uloha = nahraj(f, f.name, f.type).then(function (u) { setDeep(path, u); if ("pdf" in t.dataset) s.dl.file = f.name; if ("video" in t.dataset) s.heroMedia = "video"; });
+    uloha = nahraj(f, f.name, f.type).then(function (u) { setDeep(path, u); s.dl.file = f.name; });
   } else {
     var png = "png" in t.dataset;
     uloha = zmensi(f, +t.dataset.max, png).then(function (r) {
-      return nahraj(r.blob, f.name.replace(/\.[^.]+$/, "") + (png ? ".png" : ".jpg"), png ? "image/png" : "image/jpeg").then(function (u) {
-        setDeep(path, u);
+      return nahraj(r.blob, f.name.replace(/\.[^.]+$/, "") + r.ext, r.blob.type).then(function (u) {
+        setDeep(path, u); if (path === "heroImg") s.heroFoc = "";
         if (path === "logo" && r.farby.length) { s.logoCols = r.farby; s.color = "vlastna"; s.cc = r.farby[0]; if (r.farby[1]) s.b2 = r.farby[1]; toast("Farby webu som nastavil podľa loga"); }
       });
     });
@@ -388,7 +478,7 @@ document.addEventListener("keydown", function (e) {
 });
 
 /* ================================================================ zverejnenie, adresa, doména, verzie */
-function nacitajWeb() { return rpc("moj_web", { p_makler: MAKLER_ID }).then(function (w) { WEB = w; return w; }); }
+function nacitajWeb() { return rpc("moj_web", { p_makler: MAKLER_ID }).then(function (w) { WEB = w; W.adresa = w && w.zverejnene_kedy ? w.adresa : ""; return w; }); }
 function zverejnit() {
   var b = $("zverejnit"); b.disabled = true; b.textContent = "Zverejňujem…";
   ulozTeraz().then(function () { return rpc("zverejnit_web", { p_koncept: cistyS(), p_makler: MAKLER_ID }); }).then(nacitajWeb).then(function () {

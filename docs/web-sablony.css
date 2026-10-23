@@ -500,3 +500,29 @@ dialog.wlb::backdrop{background:rgba(10,14,18,.94)}
 .wlb-img .nofoto{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-size:16px}
 .wlb-img .nofoto svg{width:48px;height:48px}
 .site footer .ai-pozn{flex-basis:100%;margin:0;font-size:12.5px;color:var(--muted)}
+/* poloha úvodnej bubliny a textu */
+.t-galeria .hero.pos-c{justify-content:center}
+.t-galeria .hero.pos-r{justify-content:flex-end}
+.t-luxus .hero.pos-l{justify-content:flex-start;text-align:left}
+.t-luxus .hero.pos-r{justify-content:flex-end;text-align:right}
+.t-luxus .hero.pos-l .in{align-items:flex-start;max-width:660px}
+.t-luxus .hero.pos-r .in{align-items:flex-end;max-width:660px}
+.t-luxus .hero.pos-l .btns{justify-content:flex-start}
+.t-luxus .hero.pos-r .btns{justify-content:flex-end}
+.t-luxus .hero.pos-l .scrim{background:linear-gradient(to bottom,rgba(8,10,12,.55) 0,rgba(8,10,12,0) 26%),linear-gradient(to right,rgba(8,10,12,.88) 0,rgba(8,10,12,.72) 40%,rgba(8,10,12,.18) 74%,rgba(8,10,12,.06) 100%)}
+.t-luxus .hero.pos-r .scrim{background:linear-gradient(to bottom,rgba(8,10,12,.55) 0,rgba(8,10,12,0) 26%),linear-gradient(to left,rgba(8,10,12,.88) 0,rgba(8,10,12,.72) 40%,rgba(8,10,12,.18) 74%,rgba(8,10,12,.06) 100%)}
+@container (max-width:700px){.t-luxus .hero.pos-l .scrim,.t-luxus .hero.pos-r .scrim{background:linear-gradient(to bottom,rgba(8,10,12,.7) 0,rgba(8,10,12,.42) 22%,rgba(8,10,12,.62) 40%,rgba(8,10,12,.82) 65%,rgba(8,10,12,.9) 100%)}}
+/* filter ponúk */
+.site .filtre{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:0 0 clamp(16px,2.4cqi,24px)}
+.t-galeria .filtre,.t-luxus .filtre{justify-content:center}
+.site .fchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.site .fchip{border:0;cursor:pointer;font:600 14px/1.1 var(--fb);padding:9px 14px;border-radius:var(--rb);background:var(--surf);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
+.site .s.alt .fchip{background:var(--bg)}
+.site .fchip span{color:var(--muted);font-weight:500;margin-left:2px}
+.site .fchip.on{background:var(--a);color:var(--on-a);box-shadow:none}
+.site .fchip.on span{color:inherit}
+.site .fsep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.site .fsort{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.site .fsort select{font:600 14px var(--fb);color:var(--fg);background:var(--surf);border:1px solid var(--line);border-radius:var(--rb);padding:8px 12px;cursor:pointer}
+.site .s.alt .fsort select{background:var(--bg)}
+

@@ -46,6 +46,9 @@ jobs:
           RewriteEngine On
           RewriteCond %{HTTPS} off
           RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+          # roboty sociálnych sietí dostanú web makléra s fotkou a názvom ponuky (zdielaj.php)
+          RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Viber|SkypeUriPreview|Pinterest|redditbot|vkShare|Snapchat|Iframely|Embedly|Applebot|Mastodon) [NC]
+          RewriteRule ^stranka\.html$ zdielaj.php [L,QSA]
           <IfModule mod_headers.c>
             <FilesMatch "\.(html|webmanifest)$|^sw\.js$">
               Header set Cache-Control "no-cache"
