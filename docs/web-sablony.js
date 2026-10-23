@@ -86,9 +86,9 @@ var DEF = { tpl: "susedska", color: "zlata", cc: "#1D6F8F", b2: "", hcol: "text"
   share: { title: "", desc: "" },
   reply: "Dobrý deň {meno klienta},\nďakujem za vašu správu. Ozvem sa vám do 24 hodín, väčšinou ešte v ten istý deň.\n\nS pozdravom\n{meno makléra}\n{telefón}" };
 var UKAZKA = [
-  { k: "byt", t: "3-izbový byt s loggiou", l: "Spišská Nová Ves – Mier", p: 139000, a: ["74 m²", "3 izby", "6. poschodie"], m: 74, iz: 3, d: "Svetlý byt s loggiou a výhľadom na Slovenský raj. Nové rozvody, kuchyňa aj kúpeľňa." },
-  { k: "dom", t: "Rodinný dom so záhradou", l: "Smižany", p: 229000, a: ["142 m²", "4 izby", "pozemok 620 m²"], m: 142, iz: 4, d: "Dom v tichej ulici s rovinatou záhradou a garážou." },
-  { k: "poz", t: "Stavebný pozemok", l: "Levoča", p: 68000, a: ["950 m²"], m: 950, iz: 0, d: "Pozemok s výhľadom na les, siete pri hranici pozemku." }];
+  { k: "byt", t: "3-izbový byt s loggiou", l: "Sídlisko blízko centra", p: 139000, a: ["74 m²", "3 izby", "6. poschodie"], m: 74, iz: 3, d: "Svetlý byt s loggiou a výhľadom na hory. Nové rozvody, kuchyňa aj kúpeľňa." },
+  { k: "dom", t: "Rodinný dom so záhradou", l: "Tichá ulica na okraji obce", p: 229000, a: ["142 m²", "4 izby", "pozemok 620 m²"], m: 142, iz: 4, d: "Dom v tichej ulici s rovinatou záhradou a garážou." },
+  { k: "poz", t: "Stavebný pozemok", l: "Okraj obce pri lese", p: 68000, a: ["950 m²"], m: 950, iz: 0, d: "Pozemok s výhľadom na les, siete pri hranici pozemku." }];
 var QS = [["Čo plánujete?", ["Predať", "Kúpiť", "Prenajať", "Oceniť"]], ["O akú nehnuteľnosť ide?", ["Byt", "Dom", "Pozemok", "Iné"]], ["Kedy to plánujete?", ["Čo najskôr", "Do 3 mesiacov", "Do roka", "Len zisťujem"]]];
 var DN = ["Ne", "Po", "Ut", "St", "Št", "Pi", "So"];
 
@@ -352,7 +352,7 @@ var R = {
   sluzby: function () { return H("sluzby", "Služby", "S čím vám pomôžem") + '<div class="svc">' + W.S.svc.map(function (x, i) { return "<div><i>" + IC[SVC_IC[i % 4]] + "</i><h3 " + ed("svc." + i + ".t", 1) + ">" + esc(x.t) + "</h3><p " + ed("svc." + i + ".d") + ">" + esc(x.d) + "</p></div>"; }).join("") + "</div>"; },
   lokality: function (P) {
     return H("lokality", "Lokality", "Lokality, ktoré poznám", "Kde v regióne sa oplatí bývať a čo ktorá obec ponúka.") + '<div class="locs">' + W.S.loc.map(function (l, i) {
-      return '<div class="loc"><div class="media">' + (l.img ? img(l.img, l.n) : aiImg(["mesto-namestie", "mesto-letecky", "dom-rodinny", "pozemok"][i % 4], l.n, true)) + '</div><div class="in"><h3 ' + ed("loc." + i + ".n", 1) + ">" + esc(l.n) + "</h3><p " + ed("loc." + i + ".t") + ">" + esc(l.t) + '</p><div class="params">' +
+      return '<div class="loc">' + (l.img ? '<div class="media">' + img(l.img, l.n) + "</div>" : "") + '<div class="in"><h3 ' + ed("loc." + i + ".n", 1) + ">" + esc(l.n) + "</h3><p " + ed("loc." + i + ".t") + ">" + esc(l.t) + '</p><div class="params">' +
         String(l.g || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean).map(function (g) { return "<span>" + esc(g) + "</span>"; }).join("") + '</div><button type="button" class="bk" data-go="ponuky" style="margin-top:6px">Ponuky v lokalite →</button></div></div>';
     }).join("") + "</div>";
   },
