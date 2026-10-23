@@ -162,13 +162,15 @@ function renderPanel() {
   $("fonts").innerHTML = T.FONTS.map(function (f) { return '<button type="button" class="chip" data-font="' + f.id + '" aria-pressed="' + (s.font === f.id) + '" style="font-family:' + f.h.replace(/"/g, "'") + ";font-weight:" + Math.min(f.w, 800) + '">' + f.name + "</button>"; }).join("");
   seg("bgs", T.BGS.map(function (b) { return [b.id, b.name]; }).concat([["vlastne", "Vlastné"]]), s.bg, "bg");
   var hasImg = T.HERO_IMG_TPLS.indexOf(s.tpl) >= 0;
-  $("fHero").innerHTML = (hasImg ? "" : '<p class="note">Šablóna ' + T.TPLS.find(function (t) { return t.id === s.tpl; }).name + " nemá veľkú fotku v úvode. Fotka a video sa ukážu v šablónach Galéria, Luxusná a Mestská.</p>") +
+  $("fHero").innerHTML = (hasImg ? "" : '<p class="note">Šablóna ' + T.TPLS.find(function (t) { return t.id === s.tpl; }).name + " nemá veľkú fotku ani video v úvode. Prepni na šablónu s fotkou cez celý úvod:</p>" +
+      '<div class="seg" style="grid-column:1/-1">' + T.HERO_IMG_TPLS.map(function (id) { return '<button type="button" class="chip" data-tpl="' + id + '">' + T.TPLS.find(function (t) { return t.id === id; }).name + "</button>"; }).join("") + "</div>") +
     '<div class="seg" style="grid-column:1/-1">' + [["foto", "Fotka"], ["pohyb", "Pomaly sa približuje"], ["video", "Video"]].map(function (x) { return '<button type="button" class="chip" data-hm="' + x[0] + '" aria-pressed="' + (s.heroMedia === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" +
-    (s.heroMedia === "video" ? upl("Video do úvodu", "heroVideo", { video: 1 }) + '<p class="note">Krátke video bez zvuku, napríklad prelet dronom, 10 až 30 sekúnd, najviac 50 MB.</p>'
-      : upl("Úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Bez fotky sa ukáže kreslený dom. Najlepšie fungujú fotky na šírku.</p>');
+    (s.heroMedia === "video" ? upl("Video do úvodu", "heroVideo", { video: 1 }) + '<p class="note">Krátke video bez zvuku, napríklad prelet dronom, 10 až 30 sekúnd, najviac 50 MB. Kým nenahráš vlastné, ukáže sa ilustračné video od AI.</p>'
+      : upl("Úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Bez vlastnej fotky sa ukáže ilustračná fotka od AI. Najlepšie fungujú fotky na šírku.</p>');
   seg("btnShape", [["pill", "Pilulka"], ["round", "Zaoblené"], ["square", "Hranaté"]], s.btn, "bs");
   seg("btnFill", [["fill", "Vyplnené"], ["outline", "Obrysové"]], s.btnFill, "bf");
   seg("phStyle", [["plain", "Bez rámika"], ["frame", "S rámikom"], ["shadow", "S tieňom"]], s.ph, "phs");
+  seg("bubSeg", [["plne", "Plné"], ["polo", "Polopriehľadné"], ["sklo", "Sklo"]], s.bub, "bub");
   seg("animSeg", [["1", "Zapnuté"], ["0", "Vypnuté"]], s.anim ? "1" : "0", "an");
   seg("viewSeg", [["web", "Web"], ["prehlad", "Prehľad"]], VIEW, "view");
   seg("dev", [["pc", "Počítač"], ["mob", "Mobil"]], s.dev, "dev");
@@ -203,7 +205,7 @@ function checks() {
     ch("Odkaz na video", s.video.url, ["sekcie", "video"], !!s.on.video),
     ch("Súbor e-booku", s.dl.url, ["sekcie", "stiahnut"], !!s.on.stiahnut),
     ch("Fotka v sekcii Fotka", s.img.src, ["sekcie", "fotka"], !!s.on.fotka),
-    ch("Lokality podľa seba", JSON.stringify(s.loc) !== JSON.stringify(T.DEF.loc), ["sekcie", "lokality"], !!s.on.lokality),
+    ch("Lokality vyplnené", s.loc.length > 0, ["sekcie", "lokality"], !!s.on.lokality),
     ch("Časté otázky podľa seba", JSON.stringify(s.faq) !== JSON.stringify(T.DEF.faq), ["sekcie", "faq"], !!s.on.faq),
     ch("Prevádzkovateľ, IČO a sídlo pre ochranu údajov", s.gdpr.who && s.gdpr.ico && s.gdpr.addr, ["makler", "f-gdpr-ico"])].filter(Boolean);
 }
@@ -312,7 +314,7 @@ document.addEventListener("click", function (e) {
   if (d.logokanc !== undefined) { s.logo = (W.CTX.kancelaria || {}).logo || ""; all(); return; }
   if (d.tab) s.tab = d.tab; else if (d.tpl) { s.tpl = d.tpl; W.INTRO = true; W.PAGE = { v: "home" }; } else if (d.col) s.color = d.col; else if (d.font) s.font = d.font; else if (d.bg) s.bg = d.bg; else if (d.dev) s.dev = d.dev;
   else if (d.set) { var x = T.SETS.find(function (z) { return z.id === d.set; }); s.color = "vlastna"; s.cc = x.a; s.b2 = x.b; s.hcol = x.h; s.bg = x.bg; }
-  else if (d.hc) s.hcol = d.hc; else if (d.bs) s.btn = d.bs; else if (d.bf) s.btnFill = d.bf; else if (d.phs) s.ph = d.phs; else if (d.an !== undefined) { s.anim = d.an === "1"; W.INTRO = s.anim; }
+  else if (d.hc) s.hcol = d.hc; else if (d.bs) s.btn = d.bs; else if (d.bf) s.btnFill = d.bf; else if (d.phs) s.ph = d.phs; else if (d.bub) s.bub = d.bub; else if (d.an !== undefined) { s.anim = d.an === "1"; W.INTRO = s.anim; }
   else if (d.hm) s.heroMedia = d.hm;
   else if (d.up !== undefined) { var i = +d.up, tmp = s.order[i - 1]; s.order[i - 1] = s.order[i]; s.order[i] = tmp; }
   else if (d.dn !== undefined) { var j = +d.dn, tmp2 = s.order[j + 1]; s.order[j + 1] = s.order[j]; s.order[j] = tmp2; }

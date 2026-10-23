@@ -47,7 +47,7 @@ var SECS = { ponuky: "Ponuky", predane: "Predané nehnuteľnosti", strazca: "Str
   dotaznik: "Dotazník", fotka: "Fotka", hypoteka: "Hypotekárna kalkulačka", clanok: "Článok mesiaca", kontakt: "Kontakt" };
 var SOC = [["fb", "Facebook", "facebook.com/meno"], ["ig", "Instagram", "instagram.com/meno"], ["li", "LinkedIn", "linkedin.com/in/meno"], ["x", "X", "x.com/meno"], ["tt", "TikTok", "tiktok.com/@meno"]];
 var DEF = { tpl: "susedska", color: "zlata", cc: "#1D6F8F", b2: "", hcol: "text", cbg: "#EEF2F1", logoCols: [], font: "moderne", bg: "kremove", r: 14,
-  btn: "pill", btnFill: "fill", ph: "plain", anim: true, heroMedia: "foto", heroImg: "", heroVideo: "",
+  btn: "pill", btnFill: "fill", ph: "plain", anim: true, heroMedia: "foto", heroImg: "", heroVideo: "", bub: "polo",
   order: ["ponuky", "strazca", "omne", "postup", "sluzby", "predane", "lokality", "video", "recenzie", "obhliadka", "ocenenie", "callback", "stiahnut", "faq", "dotaznik", "fotka", "hypoteka", "clanok", "kontakt"],
   on: { ponuky: true, predane: true, strazca: true, omne: true, postup: true, sluzby: true, lokality: false, video: false, recenzie: true, obhliadka: true, ocenenie: true, callback: true, stiahnut: false, faq: true, dotaznik: false, fotka: false, hypoteka: false, clanok: false, kontakt: true },
   n: 6, name: "", area: "Spišská Nová Ves a Levoča", office: "", phone: "", email: "", wa: "", photo: "", logo: "", years: "", sold: "",
@@ -73,10 +73,7 @@ var DEF = { tpl: "susedska", color: "zlata", cc: "#1D6F8F", b2: "", hcol: "text"
   book: { times: "9:00, 10:30, 14:00, 16:30, 18:00", sat: false, text: "Vyberte si deň a čas. Obhliadku vám potvrdím telefonicky alebo SMS." },
   val: { title: "Koľko má hodnotu vaša nehnuteľnosť?", text: "Vyplňte pár údajov a do 24 hodín vám pošlem odhad ceny podľa skutočných predajov v okolí. Zadarmo a nezáväzne." },
   cb: { title: "Zavolám vám späť", text: "Nemáte čas písať? Nechajte mi číslo a vyberte si, kedy vám to vyhovuje." },
-  loc: [
-    { n: "Spišská Nová Ves", t: "Okresné mesto s nemocnicou, školami a vlakom na trati Košice – Žilina. Najväčší výber bytov v regióne.", g: "Školy, Vlak, Nemocnica" },
-    { n: "Levoča", t: "Historické mesto zapísané v zozname UNESCO. Pokojné bývanie v centre aj v domoch na okraji.", g: "UNESCO, Pokoj, Centrum" },
-    { n: "Smižany", t: "Veľká obec hneď vedľa Spišskej Novej Vsi, kúsok od Slovenského raja. Obľúbená pre rodinné domy.", g: "Rodinné domy, Príroda" }],
+  loc: [],
   faq: [
     { q: "Koľko stojí vaša služba?", a: "Províziu platí predávajúci až po úspešnom predaji. Výšku vám poviem vopred a zapíšeme ju do zmluvy." },
     { q: "Ako dlho trvá predaj bytu?", a: "Pri reálnej cene väčšinou do dvoch mesiacov. Záleží na lokalite, stave a cene." },
@@ -178,6 +175,7 @@ var AI = {
 var AI_NOTE = "Obsahový vizuál na webe je generovaný AI.";
 function aiSrc(n, maly) { return AI_BASE + n + (maly ? "-m" : "") + ".webp"; }
 function aiImg(n, alt, maly, lazy) { return '<img class="ph" src="' + aiSrc(n, maly) + '" alt="' + esc(alt || "") + '"' + (lazy === false ? "" : ' loading="lazy"') + ' decoding="async">'; }
+function aiVid(kind) { return AI_BASE + (kind === "mesto" ? "video-mesto" : W.S.tpl === "luxus" ? "video-luxus" : "video-dom") + ".mp4"; }
 function heroAi(kind) { return kind === "mesto" ? "mesto-namestie" : W.S.tpl === "luxus" ? "luxus-obyvacka" : "dom-novostavba"; }
 // skutočná ponuka bez fotiek: nikdy nie cudzia fotka, len neutrálna plocha
 function bezFotky() { return '<div class="ph nofoto" role="img" aria-label="Fotky pripravujeme">' + SV('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>') + "<span>Fotky pripravujeme</span></div>"; }
@@ -230,7 +228,7 @@ var IC = {
   predaj: SV('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>'),
   prenajom: SV('<circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M17 5l3 3M15 7l2 2"/>'),
   ocenenie: SV('<path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/>'),
-  vykup: SV('<path d="M12 3v18M17 7.5c0-1.9-2.2-3-5-3s-5 1.1-5 3 2 2.6 5 3.3 5 1.6 5 3.6-2.2 3.1-5 3.1-5-1.2-5-3"/>'),
+  vykup: SV('<path d="M17.5 6.2a7 7 0 1 0 0 11.6"/><path d="M4 10h9.5M4 14h9.5"/>'),
   cube: SV('<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12M21 7l-9 5-9-5"/>'),
   fb: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 8.5V6.8c0-.8.5-1 1-1h2.3V2.2L14.2 2C10.9 2 10 4.2 10 6.3v2.2H7.5v3.8H10V22h4v-9.7h3.1l.5-3.8H14z"/></svg>',
   ig: SV('<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/>'),
@@ -268,7 +266,7 @@ function facts() {
 }
 function heroMedia(P, kind) {
   var s = W.S;
-  if (s.heroMedia === "video" && s.heroVideo) return '<div class="hm"><video src="' + esc(s.heroVideo) + '" autoplay muted loop playsinline aria-hidden="true"></video></div>';
+  if (s.heroMedia === "video") return '<div class="hm"><video src="' + esc(s.heroVideo || aiVid(kind)) + '"' + (s.heroVideo ? "" : ' poster="' + aiSrc(heroAi(kind)) + '"') + ' autoplay muted loop playsinline aria-hidden="true"></video></div>';
   return '<div class="hm' + (s.heroMedia === "pohyb" ? " kb" : "") + '">' + (s.heroImg ? img(s.heroImg, "", false) : aiImg(heroAi(kind), "", false, false)) + "</div>";
 }
 function days() { var out = [], d = new Date(); d.setHours(12, 0, 0, 0); while (out.length < 6) { d.setDate(d.getDate() + 1); var w = d.getDay(); if (w === 0 || (w === 6 && !W.S.book.sat)) continue; out.push(new Date(d)); } return out; }
@@ -351,7 +349,9 @@ var R = {
   },
   sluzby: function () { return H("sluzby", "Služby", "S čím vám pomôžem") + '<div class="svc">' + W.S.svc.map(function (x, i) { return "<div><i>" + IC[SVC_IC[i % 4]] + "</i><h3 " + ed("svc." + i + ".t", 1) + ">" + esc(x.t) + "</h3><p " + ed("svc." + i + ".d") + ">" + esc(x.d) + "</p></div>"; }).join("") + "</div>"; },
   lokality: function (P) {
-    return H("lokality", "Lokality", "Lokality, ktoré poznám", "Kde v regióne sa oplatí bývať a čo ktorá obec ponúka.") + '<div class="locs">' + W.S.loc.map(function (l, i) {
+    var hd = H("lokality", "Lokality", "Lokality, ktoré poznám", "Kde v regióne sa oplatí bývať a čo ktorá obec ponúka.");
+    if (!W.S.loc.length) return W.editor ? hd + '<p class="sample">Doplň obce a štvrte, ktoré dobre poznáš. Otvor nastavenie sekcie ceruzkou v časti Sekcie. Kým ich nevyplníš, na verejnom webe sa sekcia nezobrazí.</p>' : "";
+    return hd + '<div class="locs">' + W.S.loc.map(function (l, i) {
       return '<div class="loc">' + (l.img ? '<div class="media">' + img(l.img, l.n) + "</div>" : "") + '<div class="in"><h3 ' + ed("loc." + i + ".n", 1) + ">" + esc(l.n) + "</h3><p " + ed("loc." + i + ".t") + ">" + esc(l.t) + '</p><div class="params">' +
         String(l.g || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean).map(function (g) { return "<span>" + esc(g) + "</span>"; }).join("") + '</div><button type="button" class="bk" data-go="ponuky" style="margin-top:6px">Ponuky v lokalite →</button></div></div>';
     }).join("") + "</div>";
@@ -495,12 +495,13 @@ function gdprPage() {
 }
 
 /* ================================================================ vykreslenie */
+function bubBg(P) { var a = W.S.bub === "plne" ? 1 : W.S.bub === "sklo" ? 0.6 : 0.8, c = h2r(P.bg); return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"; }
 function render() {
   var root = W.root; if (!root) return;
   var s = W.S, P = pal(), F = FONTS.find(function (f) { return f.id === s.font; }) || FONTS[0], st = root.style;
   var rb = s.btn === "pill" ? "999px" : s.btn === "round" ? Math.max(8, Math.round(s.r * 0.7)) + "px" : "2px";
   [["--bg", P.bg], ["--surf", P.surf], ["--fg", P.fg], ["--muted", P.muted], ["--line", P.line], ["--a", P.a], ["--on-a", P.onA], ["--at", P.at], ["--a-soft", P.soft], ["--b", P.b], ["--on-b", P.onB], ["--bt", P.bt], ["--b-soft", P.bsoft],
-    ["--hc", P.hc], ["--err", P.err], ["--on-fg", P.onFg], ["--fh", F.h], ["--fb", F.b], ["--fhw", F.w], ["--fhls", F.ls], ["--r", s.r + "px"], ["--rb", rb]].forEach(function (x) { st.setProperty(x[0], x[1]); });
+    ["--hc", P.hc], ["--err", P.err], ["--on-fg", P.onFg], ["--fh", F.h], ["--fb", F.b], ["--fhw", F.w], ["--fhls", F.ls], ["--r", s.r + "px"], ["--rb", rb], ["--bub", bubBg(P)], ["--bub-blur", s.bub === "plne" ? "0px" : s.bub === "sklo" ? "16px" : "10px"], ["--bub-muted", s.bub === "plne" ? P.muted : P.fg]].forEach(function (x) { st.setProperty(x[0], x[1]); });
   st.colorScheme = P.dark ? "dark" : "light";
   root.className = ["site", "t-" + s.tpl, "pg-" + W.PAGE.v, s.anim ? "anim" : "", s.anim && W.INTRO ? "intro" : "", s.btnFill === "outline" ? "bo" : "", s.ph === "frame" ? "pf" : s.ph === "shadow" ? "ps" : "", W.EDIT ? "editing" : ""].filter(Boolean).join(" ");
   var out = nav();
