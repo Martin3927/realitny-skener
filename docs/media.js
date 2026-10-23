@@ -9,7 +9,8 @@
     if (!/^https?:\/\//i.test(u) && /^[\w-]+(\.[\w-]+)+(\/|$)/.test(u)) u = "https://" + u;
     return u;
   }
-  function parsuj(u) { try { return new URL(u); } catch (e) { return null; } }
+  // len odkazy http(s); javascript: a data: sa nikdy nedostanú do iframe ani videa
+  function parsuj(u) { try { var x = new URL(u); return /^https?:$/.test(x.protocol) ? x : null; } catch (e) { return null; } }
   function host(x) { return x ? x.hostname.replace(/^(www|m)\./, "").toLowerCase() : ""; }
 
   // text zo stĺpca → zoznam odkazov

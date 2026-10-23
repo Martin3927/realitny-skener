@@ -107,11 +107,26 @@ function fmt(v) { return NF.format(Math.round(v)); }
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function isHex(v) { return /^#[0-9a-f]{6}$/i.test(v || ""); }
 function okHex(v) { v = String(v || "").trim(); if (v.charAt(0) !== "#") v = "#" + v; return isHex(v) ? v.toLowerCase() : null; }
+function typ(v) { return v === null ? "null" : Array.isArray(v) ? "pole" : typeof v; }
 function merge(x) {
-  var d = clone(DEF); x = x || {};
+  var d = clone(DEF); x = x && typeof x === "object" && !Array.isArray(x) ? x : {};
   Object.keys(x).forEach(function (k) {
-    d[k] = (x[k] && typeof x[k] === "object" && !Array.isArray(x[k]) && d[k] && typeof d[k] === "object" && !Array.isArray(d[k])) ? Object.assign(d[k], x[k]) : x[k];
+    if (!Object.prototype.hasOwnProperty.call(DEF, k)) { if (k === "dev" || k === "tab") d[k] = x[k]; return; }
+    var td = typ(DEF[k]), tx = typ(x[k]);
+    // nastavenie s nesprávnym typom sa ignoruje (ochrana pred poškodenými alebo podvrhnutými údajmi)
+    if (td === "object") { if (tx === "object") d[k] = Object.assign(d[k], x[k]); return; }
+    if (td === "pole") { if (tx === "pole") d[k] = x[k]; return; }
+    if (td === "string" || td === "number") { if (tx === "string" || tx === "number") d[k] = x[k]; return; }
+    if (td === "boolean") { if (tx === "boolean") d[k] = x[k]; return; }
+    d[k] = x[k];
   });
+  if (!TPLS.some(function (t) { return t.id === d.tpl; })) d.tpl = DEF.tpl;
+  if (typ(d.custom) !== "object") d.custom = {};
+  Object.keys(d.custom).forEach(function (k) { if (!/^c[0-9a-z]{1,20}$/.test(k) || typ(d.custom[k]) !== "object") delete d.custom[k]; });
+  if (typ(d.order) !== "pole") d.order = DEF.order.slice();
+  d.order = d.order.filter(function (k, i, a) { return typeof k === "string" && a.indexOf(k) === i; });
+  ["svc", "steps", "loc", "faq"].forEach(function (k) { d[k] = d[k].filter(function (e) { return typ(e) === "object"; }); });
+  ["soc", "heroTx", "heads"].forEach(function (k) { Object.keys(d[k]).forEach(function (j) { if (typ(d[k][j]) === "pole" || typ(d[k][j]) === "null") delete d[k][j]; }); });
   DEF.order.forEach(function (k, idx) {
     if (d.order.indexOf(k) < 0) { var nx = DEF.order.slice(idx + 1).find(function (n) { return d.order.indexOf(n) >= 0; }); d.order.splice(nx ? d.order.indexOf(nx) : d.order.length, 0, k); }
     if (d.on[k] === undefined) d.on[k] = DEF.on[k];
@@ -248,7 +263,7 @@ var IC = {
 var SVC_IC = ["predaj", "prenajom", "ocenenie", "vykup"];
 
 /* ================================================================ časti stránky */
-function ed(path, single) { return 'data-ed="' + path + '"' + (single ? " data-single" : "") + (W.EDIT ? ' contenteditable="true" spellcheck="true"' : ""); }
+function ed(path, single) { return 'data-ed="' + esc(path) + '"' + (single ? " data-single" : "") + (W.EDIT ? ' contenteditable="true" spellcheck="true"' : ""); }
 function fotoMaklera() { var s = W.S; return s.photo || (W.CTX.makler && W.CTX.makler.foto) || ""; }
 // ilustračná fotka makléra/maklérky len v ukážke v editore, na zverejnenom webe sa bez fotky zobrazia iniciály
 function zena() { return !!(W.CTX.makler && W.CTX.makler.pohlavie === "zena"); }
@@ -283,18 +298,18 @@ function calcHtml(p0) {
   return '<div class="calc"><div class="sl"><label>Cena nehnuteľnosti <b class="num" data-o="p"></b><input type="range" data-c="p" min="30000" max="500000" step="1000" value="' + Math.min(500000, Math.max(30000, p0 || 150000)) + '"></label>' +
     '<label>Vlastné zdroje <b class="num" data-o="d"></b><input type="range" data-c="d" min="0" max="40" step="5" value="20"></label>' +
     '<label>Doba splácania <b class="num" data-o="y"></b><input type="range" data-c="y" min="5" max="35" step="1" value="30"></label></div>' +
-    '<div class="res"><span class="muted">Mesačná splátka približne</span><strong class="num" data-o="m"></strong><span class="muted" style="font-size:14px">Orientačne pri úroku ' + String(W.S.hypo.rate).replace(".", ",") + " %. Rád vám odporučím overeného hypotekárneho špecialistu.</span></div></div>";
+    '<div class="res"><span class="muted">Mesačná splátka približne</span><strong class="num" data-o="m"></strong><span class="muted" style="font-size:14px">Orientačne pri úroku ' + String(Math.round((+W.S.hypo.rate || 0) * 100) / 100).replace(".", ",") + " %. Rád vám odporučím overeného hypotekárneho špecialistu.</span></div></div>";
 }
 
 function nav() {
   var s = W.S;
-  var items = s.order.filter(function (k) { return s.on[k] && ["ponuky", "omne", "sluzby", "postup", "recenzie", "lokality", "faq", "kontakt", "ocenenie"].indexOf(k) >= 0; }).slice(0, 5)
+  var items = s.order.filter(function (k) { return s.on[k] && (!W.SEKCIE || W.SEKCIE.indexOf(k) >= 0) && ["ponuky", "omne", "sluzby", "postup", "recenzie", "lokality", "faq", "kontakt", "ocenenie"].indexOf(k) >= 0; }).slice(0, 5)
     .map(function (k) { return '<button type="button" data-go="' + k + '">' + esc(secName(k).replace("Lokality, ktoré poznám", "Lokality")) + "</button>"; }).join("");
   return '<div class="w nav"><div class="brand" data-home="top">' + (s.logo ? '<img class="logoimg" src="' + esc(s.logo) + '" alt="' + esc(s.name) + '">' : av() + esc(s.name)) + '</div><nav class="menu">' + items + '</nav><button type="button" class="btn" data-go="' + (s.on.callback ? "callback" : "kontakt") + '">Zavolajte mi</button></div>';
 }
 function pozicia() { return ["l", "c", "r"].indexOf(W.S.heroPos) >= 0 ? W.S.heroPos : W.S.tpl === "luxus" ? "c" : "l"; }
 function heroHladaj() {
-  var s = W.S, kat = s.on.ponuky ? katPocty(ZOZ()).slice(0, 3) : [], F = W.FIL;
+  var s = W.S, kat = s.on.ponuky ? katPocty(ZOZ().filter(function (x) { return x.stav !== "predane"; })).slice(0, 3) : [], F = W.FIL;
   return '<div class="search">' + kat.map(function (k) { return '<button type="button" data-hfk="' + k[0] + '"' + (F.k === k[0] ? ' class="on"' : "") + ">" + (k[0] === "chata" ? "Chaty" : KAT_N[k[0]][0]) + "</button>"; }).join("") +
     '<button type="button" data-go="' + (s.on.strazca ? "strazca" : "kontakt") + '"' + (kat.length ? "" : ' class="on"') + ">" + (kat.length ? "Hľadám" : "Hľadám nehnuteľnosť") + "</button></div>";
 }
@@ -320,7 +335,7 @@ function hero(P) {
 
 function kartaPonuky(x, i, P) {
   var bk = W.S.on.obhliadka && x.stav !== "predane" ? '<button type="button" class="bk" data-book="' + i + '">Dohodnúť obhliadku →</button>' : "", wa = waPonuka(x);
-  return '<div class="card" data-open="' + i + '" role="button" tabindex="0" aria-label="' + esc(x.t) + '"><div class="media">' + fotoX(x, i, P) + stitok(x, i) + '</div><div class="price num">' + esc(cenaTxt(x)) + "</div><h3>" + esc(x.t) +
+  return '<div class="card" data-open="' + i + '"><div class="media">' + fotoX(x, i, P) + stitok(x, i) + '</div><div class="price num">' + esc(cenaTxt(x)) + '</div><h3><button type="button" class="tlink" data-open="' + i + '">' + esc(x.t) + "</button>" +
     '<br><span class="muted" style="font-weight:400;font-size:15px">' + esc(x.l) + '</span></h3><div class="params">' + x.a.map(function (v) { return "<span>" + esc(v) + "</span>"; }).join("") + "</div>" +
     (bk || wa ? '<div class="card-akcie">' + bk + (wa && x.stav !== "predane" ? '<a class="wa-mini" href="' + esc(wa) + '" target="_blank" rel="noopener" aria-label="Napísať cez WhatsApp o ponuke ' + esc(x.t) + '">' + IC.wa + "WhatsApp</a>" : "") + "</div>" : "") + "</div>";
 }
@@ -339,7 +354,7 @@ function obecX(x) { return String((x.raw && x.raw.obec) || "").trim(); }
 function rovnakaObec(a, b) { return slugD(a) === slugD(b); }
 function filtrovane() {
   var F = W.FIL, out = ZOZ().map(function (x, i) { return [x, i]; }).filter(function (q) {
-    var x = q[0]; return (!F.k || x.k === F.k) && (!F.t || (F.t === "prenajom") === !!x.rent) && (!F.o || rovnakaObec(obecX(x), F.o));
+    var x = q[0]; return x.stav !== "predane" && (!F.k || x.k === F.k) && (!F.t || (F.t === "prenajom") === !!x.rent) && (!F.o || rovnakaObec(obecX(x), F.o));
   });
   if (F.sort === "lacne" || F.sort === "drahe") out.sort(function (a, b) {
     var x = a[0], y = b[0]; if (x.bezCeny !== y.bezCeny) return x.bezCeny ? 1 : -1; if (x.bezCeny) return 0;
@@ -361,7 +376,7 @@ function filtre(Z) {
 
 var R = {
   ponuky: function (P) {
-    var s = W.S, Z = ZOZ(), FL = filtrovane(), L = W.VSETKY ? FL : FL.slice(0, s.n);
+    var s = W.S, Z = ZOZ().filter(function (x) { return x.stav !== "predane"; }), FL = filtrovane(), L = W.VSETKY ? FL : FL.slice(0, s.n);
     var nic = '<div class="prazdne"><b>V tomto výbere teraz nemám ponuku.</b><p class="muted">Napíšte mi, čo hľadáte, a ozvem sa vám, keď sa objaví.</p><div class="btns" style="justify-content:center"><button type="button" class="btn gh" data-fk="">Zobraziť všetky ponuky</button><button type="button" class="btn" data-go="' + (s.on.strazca ? "strazca" : "kontakt") + '">Napísať, čo hľadám</button></div></div>';
     var body = Z.length ? filtre(Z) + (FL.length ? zoznamPonuk(L, P) : nic) : '<div class="prazdne"><b>Momentálne pripravujem nové ponuky.</b><p class="muted">Napíšte mi, čo hľadáte, a ozvem sa vám, keď sa objaví vhodná nehnuteľnosť.</p><button type="button" class="btn" data-go="' + (s.on.strazca ? "strazca" : "kontakt") + '">Napísať, čo hľadám</button></div>';
     var viac = FL.length > s.n && !W.VSETKY ? '<div class="btns" style="justify-content:center;margin-top:28px"><button type="button" class="btn gh" data-vsetky>Všetky ponuky (' + FL.length + ")</button></div>" : "";
@@ -387,10 +402,11 @@ var R = {
   omne: function () { var s = W.S; return '<div class="about">' + av() + '<div class="txt"><span class="eb">O mne</span><h2 class="h2" style="margin:10px 0 16px" ' + ed("about.title", 1) + ">" + esc(s.about.title) + "</h2><div " + ed("about.text") + ">" + paras(s.about.text) + '</div><div class="sig">' + esc(s.name) + '</div><div class="muted" style="font-size:14px">' + esc(s.office) + "</div>" + (s.tpl !== "susedska" ? facts() : "") + "</div></div>"; },
   postup: function () {
     var st = W.S.steps.map(function (s, i) { return [s, i]; }).filter(function (x) { return x[0].t || x[0].d; }), n = st.length;
+    if (!n) return "";
     return H("postup", "Postup predaja", "Ako prebieha predaj so mnou", n + " " + (n === 1 ? "krok" : n < 5 ? "kroky" : "krokov") + " od prvého stretnutia po odovzdanie kľúčov.") +
       '<ol class="steps">' + st.map(function (x) { return "<li><div><h3 " + ed("steps." + x[1] + ".t", 1) + ">" + esc(x[0].t) + "</h3><p " + ed("steps." + x[1] + ".d") + ">" + esc(x[0].d) + "</p></div></li>"; }).join("") + "</ol>";
   },
-  sluzby: function () { return H("sluzby", "Služby", "S čím vám pomôžem") + '<div class="svc">' + W.S.svc.map(function (x, i) { return "<div><i>" + IC[SVC_IC[i % 4]] + "</i><h3 " + ed("svc." + i + ".t", 1) + ">" + esc(x.t) + "</h3><p " + ed("svc." + i + ".d") + ">" + esc(x.d) + "</p></div>"; }).join("") + "</div>"; },
+  sluzby: function () { if (!W.S.svc.some(function (x) { return x.t || x.d; })) return ""; return H("sluzby", "Služby", "S čím vám pomôžem") + '<div class="svc">' + W.S.svc.map(function (x, i) { return "<div><i>" + IC[SVC_IC[i % 4]] + "</i><h3 " + ed("svc." + i + ".t", 1) + ">" + esc(x.t) + "</h3><p " + ed("svc." + i + ".d") + ">" + esc(x.d) + "</p></div>"; }).join("") + "</div>"; },
   lokality: function (P) {
     var hd = H("lokality", "Lokality", "Lokality, ktoré poznám", "Kde v regióne sa oplatí bývať a čo ktorá obec ponúka.");
     if (!W.S.loc.length) return W.editor ? hd + '<p class="sample">Doplň obce a štvrte, ktoré dobre poznáš. Otvor nastavenie sekcie ceruzkou v časti Sekcie. Kým ich nevyplníš, na verejnom webe sa sekcia nezobrazí.</p>' : "";
@@ -436,6 +452,7 @@ var R = {
   },
   obhliadka: function () {
     var s = W.S, f = "obhliadka", BK = W.BK, ds = days(), times = String(s.book.times || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean), L = ZOZ();
+    if (!times.length) times = DEF.book.times.split(", ");
     if (!L.length) return "";
     if (BK.l >= L.length) BK.l = 0; if (BK.d >= ds.length) BK.d = 0;
     var d = ds[BK.d], when = DN[d.getDay()] + " " + d.getDate() + ". " + (d.getMonth() + 1) + ".", body;
@@ -448,7 +465,7 @@ var R = {
     return '<div class="hd"><span class="eb">Obhliadka</span><h2 ' + ed("heads.obhliadka.h", 1) + ">" + esc(head("obhliadka", "h", "Dohodnite si obhliadku")) + "</h2><p " + ed("book.text") + ">" + esc(s.book.text) + '</p></div><div class="book">' + body + "</div>";
   },
   stiahnut: function () {
-    var s = W.S, f = "ebook", u = s.dl.url;
+    var s = W.S, f = "ebook", u = W.DLURL || (s.dl.url ? url(s.dl.url) : "");
     return '<div class="dl"><div class="cover"><small>E-BOOK</small><b>' + esc(s.dl.title) + "</b><span>" + esc(s.name) + '</span></div><div><span class="eb">Na stiahnutie zadarmo</span><h2 class="h2" style="margin:10px 0 14px" ' + ed("dl.title", 1) + ">" + esc(s.dl.title) + '</h2><p class="muted" ' + ed("dl.desc") + ">" + esc(s.dl.desc) + "</p>" +
       (W.DONE[f] ? '<div class="done" style="margin-top:20px"><b>Ďakujem, e-book je váš</b>' + (u ? '<p><a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener" download>Stiahnuť ' + esc(s.dl.file || "e-book") + "</a></p>" : "<p>Pošlem vám ho na e-mail.</p>") + "</div>"
         : '<div class="dlf" data-form="' + f + '">' + inp(f, "kontakt", "Váš e-mail", "email") + '<button type="button" class="btn" data-send="' + f + '">' + esc(s.dl.btn || "Stiahnuť") + "</button></div>" + errMsg(f)) + "</div></div>";
@@ -487,7 +504,7 @@ function rCustom(id) {
 /* ================================================================ detail ponuky */
 function parametre(p) {
   var out = [], ch = [["plocha_uzitkova", "Úžitková plocha", " m²"], ["plocha_zastavana", "Zastavaná plocha", " m²"], ["plocha_pozemku", "Pozemok", " m²"], ["izby", "Izby", ""], ["poschodie", "Poschodie", ""], ["rok_vystavby", "Rok výstavby", ""]];
-  ch.forEach(function (k) { var v = p[k[0]]; if (v === null || v === undefined || v === "") return; if (k[0] === "poschodie") v = Number(v) === 0 ? "prízemie" : v + (p.pocet_podlazi ? " z " + p.pocet_podlazi : ""); else v = NF.format(v) + k[2]; out.push([k[1], esc(v)]); });
+  ch.forEach(function (k) { var v = p[k[0]]; if (v === null || v === undefined || v === "") return; if (k[0] === "poschodie") v = Number(v) === 0 ? "prízemie" : v + (p.pocet_podlazi ? " z " + p.pocet_podlazi : ""); else v = (k[0] === "rok_vystavby" || k[0] === "izby" ? String(v) : NF.format(v)) + k[2]; out.push([k[1], esc(v)]); });
   [["stav_objektu", "Stav"], ["konstrukcia", "Konštrukcia"], ["vlastnictvo", "Vlastníctvo"], ["kurenie", "Kúrenie"]].forEach(function (k) { if (p[k[0]]) out.push([k[1], esc(p[k[0]])]); });
   if (p.energ_certifikat) out.push(["Energetický certifikát", '<span class="energ">' + esc(String(p.energ_certifikat).charAt(0)) + "</span>" + esc(p.energ_certifikat)]);
   if (p.cena_energie) out.push(["Energie", esc(p.cena_energie)]);
@@ -517,7 +534,7 @@ function detail(i, P) {
     (!x.rent && !x.bezCeny && x.stav !== "predane" ? "<div><h2>Koľko by ste splácali</h2>" + calcHtml(x.p) + "</div>" : "") + "</div>" +
     '<aside class="dside"><span class="muted">' + (x.rent ? "Nájom" : "Cena") + '</span><div class="price num">' + esc(cenaTxt(x)) + "</div>" +
     (x.stav === "predane" ? '<p class="muted">Táto nehnuteľnosť je už predaná. Hľadáte podobnú? Napíšte mi.</p><button type="button" class="btn" data-home="' + (s.on.strazca ? "strazca" : "kontakt") + '">Hľadám podobnú</button>'
-      : (s.on.obhliadka ? '<button type="button" class="btn" data-book="' + i + '">Dohodnúť obhliadku</button>' : '<button type="button" class="btn" data-home="kontakt">Mám záujem</button>')) +
+      : (s.on.obhliadka ? '<button type="button" class="btn" data-book="' + i + '">Dohodnúť obhliadku</button>' : '<button type="button" class="btn" data-home="' + (s.on.kontakt ? "kontakt" : s.on.callback ? "callback" : "kontakt") + '" data-zaujem="' + i + '">Mám záujem</button>')) +
     (wa && x.stav !== "predane" ? '<a class="btn wa-btn" href="' + esc(wa) + '" target="_blank" rel="noopener">' + IC.wa + "Napísať cez WhatsApp</a>" : "") +
     '<div class="mini"><button type="button" class="btn gh" data-share="' + i + '">Zdieľať</button>' + (x.id ? '<a class="btn gh" href="letak.html?id=' + x.id + '" target="_blank" rel="noopener">Leták</a>' : '<button type="button" class="btn gh" data-demo="letak">Leták</button>') + "</div>" +
     '<div class="agent">' + av() + "<div><b>" + esc(s.name) + '</b><div class="muted num" style="font-size:14px">' + esc(s.phone) + "</div></div></div></aside></div></div>";
@@ -547,7 +564,7 @@ function render() {
     ["--hc", P.hc], ["--err", P.err], ["--on-fg", P.onFg], ["--fh", F.h], ["--fb", F.b], ["--fhw", F.w], ["--fhls", F.ls], ["--r", s.r + "px"], ["--rb", rb], ["--bub", bubBg(P)], ["--bub-blur", s.bub === "plne" ? "0px" : s.bub === "sklo" ? "16px" : "10px"], ["--bub-muted", s.bub === "plne" ? P.muted : P.fg]].forEach(function (x) { st.setProperty(x[0], x[1]); });
   st.colorScheme = P.dark ? "dark" : "light";
   root.className = ["site", "t-" + s.tpl, "pg-" + W.PAGE.v, s.anim ? "anim" : "", s.anim && W.INTRO ? "intro" : "", s.btnFill === "outline" ? "bo" : "", s.ph === "frame" ? "pf" : s.ph === "shadow" ? "ps" : "", W.EDIT ? "editing" : ""].filter(Boolean).join(" ");
-  var out = nav();
+  var out = "", vykreslene = [];
   if (W.PAGE.v === "detail") out += detail(W.PAGE.i, P);
   else if (W.PAGE.v === "gdpr") out += gdprPage();
   else {
@@ -555,10 +572,14 @@ function render() {
     s.order.forEach(function (k) {
       if (!s.on[k] || (!s.custom[k] && !R[k])) return;
       var html = s.custom[k] ? rCustom(k) : R[k](P); if (!html) return;
+      vykreslene.push(k);
       var alt = (["galeria", "luxus"].indexOf(s.tpl) >= 0 ? i % 2 === 1 : i % 2 === 0) && k !== "ocenenie";
-      out += '<section class="s' + (alt ? " alt" : "") + '" id="s-' + k + '"><div class="w secin">' + html + "</div></section>"; i++;
+      out += '<section class="s' + (alt ? " alt" : "") + '" id="s-' + esc(k) + '"><div class="w secin">' + html + "</div></section>"; i++;
     });
   }
+  // v menu len sekcie, ktoré sa naozaj zobrazili (napr. Recenzie bez recenzií nie)
+  if (W.PAGE.v === "home") W.SEKCIE = vykreslene;
+  out = nav() + out;
   var aiVizual = out.indexOf(AI_BASE) >= 0;
   out += '<footer><div class="w"><span style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px">' + (s.logo ? '<img class="logoimg" src="' + esc(s.logo) + '" alt="">' : "") + "© " + new Date().getFullYear() + " " + esc(s.name) + (s.office ? " · " + esc(s.office) : "") +
     ' · <button type="button" class="flink" data-gdpr>Ochrana osobných údajov</button>' + (s.gdpr.bar ? ' · <button type="button" class="flink" data-ckopen>Nastavenie cookies</button>' : "") + "</span>" + socRow() + (aiVizual ? '<p class="ai-pozn">' + AI_NOTE + "</p>" : "") + "</div></footer>";
@@ -598,8 +619,8 @@ function goSec(k) {
   function run() { var el = document.getElementById("s-" + k) || W.root; el.scrollIntoView({ behavior: "smooth", block: "start" }); }
   if (W.PAGE.v !== "home") { W.PAGE = { v: "home" }; render(); setHash(""); requestAnimationFrame(run); } else run();
 }
-function setHash(h) { if (W.editor) return; try { history.replaceState(null, "", location.pathname + location.search + (h ? "#" + h : "")); } catch (e) { /* nič */ } }
-function otvorDetail(i) { W.PAGE = { v: "detail", i: i }; render(); var x = ZOZ()[i]; if (x && x.id) setHash("p-" + x.id); if (x && W.poDetaile) W.poDetaile(x); W.root.scrollIntoView({ behavior: "smooth", block: "start" }); }
+function setHash(h, nove) { if (W.editor) return; try { history[nove ? "pushState" : "replaceState"]({ typek: h || "" }, "", location.pathname + location.search + (h ? "#" + h : "")); return; } catch (e) { /* nič */ } try { history.replaceState(null, "", location.pathname + location.search + (h ? "#" + h : "")); } catch (e) { /* nič */ } }
+function otvorDetail(i) { var bol = W.PAGE.v === "detail"; W.PAGE = { v: "detail", i: i }; render(); var x = ZOZ()[i]; if (x && x.id) setHash("p-" + x.id, !bol); if (x && W.poDetaile) W.poDetaile(x); W.root.scrollIntoView({ behavior: "smooth", block: "start" }); }
 function send(f) {
   var box = W.root.querySelector('[data-form="' + f + '"]'), v = {};
   if (box) box.querySelectorAll("[name]").forEach(function (e) { v[e.name] = String(e.value || "").trim(); });
@@ -620,9 +641,10 @@ function send(f) {
   if (f === "ebook") co = "E-book: " + W.S.dl.title;
   if (f === "kontakt") co = v.sprava || "";
   if (W.PAGE.v === "detail") { var dx = Z[W.PAGE.i]; if (dx && dx.id) ponuka = dx.id; }
+  if (!ponuka && f === "kontakt" && W.ZAUJEM) ponuka = W.ZAUJEM;
   var btn = box && box.querySelector("[data-send]"); if (btn) { btn.disabled = true; btn.textContent = "Odosielam…"; }
   var odo = W.odoslat ? W.odoslat({ zdroj: f, kontakt: k, meno: v.meno || "", co: co, ponuka: ponuka, dopyt: dopyt }) : Promise.resolve();
-  Promise.resolve(odo).then(function () { delete W.ERR[f]; W.DONE[f] = true; W.FV[f] = {}; render(); })
+  Promise.resolve(odo).then(function (r) { if (f === "ebook" && typeof r === "string" && /^https?:\/\//i.test(r)) W.DLURL = r; if (f === "kontakt") W.ZAUJEM = null; delete W.ERR[f]; W.DONE[f] = true; W.FV[f] = {}; render(); })
     .catch(function (e) { W.ERR[f] = (e && e.message) || "Správu sa nepodarilo odoslať. Skúste to znova alebo zavolajte."; render(); });
 }
 function share(i) {
@@ -655,10 +677,11 @@ function napoj(root) {
     if (W.EDIT && e.target.closest("[data-ed]")) return;
     if (e.target.closest("a[href]")) return;
     var t = e.target.closest("button,[data-open],[data-home]"); if (!t) return; var d = t.dataset;
-    if (d.open !== undefined && !e.target.closest("button")) { otvorDetail(+d.open); return; }
+    if (d.open !== undefined && (!e.target.closest("button") || e.target.closest("button") === t)) { otvorDetail(+d.open); return; }
     if (d.book !== undefined) { W.BK.l = +d.book; W.DONE.obhliadka = false; W.PAGE = { v: "home" }; render(); setHash(""); requestAnimationFrame(function () { goSec("obhliadka"); }); return; }
+    if (d.zaujem !== undefined) { var zx = ZOZ()[+d.zaujem]; if (zx) { W.ZAUJEM = zx.id || null; W.FV.kontakt = { sprava: "Mám záujem o ponuku: " + zx.t + (zx.l ? " (" + zx.l + ")" : "") }; } }
     if (d.home !== undefined) { W.PAGE = { v: "home" }; render(); setHash(""); requestAnimationFrame(function () { if (d.home === "top") W.root.scrollIntoView({ behavior: "smooth", block: "start" }); else goSec(d.home); }); return; }
-    if (d.go) { goSec(d.go); return; }
+    if (d.go) { goSec(W.SEKCIE && W.SEKCIE.indexOf(d.go) < 0 && W.PAGE.v === "home" && (d.go === "strazca" || d.go === "ocenenie") ? "kontakt" : d.go); return; }
     if (d.hfk !== undefined || d.hfo !== undefined) { W.FIL = { k: d.hfk || "", t: "", o: d.hfo || "", sort: W.FIL.sort }; W.VSETKY = false; W.PAGE = { v: "home" }; render(); requestAnimationFrame(function () { goSec("ponuky"); }); return; }
     if (d.fk !== undefined) { W.FIL.k = d.fk; if (!d.fk && t.classList.contains("btn")) W.FIL = { k: "", t: "", o: "", sort: W.FIL.sort }; W.VSETKY = false; render(); return; }
     if (d.ft !== undefined) { W.FIL.t = W.FIL.t === d.ft ? "" : d.ft; W.VSETKY = false; render(); return; }
@@ -681,6 +704,12 @@ function napoj(root) {
     else if (d.ckopen !== undefined) W.CK.bar = true;
     else return;
     render();
+  });
+  if (!W.editor) window.addEventListener("popstate", function () {
+    var m = location.hash.match(/^#p-(\d+)$/), i = m ? ZOZ().findIndex(function (x) { return String(x.id) === m[1]; }) : -1;
+    if (i >= 0) { if (W.PAGE.v !== "detail" || W.PAGE.i !== i) { W.PAGE = { v: "detail", i: i }; render(); } }
+    else if (W.PAGE.v !== "home") { var sp = W.PAGE.v === "detail" ? W.PAGE.i : -1; W.PAGE = { v: "home" }; render();
+      requestAnimationFrame(function () { var el = sp >= 0 && W.root.querySelector('[data-open="' + sp + '"]'); (el || document.getElementById("s-ponuky") || W.root).scrollIntoView({ block: "center" }); }); }
   });
   root.addEventListener("change", function (e) { if (e.target.dataset && e.target.dataset.fsort !== undefined) { W.FIL.sort = e.target.value; render(); } });
   root.addEventListener("keydown", function (e) {

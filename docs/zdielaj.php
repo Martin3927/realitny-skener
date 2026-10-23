@@ -3,7 +3,7 @@
 // Roboty sociálnych sietí nespúšťajú JavaScript, preto im fotku, názov a popis pripraví server.
 // .htaccess sem posiela roboty, ktoré otvárajú stranka.html; človeka rovno presmeruje na web.
 header('Content-Type: text/html; charset=utf-8');
-header('Cache-Control: public, max-age=600');
+header('Vary: User-Agent');
 
 $APP = 'https://app.realitnytypek.sk/';
 function cisti($v) { return strtolower(preg_replace('/[^A-Za-z0-9.-]/', '', (string)$v)); }
@@ -28,7 +28,7 @@ $ciel = $APP . 'stranka.html?m=' . rawurlencode($m) . ($p ? '&p=' . $p : '');
 // človek, ktorý otvoril tento súbor priamo, ide rovno na web
 $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
 $robot = preg_match('/facebookexternalhit|facebot|whatsapp|twitterbot|linkedinbot|slackbot|telegrambot|discordbot|viber|skypeuripreview|pinterest|redditbot|vkshare|snapchat|iframely|embedly|applebot|mastodon|bot\b|crawler|spider/i', $ua);
-if (!$robot && empty($_GET['ukaz'])) { header('Location: ' . $ciel, true, 302); exit; }
+if (!$robot && empty($_GET['ukaz'])) { header('Cache-Control: private, no-store'); header('Location: ' . $ciel, true, 302); exit; }
 
 // údaje zverejneného webu z databázy (rovnaké, aké vidí každý návštevník)
 $cfg = @file_get_contents(__DIR__ . '/config.js') ?: '';
@@ -51,6 +51,8 @@ if ($m !== '' && $u && $k) {
   $d = $odpoved ? json_decode($odpoved, true) : null;
   if (!is_array($d)) $d = null;
 }
+// keď sa údaje nepodarilo načítať, náhľad sa neukladá, aby sa pri ďalšom zdieľaní skúsil znova
+header($d ? 'Cache-Control: public, max-age=600' : 'Cache-Control: no-store');
 
 $web = ($d && is_array($d['web'] ?? null)) ? $d['web'] : [];
 $mk = ($d && is_array($d['makler'] ?? null)) ? $d['makler'] : [];
