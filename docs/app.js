@@ -18,7 +18,7 @@
     "Záujem – stretnutie dohodnuté": "won", "Získaný do ponuky": "won",
     "Nemá záujem o RK": "lost", "Predáva cez inú RK": "lost", "Už predané": "lost",
   };
-  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️", udalost: "📅" };
+  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️", udalost: "📅", web: "🌐" };
   // výsledky hovoru, pri ktorých sa inzerát automaticky neuvoľní
   var CHRANENE_VYSLEDKY = ["Záujem – stretnutie dohodnuté", "Získaný do ponuky"];
   var SMS_ZAKLAD = "Dobrý deň, volám sa {makler} z realitnej kancelárie Alpha Reality. {Všimol|Všimla} som si Váš inzerát – {nehnutelnost}, {lokalita}. " +
@@ -5305,16 +5305,27 @@
     var el = $("#obsah"); if (!el) return;
     var url = new URL("makler.html?id=" + S.me.id, location.href).href, base = new URL(".", location.href).href;
     el.innerHTML = '<div class="box web-box"><div class="vykon-hlava"><h3>🌐 Osobný web</h3></div>' +
-      '<div class="web-hero"><div><b>Vaša osobná stránka už funguje</b><p class="meta">Fotka, kontakt, vaše aktuálne ponuky a recenzie klientov – všetko sa aktualizuje samo z Realitného týpka. Pošlite ju klientom alebo dajte do podpisu emailu.</p>' +
-      '<div class="pd-odkaz"><input type="text" readonly value="' + esc(url) + '"><button class="btn" type="button" data-web="kopiruj">Kopírovať</button><a class="btn primary" href="' + esc(url) + '" target="_blank" rel="noopener">Otvoriť</a></div></div></div>' +
+      '<div class="web-hero"><div><b>Skladačka webu</b><p class="meta">Vyber šablónu, farby, sekcie a texty. Ponuky, predané nehnuteľnosti a recenzie sa na web dostanú samy z Realitného týpka. Kontakty z formulárov ti prídu do zvončeka.</p>' +
+      '<div id="web-stav" class="meta">Načítavam stav webu…</div>' +
+      '<div class="pd-zdiel-btns" style="margin-top:10px"><a class="btn primary" href="web-editor.html">✏️ Upraviť môj web</a></div></div></div>' +
+      (admin() ? '<div class="web-dl" style="margin-top:12px"><span class="web-ik">🧑‍💼</span><b>Web iného makléra</b><span class="meta">Ako administrátor môžete upraviť a zverejniť web ktoréhokoľvek makléra.</span><div class="pd-odkaz"><select id="web-makler" aria-label="Maklér">' +
+        S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) { return '<option value="' + m.id + '">' + esc(m.meno) + "</option>"; }).join("") + '</select><button class="btn" type="button" data-web="iny">Upraviť</button></div></div>' : "") +
       '<div class="web-dlazdice">' +
-      '<div class="web-dl"><span class="web-ik">✏️</span><b>Úprava vlastného webu</b><span class="meta">Texty o vás, farby, vlastná doména (napr. meno.alphareality.sk), sekcie a fotky.</span><span class="chip">Pripravujeme</span></div>' +
-      '<div class="web-dl"><span class="web-ik">📘</span><b>E-book pre predávajúcich</b><span class="meta">„Ako predať nehnuteľnosť rýchlo a za najlepšiu cenu“ – stiahnutie výmenou za kontakt. Získate nových majiteľov priamo z webu.</span><span class="chip">Pripravujeme</span></div>' +
-      '<div class="web-dl"><span class="web-ik">⭐</span><b>Recenzie na webe</b><span class="meta">Schválené recenzie klientov sa na vašej stránke zobrazujú automaticky.</span><button class="btn" type="button" data-domov="recenzie">Recenzie →</button></div>' +
+      '<div class="web-dl"><span class="web-ik">🔗</span><b>Jednoduchá stránka makléra</b><span class="meta">Fotka, kontakt, ponuky a recenzie bez úprav. Funguje aj bez skladačky.</span><div class="pd-odkaz"><input type="text" readonly value="' + esc(url) + '"><button class="btn" type="button" data-web="kopiruj">Kopírovať</button></div></div>' +
+      '<div class="web-dl"><span class="web-ik">⭐</span><b>Recenzie na webe</b><span class="meta">Schválené recenzie klientov sa na vašom webe zobrazujú automaticky.</span><button class="btn" type="button" data-domov="recenzie">Recenzie →</button></div>' +
       '<div class="web-dl"><span class="web-ik">🧩</span><b>Ponuky na inom webe</b><span class="meta">Kód s vašimi ponukami pre ľubovoľnú stránku:</span><pre class="kod" id="kod-moj">' + esc('<div data-typek-ponuky data-makler="' + S.me.id + '"></div>\n<script src="' + base + 'widget.js" async></script>') +
       '</pre><button class="btn" type="button" data-web="kod">Kopírovať kód</button></div></div></div>';
     el.querySelector('[data-web="kopiruj"]').onclick = function () { kopiruj(url, "Odkaz na vašu stránku je skopírovaný."); };
     el.querySelector('[data-web="kod"]').onclick = function () { kopiruj($("#kod-moj").textContent, "Kód je skopírovaný."); };
+    var iny = el.querySelector('[data-web="iny"]'); if (iny) iny.onclick = function () { location.href = "web-editor.html?m=" + encodeURIComponent($("#web-makler").value); };
+    rpc("moj_web", {}).then(function (w) {
+      var st = $("#web-stav"); if (!st) return;
+      var u = new URL("stranka.html?m=" + encodeURIComponent(w.adresa), location.href).href;
+      st.innerHTML = w.zverejnene_kedy
+        ? '<b>Váš web je zverejnený</b>' + (w.zmeny_od_zverejnenia ? " · máte nezverejnené zmeny" : "") + '<div class="pd-odkaz" style="margin-top:6px"><input type="text" readonly value="' + esc(u) + '"><button class="btn" type="button" data-web="kop-novy">Kopírovať</button><a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Otvoriť</a></div>'
+        : "Web zatiaľ nie je zverejnený. Otvorte skladačku, poskladajte ho a kliknite na Zverejniť web.";
+      var k = st.querySelector('[data-web="kop-novy"]'); if (k) k.onclick = function () { kopiruj(u, "Odkaz na váš web je skopírovaný."); };
+    }).catch(function () { var st = $("#web-stav"); if (st) st.textContent = "Skladačka sa práve nasadzuje. Skúste to o pár minút."; });
   }
 
   // ------------------------------------------------------------ RECENZIE

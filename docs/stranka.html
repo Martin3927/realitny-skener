@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Realitný maklér</title>
+<meta name="description" content="Realitný maklér – aktuálne ponuky, odhad ceny zadarmo a kontakt.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" id="fonty" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=Young+Serif&family=Public+Sans:wght@400..800&family=Archivo:wght@400..900&family=Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@500..800&display=swap">
+<link rel="stylesheet" href="media.css?v=202610201600">
+<link rel="stylesheet" href="web-sablony.css?v=202610231600">
+<link rel="icon" id="ikona" href="favicon-32.png">
+<style>
+html,body{margin:0;background:#F7F2E8}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.nacitavam{min-height:70vh;display:grid;place-items:center;color:#5A6470;font-size:15px;padding:24px;text-align:center}
+.nahlad-pas{position:sticky;top:0;z-index:20;background:#DB9522;color:#1E2A35;font:600 14px/1.4 system-ui,sans-serif;padding:8px 16px;text-align:center}
+</style>
+</head>
+<body>
+<div id="nahladPas" class="nahlad-pas" hidden>Náhľad rozpracovaného webu. Klienti vidia poslednú zverejnenú verziu.</div>
+<div class="site" id="site"><div class="nacitavam">Načítavam…</div></div>
+<script src="config.js?v=202610201100"></script>
+<script src="supabase.min.js"></script>
+<script src="media.js?v=202610201600"></script>
+<script src="web-sablony.js?v=202610231600"></script>
+<script>
+(function () {
+  "use strict";
+  var CFG = window.SKENER_CONFIG, T = window.TYPEK_WEB, W = T.W;
+  var sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
+  var q = new URLSearchParams(location.search);
+  // adresa: stranka.html?m=jana-kovacova, stranka.html?jana-kovacova alebo vlastná doména
+  var adresa = q.get("m") || (location.search.replace(/^\?/, "").split("&")[0].indexOf("=") < 0 ? location.search.replace(/^\?/, "").split("&")[0] : "") ||
+    (/realitnytypek\.sk$|github\.io$|localhost|^127\./.test(location.hostname) ? "" : location.hostname.replace(/^www\./, ""));
+  var nahlad = q.get("nahlad") === "1";
+  var site = document.getElementById("site");
+  function chyba(t) { site.innerHTML = '<div class="nacitavam">' + t + "</div>"; }
+  if (!adresa) return chyba("Stránka sa nenašla.");
+
+  sb.rpc("verejny_web", { p_adresa: adresa, p_nahlad: nahlad }).then(function (r) {
+    if (r.error) throw r.error;
+    var d = r.data;
+    if (!d) return chyba(nahlad ? "Náhľad uvidíš, keď si v rovnakom prehliadači prihlásený v Realitnom týpkovi." : "Táto stránka zatiaľ nie je zverejnená.");
+    var m = d.makler || {}, s = T.merge(d.web || {});
+    if (!s.name) s.name = m.meno || "";
+    if (!s.phone) s.phone = m.telefon || "";
+    if (!s.email) s.email = m.email || "";
+    if (!s.photo && m.foto) s.photo = m.foto;
+    W.S = s;
+    W.CTX = { ponuky: (d.ponuky || []).map(T.prevod), predane: (d.predane || []).map(T.prevod), recenzie: d.recenzie, makler: m, ukazka: false };
+    try { if (localStorage.getItem("typek-web-cookies")) W.CK.bar = false; } catch (e) { /* nič */ }
+    W.odoslat = function (o) {
+      return sb.rpc("web_kontakt", { p_adresa: adresa, p_zdroj: o.zdroj, p_kontakt: o.kontakt, p_meno: o.meno || null, p_co: o.co || null, p_ponuka: o.ponuka || null, p_dopyt: o.dopyt || null })
+        .then(function (x) { if (x.error) throw new Error(x.error.message || "Správu sa nepodarilo odoslať."); });
+    };
+    document.getElementById("nahladPas").hidden = !d.nahlad;
+    // titulok, popis a ikona pre prehliadač aj zdieľanie
+    var titul = s.share.title || (s.name + " | Realitn" + (m.pohlavie === "zena" ? "á maklérka" : "ý maklér") + (s.area ? ", " + s.area : ""));
+    document.title = titul;
+    var popis = s.share.desc || T.heroTx().l || ("Predaj, kúpa a prenájom nehnuteľností v regióne " + s.area + ".");
+    document.querySelector('meta[name="description"]').setAttribute("content", popis);
+    [["og:title", titul], ["og:description", popis], ["og:image", s.heroImg || s.photo && !/^data:/.test(s.photo) && s.photo || ""]].forEach(function (x) {
+      if (!x[1]) return; var el = document.createElement("meta"); el.setAttribute("property", x[0]); el.setAttribute("content", x[1]); document.head.appendChild(el);
+    });
+    if (s.logo) document.getElementById("ikona").href = s.logo;
+    else { var P = T.pal(); document.getElementById("ikona").href = "data:image/svg+xml," + encodeURIComponent(T.favSvg(P).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ')); }
+    document.documentElement.style.background = T.pal().bg; document.body.style.background = T.pal().bg;
+    W.poDetaile = function (x) { if (x.id && !d.nahlad) sb.rpc("zaznamenat_zobrazenie", { p_id: x.id }).then(function () {}); };
+    T.napoj(site);
+    var h = location.hash.match(/^#p-(\d+)$/), i = h ? W.CTX.ponuky.findIndex(function (x) { return String(x.id) === h[1]; }) : -1;
+    if (i < 0 && h) { var j = W.CTX.predane.findIndex(function (x) { return String(x.id) === h[1]; }); if (j >= 0) { W.CTX.ponuky = W.CTX.ponuky.concat([W.CTX.predane[j]]); i = W.CTX.ponuky.length - 1; } }
+    if (i >= 0) W.PAGE = { v: "detail", i: i };
+    T.render();
+    if (!d.nahlad) { try { if (!sessionStorage.getItem("typek-web-" + adresa)) { sessionStorage.setItem("typek-web-" + adresa, "1"); sb.rpc("zaznamenat_navstevu_webu", { p_adresa: adresa }).then(function () {}); } } catch (e) { /* nič */ } }
+  }).catch(function () { chyba("Stránku sa nepodarilo načítať. Skúste to o chvíľu znova."); });
+})();
+</script>
+</body>
+</html>

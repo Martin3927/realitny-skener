@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1e2a35">
+<title>Môj web – Realitný týpek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=Young+Serif&family=Public+Sans:wght@400..800&family=Archivo:wght@400..900&family=Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@500..800&family=Montserrat:wght@900&display=swap">
+<link rel="stylesheet" href="web-sablony.css?v=202610231600">
+<link rel="stylesheet" href="web-editor.css?v=202610231600">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<script>try { var t = localStorage.getItem("alpha-skener-tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+</head>
+<body>
+<header class="top">
+  <div>
+    <a class="spat" href="./#web">← Späť do aplikácie</a>
+    <h1>Môj web</h1>
+    <p id="podnadpis">Vyber vzhľad, poskladaj sekcie a doplň údaje. Texty môžeš prepisovať priamo v ukážke. Zmeny sa ukladajú samy, klienti ich uvidia po zverejnení.</p>
+  </div>
+  <div class="top-actions">
+    <span class="stav" id="stav" aria-live="polite"><i></i><span>Načítavam…</span></span>
+    <button class="ib" id="undo" type="button" aria-label="Späť" title="Späť (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+    <button class="ib" id="redo" type="button" aria-label="Znova" title="Znova (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+    <a class="b b-soft" id="nahlad" href="#" target="_blank" rel="noopener">Náhľad</a>
+    <button class="b b-gold" id="zverejnit" type="button">Zverejniť web</button>
+  </div>
+</header>
+
+<main class="app" id="appEd" hidden>
+  <aside class="panel" id="panel" aria-label="Nastavenie webu">
+    <div class="phead">
+      <button type="button" class="ready" id="ready" aria-label="Otvoriť kontrolu webu"><span class="lab">Web je hotový na</span><span class="bar2"><i id="readyBar"></i></span><b id="readyPct"></b></button>
+      <div class="tabs" role="tablist" id="tabs"></div>
+    </div>
+
+    <div class="pane" data-pane="vzhlad">
+      <section class="grp"><h2>Šablóna</h2><div class="tpls" id="tpls"></div><button type="button" class="b b-soft b-sm" id="mix">Zamiešať vzhľad</button></section>
+      <section class="grp"><h2>Farebné sady</h2><div class="sets" id="sets"></div><p class="sub">Celý web zladený jedným klikom. Potom si môžeš každú farbu doladiť nižšie.</p></section>
+      <section class="grp"><h2>Hlavná farba <output id="colName"></output></h2><div class="sw" id="colors"></div>
+        <div id="logoCols"></div>
+        <div class="own-row"><input type="color" id="ccPick" aria-label="Vybrať hlavnú farbu"><input type="text" id="ccHex" maxlength="7" spellcheck="false" aria-label="Kód hlavnej farby"><small>vlastná</small></div>
+      </section>
+      <section class="grp"><h2>Doplnková farba</h2>
+        <div class="own-row"><input type="color" id="c2Pick" aria-label="Vybrať doplnkovú farbu"><input type="text" id="c2Hex" maxlength="7" spellcheck="false" aria-label="Kód doplnkovej farby" placeholder="ako hlavná"><button type="button" class="lbtn" id="c2Clear">Zrušiť</button></div>
+        <p class="sub">Použije sa na štítky, hviezdičky, ikony služieb a malé nadpisy.</p>
+      </section>
+      <section class="grp"><h2>Farba nadpisov</h2><div class="seg" id="hcols"></div></section>
+      <section class="grp"><h2>Písmo</h2><div class="seg" id="fonts"></div></section>
+      <section class="grp"><h2>Pozadie</h2><div class="seg" id="bgs"></div>
+        <div class="own-row"><input type="color" id="bgPick" aria-label="Vybrať vlastné pozadie"><input type="text" id="bgHex" maxlength="7" spellcheck="false" aria-label="Kód vlastného pozadia"><small>vlastné</small></div>
+      </section>
+      <section class="grp"><h2>Úvod webu</h2><div class="fields" id="fHero"></div></section>
+      <section class="grp"><h2>Tlačidlá</h2><div class="seg" id="btnShape"></div><div class="seg" id="btnFill"></div></section>
+      <section class="grp"><h2>Fotky</h2><div class="seg" id="phStyle"></div></section>
+      <section class="grp"><h2>Zaoblenie rohov <output id="rOut"></output></h2><input type="range" id="rad" min="0" max="28" step="1" aria-label="Zaoblenie rohov"></section>
+      <section class="grp"><h2>Animácie</h2><div class="seg" id="animSeg"></div></section>
+    </div>
+
+    <div class="pane" data-pane="sekcie" hidden>
+      <section class="grp"><h2>Sekcie webu</h2>
+        <ul class="secs" id="secs"></ul>
+        <button type="button" class="addb" id="addCustom">+ Pridať vlastnú sekciu</button>
+        <p class="note">Ťahaj za úchyt vľavo alebo použi šípky. Ceruzkou otvoríš nastavenie sekcie. Ponuky, predané nehnuteľnosti a recenzie sa berú samy z Realitného týpka.</p>
+      </section>
+    </div>
+
+    <div class="pane" data-pane="makler" hidden>
+      <div class="ai" id="ai">
+        <h3>Texty na jeden klik</h3>
+        <p>Odpovedz na tri otázky a AI asistent napíše úvod, text O mne, služby aj ponuku odhadu ceny. Výsledok sa hneď objaví v ukážke a tlačidlom Späť ho vieš vrátiť.</p>
+        <label>Ako dlho robíš reality a kde?<textarea id="aiQ1" rows="2" placeholder="Napríklad 12 rokov, Spišská Nová Ves a okolie"></textarea></label>
+        <label>V čom si dobrý a čím sa líšiš od iných?<textarea id="aiQ2" rows="2" placeholder="Napríklad rodinné domy, rýchly predaj, poctivé ocenenie"></textarea></label>
+        <label>Čo na tebe klienti oceňujú?<textarea id="aiQ3" rows="2" placeholder="Napríklad som vždy na telefóne, poviem pravdu"></textarea></label>
+        <div class="lab" style="color:inherit;opacity:.85">Tón textov</div>
+        <div class="seg" id="aiTone"></div>
+        <div class="row2"><button type="button" class="b b-gold" id="aiGo">Napísať texty</button><span class="st" id="aiSt" aria-live="polite"></span></div>
+      </div>
+      <section class="grp"><h2>Maklér</h2><div class="fields" id="fMakler"></div></section>
+      <section class="grp"><h2>Kontakty</h2><div class="fields" id="fKontakt"></div></section>
+      <section class="grp"><h2>Ochrana údajov a cookies</h2><div class="fields" id="fGdpr"></div></section>
+    </div>
+
+    <div class="pane" data-pane="siete" hidden>
+      <section class="grp"><h2>Sociálne siete</h2><div class="fields" id="fSoc"></div></section>
+    </div>
+
+    <div class="pane" data-pane="kontrola" hidden>
+      <section class="grp"><h2>Zverejnenie</h2><div class="pub" id="pubBox"></div></section>
+      <section class="grp"><h2>Kontrola pred zverejnením</h2>
+        <div class="big"><b id="ckPct"></b><span class="sub" id="ckSub"></span></div>
+        <ul class="chk-list" id="ckList"></ul>
+      </section>
+      <section class="grp"><h2>Adresa webu</h2><div class="fields" id="fAdresa"></div></section>
+      <section class="grp"><h2>Vlastná doména</h2><div class="fields" id="fDomena"></div></section>
+      <section class="grp"><h2>Staršie verzie</h2><p class="sub">Každé zverejnenie sa uloží. Starú verziu vieš vrátiť do rozpracovaného webu a znova zverejniť.</p><ul class="verzie" id="verzie"></ul></section>
+      <section class="grp"><h2>Ikona a zdieľanie</h2>
+        <div class="fav"><div class="ic" id="favBig"></div><p class="sub">Ikona v záložke prehliadača sa vytvorí sama z loga. Bez loga z iniciál a hlavnej farby.</p></div>
+        <div class="lab">Takto vyzerá odkaz na Facebooku a vo WhatsAppe</div>
+        <div class="share" id="sharePrev"></div>
+        <div class="fields" id="fShare"></div>
+      </section>
+    </div>
+  </aside>
+
+  <section class="frame" aria-label="Ukážka webu">
+    <div class="bar">
+      <div class="addr"><span class="fi" id="favSmall"></span><b id="addr"></b></div>
+      <div class="seg" id="viewSeg"></div>
+      <div class="seg" id="dev"></div>
+      <button type="button" class="chip edit-tg" id="editTg" aria-pressed="false">Upraviť texty</button>
+    </div>
+    <div class="edit-hint" id="editHint" hidden>Klikni na nadpis alebo text v ukážke a prepíš ho. Zmeny sa hneď uložia.</div>
+    <div class="stage" id="stage"><div class="site" id="site"></div></div>
+    <div id="dash" hidden></div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden role="status"></div>
+<script src="config.js?v=202610201100"></script>
+<script src="supabase.min.js"></script>
+<script src="web-sablony.js?v=202610231600"></script>
+<script src="web-editor.js?v=202610231600"></script>
+</body>
+</html>
