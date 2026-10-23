@@ -1992,3 +1992,41 @@ a.dl-menu { text-decoration: none; color: inherit }
 /* ---------- história makléra */
 .hm-seg { flex-wrap: wrap; overflow: visible }
 @media (max-width: 640px) { .hm-seg { display: flex; width: 100% } .hm-seg button { flex: 1 1 auto; border-bottom: 1px solid var(--line) } .hm-box #hm-obd { width: 100% } }
+
+/* ---------- svetlý režim: svetlý aj bočný panel a menu na mobile */
+:root[data-theme="light"] .bocne, :root[data-theme="light"] .menu-sheet-panel { background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 60%, var(--bg) 100%); color: var(--ink); border-right: 1px solid var(--line); box-shadow: 2px 0 14px rgba(30,42,53,.05) }
+:root[data-theme="light"] .menu-sheet-panel { box-shadow: 0 20px 50px rgba(30,42,53,.25) }
+:root[data-theme="light"] .bocne-logo { border-bottom-color: var(--line) }
+:root[data-theme="light"] .bocne-logo img { filter: none }
+:root[data-theme="light"] .bocne-logo span { color: var(--gold) }
+:root[data-theme="light"] .menu-skup-n { color: var(--gold) }
+:root[data-theme="light"] .dl-menu { background: var(--surface); border-color: var(--line); color: var(--ink); box-shadow: 0 1px 2px rgba(30,42,53,.04) }
+:root[data-theme="light"] .dl-menu:hover { background: var(--gold-soft); border-color: rgb(var(--accent-rgb) / .6) }
+:root[data-theme="light"] .dl-menu-ik { background: rgb(var(--accent-rgb) / .16); color: var(--gold) }
+:root[data-theme="light"] .dl-menu[aria-current="page"] { background: var(--gold-soft); border-color: var(--gold-strong); color: var(--ink); box-shadow: inset 3px 0 0 var(--gold-strong), 0 2px 8px rgb(var(--accent-rgb) / .18) }
+:root[data-theme="light"] .dl-menu[aria-current="page"] .dl-menu-ik { background: var(--gold-strong); color: var(--on-accent) }
+:root[data-theme="light"] .bocne-typek { border-top-color: var(--line) }
+:root[data-theme="light"] .bocne-typek span { color: var(--muted) }
+:root[data-theme="light"] .bocne-typek b { color: var(--ink) }
+:root[data-theme="light"] .menu-sheet-hl b { color: var(--ink) }
+:root[data-theme="light"] .menu-sheet-x { border-color: var(--line); color: var(--ink) }
+:root[data-theme="light"] .bocne::-webkit-scrollbar-thumb { background: var(--line) }
+@media (prefers-color-scheme: light) {
+:root:not([data-theme="dark"]) .bocne, :root:not([data-theme="dark"]) .menu-sheet-panel { background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 60%, var(--bg) 100%); color: var(--ink); border-right: 1px solid var(--line); box-shadow: 2px 0 14px rgba(30,42,53,.05) }
+:root:not([data-theme="dark"]) .menu-sheet-panel { box-shadow: 0 20px 50px rgba(30,42,53,.25) }
+:root:not([data-theme="dark"]) .bocne-logo { border-bottom-color: var(--line) }
+:root:not([data-theme="dark"]) .bocne-logo img { filter: none }
+:root:not([data-theme="dark"]) .bocne-logo span { color: var(--gold) }
+:root:not([data-theme="dark"]) .menu-skup-n { color: var(--gold) }
+:root:not([data-theme="dark"]) .dl-menu { background: var(--surface); border-color: var(--line); color: var(--ink); box-shadow: 0 1px 2px rgba(30,42,53,.04) }
+:root:not([data-theme="dark"]) .dl-menu:hover { background: var(--gold-soft); border-color: rgb(var(--accent-rgb) / .6) }
+:root:not([data-theme="dark"]) .dl-menu-ik { background: rgb(var(--accent-rgb) / .16); color: var(--gold) }
+:root:not([data-theme="dark"]) .dl-menu[aria-current="page"] { background: var(--gold-soft); border-color: var(--gold-strong); color: var(--ink); box-shadow: inset 3px 0 0 var(--gold-strong), 0 2px 8px rgb(var(--accent-rgb) / .18) }
+:root:not([data-theme="dark"]) .dl-menu[aria-current="page"] .dl-menu-ik { background: var(--gold-strong); color: var(--on-accent) }
+:root:not([data-theme="dark"]) .bocne-typek { border-top-color: var(--line) }
+:root:not([data-theme="dark"]) .bocne-typek span { color: var(--muted) }
+:root:not([data-theme="dark"]) .bocne-typek b { color: var(--ink) }
+:root:not([data-theme="dark"]) .menu-sheet-hl b { color: var(--ink) }
+:root:not([data-theme="dark"]) .menu-sheet-x { border-color: var(--line); color: var(--ink) }
+:root:not([data-theme="dark"]) .bocne::-webkit-scrollbar-thumb { background: var(--line) }
+}
