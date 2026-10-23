@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" id="fonty" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=Young+Serif&family=Public+Sans:wght@400..800&family=Archivo:wght@400..900&family=Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@500..800&display=swap">
 <link rel="stylesheet" href="media.css?v=202610201600">
-<link rel="stylesheet" href="web-sablony.css?v=202610231600">
+<link rel="stylesheet" href="web-sablony.css?v=202610231700">
 <link rel="icon" id="ikona" href="favicon-32.png">
 <style>
 html,body{margin:0;background:#F7F2E8}
@@ -24,7 +24,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 <script src="config.js?v=202610201100"></script>
 <script src="supabase.min.js"></script>
 <script src="media.js?v=202610201600"></script>
-<script src="web-sablony.js?v=202610231600"></script>
+<script src="web-sablony.js?v=202610231700"></script>
 <script>
 (function () {
   "use strict";
@@ -61,7 +61,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     document.title = titul;
     var popis = s.share.desc || T.heroTx().l || ("Predaj, kúpa a prenájom nehnuteľností v regióne " + s.area + ".");
     document.querySelector('meta[name="description"]').setAttribute("content", popis);
-    [["og:title", titul], ["og:description", popis], ["og:image", s.heroImg || s.photo && !/^data:/.test(s.photo) && s.photo || ""]].forEach(function (x) {
+    [["og:title", titul], ["og:description", popis], ["og:image", s.heroImg || s.photo && !/^data:/.test(s.photo) && s.photo || T.aiSrc(T.heroAi(s.tpl === "mestska" ? "mesto" : "dom"))]].forEach(function (x) {
       if (!x[1]) return; var el = document.createElement("meta"); el.setAttribute("property", x[0]); el.setAttribute("content", x[1]); document.head.appendChild(el);
     });
     if (s.logo) document.getElementById("ikona").href = s.logo;

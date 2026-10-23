@@ -163,21 +163,25 @@ function pal() {
     err: rdAll("#C2412D", [B.bg, B.surf], tx, 4.5), onFg: con(fg, "#FFFFFF") > con(fg, "#12171C") ? "#FFFFFF" : "#12171C" };
 }
 
-/* ================================================================ ilustrácie (keď chýba fotka) */
-function photo(k, i, P) {
-  var sky = mix(P.a, P.dark ? "#1A2430" : "#FFFFFF", P.dark ? 0.55 : 0.8), sky2 = mix(sky, "#FFFFFF", P.dark ? 0.05 : 0.35);
-  var hill = mix("#6E8F5A", P.a, 0.18), hill2 = mix(hill, "#2C3B2A", 0.25), wall = P.dark ? "#D9D2C4" : "#F1EBDF", roof = mix(P.a, "#1E2A35", 0.25), win = "#2C3A47";
-  var o = (i * 37) % 60, b = '<rect width="400" height="260" fill="' + sky + '"/><circle cx="' + (320 - o) + '" cy="58" r="22" fill="' + sky2 + '"/><path d="M0 190 Q ' + (90 + o) + " " + (150 - o / 4) + ' 200 178 T 400 168 V260 H0Z" fill="' + hill + '"/>', r, c, t;
-  if (k === "byt") { b += '<rect x="120" y="60" width="160" height="160" fill="' + wall + '"/><rect x="120" y="54" width="160" height="10" fill="' + roof + '"/>';
-    for (r = 0; r < 6; r++) for (c = 0; c < 5; c++) b += '<rect x="' + (134 + c * 28) + '" y="' + (74 + r * 24) + '" width="18" height="13" rx="2" fill="' + ((r + c + i) % 5 === 0 ? mix(P.a, "#FFFFFF", 0.3) : win) + '"/>';
-    b += '<rect x="70" y="120" width="44" height="100" fill="' + mix(wall, "#B9B2A5", 0.35) + '"/><rect x="290" y="100" width="54" height="120" fill="' + mix(wall, "#B9B2A5", 0.2) + '"/>'; }
-  else if (k === "dom") { b += '<rect x="130" y="128" width="150" height="92" fill="' + wall + '"/><path d="M118 132 L205 70 L292 132Z" fill="' + roof + '"/><rect x="190" y="168" width="28" height="52" rx="2" fill="' + mix(P.a, "#1E2A35", 0.45) + '"/><rect x="148" y="150" width="30" height="24" rx="2" fill="' + win + '"/><rect x="234" y="150" width="30" height="24" rx="2" fill="' + win + '"/><rect x="194" y="98" width="22" height="20" rx="2" fill="' + win + '"/><circle cx="330" cy="168" r="30" fill="' + hill2 + '"/><rect x="326" y="190" width="8" height="30" fill="#5B4636"/>'; }
-  else if (k === "chata") { b += '<rect x="150" y="150" width="110" height="70" fill="' + mix(wall, "#A9825A", 0.45) + '"/><path d="M136 156 L205 84 L274 156Z" fill="' + roof + '"/><rect x="194" y="178" width="24" height="42" fill="' + win + '"/><rect x="164" y="170" width="20" height="18" fill="' + win + '"/>'; for (t = 0; t < 4; t++) b += '<path d="M' + (40 + t * 28) + ' 205 l14 -46 l14 46Z" fill="' + hill2 + '"/>'; }
-  else if (k === "mesto") { for (t = 0; t < 7; t++) { var hg = 60 + ((t * 53 + i * 17) % 70); b += '<rect x="' + (20 + t * 54) + '" y="' + (218 - hg) + '" width="46" height="' + hg + '" fill="' + (t % 2 ? wall : mix(wall, "#B9B2A5", 0.3)) + '"/><path d="M' + (20 + t * 54) + " " + (218 - hg) + ' l23 -22 l23 22Z" fill="' + roof + '"/>'; } b += '<rect x="186" y="60" width="18" height="100" fill="' + mix(wall, "#B9B2A5", 0.4) + '"/><path d="M182 62 l13 -36 l13 36Z" fill="' + roof + '"/>'; }
-  else { b += '<path d="M0 205 Q 200 190 400 200 V260 H0Z" fill="' + mix(hill, "#C9B36A", 0.35) + '"/>'; for (t = 0; t < 12; t++) b += '<rect x="' + (20 + t * 32) + '" y="196" width="4" height="22" fill="#7A6247"/>'; b += '<rect x="20" y="202" width="356" height="3" fill="#7A6247"/><circle cx="' + (300 - o) + '" cy="150" r="36" fill="' + hill2 + '"/><rect x="' + (296 - o) + '" y="176" width="8" height="30" fill="#5B4636"/>'; }
-  b += '<rect y="218" width="400" height="42" fill="' + hill2 + '"/>';
-  return '<svg class="ph" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + b + "</svg>";
-}
+/* ================================================================ ilustračné fotky (vytvorené AI) */
+var AI_BASE = (function () {
+  try { var u = document.currentScript && document.currentScript.src; if (u) return u.split(/[?#]/)[0].replace(/[^\/]*$/, "") + "img/web/"; } catch (e) { /* nič */ }
+  return "img/web/";
+})();
+var AI = {
+  dom: ["dom-rodinny", "dom-obyvacka", "dom-zahrada", "dom-novostavba"],
+  byt: ["byt-dom", "byt-obyvacka", "byt-kuchyna", "byt-spalna"],
+  poz: ["pozemok", "mesto-letecky"],
+  chata: ["chata", "chata-krb"],
+  mesto: ["mesto-namestie", "mesto-letecky"]
+};
+var AI_NOTE = "Obsahový vizuál na webe je generovaný AI.";
+function aiSrc(n, maly) { return AI_BASE + n + (maly ? "-m" : "") + ".webp"; }
+function aiImg(n, alt, maly, lazy) { return '<img class="ph" src="' + aiSrc(n, maly) + '" alt="' + esc(alt || "") + '"' + (lazy === false ? "" : ' loading="lazy"') + ' decoding="async">'; }
+function heroAi(kind) { return kind === "mesto" ? "mesto-namestie" : W.S.tpl === "luxus" ? "luxus-obyvacka" : "dom-novostavba"; }
+// skutočná ponuka bez fotiek: nikdy nie cudzia fotka, len neutrálna plocha
+function bezFotky() { return '<div class="ph nofoto" role="img" aria-label="Fotky pripravujeme">' + SV('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>') + "<span>Fotky pripravujeme</span></div>"; }
+function photo(k, i) { var L = AI[k] || AI.dom; return aiImg(L[(i || 0) % L.length], "", true); }
 function img(src, alt, lazy) { return '<img class="ph" src="' + esc(src) + '" alt="' + esc(alt || "") + '"' + (lazy === false ? "" : ' loading="lazy"') + ">"; }
 function favSvg(P) { var s = W.S; return s.logo ? '<img src="' + esc(s.logo) + '" alt="">' : '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="' + P.a + '"/><text x="32" y="41" font-size="26" font-weight="800" text-anchor="middle" fill="' + P.onA + '" font-family="system-ui,sans-serif">' + esc(initials(s.name)) + "</text></svg>"; }
 
@@ -212,7 +216,7 @@ function stitok(x, i) {
   if (x.exkl) return '<span class="tag">EXKLUZÍVNE</span>';
   return "";
 }
-function fotoX(x, i, P) { return x.foto && x.foto.length ? img(x.foto[0], x.t) : photo(x.k, i, P); }
+function fotoX(x, i, P) { return x.foto && x.foto.length ? img(x.foto[0], x.t) : x.raw ? bezFotky() : aiImg((AI[x.k] || AI.dom)[0], x.t, true); }
 function waPonuka(x) {
   var s = W.S, cis = waNum(s.wa || s.phone); if (!cis) return "";
   var txt = "Dobrý deň, mám záujem o ponuku " + x.t + (x.l ? " (" + x.l + ")" : "") + ". " + odkazPonuky(x);
@@ -240,7 +244,10 @@ var SVC_IC = ["predaj", "prenajom", "ocenenie", "vykup"];
 /* ================================================================ časti stránky */
 function ed(path, single) { return 'data-ed="' + path + '"' + (single ? " data-single" : "") + (W.EDIT ? ' contenteditable="true" spellcheck="true"' : ""); }
 function fotoMaklera() { var s = W.S; return s.photo || (W.CTX.makler && W.CTX.makler.foto) || ""; }
-function av() { var s = W.S, f = fotoMaklera(); return '<span class="mono">' + (f ? '<img src="' + esc(f) + '" alt="' + esc(s.name) + '">' : esc(initials(s.name))) + "</span>"; }
+// ilustračná fotka makléra/maklérky len v ukážke v editore, na zverejnenom webe sa bez fotky zobrazia iniciály
+function zena() { return !!(W.CTX.makler && W.CTX.makler.pohlavie === "zena"); }
+function fotoUkazka() { return W.editor && !fotoMaklera() ? aiSrc(zena() ? "maklerka" : "makler") : ""; }
+function av() { var s = W.S, f = fotoMaklera() || fotoUkazka(); return '<span class="mono">' + (f ? '<img src="' + esc(f) + '" alt="' + esc(s.name) + '">' : esc(initials(s.name))) + "</span>"; }
 function socRow() {
   var s = W.S, it = SOC.filter(function (x) { return String(s.soc[x[0]] || "").trim(); });
   if (!it.length) return "";
@@ -262,7 +269,7 @@ function facts() {
 function heroMedia(P, kind) {
   var s = W.S;
   if (s.heroMedia === "video" && s.heroVideo) return '<div class="hm"><video src="' + esc(s.heroVideo) + '" autoplay muted loop playsinline aria-hidden="true"></video></div>';
-  return '<div class="hm' + (s.heroMedia === "pohyb" ? " kb" : "") + '">' + (s.heroImg ? img(s.heroImg, "", false) : photo(kind || "dom", 3, P)) + "</div>";
+  return '<div class="hm' + (s.heroMedia === "pohyb" ? " kb" : "") + '">' + (s.heroImg ? img(s.heroImg, "", false) : aiImg(heroAi(kind), "", false, false)) + "</div>";
 }
 function days() { var out = [], d = new Date(); d.setHours(12, 0, 0, 0); while (out.length < 6) { d.setDate(d.getDate() + 1); var w = d.getDay(); if (w === 0 || (w === 6 && !W.S.book.sat)) continue; out.push(new Date(d)); } return out; }
 function calcHtml(p0) {
@@ -285,7 +292,7 @@ function hero(P) {
   switch (s.tpl) {
     case "galeria": return '<div class="hero">' + heroMedia(P) + '<div class="box"><div class="who">' + av() + "<div><b>" + esc(s.name) + '</b><div class="muted" style="font-size:14px">' + esc(s.area) + "</div></div></div>" + h1 + lead +
       '<div class="search"><button type="button" class="on" data-go="ponuky">Byty</button><button type="button" data-go="ponuky">Domy</button><button type="button" data-go="ponuky">Pozemky</button><button type="button" data-go="strazca">Hľadám</button></div></div></div>';
-    case "vizitka": return '<div class="w hero">' + av() + '<span class="eb">Realitný maklér' + (s.office ? " · " + esc(s.office) : "") + "</span><h1>" + esc(s.name) + "</h1>" + lead +
+    case "vizitka": return '<div class="w hero">' + av() + '<span class="eb">' + (zena() ? "Realitná maklérka" : "Realitný maklér") + (s.office ? " · " + esc(s.office) : "") + "</span><h1>" + esc(s.name) + "</h1>" + lead +
       '<div class="pills">' + (s.phone ? '<a class="num" href="tel:' + esc(String(s.phone).replace(/[^\d+]/g, "")) + '">' + esc(s.phone) + "</a>" : "") + (s.email ? '<a href="mailto:' + esc(s.email) + '">' + esc(s.email) + "</a>" : "") + (s.wa ? '<a href="https://wa.me/' + waNum(s.wa) + '" target="_blank" rel="noopener">WhatsApp</a>' : "") + "</div>" + socRow() + "</div>";
     case "luxus": return '<div class="hero">' + heroMedia(P) + '<div class="scrim"></div><div class="in"><span class="eb">' + esc(s.name) + " · " + esc(s.area) + "</span>" + h1 + lead +
       '<div class="btns"><button type="button" class="btn" data-go="ponuky">Pozrieť ponuky</button><button type="button" class="btn gh" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Ocenenie nehnuteľnosti</button></div></div></div>';
@@ -293,8 +300,8 @@ function hero(P) {
       return '<div class="w hero"><div><span class="eb">Realitný maklér · ' + esc(s.area) + '</span><h1><span class="hl" ' + ed("heroTx.rodinna.t", 1) + ">" + esc(T.t) + "</span></h1>" + lead + btns + "</div>" +
         '<div class="blob"><div class="shape">' + av() + "</div>" + (y || a ? '<div class="badge2"><b class="num">' + (y ? esc(y) + " rokov" : a + " z 5") + "</b><span>" + (y ? "v realitách" : "priemer hodnotení") + "</span></div>" : "") + "</div></div>"; }
     case "mestska": return '<div class="hero"><div class="blk"><span class="eb">' + esc(s.name) + " · " + esc(s.area) + "</span><div>" + h1 + "</div><div>" + lead + '<div class="btns" style="margin-top:18px"><button type="button" class="btn" data-go="ponuky">Pozrieť ponuky</button></div></div></div><div class="img">' + heroMedia(P, "mesto") + "</div></div>";
-    default: return '<div class="w hero"><div><span class="eb">Realitn' + (W.CTX.makler && W.CTX.makler.pohlavie === "zena" ? "á maklérka" : "ý maklér") + " · " + esc(s.area) + "</span>" + h1 + lead + btns + "</div>" +
-      '<div class="port' + (fotoMaklera() ? " hasimg" : "") + '">' + av() + '<div><b style="font-size:18px">' + esc(s.name || first) + '</b><div class="muted" style="font-size:14px">' + esc(s.office) + "</div></div>" + facts() + socRow() + "</div></div>";
+    default: return '<div class="w hero"><div><span class="eb">Realitn' + (zena() ? "á maklérka" : "ý maklér") + " · " + esc(s.area) + "</span>" + h1 + lead + btns + "</div>" +
+      '<div class="port' + (fotoMaklera() || fotoUkazka() ? " hasimg" : "") + '">' + av() + '<div><b style="font-size:18px">' + esc(s.name || first) + '</b><div class="muted" style="font-size:14px">' + esc(s.office) + "</div></div>" + facts() + socRow() + "</div></div>";
   }
 }
 
@@ -345,19 +352,19 @@ var R = {
   sluzby: function () { return H("sluzby", "Služby", "S čím vám pomôžem") + '<div class="svc">' + W.S.svc.map(function (x, i) { return "<div><i>" + IC[SVC_IC[i % 4]] + "</i><h3 " + ed("svc." + i + ".t", 1) + ">" + esc(x.t) + "</h3><p " + ed("svc." + i + ".d") + ">" + esc(x.d) + "</p></div>"; }).join("") + "</div>"; },
   lokality: function (P) {
     return H("lokality", "Lokality", "Lokality, ktoré poznám", "Kde v regióne sa oplatí bývať a čo ktorá obec ponúka.") + '<div class="locs">' + W.S.loc.map(function (l, i) {
-      return '<div class="loc"><div class="media">' + (l.img ? img(l.img, l.n) : photo(i % 2 ? "dom" : "mesto", i + 2, P)) + '</div><div class="in"><h3 ' + ed("loc." + i + ".n", 1) + ">" + esc(l.n) + "</h3><p " + ed("loc." + i + ".t") + ">" + esc(l.t) + '</p><div class="params">' +
+      return '<div class="loc"><div class="media">' + (l.img ? img(l.img, l.n) : aiImg(["mesto-namestie", "mesto-letecky", "dom-rodinny", "pozemok"][i % 4], l.n, true)) + '</div><div class="in"><h3 ' + ed("loc." + i + ".n", 1) + ">" + esc(l.n) + "</h3><p " + ed("loc." + i + ".t") + ">" + esc(l.t) + '</p><div class="params">' +
         String(l.g || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean).map(function (g) { return "<span>" + esc(g) + "</span>"; }).join("") + '</div><button type="button" class="bk" data-go="ponuky" style="margin-top:6px">Ponuky v lokalite →</button></div></div>';
     }).join("") + "</div>";
   },
   video: function (P) {
     var s = W.S, u = url(s.video.url), M = window.TYPEK_MEDIA, emb = "";
     if (u && M && !W.editor) { try { emb = M.htmlVidea(u); } catch (e) { emb = ""; } }
-    var inner = '<div class="media wide">' + photo("dom", 2, P) + '<div class="play"><span>' + IC.play + "</span></div></div>";
+    var inner = '<div class="media wide">' + aiImg("dom-obyvacka", "") + '<div class="play"><span>' + IC.play + "</span></div></div>";
     return '<div class="hd"><span class="eb">Video</span><h2 ' + ed("video.title", 1) + ">" + esc(s.video.title) + "</h2><p " + ed("video.text") + ">" + esc(s.video.text) + "</p></div>" +
       (emb ? '<div class="vid-emb">' + emb + "</div>" : u ? '<a class="vid" href="' + esc(u) + '" target="_blank" rel="noopener" aria-label="Prehrať video">' + inner + "</a>" : '<div class="vid">' + inner + "</div>") +
       (W.editor ? '<p class="sample">' + (u ? "Na zverejnenom webe sa video prehrá priamo na stránke." : "Vlož odkaz na video z YouTube alebo Vimeo v nastavení sekcie.") + "</p>" : "");
   },
-  fotka: function (P) { var s = W.S; return (s.img.title || W.EDIT ? '<div class="hd"><span class="eb">Fotka</span><h2 ' + ed("img.title", 1) + ">" + esc(s.img.title) + "</h2></div>" : "") + '<figure><div class="media wide">' + (s.img.src ? img(s.img.src, s.img.cap) : photo("mesto", 4, P)) + "</div>" + (s.img.cap || W.EDIT ? "<figcaption " + ed("img.cap") + ">" + esc(s.img.cap) + "</figcaption>" : "") + "</figure>"; },
+  fotka: function (P) { var s = W.S; return (s.img.title || W.EDIT ? '<div class="hd"><span class="eb">Fotka</span><h2 ' + ed("img.title", 1) + ">" + esc(s.img.title) + "</h2></div>" : "") + '<figure><div class="media wide">' + (s.img.src ? img(s.img.src, s.img.cap) : aiImg("mesto-letecky", s.img.cap)) + "</div>" + (s.img.cap || W.EDIT ? "<figcaption " + ed("img.cap") + ">" + esc(s.img.cap) + "</figcaption>" : "") + "</figure>"; },
   ocenenie: function () {
     var s = W.S, f = "odhad", VF = W.VF, fvv = W.FV[f] || {};
     var form = W.DONE[f] ? '<div class="done"><b>Ďakujem, mám všetko potrebné</b><p>Do 24 hodín vám pošlem odhad ceny. Ak budem potrebovať niečo doplniť, zavolám vám.</p><button type="button" class="qback" data-again="' + f + '">Poslať ďalšiu nehnuteľnosť</button></div>'
@@ -419,7 +426,7 @@ var R = {
     return '<div class="hd"><span class="eb">Dotazník</span><h2 ' + ed("form.title", 1) + ">" + esc(s.form.title) + "</h2><p " + ed("form.text") + ">" + esc(s.form.text) + '</p></div><div class="quiz"><div class="prog"><i style="width:' + pr + '%"></i></div>' + b + "</div>";
   },
   hypoteka: function () { return H("hypoteka", "Hypotéka", "Koľko budete splácať?", "Posuňte cenu a dobu splácania a hneď uvidíte orientačnú splátku.") + calcHtml(150000); },
-  clanok: function (P) { var s = W.S, u = url(s.post.url); return '<div class="post"><div class="media">' + photo("byt", 5, P) + '</div><div><span class="eb">Článok mesiaca</span><h3 ' + ed("post.title", 1) + ">" + esc(s.post.title) + '</h3><p class="muted" ' + ed("post.text") + ">" + esc(s.post.text) + "</p>" + (u ? '<a class="more" href="' + esc(u) + '" target="_blank" rel="noopener">Čítať článok →</a>' : "") + "</div></div>"; },
+  clanok: function (P) { var s = W.S, u = url(s.post.url); return '<div class="post"><div class="media">' + aiImg("byt-obyvacka", "", true) + '</div><div><span class="eb">Článok mesiaca</span><h3 ' + ed("post.title", 1) + ">" + esc(s.post.title) + '</h3><p class="muted" ' + ed("post.text") + ">" + esc(s.post.text) + "</p>" + (u ? '<a class="more" href="' + esc(u) + '" target="_blank" rel="noopener">Čítať článok →</a>' : "") + "</div></div>"; },
   kontakt: function () {
     var s = W.S, f = "kontakt", w = s.wa ? '<a href="https://wa.me/' + waNum(s.wa) + '" target="_blank" rel="noopener"><small>WhatsApp</small><b class="num">' + esc(s.wa) + "</b></a>" : "";
     return '<div class="contact"><div><span class="eb">Kontakt</span><h2 class="h2" style="margin-top:10px" ' + ed("heads.kontakt.h", 1) + ">" + esc(head("kontakt", "h", "Zavolajte mi, poradím vám.")) + "</h2>" +
@@ -445,7 +452,8 @@ function parametre(p) {
 }
 function galeria(x, i, P) {
   if (x.foto && x.foto.length) return x.foto.map(function (u) { return img(u, x.t); });
-  return [photo(x.k, i, P), photo(x.k === "poz" ? "poz" : "mesto", i + 2, P), photo(x.k, i + 4, P)];
+  if (x.raw) return [bezFotky()];
+  return (AI[x.k] || AI.dom).map(function (n) { return aiImg(n, x.t); });
 }
 function detail(i, P) {
   var s = W.S, Z = ZOZ(), x = Z[i]; if (!x) return "";
@@ -507,8 +515,9 @@ function render() {
       out += '<section class="s' + (alt ? " alt" : "") + '" id="s-' + k + '"><div class="w secin">' + html + "</div></section>"; i++;
     });
   }
+  var aiVizual = out.indexOf(AI_BASE) >= 0;
   out += '<footer><div class="w"><span style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px">' + (s.logo ? '<img class="logoimg" src="' + esc(s.logo) + '" alt="">' : "") + "© " + new Date().getFullYear() + " " + esc(s.name) + (s.office ? " · " + esc(s.office) : "") +
-    ' · <button type="button" class="flink" data-gdpr>Ochrana osobných údajov</button>' + (s.gdpr.bar ? ' · <button type="button" class="flink" data-ckopen>Nastavenie cookies</button>' : "") + "</span>" + socRow() + "</div></footer>";
+    ' · <button type="button" class="flink" data-gdpr>Ochrana osobných údajov</button>' + (s.gdpr.bar ? ' · <button type="button" class="flink" data-ckopen>Nastavenie cookies</button>' : "") + "</span>" + socRow() + (aiVizual ? '<p class="ai-pozn">' + AI_NOTE + "</p>" : "") + "</div></footer>";
   var ckOn = s.gdpr.bar && W.CK.bar;
   if (ckOn) out += '<div class="ck-wrap"><div class="ck"><p><b>Používame cookies.</b> Nevyhnutné cookies zabezpečujú fungovanie webu.' + (s.gdpr.ga || s.gdpr.fbp ? " S vaším súhlasom použijeme aj analytické" + (s.gdpr.fbp ? " a marketingové" : "") + " cookies." : "") + ' <button type="button" class="flink" data-gdpr>Viac informácií</button></p><div class="btns"><button type="button" class="btn" data-ck="vsetky">Prijať všetky</button><button type="button" class="btn gh" data-ck="nevyhnutne">Len nevyhnutné</button></div></div></div>';
   if (s.wa && !ckOn) out += '<div class="wa-wrap"><a class="wa" href="https://wa.me/' + waNum(s.wa) + '" target="_blank" rel="noopener" aria-label="Napísať na WhatsApp">' + IC.wa + "<span>Napíšte mi</span></a></div>";
@@ -644,7 +653,7 @@ function napoj(root) {
   root.addEventListener("change", function (e) { var t = e.target; if (t.dataset.bl !== undefined) W.BK.l = +t.value; var form = t.closest("[data-form]"); if (form && t.name) (W.FV[form.dataset.form] = W.FV[form.dataset.form] || {})[t.name] = t.value; });
 }
 
-window.TYPEK_WEB = { W: W, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
+window.TYPEK_WEB = { W: W, AI: AI, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
   fotoMaklera: function () { return fotoMaklera(); }, merge: merge, clone: clone, esc: esc, get: get, setDeep: setDeep, secName: secName, heroTx: heroTx, pal: pal, photo: photo, favSvg: favSvg, initials: initials, slugD: slugD, url: url, waNum: waNum, fmt: fmt,
   okHex: okHex, isHex: isHex, mix: mix, h2r: h2r, r2h: r2h, prevod: prevod, ZOZ: ZOZ, render: render, napoj: napoj, toast: toast, SV: SV, otvorDetail: otvorDetail };
 })();

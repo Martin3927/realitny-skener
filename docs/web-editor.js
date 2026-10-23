@@ -176,7 +176,7 @@ function renderPanel() {
   $("rad").value = s.r; $("rOut").textContent = s.r + " px";
   var vz = W.CTX.kancelaria || {};
   $("fMakler").innerHTML = upl("Logo", "logo", { max: 700, logo: 1 }) + (vz.logo && s.logo !== vz.logo ? '<button type="button" class="lbtn" data-logokanc style="grid-column:1/-1;justify-self:start;color:var(--c-ink)">Použiť logo kancelárie</button>' : "") +
-    upl("Fotka makléra", "photo", { round: 1, max: 900 }) + fld("Meno a priezvisko", "name") + fld("Kde pôsobí", "area") + fld("Kancelária", "office") + fld("Rokov v realitách", "years", { half: 1, ph: "napr. 12" }) + fld("Predaných nehnuteľností", "sold", { half: 1, ph: "nepovinné" }) + '<p class="note">Bez fotky sa zobrazia iniciály.</p>';
+    upl("Fotka makléra", "photo", { round: 1, max: 900 }) + fld("Meno a priezvisko", "name") + fld("Kde pôsobí", "area") + fld("Kancelária", "office") + fld("Rokov v realitách", "years", { half: 1, ph: "napr. 12" }) + fld("Predaných nehnuteľností", "sold", { half: 1, ph: "nepovinné" }) + '<p class="note">Kým nenahráš svoju fotku, ukážka ukazuje ilustračnú fotku od AI. Na zverejnenom webe sa bez fotky zobrazia iniciály.</p>';
   $("fKontakt").innerHTML = fld("Telefón", "phone", { half: 1 }) + fld("WhatsApp", "wa", { half: 1, ph: "0905 ..." }) + fld("E-mail", "email") + '<p class="note">Keď vyplníš WhatsApp, na webe sa zobrazí zelené tlačidlo „Napíšte mi“ a pri každej ponuke odkaz s predvyplnenou správou.</p>';
   $("fGdpr").innerHTML = fld("Prevádzkovateľ (meno alebo firma)", "gdpr.who") + fld("IČO", "gdpr.ico", { half: 1 }) + fld("E-mail pre GDPR", "gdpr.mail", { half: 1, ph: s.email }) + fld("Sídlo", "gdpr.addr", { ph: "Ulica, PSČ Mesto" }) +
     '<label class="chk"><input type="checkbox" data-check="gdpr.bar"' + (s.gdpr.bar ? " checked" : "") + '>Zobraziť lištu so súhlasom s cookies</label>' +
@@ -250,7 +250,7 @@ function renderVerzie() {
 function renderShare() {
   var s = S(), P = T.pal(), t = s.share.title || s.name + " | Realitný maklér" + (s.area ? ", " + s.area : ""), d = s.share.desc || T.heroTx().l || "Predaj, kúpa a prenájom nehnuteľností v regióne " + s.area + ".";
   $("favBig").innerHTML = T.favSvg(P); $("favSmall").innerHTML = T.favSvg(P);
-  var im = s.heroImg ? '<img src="' + esc(s.heroImg) + '" alt="">' : s.photo ? '<img src="' + esc(s.photo) + '" alt="">' : T.photo(s.tpl === "mestska" ? "mesto" : "dom", 3, P);
+  var im = s.heroImg ? '<img src="' + esc(s.heroImg) + '" alt="">' : s.photo ? '<img src="' + esc(s.photo) + '" alt="">' : '<img src="' + T.aiSrc(T.heroAi(s.tpl === "mestska" ? "mesto" : "dom"), true) + '" alt="">';
   $("sharePrev").innerHTML = '<div class="im">' + im + '</div><div class="tx"><small>' + esc(location.host) + "</small><b>" + esc(t) + "</b><span>" + esc(d) + "</span></div>";
   if (!$("fShare").contains(document.activeElement)) $("fShare").innerHTML = fld("Nadpis pri zdieľaní", "share.title", { ph: t }) + fld("Popis pri zdieľaní", "share.desc", { area: 1, rows: 2, ph: d }) + '<p class="note">Nechaj prázdne a vyplní sa samo z mena a úvodu webu.</p>';
 }
