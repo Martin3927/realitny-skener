@@ -1345,6 +1345,7 @@
   function predvolba(v) {
     Object.assign(S.f, { predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", q: "" });
     if (v === "sukr") S.f.predajca = "sukr";
+    if (v === "sukr24") { S.f.predajca = "sukr"; S.f.novost = "1"; }
     if (v === "moje") S.f.praca = "moje";
     if (v === "nove") S.f.novost = "1";
     if (v === "under") { S.f.under = true; S.f.sort = "under"; }
@@ -1371,8 +1372,11 @@
     var sukrVolne = sukr.filter(function (z) { return !(S.prev[z.id] && S.prev[z.id].makler_id); }).length;
     var moje = vid.filter(function (z) { return S.prev[z.id] && S.prev[z.id].makler_id === S.me.id; }).length;
     var nove = akt.filter(function (z) { return new Date(z.prvy_krat).getTime() > den; }).length;
+    var sukr24 = sukr.filter(function (z) { return new Date(z.prvy_krat).getTime() > den; });
+    var sukr24Volne = sukr24.filter(function (z) { return !(S.prev[z.id] && S.prev[z.id].makler_id); }).length;
     var h = '<button class="stat" type="button" data-act="preset" data-v="vsetky"><b>' + nf.format(akt.length) + "</b><small>Aktívne inzeráty</small></button>" +
       '<button class="stat gold" type="button" data-act="preset" data-v="sukr"><b>' + nf.format(sukr.length) + "</b><small>Súkromní · voľných " + nf.format(sukrVolne) + "</small></button>" +
+      '<button class="stat gold" type="button" data-act="preset" data-v="sukr24"><b>' + nf.format(sukr24.length) + "</b><small>Súkromní za 24 h · voľných " + nf.format(sukr24Volne) + "</small></button>" +
       '<button class="stat" type="button" data-act="preset" data-v="moje"><b>' + nf.format(moje) + "</b><small>Moje inzeráty</small></button>" +
       '<button class="stat" type="button" data-act="preset" data-v="nove"><b>' + nf.format(nove) + "</b><small>Nové za 24 h</small></button>";
     if (S.canUnder) {
@@ -1390,6 +1394,7 @@
     var pr = f.predajca || "vsetci", pc = f.praca || "vsetky", nv = f.novost || "", un = !!f.under;
     if (pr === "vsetci" && pc === "vsetky" && !nv && !un) return "vsetky";
     if (pr === "sukr" && pc === "vsetky" && !nv && !un) return "sukr";
+    if (pr === "sukr" && pc === "vsetky" && nv === "1" && !un) return "sukr24";
     if (pr === "vsetci" && pc === "moje" && !nv && !un) return "moje";
     if (pr === "vsetci" && pc === "vsetky" && nv === "1" && !un) return "nove";
     if (pr === "vsetci" && pc === "vsetky" && !nv && un) return "under";
