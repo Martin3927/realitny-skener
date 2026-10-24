@@ -45,7 +45,7 @@
     document.getElementById("nahladPas").hidden = !d.nahlad;
     // titulok, popis a ikona pre prehliadač aj zdieľanie
     var titul = s.share.title || (s.name + " | Realitn" + (m.pohlavie === "zena" ? "á maklérka" : "ý maklér") + (s.area ? ", " + s.area : ""));
-    document.title = titul;
+    document.title = titul; W.titulDomov = titul;
     var popis = s.share.desc || T.heroTx().l || ("Predaj, kúpa a prenájom nehnuteľností v regióne " + s.area + ".");
     document.querySelector('meta[name="description"]').setAttribute("content", popis);
     // značky pre zdieľanie (ak ich už pripravil server, nedopĺňajú sa druhýkrát)

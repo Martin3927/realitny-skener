@@ -604,6 +604,8 @@ function gdprPage() {
 function bubBg(P) { var a = W.S.bub === "plne" ? 1 : W.S.bub === "sklo" ? 0.6 : 0.8, c = h2r(P.bg); return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"; }
 function render() {
   var root = W.root; if (!root) return;
+  // titulok karty prehliadača (a pre Google): na detaile ponuky jej názov, inak titulok webu
+  if (!W.editor && W.titulDomov) { var dx = W.PAGE.v === "detail" ? ZOZ()[W.PAGE.i] : null; document.title = dx && dx.t ? dx.t + (W.S.name ? " | " + W.S.name : "") : W.titulDomov; }
   var s = W.S, P = pal(), F = FONTS.find(function (f) { return f.id === s.font; }) || FONTS[0], st = root.style;
   var rb = s.btn === "pill" ? "999px" : s.btn === "round" ? Math.max(8, Math.round(s.r * 0.7)) + "px" : "2px";
   [["--bg", P.bg], ["--surf", P.surf], ["--fg", P.fg], ["--muted", P.muted], ["--line", P.line], ["--a", P.a], ["--on-a", P.onA], ["--at", P.at], ["--a-soft", P.soft], ["--b", P.b], ["--on-b", P.onB], ["--bt", P.bt], ["--b-soft", P.bsoft],
