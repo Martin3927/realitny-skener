@@ -390,7 +390,7 @@ function gBadge() {
 function ohnisko() { var f = String(W.S.heroFoc || ""); return /^\d{1,3}(\.\d)?% \d{1,3}(\.\d)?%$/.test(f) ? f : ""; }
 function heroMedia(P, kind) {
   var s = W.S, f = ohnisko(), st = f ? ' style="object-position:' + f + ";transform-origin:" + f + '"' : "";
-  if (s.heroMedia === "video") return '<div class="hm"><video src="' + esc(s.heroVideo || aiVid(kind)) + '"' + (s.heroVideo ? "" : ' poster="' + aiSrc(heroAi(kind)) + '"') + st + ' autoplay muted loop playsinline aria-hidden="true"></video></div>';
+  if (s.heroMedia === "video") return '<div class="hm hm-vid"><video src="' + esc(s.heroVideo || aiVid(kind)) + '"' + (s.heroVideo ? "" : ' poster="' + aiSrc(heroAi(kind)) + '"') + st + ' autoplay muted loop playsinline aria-hidden="true"></video></div>';
   return '<div class="hm' + (s.heroMedia === "pohyb" ? " kb" : "") + '">' + (s.heroImg ? img(s.heroImg, "", false) : aiImg(heroAi(kind), "", false, false)).replace("<img ", "<img" + st + " ") + "</div>";
 }
 function days() { var out = [], d = new Date(); d.setHours(12, 0, 0, 0); while (out.length < 6) { d.setDate(d.getDate() + 1); var w = d.getDay(); if (w === 0 || (w === 6 && !W.S.book.sat)) continue; out.push(new Date(d)); } return out; }

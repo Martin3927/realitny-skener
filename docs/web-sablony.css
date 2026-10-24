@@ -658,6 +658,12 @@
   .site.anim .fprog{animation:hl-prog linear both;animation-timeline:scroll(root)}
 }
 @keyframes hl-hm{to{translate:0 14%}}
+/* video v úvode: bez pohybu a vždy rovnakým spôsobom vykresľovania. Chrome pri pohybe videa a vrstiev nad ním
+   prepínal spôsob kreslenia videa a na okamih ukázal tmavú plochu. Jemný filter ho drží v jednom režime. */
+.site.anim .hero .hm.hm-vid{scale:none;animation:none}
+.site.anim .hero .hm.hm-vid > *{translate:none}
+.site .hero .hm.hm-vid video{filter:brightness(1.004)}
+.site.anim.t-luxus .hero:has(.hm-vid) .in{animation:none}
 @keyframes hl-in{to{translate:0 -50px}}
 @keyframes hl-up{to{translate:0 -36px}}
 @keyframes hl-py{from{translate:0 3.5%}to{translate:0 -3.5%}}
@@ -665,9 +671,10 @@
 
 /* plávajúca lišta s kontaktom a čiarou priebehu (len na zverejnenom webe) */
 .site .fhd-wrap{position:sticky;top:0;height:0;z-index:30}
-.site .fprog{position:absolute;left:0;top:0;width:100%;height:3px;background:var(--a);transform-origin:0 50%;transform:scaleX(var(--prog,0))}
+.site .fprog{position:absolute;left:0;top:0;width:100%;height:3px;background:var(--a);transform-origin:0 50%;transform:scaleX(var(--prog,0));visibility:hidden}
+.site.fhd-on .fprog{visibility:visible}
 .site .fhd{position:absolute;top:12px;left:50%;width:min(780px,calc(100% - 20px));display:flex;align-items:center;gap:10px;padding:7px 7px 7px 10px;border-radius:999px;color:var(--fg);
-  background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5);
+  background:color-mix(in srgb,var(--bg) 96%,transparent);
   box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 9%,transparent),0 22px 44px -22px rgba(0,0,0,.5);
   transform:translate(-50%,-160%);visibility:hidden;transition:transform .6s cubic-bezier(.2,.8,.2,1),visibility 0s linear .6s}
 .site.fhd-on .fhd{transform:translate(-50%,0);visibility:visible;transition:transform .6s cubic-bezier(.2,.8,.2,1),visibility 0s}
