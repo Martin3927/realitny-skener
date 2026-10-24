@@ -15,6 +15,7 @@ function chybaText(e) { return (e && (e.message || e.error_description || e.chyb
 function rpc(fn, args) { return sb.rpc(fn, args || {}).then(function (r) { if (r.error) throw r.error; return r.data; }); }
 function S() { return W.S; }
 function cas(d) { d = new Date(d); return d.getDate() + ". " + (d.getMonth() + 1) + ". " + d.getFullYear() + " o " + d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0"); }
+function qrOdkaz() { var u = verejnyOdkaz(); return u + (u.indexOf("?") >= 0 ? "&" : "?") + "z=qr"; }
 function verejnyOdkaz() { return WEB.domena && WEB.domena_pripojena ? "https://" + WEB.domena + "/" : new URL("stranka.html?m=" + encodeURIComponent(WEB.adresa), location.href).href; }
 function nahladOdkaz() { return new URL("stranka.html?m=" + encodeURIComponent(WEB.adresa), location.href).href + "&nahlad=1"; }
 function adresaText() { return WEB.domena && WEB.domena_pripojena ? WEB.domena : location.host + "/stranka.html?m=" + WEB.adresa; }
@@ -241,6 +242,8 @@ function renderPanel() {
   $("fKontakt").innerHTML = fld("Telefón", "phone", { half: 1 }) + fld("WhatsApp", "wa", { half: 1, ph: "0905 ..." }) + fld("E-mail", "email") + '<p class="note">Keď vyplníš WhatsApp, na webe sa zobrazí zelené tlačidlo „Napíšte mi“ a pri každej ponuke odkaz s predvyplnenou správou.</p>';
   $("fGdpr").innerHTML = fld("Prevádzkovateľ (meno alebo firma)", "gdpr.who") + fld("IČO", "gdpr.ico", { half: 1 }) + fld("E-mail pre GDPR", "gdpr.mail", { half: 1, ph: s.email }) + fld("Sídlo", "gdpr.addr", { ph: "Ulica, PSČ Mesto" }) +
     '<label class="chk"><input type="checkbox" data-check="gdpr.bar"' + (s.gdpr.bar ? " checked" : "") + '>Zobraziť lištu so súhlasom s cookies</label>' +
+    fld("ID Google Analytics (nepovinné)", "gdpr.gaId", { half: 1, ph: "G-XXXXXXXXXX" }) + fld("ID Meta Pixelu (nepovinné)", "gdpr.fbId", { half: 1, ph: "napr. 123456789012345" }) +
+    '<p class="note">Vlastné štatistiky v Prehľade fungujú aj bez nich. Google Analytics a Meta Pixel sa na webe zapnú až vtedy, keď návštevník v lište cookies klikne Prijať všetky. Lišta sa pri vyplnenom ID zobrazí vždy. Meta Pixel sa oplatí, ak robíš reklamy na Facebooku alebo Instagrame: uvidíš, koľko ľudí z reklamy ti poslalo kontakt.</p>' +
     '<p class="note">Z týchto údajov sa vyskladá stránka Ochrana osobných údajov aj lišta s cookies. Je to vzorový text, pred spustením ho daj raz skontrolovať právnikovi.</p>';
   $("fSoc").innerHTML = T.SOC.map(function (x) { return fld(x[1], "soc." + x[0], { ph: x[2] }); }).join("") + '<p class="note">Vyplnené siete sa zobrazia ako ikony. Prázdne sa na webe nezobrazia.</p>';
   renderSecs(); renderKontrola(); renderPub(); renderAdresa(); renderVerzie();
@@ -293,7 +296,7 @@ function qrSvg(text, tlac) {
 }
 function stiahni(blob, nazov) { var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nazov; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
 function stiahniQr(druh) {
-  var u = verejnyOdkaz(), q = qrModuly(u), nazov = "qr-" + (WEB.adresa || "web");
+  var u = qrOdkaz(), q = qrModuly(u), nazov = "qr-" + (WEB.adresa || "web");
   if (!q) { toast("QR kód sa nepodarilo vytvoriť. Skontroluj pripojenie a skús znova.", true); return; }
   if (druh === "svg") { stiahni(new Blob([qrSvg(u, true)], { type: "image/svg+xml" }), nazov + ".svg"); return; }
   var n = q.getModuleCount(), m = 4, k = Math.floor(1200 / (n + 2 * m)), c = document.createElement("canvas"), x = c.getContext("2d");
@@ -306,7 +309,7 @@ function renderPub() {
   var u = verejnyOdkaz();
   $("pubBox").innerHTML = (WEB.zverejnene_kedy ? "<b>Web je zverejnený</b><span class=\"sub\">Naposledy " + esc(cas(WEB.zverejnene_kedy)) + (ZMENY ? ". Máš zmeny, ktoré klienti ešte nevidia." : ". Klienti vidia aktuálnu verziu.") + "</span>" +
       '<div class="linkbox"><input id="pubLink" readonly value="' + esc(u) + '" aria-label="Adresa webu"><button type="button" class="b b-ink b-sm" data-kop="pub">Kopírovať</button><a class="b b-soft b-sm" href="' + esc(u) + '" target="_blank" rel="noopener">Otvoriť</a></div>' +
-      '<div class="qrbox"><div class="qr">' + qrSvg(u) + '</div><div><b>QR kód webu</b><span class="sub">Na vizitky, letáky a tabule Predám. Po naskenovaní sa otvorí tvoj web.</span><div class="qrbtns"><button type="button" class="b b-soft b-sm" data-qr="png">Stiahnuť obrázok</button><button type="button" class="b b-soft b-sm" data-qr="svg">Stiahnuť na tlač (SVG)</button></div></div></div>'
+      '<div class="qrbox"><div class="qr">' + qrSvg(qrOdkaz()) + '</div><div><b>QR kód webu</b><span class="sub">Na vizitky, letáky a tabule Predám. Po naskenovaní sa otvorí tvoj web a v Prehľade uvidíš, koľko ľudí prišlo cez QR kód.</span><div class="qrbtns"><button type="button" class="b b-soft b-sm" data-qr="png">Stiahnuť obrázok</button><button type="button" class="b b-soft b-sm" data-qr="svg">Stiahnuť na tlač (SVG)</button></div></div></div>'
     : "<b>Web zatiaľ nie je zverejnený</b><span class=\"sub\">Klienti ho uvidia po kliknutí na Zverejniť web. Dovtedy si ho môžeš pozrieť cez Náhľad.</span>") +
     '<button type="button" class="b b-gold" data-zverejnit>' + (WEB.zverejnene_kedy ? "Zverejniť zmeny" : "Zverejniť web") + "</button>" +
     '<span class="sub">Odkaz na náhľad rozpracovaného webu pre kolegu (musí byť prihlásený v Realitnom týpkovi):</span><div class="linkbox"><input id="nahLink" readonly value="' + esc(nahladOdkaz()) + '" aria-label="Odkaz na náhľad"><button type="button" class="b b-soft b-sm" data-kop="nah">Kopírovať</button></div>';
@@ -378,19 +381,28 @@ function renderShare() {
 function setView(v) { VIEW = v; $("stage").hidden = v !== "web"; $("dash").hidden = v !== "prehlad"; if (v === "prehlad") renderDash(); renderPanel(); }
 function renderDash() {
   var el = $("dash"); el.innerHTML = '<div class="dash"><div class="prazdny">Načítavam prehľad…</div></div>';
-  var od = new Date(); od.setDate(od.getDate() - 29); var odIso = od.toISOString().slice(0, 10);
+  var od = new Date(); od.setHours(0, 0, 0, 0); od.setDate(od.getDate() - 29); var odIso = isoDen(od);
+  var od2 = new Date(od); od2.setDate(od2.getDate() - 30); var od2Iso = isoDen(od2);   // predošlých 30 dní na porovnanie
   var ids = (W.CTX.ponuky || []).map(function (x) { return x.id; }).filter(Boolean);
+  var prazdne = Promise.resolve({ data: [] });
   Promise.all([
-    sb.from("web_zobrazenia").select("den,pocet").eq("web_id", WEB.id).gte("den", odIso),
+    sb.from("web_zobrazenia").select("den,pocet").eq("web_id", WEB.id).gte("den", od2Iso),
     sb.from("web_kontakty").select("*").eq("web_id", WEB.id).order("vytvorene", { ascending: false }).limit(200),
-    ids.length ? sb.from("zobrazenia_ponuk").select("nehnutelnost_id,pocet").in("nehnutelnost_id", ids).gte("den", odIso) : Promise.resolve({ data: [] })
+    ids.length ? sb.from("zobrazenia_ponuk").select("nehnutelnost_id,pocet").in("nehnutelnost_id", ids).gte("den", odIso) : prazdne,
+    sb.from("web_zdroje").select("zdroj,pocet").eq("web_id", WEB.id).gte("den", odIso).then(function (x) { return x.error ? { data: [] } : x; }),
+    sb.from("web_kliky").select("den,typ,ponuka,pocet").eq("web_id", WEB.id).gte("den", od2Iso).then(function (x) { return x.error ? { data: [] } : x; })
   ]).then(function (r) {
     if (r[0].error || r[1].error) throw r[0].error || r[1].error;
-    var den = {}; (r[0].data || []).forEach(function (x) { den[x.den] = x.pocet; });
-    var VIS = Array.from({ length: 30 }, function (_, i) { var d = new Date(od); d.setDate(od.getDate() + i); return den[d.toISOString().slice(0, 10)] || 0; });
-    var K = r[1].data || [], K30 = K.filter(function (k) { return new Date(k.vytvorene) >= od; }), tot = VIS.reduce(function (a, b) { return a + b; }, 0);
+    var den = {}, pred = 0; (r[0].data || []).forEach(function (x) { if (x.den >= odIso) den[x.den] = x.pocet; else pred += x.pocet; });
+    var VIS = Array.from({ length: 30 }, function (_, i) { var d = new Date(od); d.setDate(od.getDate() + i); return den[isoDen(d)] || 0; });
+    var K = r[1].data || [], K30 = K.filter(function (k) { return new Date(k.vytvorene) >= od; }), Kpred = K.filter(function (k) { var t = new Date(k.vytvorene); return t >= od2 && t < od; }).length;
+    var tot = VIS.reduce(function (a, b) { return a + b; }, 0);
     var pz = {}; (r[2].data || []).forEach(function (x) { pz[x.nehnutelnost_id] = (pz[x.nehnutelnost_id] || 0) + x.pocet; });
-    var top = (W.CTX.ponuky || []).filter(function (x) { return pz[x.id]; }).sort(function (a, b) { return pz[b.id] - pz[a.id]; }).slice(0, 5);
+    var ZD = {}, zdTot = 0; (r[3].data || []).forEach(function (x) { ZD[x.zdroj] = (ZD[x.zdroj] || 0) + x.pocet; zdTot += x.pocet; });
+    var KL = { tel: 0, wa: 0, mail: 0 }, klPred = 0, kp = {}; (r[4].data || []).forEach(function (x) { if (x.den < odIso) { klPred += x.pocet; return; } KL[x.typ] = (KL[x.typ] || 0) + x.pocet; if (x.ponuka) kp[x.ponuka] = (kp[x.ponuka] || 0) + x.pocet; });
+    var klTot = KL.tel + KL.wa + KL.mail, uspech = tot ? Math.min(100, Math.round((K30.length + klTot) / tot * 1000) / 10) : 0;
+    var top = (W.CTX.ponuky || []).filter(function (x) { return pz[x.id] || kp[x.id]; }).sort(function (a, b) { return (pz[b.id] || 0) - (pz[a.id] || 0) || (kp[b.id] || 0) - (kp[a.id] || 0); }).slice(0, 5);
+    var odh = K30.filter(function (k) { return k.zdroj === "odhad"; }).length, obh = K30.filter(function (k) { return k.zdroj === "obhliadka"; }).length;
     var NAZ = { odhad: "Odhad ceny", strazca: "Strážca ponúk", obhliadka: "Obhliadka", callback: "Zavolať späť", dotaznik: "Dotazník", ebook: "E-book", kontakt: "Správa" };
     var W2 = 640, H2 = 220, pl = 40, pr = 14, pt = 14, pb = 28, mx = Math.max(4, Math.ceil(Math.max.apply(null, VIS) / 4) * 4);
     var sx = function (i) { return pl + i * (W2 - pl - pr) / 29; }, sy = function (v) { return pt + (H2 - pt - pb) * (1 - v / mx); };
@@ -399,11 +411,16 @@ function renderDash() {
     var grid = [0, mx / 4, mx / 2, mx * 3 / 4, mx].map(function (v) { return '<line class="g" x1="' + pl + '" x2="' + (W2 - pr) + '" y1="' + sy(v) + '" y2="' + sy(v) + '"/><text class="t" x="' + (pl - 8) + '" y="' + (sy(v) + 4) + '" font-size="11" text-anchor="end">' + v + "</text>"; }).join("");
     var xl = [0, 7, 14, 21, 29].map(function (i) { return '<text class="t" x="' + sx(i) + '" y="' + (H2 - 8) + '" font-size="11" text-anchor="' + (i === 0 ? "start" : i === 29 ? "end" : "middle") + '">' + dl(i) + "</text>"; }).join("");
     el.innerHTML = '<div class="dash"><div class="dh"><div><div class="lab">Posledných 30 dní</div><h2>Prehľad webu</h2></div>' + (WEB.zverejnene_kedy ? "" : '<span class="tagx">Web ešte nie je zverejnený</span>') + "</div>" +
-      '<div class="kpis"><div class="kpi"><small>Návštevy webu</small><b>' + T.fmt(tot) + '</b></div><div class="kpi"><small>Kontakty z formulárov</small><b>' + K30.length + '</b></div><div class="kpi"><small>Žiadosti o odhad ceny</small><b>' + K30.filter(function (k) { return k.zdroj === "odhad"; }).length + '</b></div><div class="kpi"><small>Záujem o obhliadku</small><b>' + K30.filter(function (k) { return k.zdroj === "obhliadka"; }).length + "</b></div></div>" +
+      '<div class="kpis"><div class="kpi"><small>Návštevy webu</small><b>' + T.fmt(tot) + "</b>" + zmena(tot, pred) + "</div>" +
+      '<div class="kpi"><small>Kontakty z formulárov</small><b>' + K30.length + "</b>" + zmena(K30.length, Kpred) + (odh || obh ? "<em>" + [odh ? odh + (odh === 1 ? " odhad ceny" : odh < 5 ? " odhady ceny" : " odhadov ceny") : "", obh ? obh + (obh === 1 ? " obhliadka" : obh < 5 ? " obhliadky" : " obhliadok") : ""].filter(Boolean).join(", ") + "</em>" : "") + "</div>" +
+      '<div class="kpi"><small>Kliky na kontakt</small><b>' + klTot + "</b>" + zmena(klTot, klPred) + "<em>telefón, WhatsApp, e-mail</em></div>" +
+      '<div class="kpi"><small>Úspešnosť webu</small><b>' + String(uspech).replace(".", ",") + ' %</b><em>' + (tot ? "návštev skončilo kontaktom alebo klikom" : "keď prídu prvé návštevy") + "</em></div></div>" +
       '<div class="dgrid"><div class="card2"><h3>Návštevy po dňoch</h3>' + (tot ? '<div class="chart"><svg viewBox="0 0 ' + W2 + " " + H2 + '" role="img" aria-label="Návštevy webu za posledných 30 dní, spolu ' + tot + '">' + grid + '<path class="ar" d="' + line + " L" + sx(29) + " " + sy(0) + " L" + sx(0) + " " + sy(0) + ' Z"/><path class="ln" d="' + line + '" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' + xl +
         '<circle class="dt" cx="' + sx(29) + '" cy="' + sy(VIS[29]) + '" r="5" stroke-width="2"/><line class="xh" id="vx" x1="0" x2="0" y1="' + pt + '" y2="' + (H2 - pb) + '" stroke-dasharray="3 3" visibility="hidden"/><circle class="dt" id="vd" r="5" stroke-width="2" visibility="hidden"/><rect x="' + pl + '" y="0" width="' + (W2 - pl - pr) + '" height="' + (H2 - pb) + '" fill="transparent" id="vhit"/></svg><div class="tip" id="vtip" hidden></div></div>'
         : '<div class="prazdny">Zatiaľ žiadne návštevy. Počítajú sa len návštevy zverejneného webu, tvoje vlastné nie.</div>') + "</div>" +
-      '<div class="card2"><h3>Najsledovanejšie ponuky</h3>' + (top.length ? top.map(function (x) { return '<div class="hbar"><span style="grid-column:1 / span 2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(x.t) + "</span><b>" + pz[x.id] + "</b></div>"; }).join("") : '<div class="prazdny">Zatiaľ bez zobrazení.</div>') + "</div></div>" +
+      zdrojeHtml(ZD, zdTot, tot) + "</div>" +
+      '<div class="dgrid"><div class="card2"><h3>Najsledovanejšie ponuky</h3>' + (top.length ? '<div class="hrow hhead"><span>Ponuka</span><span>Zobrazenia</span><span>Kliky</span></div>' + top.map(function (x) { return '<div class="hrow"><span>' + esc(x.t) + "</span><b>" + (pz[x.id] || 0) + "</b><b>" + (kp[x.id] || 0) + "</b></div>"; }).join("") : '<div class="prazdny">Zatiaľ bez zobrazení.</div>') + "</div>" +
+      klikyHtml(KL, klTot) + "</div>" +
       strazcaHtml() +
       '<div class="card2"><h3>Kontakty z webu</h3><p class="sub">Každý kontakt ti príde aj do zvončeka v aplikácii. Odpovedať môžeš jedným klikom, text je pripravený a pred odoslaním ho ešte uvidíš. Strážca ponúk sa zapíše medzi dopyty v Klientoch.</p>' +
       (K.length ? '<div class="tbl"><table><thead><tr><th>Kedy</th><th>Meno</th><th>Kontakt</th><th>Odkiaľ</th><th>Čo chce</th><th>Odpovedať</th><th></th></tr></thead><tbody>' + K.map(function (k) {
@@ -419,6 +436,27 @@ function renderDash() {
   }).catch(function (e) { el.innerHTML = '<div class="dash"><div class="prazdny">Prehľad sa nepodarilo načítať: ' + esc(chybaText(e)) + "</div></div>"; });
 }
 
+function isoDen(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+// zmena oproti predošlým 30 dňom
+function zmena(teraz, predtym) {
+  if (!teraz && !predtym) return "";
+  if (!predtym) return '<span class="zm hore">nové oproti predošlým 30 dňom</span>';
+  var p = Math.round((teraz - predtym) / predtym * 100);
+  return '<span class="zm ' + (p > 0 ? "hore" : p < 0 ? "dole" : "") + '">' + (p > 0 ? "+" : p < 0 ? "−" : "±") + Math.abs(p) + " % oproti predošlým 30 dňom</span>";
+}
+var ZDROJE_N = [["google", "Google"], ["facebook", "Facebook"], ["instagram", "Instagram"], ["qr", "QR kód (letáky, tabule)"], ["email", "E-mail"], ["vyhladavac", "Iné vyhľadávače"], ["iny", "Iné weby"], ["priamo", "Priamo"]];
+function zdrojeHtml(ZD, zdTot, tot) {
+  var rows = ZDROJE_N.filter(function (z) { return ZD[z[0]]; }).sort(function (a, b) { return ZD[b[0]] - ZD[a[0]]; }), mx = rows.length ? ZD[rows[0][0]] : 1;
+  return '<div class="card2"><h3>Odkiaľ prišli</h3>' + (rows.length ? rows.map(function (z) { var n = ZD[z[0]]; return '<div class="hbar hbar2"><span>' + z[1] + '</span><span class="tr"><i style="width:' + Math.max(3, Math.round(n / mx * 100)) + '%"></i></span><b>' + n + '</b><small>' + Math.round(n / zdTot * 100) + " %</small></div>"; }).join("") +
+      (zdTot < tot ? '<p class="sub">Zdroje sa počítajú od 24. 10. 2026, staršie návštevy ich nemajú.</p>' : "")
+    : '<div class="prazdny">Zdroje sa počítajú od 24. 10. 2026. Ukážu sa s ďalšími návštevami.</div>') +
+    '<p class="sub">Návštevy z QR kódu sa rátajú pri QR kóde stiahnutom od 24. 10. 2026 (Nastavenia → Zverejnenie). Starší QR kód funguje ďalej, len sa ráta ako „Priamo“.</p></div>';
+}
+function klikyHtml(KL, klTot) {
+  var rows = [["tel", "Telefón"], ["wa", "WhatsApp"], ["mail", "E-mail"]], mx = Math.max(1, KL.tel, KL.wa, KL.mail);
+  return '<div class="card2"><h3>Kliky na kontakt</h3>' + (klTot ? rows.map(function (z) { var n = KL[z[0]] || 0; return '<div class="hbar"><span>' + z[1] + '</span><span class="tr"><i style="width:' + (n ? Math.max(3, Math.round(n / mx * 100)) : 0) + '%"></i></span><b>' + n + "</b></div>"; }).join("")
+    : '<div class="prazdny">Zatiaľ žiadne kliky. Počítajú sa od 24. 10. 2026.</div>') + '<p class="sub">Každý návštevník sa pri jednom druhu kontaktu ráta raz za návštevu. Tvoje vlastné kliky sa nerátajú.</p></div>';
+}
 function odpovedMakler() { var s = S(), m = W.CTX.makler || {}; return { meno: s.name || m.meno || "", telefon: s.phone || m.telefon || "", pohlavie: m.pohlavie }; }
 function strazcaHtml() {
   var z = (WEB && WEB.strazcovia) || {}, n = +z.aktivni || 0, e = +z.emaily_30 || 0, p = +z.nepotvrdeni || 0;
@@ -546,6 +584,8 @@ function varovania() {
   if (!String(s.email || "").trim()) add("mail", "Chýba e-mail.", "makler|f-email");
   var bez = s.on.ponuky && !W.CTX.ukazka ? (W.CTX.ponuky || []).filter(function (x) { return !(x.foto && x.foto.length); }) : [];
   if (bez.length) add("ponuky", (bez.length === 1 ? "1 ponuka nemá" : bez.length + (bez.length < 5 ? " ponuky nemajú" : " ponúk nemá")) + " fotky a na webe sa zobrazí bez obrázka: " + bez.slice(0, 3).map(function (x) { return x.t; }).join(", ") + (bez.length > 3 ? " a ďalšie" : "") + ".", "app");
+  if (String(s.gdpr.gaId || "").trim() && !T.trk().ga) add("ga", "ID Google Analytics má zlý tvar. Má vyzerať ako G-ABC123XYZ. Kým ho neopravíš, Google Analytics sa na webe nezapne.", "makler|f-gdpr-gaId");
+  if (String(s.gdpr.fbId || "").trim() && !T.trk().fb) add("fb", "ID Meta Pixelu má zlý tvar. Sú to len číslice, napríklad 123456789012345. Kým ho neopravíš, Pixel sa na webe nezapne.", "makler|f-gdpr-fbId");
   if (!(s.gdpr.who && s.gdpr.ico && s.gdpr.addr)) add("gdpr", "Chýba prevádzkovateľ, IČO alebo sídlo v Ochrane osobných údajov. Formuláre na webe zbierajú osobné údaje, preto ich treba doplniť.", "makler|f-gdpr-ico");
   if (s.on.omne && s.about.text === T.DEF.about.text) add("omne", "Text O mne je stále ukážkový. Napíš pár viet o sebe, alebo ich nechaj napísať AI asistenta.", "sekcie|omne");
   if (s.on.stiahnut && !s.dl.url) add("ebook", "Sekcia E-book je zapnutá, ale nemá nahraný súbor.", "sekcie|stiahnut");

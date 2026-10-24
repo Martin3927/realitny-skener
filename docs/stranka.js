@@ -11,6 +11,41 @@
   var nahlad = q.get("nahlad") === "1";
   var site = document.getElementById("site");
   function chyba(t) { site.innerHTML = '<div class="nacitavam">' + t + "</div>"; }
+
+  // odkiaľ návštevník prišiel (bez cookies): QR kód z letáku či tabule, sociálne siete, vyhľadávač, e-mail, priamo
+  function zdrojNavstevy() {
+    var g = function (k) { return String(q.get(k) || "").toLowerCase(); }, z = g("z"), us = g("utm_source"), um = g("utm_medium");
+    if (z === "qr" || us === "qr" || um === "qr") return "qr";
+    if (z === "email" || um === "email" || us === "newsletter") return "email";
+    if (/instagram|^ig$/.test(us)) return "instagram";
+    if (/facebook|^fb$|^meta$/.test(us)) return "facebook";
+    if (/google/.test(us) || q.get("gclid")) return "google";
+    var r = ""; try { r = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : ""; } catch (e) { r = ""; }
+    if (r && r !== location.hostname) {
+      if (/(^|\.)instagram\.com$/.test(r)) return "instagram";
+      if (/(^|\.)(facebook\.com|fb\.com|fb\.me|messenger\.com)$/.test(r)) return "facebook";
+      if (/(^|\.)(mail\.google\.com|outlook\.live\.com|outlook\.office\.com|mail\.yahoo\.com|posta\.sk|centrum\.sk)$|^com\.google\.android\.gm$/.test(r)) return "email";
+      if (/(^|\.)google\.[a-z.]+$|^com\.google\.android\.googlequicksearchbox$/.test(r)) return "google";
+      if (/(^|\.)(bing\.com|seznam\.cz|duckduckgo\.com|yahoo\.com|zoznam\.sk|azet\.sk|ecosia\.org)$/.test(r)) return "vyhladavac";
+      return "iny";
+    }
+    if (q.get("fbclid")) return "facebook";
+    return "priamo";
+  }
+  var ZDROJ = zdrojNavstevy();
+  // značka ?z=qr sa po prečítaní z adresy odstráni, aby sa pri zdieľaní odkazu nešírila ďalej
+  if (q.has("z")) { try { q.delete("z"); var qs = q.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash); } catch (e) { /* nič */ } }
+
+  // voliteľné meracie nástroje makléra (Google Analytics, Meta Pixel) – načítajú sa len po súhlase „Prijať všetky“
+  var MER = false;
+  function skript(src) { var x = document.createElement("script"); x.async = true; x.src = src; document.head.appendChild(x); }
+  function zapniMeranie() {
+    var t = T.trk ? T.trk() : { any: false }; if (MER || !t.any) return; MER = true;
+    if (t.ga) { window.dataLayer = window.dataLayer || []; window.gtag = function () { window.dataLayer.push(arguments); }; window.gtag("js", new Date()); window.gtag("config", t.ga); skript("https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(t.ga)); }
+    if (t.fb && !window.fbq) { var f = window.fbq = function () { if (f.callMethod) f.callMethod.apply(f, arguments); else f.queue.push(arguments); }; if (!window._fbq) window._fbq = f; f.push = f; f.loaded = true; f.version = "2.0"; f.queue = [];
+      window.fbq("init", t.fb); window.fbq("track", "PageView"); skript("https://connect.facebook.net/en_US/fbevents.js"); }
+  }
+  function udalost(ga, fb, par) { if (!MER) return; var t = T.trk(); try { if (t.ga && window.gtag) window.gtag("event", ga, par || {}); if (t.fb && window.fbq) window.fbq("track", fb, par || {}); } catch (e) { /* nič */ } }
   if (!adresa) return chyba("Stránka sa nenašla.");
 
   // údaje pripravené serverom (stranka.php) ušetria jedno načítanie; náhľad sa vždy načíta s prihlásením
@@ -63,7 +98,18 @@
     if (s.logo) document.getElementById("ikona").href = s.logo;
     else { var P = T.pal(); document.getElementById("ikona").href = "data:image/svg+xml," + encodeURIComponent(T.favSvg(P).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ')); }
     document.documentElement.style.background = T.pal().bg; document.body.style.background = T.pal().bg;
-    W.poDetaile = function (x) { if (x.id && !d.nahlad) sb.rpc("zaznamenat_zobrazenie", { p_id: x.id }).then(function () {}); };
+    W.poDetaile = function (x) { if (x.id && !d.nahlad) { sb.rpc("zaznamenat_zobrazenie", { p_id: x.id }).then(function () {}); udalost("view_item", "ViewContent", { content_ids: [String(x.id)], content_type: "product" }); } };
+    // kliky na telefón, WhatsApp a e-mail (každý druh pri tej istej ponuke sa v jednej návšteve ráta raz)
+    W.klik = function (typ, ponuka) {
+      if (d.nahlad) return;
+      udalost("contact", "Contact", { method: typ });
+      var k = "typek-klik-" + adresa + "-" + typ + "-" + (ponuka || 0);
+      try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, "1"); } catch (e) { /* nič */ }
+      sb.rpc("zaznamenat_klik_webu", { p_adresa: adresa, p_typ: typ, p_ponuka: ponuka || null }).then(function () {});
+    };
+    W.poOdoslani = function (f) { if (!d.nahlad) udalost("generate_lead", "Lead", { content_name: f }); };
+    W.poSuhlase = function (volba) { if (volba === "vsetky" && !d.nahlad) zapniMeranie(); };
+    try { if (!d.nahlad && localStorage.getItem("typek-web-cookies") === "vsetky") zapniMeranie(); } catch (e) { /* nič */ }
     T.napoj(site);
     // ponuka z odkazu: stranka.html?m=adresa&p=ID alebo #p-ID
     var hm = location.hash.match(/^#p-(\d+)$/), pid = hm ? hm[1] : String(q.get("p") || "").replace(/\D/g, "");
@@ -71,6 +117,6 @@
     if (i < 0 && pid) { var j = W.CTX.predane.findIndex(function (x) { return String(x.id) === pid; }); if (j >= 0) { W.CTX.ponuky = W.CTX.ponuky.concat([W.CTX.predane[j]]); i = W.CTX.ponuky.length - 1; } }
     if (i >= 0) W.PAGE = { v: "detail", i: i };
     T.render();
-    if (!d.nahlad) { try { if (!sessionStorage.getItem("typek-web-" + adresa)) { sessionStorage.setItem("typek-web-" + adresa, "1"); sb.rpc("zaznamenat_navstevu_webu", { p_adresa: adresa }).then(function () {}); } } catch (e) { /* nič */ } }
+    if (!d.nahlad) { try { if (!sessionStorage.getItem("typek-web-" + adresa)) { sessionStorage.setItem("typek-web-" + adresa, "1"); sb.rpc("zaznamenat_navstevu_webu", { p_adresa: adresa, p_zdroj: ZDROJ }).then(function () {}); } } catch (e) { /* nič */ } }
   }).catch(function () { chyba("Stránku sa nepodarilo načítať. Skúste to o chvíľu znova."); });
 })();

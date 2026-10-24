@@ -589,8 +589,14 @@ function detail(i, P) {
 }
 
 /* ================================================================ ochrana údajov */
+/* voliteľné meracie nástroje makléra (Google Analytics, Meta Pixel) – len s overeným tvarom ID, načítajú sa až po súhlase */
+function trk() {
+  var g = W.S.gdpr || {}, ga = String(g.gaId || "").trim().toUpperCase(), fb = String(g.fbId || "").trim().replace(/\s+/g, "");
+  ga = /^G-[A-Z0-9]{4,14}$/.test(ga) ? ga : ""; fb = /^\d{8,20}$/.test(fb) ? fb : "";
+  return { ga: ga, fb: fb, any: !!(ga || fb) };
+}
 function gdprPage() {
-  var s = W.S, g = s.gdpr, who = esc(g.who || s.name), mail = esc(g.mail || s.email), rec2 = ["poskytovateľ webu a realitného softvéru Realitný týpek", "poskytovateľ e-mailových služieb"];
+  var s = W.S, g = Object.assign({}, s.gdpr, { ga: s.gdpr.ga || !!trk().ga, fbp: s.gdpr.fbp || !!trk().fb }), who = esc(g.who || s.name), mail = esc(g.mail || s.email), rec2 = ["poskytovateľ webu a realitného softvéru Realitný týpek", "poskytovateľ e-mailových služieb"];
   if (g.ga) rec2.push("Google (služba Google Analytics na meranie návštevnosti)"); if (g.fbp) rec2.push("Meta Platforms (Meta Pixel na meranie reklamy)");
   return '<div class="w"><div class="txt legal" style="max-width:760px;padding-block:24px 40px"><button type="button" class="crumb" data-home="top">← Späť na web</button><span class="eb" style="display:block">Ochrana osobných údajov</span><h2 class="h2" style="margin:10px 0 8px">Ako spracúvame vaše osobné údaje</h2>' +
     "<h3>Prevádzkovateľ</h3><p>" + who + (g.ico ? ", IČO " + esc(g.ico) : "") + (g.addr ? ", " + esc(g.addr) : "") + ". Kontakt pre otázky k osobným údajom: " + mail + (s.phone ? ", " + esc(s.phone) : "") + ".</p>" +
@@ -632,9 +638,9 @@ function render() {
   out = phFhd() + nav() + out;
   var aiVizual = out.indexOf(AI_BASE) >= 0;
   out += '<footer><div class="w"><span style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px">' + (s.logo ? '<img class="logoimg" src="' + esc(s.logo) + '" alt="">' : "") + "© " + new Date().getFullYear() + " " + esc(s.name) + (s.office ? " · " + esc(s.office) : "") +
-    ' · <button type="button" class="flink" data-gdpr>Ochrana osobných údajov</button>' + (s.gdpr.bar ? ' · <button type="button" class="flink" data-ckopen>Nastavenie cookies</button>' : "") + "</span>" + socRow() + (aiVizual ? '<p class="ai-pozn">' + AI_NOTE + "</p>" : "") + "</div></footer>";
-  var ckOn = s.gdpr.bar && W.CK.bar;
-  if (ckOn) out += '<div class="ck-wrap"><div class="ck"><p><b>Používame cookies.</b> Nevyhnutné cookies zabezpečujú fungovanie webu.' + (s.gdpr.ga || s.gdpr.fbp ? " S vaším súhlasom použijeme aj analytické" + (s.gdpr.fbp ? " a marketingové" : "") + " cookies." : "") + ' <button type="button" class="flink" data-gdpr>Viac informácií</button></p><div class="btns"><button type="button" class="btn" data-ck="vsetky">Prijať všetky</button><button type="button" class="btn gh" data-ck="nevyhnutne">Len nevyhnutné</button></div></div></div>';
+    ' · <button type="button" class="flink" data-gdpr>Ochrana osobných údajov</button>' + (s.gdpr.bar || trk().any ? ' · <button type="button" class="flink" data-ckopen>Nastavenie cookies</button>' : "") + "</span>" + socRow() + (aiVizual ? '<p class="ai-pozn">' + AI_NOTE + "</p>" : "") + "</div></footer>";
+  var TR = trk(), ckOn = (s.gdpr.bar || TR.any) && W.CK.bar;
+  if (ckOn) out += '<div class="ck-wrap"><div class="ck"><p><b>Používame cookies.</b> Nevyhnutné cookies zabezpečujú fungovanie webu.' + (s.gdpr.ga || s.gdpr.fbp || TR.any ? " S vaším súhlasom použijeme aj " + (s.gdpr.ga || TR.ga ? "analytické" + (s.gdpr.fbp || TR.fb ? " a marketingové" : "") : "marketingové") + " cookies." : "") + ' <button type="button" class="flink" data-gdpr>Viac informácií</button></p><div class="btns"><button type="button" class="btn" data-ck="vsetky">Prijať všetky</button><button type="button" class="btn gh" data-ck="nevyhnutne">Len nevyhnutné</button></div></div></div>';
   if (s.wa && !ckOn) out += '<div class="wa-wrap"><a class="wa" href="https://wa.me/' + waNum(s.wa) + '" target="_blank" rel="noopener" aria-label="Napísať na WhatsApp">' + IC.wa + "<span>Napíšte mi</span></a></div>";
   root.innerHTML = out;
   // pasca na roboty: pole, ktoré človek nevidí a nevyplní
@@ -697,7 +703,7 @@ function send(f) {
   if (!ponuka && f === "kontakt" && W.ZAUJEM) ponuka = W.ZAUJEM;
   var btn = box && box.querySelector("[data-send]"); if (btn) { btn.disabled = true; btn.textContent = "Odosielam…"; }
   var odo = W.odoslat ? W.odoslat({ zdroj: f, kontakt: k, meno: v.meno || "", co: co, ponuka: ponuka, dopyt: dopyt, med: v.web_url || "" }) : Promise.resolve();
-  Promise.resolve(odo).then(function (r) { if (f === "ebook" && typeof r === "string" && /^https?:\/\//i.test(r)) W.DLURL = r; if (f === "kontakt") W.ZAUJEM = null; delete W.ERR[f]; W.DONE[f] = true; W.FV[f] = {}; render(); })
+  Promise.resolve(odo).then(function (r) { if (f === "ebook" && typeof r === "string" && /^https?:\/\//i.test(r)) W.DLURL = r; if (f === "kontakt") W.ZAUJEM = null; if (W.poOdoslani) { try { W.poOdoslani(f); } catch (x) { /* nič */ } } delete W.ERR[f]; W.DONE[f] = true; W.FV[f] = {}; render(); })
     .catch(function (e) { W.ERR[f] = (e && e.message) || "Správu sa nepodarilo odoslať. Skúste to znova alebo zavolajte."; render(); });
 }
 function share(i) {
@@ -850,7 +856,12 @@ function napoj(root) {
   W.root = root;
   root.addEventListener("click", function (e) {
     if (W.EDIT && e.target.closest("[data-ed]")) return;
-    if (e.target.closest("a[href]")) return;
+    var lnk = e.target.closest("a[href]");
+    if (lnk) {
+      var hr = lnk.getAttribute("href") || "", typ = /^tel:/i.test(hr) ? "tel" : /^mailto:/i.test(hr) ? "mail" : /^https:\/\/wa\.me\//i.test(hr) ? "wa" : "";
+      if (typ && W.klik) { var kc = lnk.closest("[data-open]"), kx = kc ? ZOZ()[+kc.dataset.open] : W.PAGE.v === "detail" ? ZOZ()[W.PAGE.i] : null; try { W.klik(typ, kx && kx.id || null); } catch (x) { /* nič */ } }
+      return;
+    }
     var t = e.target.closest("button,[data-open],[data-home]"); if (!t) return; var d = t.dataset;
     if (d.open !== undefined && (!e.target.closest("button") || e.target.closest("button") === t)) { otvorDetail(+d.open); return; }
     if (d.book !== undefined) { W.BK.l = +d.book; W.DONE.obhliadka = false; W.PAGE = { v: "home" }; render(); setHash(""); requestAnimationFrame(function () { goSec("obhliadka"); }); return; }
@@ -875,7 +886,7 @@ function napoj(root) {
     else if (d.vt) W.VF.typ = d.vt; else if (d.vs) W.VF.stav = d.vs; else if (d.cbt) W.CBT = d.cbt;
     else if (d.bd !== undefined) W.BK.d = +d.bd; else if (d.bt !== undefined) W.BK.t = d.bt;
     else if (d.again) W.DONE[d.again] = false;
-    else if (d.ck !== undefined) { W.CK.bar = false; try { localStorage.setItem("typek-web-cookies", d.ck); } catch (x) { /* nič */ } }
+    else if (d.ck !== undefined) { W.CK.bar = false; try { localStorage.setItem("typek-web-cookies", d.ck); } catch (x) { /* nič */ } if (W.poSuhlase) W.poSuhlase(d.ck); }
     else if (d.ckopen !== undefined) W.CK.bar = true;
     else return;
     render();
@@ -910,7 +921,7 @@ function napoj(root) {
   root.addEventListener("change", function (e) { var t = e.target; if (t.dataset.bl !== undefined) W.BK.l = +t.value; var form = t.closest("[data-form]"); if (form && t.name) (W.FV[form.dataset.form] = W.FV[form.dataset.form] || {})[t.name] = t.value; });
 }
 
-window.TYPEK_WEB = { W: W, bezPohybu: function () { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }, overenie: overenie, overeniePouzite: overeniePouzite, sha256Zaciatok: sha256Zaciatok, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
+window.TYPEK_WEB = { W: W, trk: trk, bezPohybu: function () { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }, overenie: overenie, overeniePouzite: overeniePouzite, sha256Zaciatok: sha256Zaciatok, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
   fotoMaklera: function () { return fotoMaklera(); }, merge: merge, clone: clone, esc: esc, get: get, setDeep: setDeep, secName: secName, heroTx: heroTx, pal: pal, photo: photo, favSvg: favSvg, initials: initials, slugD: slugD, url: url, waNum: waNum, fmt: fmt,
   okHex: okHex, isHex: isHex, mix: mix, h2r: h2r, r2h: r2h, prevod: prevod, ZOZ: ZOZ, render: render, napoj: napoj, toast: toast, SV: SV, otvorDetail: otvorDetail };
 })();
