@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=Young+Serif&family=Public+Sans:wght@400..800&family=Archivo:wght@400..900&family=Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@500..800&family=Montserrat:wght@900&display=swap">
-<link rel="stylesheet" href="web-sablony.css?v=202610241600">
-<link rel="stylesheet" href="web-editor.css?v=202610241600">
+<link rel="stylesheet" href="web-sablony.css?v=202610241700">
+<link rel="stylesheet" href="web-editor.css?v=202610241700">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <script>try { var t = localStorage.getItem("alpha-skener-tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 </head>
@@ -26,6 +26,7 @@
     <span class="stav" id="stav" aria-live="polite"><i></i><span>Načítavam…</span></span>
     <button class="ib" id="undo" type="button" aria-label="Späť" title="Späť (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
     <button class="ib" id="redo" type="button" aria-label="Znova" title="Znova (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+    <button class="b b-stat" id="statBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Štatistiky</span></button>
     <a class="b b-soft" id="nahlad" href="#" target="_blank" rel="noopener">Náhľad</a>
     <button class="b b-gold" id="zverejnit" type="button">Zverejniť web</button>
   </div>
@@ -83,6 +84,7 @@
       <section class="grp"><h2>Maklér</h2><div class="fields" id="fMakler"></div></section>
       <section class="grp"><h2>Kontakty</h2><div class="fields" id="fKontakt"></div></section>
       <section class="grp"><h2>Ochrana údajov a cookies</h2><div class="fields" id="fGdpr"></div></section>
+      <section class="grp" id="gMeranie"><h2>Google Analytics a Meta Pixel</h2><div class="fields" id="fMeranie"></div></section>
     </div>
 
     <div class="pane" data-pane="siete" hidden>
@@ -129,8 +131,8 @@
 <script src="config.js?v=202610201100"></script>
 <script src="supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<script src="web-sablony.js?v=202610241600"></script>
+<script src="web-sablony.js?v=202610241700"></script>
 <script src="odpoved.js?v=202610241300"></script>
-<script src="web-editor.js?v=202610241600"></script>
+<script src="web-editor.js?v=202610241700"></script>
 </body>
 </html>

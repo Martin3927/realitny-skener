@@ -5301,13 +5301,40 @@
   }
 
   // ------------------------------------------------------------ OSOBNÝ WEB
+  // štatistiky zverejneného webu za posledných 30 dní (celé sú v skladačke pod tlačidlom Štatistiky)
+  function vykresliStatWebu(webId) {
+    var den = function (d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+    var od = new Date(); od.setHours(0, 0, 0, 0); od.setDate(od.getDate() - 29); var od2 = new Date(od); od2.setDate(od2.getDate() - 30);
+    var odI = den(od), od2I = den(od2), ticho = function (q) { return q.then(function (r) { return r.error ? { data: [] } : r; }); };
+    Promise.all([
+      ticho(sb.from("web_zobrazenia").select("den,pocet").eq("web_id", webId).gte("den", od2I)),
+      ticho(sb.from("web_kontakty").select("vytvorene").eq("web_id", webId).gte("vytvorene", od2.toISOString())),
+      ticho(sb.from("web_kliky").select("den,pocet").eq("web_id", webId).gte("den", od2I)),
+      ticho(sb.from("web_zdroje").select("zdroj,pocet").eq("web_id", webId).gte("den", odI))
+    ]).then(function (r) {
+      var el = $("#web-stat"); if (!el) return;
+      var sum = function (L, f) { return L.reduce(function (a, x) { return a + (f(x) ? (x.pocet == null ? 1 : x.pocet) : 0); }, 0); };
+      var nov = function (x) { return (x.den || x.vytvorene.slice(0, 10)) >= odI; }, star = function (x) { return !nov(x); };
+      var V = sum(r[0].data, nov), Vp = sum(r[0].data, star), K = sum(r[1].data, function (x) { return new Date(x.vytvorene) >= od; }), Kp = sum(r[1].data, function (x) { return new Date(x.vytvorene) < od; });
+      var L = sum(r[2].data, nov), Lp = sum(r[2].data, star), U = V ? Math.min(100, Math.round((K + L) / V * 1000) / 10) : 0;
+      var zm = function (a, b) { if (!a && !b) return ""; if (!b) return '<span class="zm hore">nové</span>'; var p = Math.round((a - b) / b * 100); return '<span class="zm ' + (p > 0 ? "hore" : p < 0 ? "dole" : "") + '">' + (p > 0 ? "+" : p < 0 ? "−" : "±") + Math.abs(p) + " %</span>"; };
+      var N = { google: "Google", vyhladavac: "iné vyhľadávače", facebook: "Facebook", instagram: "Instagram", qr: "QR kód", email: "e-mail", priamo: "priamo", iny: "iné weby" }, Z = {}, zt = 0;
+      (r[3].data || []).forEach(function (x) { Z[x.zdroj] = (Z[x.zdroj] || 0) + x.pocet; zt += x.pocet; });
+      var top = Object.keys(Z).sort(function (a, b) { return Z[b] - Z[a]; }).slice(0, 3).map(function (k) { return N[k] + " " + Math.round(Z[k] / zt * 100) + " %"; });
+      el.innerHTML = '<div class="web-stat"><div class="vykon-hlava"><h3>📊 Štatistiky webu <span class="meta">· posledných 30 dní</span></h3><a class="btn" href="web-editor.html#statistiky">Celé štatistiky →</a></div>' +
+        '<div class="vykon-sum"><div><small>Návštevy</small><b>' + nf.format(V) + "</b>" + zm(V, Vp) + "</div><div><small>Kontakty z formulárov</small><b>" + nf.format(K) + "</b>" + zm(K, Kp) + "</div>" +
+        "<div><small>Kliky na telefón a WhatsApp</small><b>" + nf.format(L) + "</b>" + zm(L, Lp) + "</div><div><small>Úspešnosť webu</small><b>" + String(U).replace(".", ",") + ' %</b><span class="zm">návštev skončilo kontaktom</span></div></div>' +
+        (top.length ? '<p class="meta" style="margin:0">Najviac ľudí prišlo cez: ' + esc(top.join(", ")) + "</p>" : '<p class="meta" style="margin:0">Odkiaľ ľudia prichádzajú, sa ukáže s ďalšími návštevami.</p>') + "</div>";
+    });
+  }
   function vykresliWeb() {
     var el = $("#obsah"); if (!el) return;
     var url = new URL("makler.html?id=" + S.me.id, location.href).href, base = new URL(".", location.href).href;
     el.innerHTML = '<div class="box web-box"><div class="vykon-hlava"><h3>🌐 Osobný web</h3></div>' +
       '<div class="web-hero"><div><b>Skladačka webu</b><p class="meta">Vyber šablónu, farby, sekcie a texty. Ponuky, predané nehnuteľnosti a recenzie sa na web dostanú samy z Realitného týpka. Kontakty z formulárov ti prídu do zvončeka.</p>' +
       '<div id="web-stav" class="meta">Načítavam stav webu…</div>' +
-      '<div class="pd-zdiel-btns" style="margin-top:10px"><a class="btn primary" href="web-editor.html">✏️ Upraviť môj web</a></div></div></div>' +
+      '<div class="pd-zdiel-btns" style="margin-top:10px"><a class="btn primary" href="web-editor.html">✏️ Upraviť môj web</a><a class="btn" href="web-editor.html#statistiky">📊 Štatistiky webu</a></div></div></div>' +
+      '<div id="web-stat"></div>' +
       (admin() ? '<div class="web-dl" style="margin-top:12px"><span class="web-ik">🧑‍💼</span><b>Web iného makléra</b><span class="meta">Ako administrátor môžete upraviť a zverejniť web ktoréhokoľvek makléra.</span><div class="pd-odkaz"><select id="web-makler" aria-label="Maklér">' +
         S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) { return '<option value="' + m.id + '">' + esc(m.meno) + "</option>"; }).join("") + '</select><button class="btn" type="button" data-web="iny">Upraviť</button></div></div>' +
         '<div class="web-dl" style="margin-top:12px"><span class="web-ik">✅</span><b>Žiadosti o adresu a doménu</b><span class="meta">Makléri žiadajú o novú adresu webu a o pripojenie vlastnej domény. Tu ich schválite.</span><div id="web-ziadosti" class="web-ziad"><span class="meta">Načítavam…</span></div></div>' : "") +
@@ -5327,6 +5354,7 @@
         ? '<b>Váš web je zverejnený</b>' + (w.zmeny_od_zverejnenia ? " · máte nezverejnené zmeny" : "") + '<div class="pd-odkaz" style="margin-top:6px"><input type="text" readonly value="' + esc(u) + '"><button class="btn" type="button" data-web="kop-novy">Kopírovať</button><a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Otvoriť</a></div>'
         : "Web zatiaľ nie je zverejnený. Otvorte skladačku, poskladajte ho a kliknite na Zverejniť web.";
       var k = st.querySelector('[data-web="kop-novy"]'); if (k) k.onclick = function () { kopiruj(u, "Odkaz na váš web je skopírovaný."); };
+      if (w.zverejnene_kedy && w.id) vykresliStatWebu(w.id);
     }).catch(function () { var st = $("#web-stav"); if (st) st.textContent = "Skladačka sa práve nasadzuje. Skúste to o pár minút."; });
   }
 

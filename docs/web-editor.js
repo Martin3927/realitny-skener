@@ -232,19 +232,22 @@ function renderPanel() {
   $("animPozn").innerHTML = s.anim && T.bezPohybu() ? '<div class="anim-pozn">' + (W.vzdyPohyb
     ? "Animácie sa v ukážke zobrazujú, hoci ich máš v počítači vypnuté. Klienti ich uvidia podľa svojho nastavenia.<br><button type=\"button\" class=\"chip\" data-pohybvzdy=\"0\">Skryť animácie v ukážke</button>"
     : "Animácie v ukážke nevidíš, lebo ich máš vypnuté v nastaveniach počítača (zjednodušenie ovládania). Klienti so zapnutými animáciami ich na webe uvidia.<br><button type=\"button\" class=\"chip\" data-pohybvzdy=\"1\">Ukázať animácie v ukážke</button>") + "</div>" : "";
-  seg("viewSeg", [["web", "Web"], ["prehlad", "Prehľad"]], VIEW, "view");
+  seg("viewSeg", [["web", "Web"], ["prehlad", "Štatistiky"]], VIEW, "view");
   seg("dev", [["pc", "Počítač"], ["mob", "Mobil"]], s.dev, "dev");
   $("dev").hidden = $("editTg").hidden = VIEW !== "web";
   $("rad").value = s.r; $("rOut").textContent = s.r + " px";
   var vz = W.CTX.kancelaria || {};
   $("fMakler").innerHTML = upl("Logo", "logo", { max: 700, logo: 1 }) + (vz.logo && s.logo !== vz.logo ? '<button type="button" class="lbtn" data-logokanc style="grid-column:1/-1;justify-self:start;color:var(--c-ink)">Použiť logo kancelárie</button>' : "") +
-    upl("Fotka makléra", "photo", { round: 1, max: 900 }) + fld("Meno a priezvisko", "name") + fld("Kde pôsobí", "area") + fld("Kancelária", "office") + fld("Rokov v realitách", "years", { half: 1, ph: "napr. 12" }) + fld("Predaných nehnuteľností", "sold", { half: 1, ph: "nepovinné" }) + '<p class="note">Kým nenahráš svoju fotku, ukážka ukazuje ilustračnú fotku od AI. Na zverejnenom webe sa bez fotky zobrazia iniciály.</p>';
+    upl("Fotka makléra", "photo", { round: 1, max: 900 }) + upl("Druhá fotka makléra", "photo2", { max: 1400 }) + '<p class="note">Druhá fotka sa ukáže v sekcii O mne a pri kontakte. Hodí sa fotka pri práci, s klientom alebo pred nehnuteľnosťou. Bez nej sa použije hlavná fotka.</p>' + fld("Meno a priezvisko", "name") + fld("Kde pôsobí", "area") + fld("Kancelária", "office") + fld("Rokov v realitách", "years", { half: 1, ph: "napr. 12" }) + fld("Predaných nehnuteľností", "sold", { half: 1, ph: "nepovinné" }) + '<p class="note">Kým nenahráš svoju fotku, ukážka ukazuje ilustračnú fotku od AI. Na zverejnenom webe sa bez fotky zobrazia iniciály.</p>';
   $("fKontakt").innerHTML = fld("Telefón", "phone", { half: 1 }) + fld("WhatsApp", "wa", { half: 1, ph: "0905 ..." }) + fld("E-mail", "email") + '<p class="note">Keď vyplníš WhatsApp, na webe sa zobrazí zelené tlačidlo „Napíšte mi“ a pri každej ponuke odkaz s predvyplnenou správou.</p>';
   $("fGdpr").innerHTML = fld("Prevádzkovateľ (meno alebo firma)", "gdpr.who") + fld("IČO", "gdpr.ico", { half: 1 }) + fld("E-mail pre GDPR", "gdpr.mail", { half: 1, ph: s.email }) + fld("Sídlo", "gdpr.addr", { ph: "Ulica, PSČ Mesto" }) +
     '<label class="chk"><input type="checkbox" data-check="gdpr.bar"' + (s.gdpr.bar ? " checked" : "") + '>Zobraziť lištu so súhlasom s cookies</label>' +
-    fld("ID Google Analytics (nepovinné)", "gdpr.gaId", { half: 1, ph: "G-XXXXXXXXXX" }) + fld("ID Meta Pixelu (nepovinné)", "gdpr.fbId", { half: 1, ph: "napr. 123456789012345" }) +
-    '<p class="note">Vlastné štatistiky v Prehľade fungujú aj bez nich. Google Analytics a Meta Pixel sa na webe zapnú až vtedy, keď návštevník v lište cookies klikne Prijať všetky. Lišta sa pri vyplnenom ID zobrazí vždy. Meta Pixel sa oplatí, ak robíš reklamy na Facebooku alebo Instagrame: uvidíš, koľko ľudí z reklamy ti poslalo kontakt.</p>' +
+
     '<p class="note">Z týchto údajov sa vyskladá stránka Ochrana osobných údajov aj lišta s cookies. Je to vzorový text, pred spustením ho daj raz skontrolovať právnikovi.</p>';
+  $("fMeranie").innerHTML = '<p class="note">Nepovinné. Štatistiky webu (tlačidlo Štatistiky hore) fungujú aj bez nich. Ak chceš merať aj cez Google alebo robíš reklamy na Facebooku a Instagrame, vlož sem ID.</p>' +
+    fld("ID Google Analytics", "gdpr.gaId", { half: 1, ph: "G-XXXXXXXXXX" }) + fld("ID Meta Pixelu", "gdpr.fbId", { half: 1, ph: "napr. 123456789012345" }) +
+    '<div class="help-links"><a href="https://support.google.com/analytics/answer/12270356" target="_blank" rel="noopener">Kde nájdem ID Google Analytics →</a><a href="https://business.facebook.com/events_manager2" target="_blank" rel="noopener">ID Meta Pixelu nájdeš v Správcovi udalostí →</a></div>' +
+    '<p class="note">Na webe sa zapnú až keď návštevník v lište cookies klikne Prijať všetky, preto sa lišta pri vyplnenom ID zobrazí vždy. Meta Pixel zaznamená odoslané formuláre (Lead), kliky na telefón a WhatsApp (Contact) a otvorené ponuky. Zmena sa prejaví po zverejnení webu.</p>';
   $("fSoc").innerHTML = T.SOC.map(function (x) { return fld(x[1], "soc." + x[0], { ph: x[2] }); }).join("") + '<p class="note">Vyplnené siete sa zobrazia ako ikony. Prázdne sa na webe nezobrazia.</p>';
   renderSecs(); renderKontrola(); renderPub(); renderAdresa(); renderVerzie();
   $("stage").classList.toggle("mob", s.dev === "mob");
@@ -378,7 +381,7 @@ function renderShare() {
 }
 
 /* ================================================================ prehľad pre makléra */
-function setView(v) { VIEW = v; $("stage").hidden = v !== "web"; $("dash").hidden = v !== "prehlad"; if (v === "prehlad") renderDash(); renderPanel(); }
+function setView(v) { VIEW = v; $("stage").hidden = v !== "web"; $("dash").hidden = v !== "prehlad"; $("statBtn").setAttribute("aria-pressed", v === "prehlad"); if (v === "prehlad") renderDash(); renderPanel(); }
 function renderDash() {
   var el = $("dash"); el.innerHTML = '<div class="dash"><div class="prazdny">Načítavam prehľad…</div></div>';
   var od = new Date(); od.setHours(0, 0, 0, 0); od.setDate(od.getDate() - 29); var odIso = isoDen(od);
@@ -410,7 +413,9 @@ function renderDash() {
     var line = VIS.map(function (v, i) { return (i ? "L" : "M") + sx(i).toFixed(1) + " " + sy(v).toFixed(1); }).join(" ");
     var grid = [0, mx / 4, mx / 2, mx * 3 / 4, mx].map(function (v) { return '<line class="g" x1="' + pl + '" x2="' + (W2 - pr) + '" y1="' + sy(v) + '" y2="' + sy(v) + '"/><text class="t" x="' + (pl - 8) + '" y="' + (sy(v) + 4) + '" font-size="11" text-anchor="end">' + v + "</text>"; }).join("");
     var xl = [0, 7, 14, 21, 29].map(function (i) { return '<text class="t" x="' + sx(i) + '" y="' + (H2 - 8) + '" font-size="11" text-anchor="' + (i === 0 ? "start" : i === 29 ? "end" : "middle") + '">' + dl(i) + "</text>"; }).join("");
-    el.innerHTML = '<div class="dash"><div class="dh"><div><div class="lab">Posledných 30 dní</div><h2>Prehľad webu</h2></div>' + (WEB.zverejnene_kedy ? "" : '<span class="tagx">Web ešte nie je zverejnený</span>') + "</div>" +
+    var TR = T.trk();
+    el.innerHTML = '<div class="dash"><div class="dh"><div><div class="lab">Posledných 30 dní</div><h2>Štatistiky webu</h2></div>' + (WEB.zverejnene_kedy ? "" : '<span class="tagx">Web ešte nie je zverejnený</span>') + "</div>" +
+      '<div class="dash-mer"><span>Google Analytics: <b>' + (TR.ga ? "napojené" : "nenapojené") + "</b></span><span>Meta Pixel: <b>" + (TR.fb ? "napojený" : "nenapojený") + '</b></span><button type="button" class="b b-soft b-sm" data-ckgo="makler|f-gdpr-gaId">' + (TR.any ? "Upraviť" : "Napojiť Google Analytics alebo Meta Pixel") + "</button></div>" +
       '<div class="kpis"><div class="kpi"><small>Návštevy webu</small><b>' + T.fmt(tot) + "</b>" + zmena(tot, pred) + "</div>" +
       '<div class="kpi"><small>Kontakty z formulárov</small><b>' + K30.length + "</b>" + zmena(K30.length, Kpred) + (odh || obh ? "<em>" + [odh ? odh + (odh === 1 ? " odhad ceny" : odh < 5 ? " odhady ceny" : " odhadov ceny") : "", obh ? obh + (obh === 1 ? " obhliadka" : obh < 5 ? " obhliadky" : " obhliadok") : ""].filter(Boolean).join(", ") + "</em>" : "") + "</div>" +
       '<div class="kpi"><small>Kliky na kontakt</small><b>' + klTot + "</b>" + zmena(klTot, klPred) + "<em>telefón, WhatsApp, e-mail</em></div>" +
@@ -436,6 +441,16 @@ function renderDash() {
   }).catch(function (e) { el.innerHTML = '<div class="dash"><div class="prazdny">Prehľad sa nepodarilo načítať: ' + esc(chybaText(e)) + "</div></div>"; });
 }
 
+// počet návštev za 30 dní na tlačidle Štatistiky
+function nacitajOdznak() {
+  if (!WEB || !WEB.id || !WEB.zverejnene_kedy) return;
+  var od = new Date(); od.setHours(0, 0, 0, 0); od.setDate(od.getDate() - 29);
+  sb.from("web_zobrazenia").select("pocet").eq("web_id", WEB.id).gte("den", isoDen(od)).then(function (r) {
+    if (r.error) return; var n = (r.data || []).reduce(function (a, x) { return a + x.pocet; }, 0), b = $("statBtn"); if (!b) return;
+    var o = b.querySelector(".bdg"); if (!o) { o = document.createElement("span"); o.className = "bdg"; b.appendChild(o); }
+    o.textContent = T.fmt(n); b.title = n + " návštev za posledných 30 dní";
+  });
+}
 function isoDen(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 // zmena oproti predošlým 30 dňom
 function zmena(teraz, predtym) {
@@ -509,6 +524,7 @@ $("panel").addEventListener("click", function (e) {
   S().heroFoc = x + "% " + y + "%"; all();
 });
 $("zverejnit").addEventListener("click", function () { zverejnit(); });
+$("statBtn").addEventListener("click", function () { setView(VIEW === "prehlad" ? "web" : "prehlad"); if (VIEW === "prehlad") window.scrollTo({ top: 0, behavior: "smooth" }); });
 $("editTg").addEventListener("click", function () { W.EDIT = !W.EDIT; all(); if (W.EDIT) toast("Klikni na text v ukážke a prepíš ho"); });
 $("addCustom").addEventListener("click", function () { var k = "c" + Date.now().toString(36), s = S(); s.custom[k] = { title: "Vlastná sekcia", text: "Sem napíš, čo chceš návštevníkom povedať.", img: "", btn: "", link: "" }; s.order.push(k); s.on[k] = true; open.add(k); all();
   requestAnimationFrame(function () { var el = $("f-custom-" + k + "-title"); if (el) { el.focus(); el.select(); } }); });
@@ -733,6 +749,8 @@ sb.auth.getSession().then(function (r) {
       $("addr").textContent = adresaText(); nacitajDomInfo();
       T.napoj($("site")); renderTone();
       renderPanel(); T.render(); histPush();
+      if (location.hash === "#statistiky") setView("prehlad");
+      nacitajOdznak();
       if (prazdny) { NEULOZENE = true; ulozTeraz(); } else stav("Uložené");
     });
   });

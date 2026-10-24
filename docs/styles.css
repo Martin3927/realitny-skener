@@ -1169,6 +1169,12 @@ pre.kod { width: 100%; margin: 0; background: var(--graphite); color: #e9e4d6; b
 .web-dlazdice { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px }
 .web-dl { border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 6px; align-content: start; justify-items: start; background: var(--surface) }
 .web-ik { font-size: 28px }
+.web-stat { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-top: 12px; background: var(--surface) }
+.web-stat .vykon-sum { margin: 12px 0 10px }
+.web-stat .vykon-hlava h3 .meta { display: inline; font-family: inherit; font-weight: 500; font-size: 13px }
+.web-stat .zm { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 2px }
+.web-stat .zm.hore { color: var(--good) }
+.web-stat .zm.dole { color: var(--bad) }
 
 /* ---------- recenzie */
 .hviezdy { color: #e0a51a; letter-spacing: 1px; white-space: nowrap }

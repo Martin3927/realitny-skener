@@ -95,7 +95,14 @@
     if (!document.querySelector('meta[property="og:title"]')) [["og:title", titul], ["og:description", popis], ["og:image", s.heroImg || s.photo && !/^data:/.test(s.photo) && s.photo || T.aiSrc(T.heroAi(s.tpl === "mestska" ? "mesto" : "dom"))]].forEach(function (x) {
       if (!x[1]) return; var el = document.createElement("meta"); el.setAttribute("property", x[0]); el.setAttribute("content", x[1]); document.head.appendChild(el);
     });
-    if (s.logo) document.getElementById("ikona").href = s.logo;
+    if (s.logo) {
+      var li = new Image(); li.crossOrigin = "anonymous";
+      li.onload = function () {
+        try { var n = 64, c = document.createElement("canvas"), g = c.getContext("2d"), k = Math.min(n / li.naturalWidth, n / li.naturalHeight), w = li.naturalWidth * k, h = li.naturalHeight * k;
+          c.width = c.height = n; g.drawImage(li, (n - w) / 2, (n - h) / 2, w, h); document.getElementById("ikona").href = c.toDataURL("image/png"); } catch (e) { /* nič */ }
+      };
+      li.src = s.logo;
+    }
     else { var P = T.pal(); document.getElementById("ikona").href = "data:image/svg+xml," + encodeURIComponent(T.favSvg(P).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ')); }
     document.documentElement.style.background = T.pal().bg; document.body.style.background = T.pal().bg;
     W.poDetaile = function (x) { if (x.id && !d.nahlad) { sb.rpc("zaznamenat_zobrazenie", { p_id: x.id }).then(function () {}); udalost("view_item", "ViewContent", { content_ids: [String(x.id)], content_type: "product" }); } };

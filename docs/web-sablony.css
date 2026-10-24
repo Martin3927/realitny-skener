@@ -46,7 +46,7 @@
 .site .nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:18px;position:relative;z-index:2}
 .site .brand{display:flex;align-items:center;gap:10px;font-family:var(--fh);font-weight:var(--fhw);font-size:19px;letter-spacing:var(--fhls);cursor:pointer}
 .site .brand .mono{width:38px;height:38px;font-size:14px}
-.site .logoimg{height:clamp(34px,5cqi,46px);width:auto;max-width:200px;object-fit:contain;display:block}
+.site .logoimg{height:clamp(34px,5cqi,46px);width:auto;max-width:200px;object-fit:contain;object-position:left center;display:block;flex:none;aspect-ratio:auto}
 .site footer .logoimg{height:30px}
 .site .menu{display:flex;gap:22px;font-size:14.5px;color:var(--muted)}
 .site .menu button{background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer}
@@ -198,6 +198,11 @@
 .site .about .mono{width:100%;aspect-ratio:1;border-radius:calc(var(--r) * 1.6);font-size:clamp(56px,10cqi,110px);max-width:380px}
 .site .about .sig{margin-top:18px;font-family:var(--fh);font-weight:var(--fhw);font-size:20px}
 .site .about .facts{margin-top:20px;max-width:360px}
+.site .about .mono.foto2{aspect-ratio:4/5;background:var(--surf)}
+.site .kfoto{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.site .kfoto .mono{width:76px;height:76px;font-size:24px;box-shadow:0 0 0 4px var(--bg),0 14px 30px -16px rgba(0,0,0,.5)}
+.site .kfoto b{display:block;font-family:var(--fh);font-weight:var(--fhw);font-size:18px;line-height:1.2}
+.site .kfoto .muted{font-size:14px}
 @container (max-width:680px){.site .about{grid-template-columns:1fr}.site .about .mono{max-width:220px}}
 .t-vizitka .about{grid-template-columns:1fr}.t-vizitka .about .mono{display:none}
 

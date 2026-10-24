@@ -50,7 +50,7 @@ var DEF = { tpl: "susedska", color: "zlata", cc: "#1D6F8F", b2: "", hcol: "text"
   btn: "pill", btnFill: "fill", ph: "plain", anim: true, heroMedia: "foto", heroImg: "", heroVideo: "", heroAiImg: "", heroAiVid: "", heroPos: "", heroFoc: "", bub: "polo",
   order: ["ponuky", "strazca", "omne", "postup", "sluzby", "predane", "lokality", "video", "recenzie", "obhliadka", "ocenenie", "callback", "stiahnut", "faq", "dotaznik", "fotka", "hypoteka", "clanok", "kontakt"],
   on: { ponuky: true, predane: true, strazca: true, omne: true, postup: true, sluzby: true, lokality: false, video: false, recenzie: true, obhliadka: true, ocenenie: true, callback: true, stiahnut: false, faq: true, dotaznik: false, fotka: false, hypoteka: false, clanok: false, kontakt: true },
-  n: 6, name: "", area: "Spišská Nová Ves a Levoča", office: "", phone: "", email: "", wa: "", photo: "", logo: "", years: "", sold: "",
+  n: 6, name: "", area: "Spišská Nová Ves a Levoča", office: "", phone: "", email: "", wa: "", photo: "", photo2: "", logo: "", years: "", sold: "",
   soc: { fb: "", ig: "", li: "", x: "", tt: "" },
   heroTx: {}, heads: {},
   about: { title: "Reality robím tak, ako by som ich chcel pre seba.", text: "Pochádzam z regiónu a poznám tu každú ulicu. Viem, za koľko sa reálne predávajú byty na sídlisku aj domy v okolitých obciach.\nKaždému klientovi poviem na rovinu, čo je možné. Postarám sa o fotky, inzerciu, obhliadky, zmluvy aj kataster." },
@@ -316,6 +316,8 @@ function fotoMaklera() { var s = W.S; return s.photo || (W.CTX.makler && W.CTX.m
 // ilustračná fotka makléra/maklérky len v ukážke v editore, na zverejnenom webe sa bez fotky zobrazia iniciály
 function zena() { return !!(W.CTX.makler && W.CTX.makler.pohlavie === "zena"); }
 function fotoUkazka() { return W.editor && !fotoMaklera() ? aiSrc(zena() ? "maklerka" : "makler") : ""; }
+// druhá fotka makléra (sekcia O mne a kontakt); bez nej sa použije hlavná
+function foto2() { return String(W.S.photo2 || "").trim(); }
 function av() { var s = W.S, f = fotoMaklera() || fotoUkazka(); return '<span class="mono">' + (f ? '<img src="' + esc(f) + '" alt="' + esc(s.name) + '">' : esc(initials(s.name))) + "</span>"; }
 function socRow() {
   var s = W.S, it = SOC.filter(function (x) { return String(s.soc[x[0]] || "").trim(); });
@@ -447,7 +449,7 @@ var R = {
         '<div class="two">' + inp("strazca", "meno", "Meno") + inp("strazca", "kontakt", "E-mail alebo telefón") + "</div>" + errMsg("strazca") + '<button type="button" class="btn" data-send="strazca">Dajte mi vedieť</button><p class="muted wnote">Keď zadáte e-mail, príde vám odkaz na potvrdenie. Potom vám nové ponuky budú chodiť aj e-mailom, najviac raz za 12 hodín. Odhlásiť sa dá jedným klikom.</p></div>';
     return '<div class="watch"><div><span class="eb">Hľadáte nehnuteľnosť?</span><h2 ' + ed("watch.title", 1) + ">" + esc(s.watch.title) + '</h2><p class="muted" ' + ed("watch.text") + ">" + esc(s.watch.text) + "</p></div>" + right + "</div>";
   },
-  omne: function () { var s = W.S; return '<div class="about">' + av() + '<div class="txt"><span class="eb">O mne</span><h2 class="h2" style="margin:10px 0 16px" ' + ed("about.title", 1) + ">" + esc(s.about.title) + "</h2><div " + ed("about.text") + ">" + paras(s.about.text) + '</div><div class="sig">' + esc(s.name) + '</div><div class="muted" style="font-size:14px">' + esc(s.office) + "</div>" + (s.tpl !== "susedska" ? facts() : "") + "</div></div>"; },
+  omne: function () { var s = W.S; return '<div class="about">' + (foto2() ? '<span class="mono foto2"><img src="' + esc(foto2()) + '" alt="' + esc(s.name) + '" loading="lazy"></span>' : av()) + '<div class="txt"><span class="eb">O mne</span><h2 class="h2" style="margin:10px 0 16px" ' + ed("about.title", 1) + ">" + esc(s.about.title) + "</h2><div " + ed("about.text") + ">" + paras(s.about.text) + '</div><div class="sig">' + esc(s.name) + '</div><div class="muted" style="font-size:14px">' + esc(s.office) + "</div>" + (s.tpl !== "susedska" ? facts() : "") + "</div></div>"; },
   postup: function () {
     var st = W.S.steps.map(function (s, i) { return [s, i]; }).filter(function (x) { return x[0].t || x[0].d; }), n = st.length;
     if (!n) return "";
@@ -537,7 +539,8 @@ var R = {
   clanok: function (P) { var s = W.S, u = url(s.post.url); return '<div class="post"><div class="media">' + aiImg("byt-obyvacka", "", true) + '</div><div><span class="eb">Článok mesiaca</span><h3 ' + ed("post.title", 1) + ">" + esc(s.post.title) + '</h3><p class="muted" ' + ed("post.text") + ">" + esc(s.post.text) + "</p>" + (u ? '<a class="more" href="' + esc(u) + '" target="_blank" rel="noopener">Čítať článok →</a>' : "") + "</div></div>"; },
   kontakt: function () {
     var s = W.S, f = "kontakt", w = s.wa ? '<a href="https://wa.me/' + waNum(s.wa) + '" target="_blank" rel="noopener"><small>WhatsApp</small><b class="num">' + esc(s.wa) + "</b></a>" : "";
-    return '<div class="contact"><div><span class="eb">Kontakt</span><h2 class="h2" style="margin-top:10px" ' + ed("heads.kontakt.h", 1) + ">" + esc(head("kontakt", "h", "Zavolajte mi, poradím vám.")) + "</h2>" +
+    var kf = foto2() || fotoMaklera() || fotoUkazka();
+    return '<div class="contact"><div>' + (kf ? '<div class="kfoto"><span class="mono"><img src="' + esc(kf) + '" alt="' + esc(s.name) + '" loading="lazy"></span><div><b>' + esc(s.name) + '</b><span class="muted">' + esc(s.office || (zena() ? "Realitná maklérka" : "Realitný maklér")) + "</span></div></div>" : "") + '<span class="eb">Kontakt</span><h2 class="h2" style="margin-top:10px" ' + ed("heads.kontakt.h", 1) + ">" + esc(head("kontakt", "h", "Zavolajte mi, poradím vám.")) + "</h2>" +
       '<div class="clist">' + (s.phone ? '<a href="tel:' + esc(String(s.phone).replace(/[^\d+]/g, "")) + '"><small>Telefón</small><b class="num">' + esc(s.phone) + "</b></a>" : "") + w + (s.email ? '<a href="mailto:' + esc(s.email) + '"><small>E-mail</small><b>' + esc(s.email) + "</b></a>" : "") + "<div><small>Pôsobím</small><b>" + esc(s.area) + "</b></div></div>" + socRow() + "</div>" +
       (W.DONE[f] ? '<div class="done" style="align-self:start"><b>Správa je odoslaná</b><p>Ďakujem, ozvem sa vám čo najskôr.</p><button type="button" class="qback" data-again="' + f + '">Napísať ďalšiu správu</button></div>'
         : '<div class="cform" data-form="' + f + '">' + inp(f, "meno", "Meno") + inp(f, "kontakt", "Telefón alebo e-mail") + '<textarea class="fld" name="sprava" placeholder="Čo potrebujete?" aria-label="Čo potrebujete?">' + fv(f, "sprava") + "</textarea>" + errMsg(f) + '<button class="btn" type="button" data-send="' + f + '" style="justify-self:start">Odoslať správu</button></div>') + "</div>";
