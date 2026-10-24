@@ -125,6 +125,13 @@ function logoColors(im) {
 
 /* ================================================================ panel – polia */
 var HBTN_E = [["", "Podľa šablóny"], ["ocenenie", "Zistiť hodnotu zdarma"], ["predat", "Chcem predať"], ["ponuky", "Pozrieť ponuky"], ["zavolat", "Zavolajte mi"], ["vykup", "Chcem výkup"], ["ebook", "Stiahnuť e-book"], ["kontakt", "Napíšte mi"]];
+function stmavPole(s) {
+  var d = T.stmavenie(), vlastne = s.heroDim !== "" && s.heroDim != null;
+  return '<label class="full" style="margin-top:6px">Stmavenie ' + (s.heroMedia === "video" ? "videa" : "fotky") + ' v úvode: <b id="dimOut">' + (d ? d + " %" : "bez stmavenia") + '</b><input type="range" min="0" max="100" step="5" data-dim value="' + d + '" aria-label="Stmavenie"></label>' +
+    '<div class="seg" style="grid-column:1/-1">' + [[0, "Bez stmavenia"], [25, "Jemné"], [50, "Stredné"], [80, "Tmavé"]].map(function (x) { return '<button type="button" class="chip" data-dimset="' + x[0] + '" aria-pressed="' + (vlastne && d === x[0]) + '">' + x[1] + "</button>"; }).join("") +
+    (vlastne ? '<button type="button" class="chip" data-dimset="">Podľa šablóny</button>' : "") + "</div>" +
+    '<p class="note">Stmavenie pomáha, aby bol text na fotke dobre čitateľný. Pri slabom stmavení skontroluj v ukážke, či sa text dá ľahko prečítať.</p>';
+}
 function hlavneTlPole(s) {
   var cur = HBTN_E.find(function (x) { return x[0] === s.heroBtn; }) || HBTN_E[0];
   return '<label class="full" style="margin-top:6px">Hlavné tlačidlo v úvode<select data-bind="heroBtn">' + HBTN_E.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === s.heroBtn ? " selected" : "") + ">" + x[1] + "</option>"; }).join("") + "</select></label>" +
@@ -254,7 +261,7 @@ function renderPanel() {
       '<div class="seg" style="grid-column:1/-1">' + T.HERO_IMG_TPLS.map(function (id) { return '<button type="button" class="chip" data-tpl="' + id + '">' + T.TPLS.find(function (t) { return t.id === id; }).name + "</button>"; }).join("") + "</div>") +
     '<div class="seg" style="grid-column:1/-1">' + [["foto", "Fotka"], ["pohyb", "Pomaly sa približuje"], ["video", "Video"]].map(function (x) { return '<button type="button" class="chip" data-hm="' + x[0] + '" aria-pressed="' + (s.heroMedia === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" +
     (video ? upl("Vlastné video do úvodu", "heroVideo", { video: 1 }) + '<p class="note">Krátke video bez zvuku, napríklad prelet dronom, 10 až 30 sekúnd. Veľké video zmenším priamo v prehliadači, trvá to asi tak dlho ako samotné video.</p>' + aiVideo
-      : upl("Vlastná úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Najlepšie fungujú fotky na šírku. Pod ilustračnými fotkami od AI sa na webe ukáže poznámka, že sú vytvorené AI.</p>' + aiFoto) + pos + foc + hlavneTlPole(s);
+      : upl("Vlastná úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Najlepšie fungujú fotky na šírku. Pod ilustračnými fotkami od AI sa na webe ukáže poznámka, že sú vytvorené AI.</p>' + aiFoto) + pos + foc + (hasImg ? stmavPole(s) : "") + hlavneTlPole(s);
   seg("btnShape", [["pill", "Pilulka"], ["round", "Zaoblené"], ["square", "Hranaté"]], s.btn, "bs");
   seg("btnFill", [["fill", "Vyplnené"], ["outline", "Obrysové"]], s.btnFill, "bf");
   seg("phStyle", [["plain", "Bez rámika"], ["frame", "S rámikom"], ["shadow", "S tieňom"]], s.ph, "phs");
@@ -603,6 +610,7 @@ document.addEventListener("click", function (e) {
   else if (d.pohybvzdy !== undefined) { W.vzdyPohyb = d.pohybvzdy === "1"; try { localStorage.setItem("typek-web-pohyb", W.vzdyPohyb ? "1" : "0"); } catch (x) { /* nič */ } W.INTRO = W.vzdyPohyb; }
   else if (d.aiimg) { s.heroAiImg = d.aiimg; s.heroImg = ""; s.heroFoc = ""; } else if (d.aivid) { s.heroAiVid = d.aivid; s.heroVideo = ""; } else if (d.hpos) s.heroPos = d.hpos; else if (d.focreset !== undefined) s.heroFoc = "";
   else if (d.hm) s.heroMedia = d.hm;
+  else if (d.dimset !== undefined) s.heroDim = d.dimset === "" ? "" : +d.dimset;
   else if (d.up !== undefined) { var i = +d.up, tmp = s.order[i - 1]; s.order[i - 1] = s.order[i]; s.order[i] = tmp; }
   else if (d.dn !== undefined) { var j = +d.dn, tmp2 = s.order[j + 1]; s.order[j + 1] = s.order[j]; s.order[j] = tmp2; }
   else if (d.edit) { if (open.has(d.edit)) open.delete(d.edit); else open.add(d.edit); }
@@ -633,6 +641,7 @@ $("editTg").addEventListener("click", function () { W.EDIT = !W.EDIT; all(); if 
 $("addCustom").addEventListener("click", function () { var k = "c" + Date.now().toString(36), s = S(); s.custom[k] = { title: "Vlastná sekcia", text: "Sem napíš, čo chceš návštevníkom povedať.", img: "", btn: "", link: "" }; s.order.push(k); s.on[k] = true; open.add(k); all();
   requestAnimationFrame(function () { var el = $("f-custom-" + k + "-title"); if (el) { el.focus(); el.select(); } }); });
 $("panel").addEventListener("input", function (e) {
+  if (e.target.dataset.dim !== undefined) { var dv = +e.target.value; S().heroDim = dv; if (W.root) W.root.style.setProperty("--hdim", dv); $("dimOut").textContent = dv ? dv + " %" : "bez stmavenia"; save(); return; }
   var t = e.target, p = t.dataset.bind; if (!p) return; var v = t.value; if ("num" in t.dataset) v = parseFloat(String(v).replace(",", ".")) || 0; setDeep(p, v);
   if (p === "gdpr.gaId" || p === "gdpr.fbId") { var bl = t.closest(".mer-blok"), st = bl && bl.querySelector(".mer-stav"), TRK = T.trk(), ok = p === "gdpr.gaId" ? !!TRK.ga : !!TRK.fb, vypl = !!String(v || "").trim(); if (st) { st.className = "mer-stav" + (ok ? " ok" : vypl ? " zle" : ""); st.textContent = ok ? "Napojené" : vypl ? "Zlý tvar ID" : "Nenapojené"; } }
   if (p === "n") $("nOut").textContent = v;

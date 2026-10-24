@@ -47,7 +47,7 @@ var SECS = { ponuky: "Ponuky", vykup: "Výkup", cennik: "Cenník", preco: "Preč
   dotaznik: "Dotazník", fotka: "Fotka", hypoteka: "Hypotekárna kalkulačka", clanok: "Článok mesiaca", kontakt: "Kontakt" };
 var SOC = [["fb", "Facebook", "facebook.com/meno"], ["ig", "Instagram", "instagram.com/meno"], ["li", "LinkedIn", "linkedin.com/in/meno"], ["x", "X", "x.com/meno"], ["tt", "TikTok", "tiktok.com/@meno"], ["yt", "YouTube", "youtube.com/@meno"]];
 var DEF = { tpl: "susedska", color: "zlata", cc: "#1D6F8F", b2: "", hcol: "text", cbg: "#EEF2F1", logoCols: [], font: "moderne", bg: "kremove", r: 14,
-  btn: "pill", btnFill: "fill", ph: "plain", anim: true, heroMedia: "foto", heroImg: "", heroVideo: "", heroAiImg: "", heroAiVid: "", heroPos: "", heroFoc: "", bub: "polo",
+  btn: "pill", btnFill: "fill", ph: "plain", anim: true, heroMedia: "foto", heroImg: "", heroVideo: "", heroAiImg: "", heroAiVid: "", heroPos: "", heroFoc: "", heroDim: "", bub: "polo",
   order: ["ponuky", "strazca", "omne", "preco", "tim", "postup", "sluzby", "vykup", "cennik", "predane", "lokality", "video", "recenzie", "obhliadka", "ocenenie", "callback", "stiahnut", "faq", "dotaznik", "fotka", "hypoteka", "clanok", "kontakt"],
   on: { ponuky: true, vykup: false, cennik: false, preco: false, tim: false, predane: true, strazca: true, omne: true, postup: true, sluzby: true, lokality: false, video: false, recenzie: true, obhliadka: true, ocenenie: true, callback: true, stiahnut: false, faq: true, dotaznik: false, fotka: false, hypoteka: false, clanok: false, kontakt: true },
   n: 6, name: "", area: "Spišská Nová Ves a Levoča", office: "", phone: "", email: "", wa: "", photo: "", photo2: "", logo: "", years: "", sold: "", yearsTx: "", soldTx: "",
@@ -387,6 +387,8 @@ function gBadge() {
   if (r && r.pocet >= 3 && a) return '<span class="gbadge">' + st + "<b>" + a + "</b><span>" + r.pocet + " hodnotení klientov</span></span>";
   return "";
 }
+// stmavenie fotky alebo videa v úvode: 0 = bez stmavenia, 100 = najtmavšie; prázdne = podľa šablóny
+function stmavenie() { var v = W.S.heroDim, n = v === "" || v == null ? NaN : +v; return isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : W.S.tpl === "luxus" ? 50 : 0; }
 function ohnisko() { var f = String(W.S.heroFoc || ""); return /^\d{1,3}(\.\d)?% \d{1,3}(\.\d)?%$/.test(f) ? f : ""; }
 function heroMedia(P, kind) {
   var s = W.S, f = ohnisko(), st = f ? ' style="object-position:' + f + ";transform-origin:" + f + '"' : "";
@@ -719,7 +721,7 @@ function render() {
   var s = W.S, P = pal(), F = FONTS.find(function (f) { return f.id === s.font; }) || FONTS[0], st = root.style;
   var rb = s.btn === "pill" ? "999px" : s.btn === "round" ? Math.max(8, Math.round(s.r * 0.7)) + "px" : "2px";
   [["--bg", P.bg], ["--surf", P.surf], ["--fg", P.fg], ["--muted", P.muted], ["--line", P.line], ["--a", P.a], ["--on-a", P.onA], ["--at", P.at], ["--a-soft", P.soft], ["--b", P.b], ["--on-b", P.onB], ["--bt", P.bt], ["--b-soft", P.bsoft],
-    ["--hc", P.hc], ["--err", P.err], ["--on-fg", P.onFg], ["--fh", F.h], ["--fb", F.b], ["--fhw", F.w], ["--fhls", F.ls], ["--r", s.r + "px"], ["--rb", rb], ["--bub", bubBg(P)], ["--bub-blur", s.bub === "plne" ? "0px" : s.bub === "sklo" ? "16px" : "10px"], ["--bub-muted", s.bub === "plne" ? P.muted : P.fg]].forEach(function (x) { st.setProperty(x[0], x[1]); });
+    ["--hc", P.hc], ["--err", P.err], ["--on-fg", P.onFg], ["--fh", F.h], ["--fb", F.b], ["--fhw", F.w], ["--fhls", F.ls], ["--r", s.r + "px"], ["--rb", rb], ["--bub", bubBg(P)], ["--bub-blur", s.bub === "plne" ? "0px" : s.bub === "sklo" ? "16px" : "10px"], ["--bub-muted", s.bub === "plne" ? P.muted : P.fg], ["--hdim", stmavenie()]].forEach(function (x) { st.setProperty(x[0], x[1]); });
   st.colorScheme = P.dark ? "dark" : "light";
   root.className = ["site", "t-" + s.tpl, "pg-" + W.PAGE.v, s.anim ? "anim" : "", s.anim && W.INTRO ? "intro" : "", s.btnFill === "outline" ? "bo" : "", s.ph === "frame" ? "pf" : s.ph === "shadow" ? "ps" : "", W.EDIT ? "editing" : ""].filter(Boolean).join(" ");
   var out = "", vykreslene = [];
@@ -1039,7 +1041,7 @@ function napoj(root) {
   root.addEventListener("change", function (e) { var t = e.target; if (t.dataset.bl !== undefined) W.BK.l = +t.value; var form = t.closest("[data-form]"); if (form && t.name) (W.FV[form.dataset.form] = W.FV[form.dataset.form] || {})[t.name] = t.type === "checkbox" ? (t.checked ? "áno" : "") : t.value; });
 }
 
-window.TYPEK_WEB = { W: W, trk: trk, bezPohybu: function () { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }, overenie: overenie, overeniePouzite: overeniePouzite, sha256Zaciatok: sha256Zaciatok, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
+window.TYPEK_WEB = { W: W, trk: trk, bezPohybu: function () { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }, overenie: overenie, overeniePouzite: overeniePouzite, sha256Zaciatok: sha256Zaciatok, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, stmavenie: function () { return stmavenie(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
   fotoMaklera: function () { return fotoMaklera(); }, merge: merge, clone: clone, esc: esc, get: get, setDeep: setDeep, secName: secName, heroTx: heroTx, pal: pal, photo: photo, favSvg: favSvg, initials: initials, slugD: slugD, url: url, waNum: waNum, fmt: fmt,
   okHex: okHex, isHex: isHex, mix: mix, h2r: h2r, r2h: r2h, prevod: prevod, ZOZ: ZOZ, render: render, napoj: napoj, toast: toast, SV: SV, otvorDetail: otvorDetail };
 })();
