@@ -179,6 +179,12 @@ input[type=range]{width:100%;accent-color:var(--c-gold)}
 .b-stat[aria-pressed="true"]{background:var(--c-gold);color:#1E2A35}
 .b-stat .bdg{background:var(--c-gold);color:#1E2A35;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
 .b-stat[aria-pressed="true"] .bdg{background:#1E2A35;color:var(--c-gold)}
+.obd{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.dash .obd .chip{background:var(--c-paper);box-shadow:0 0 0 1px var(--c-line)}
+.dash .obd .chip[aria-pressed="true"]{background:var(--c-ink);color:var(--c-paper);box-shadow:none}
+.obd-vl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:13px;color:var(--c-slate)}
+.obd-vl label{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.obd-vl input{background:var(--c-paper);border:1px solid var(--c-line);border-radius:8px;padding:6px 8px;font-size:14px;color:var(--c-ink)}
 .dash-mer{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:13px;color:var(--c-slate)}
 .mer-blok{grid-column:1/-1;display:grid;gap:8px;padding:12px 14px;border:1px solid var(--c-line);border-radius:14px;background:var(--c-bg)}
 .mer-blok + .mer-blok{margin-top:4px}

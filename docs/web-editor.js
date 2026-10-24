@@ -274,7 +274,7 @@ function renderPanel() {
   $("fCisla").innerHTML = fld("Rokov v realitách", "years", { half: 1, ph: "napr. 16+" }) + fld("Predaných nehnuteľností", "sold", { half: 1, ph: "napr. 250+" }) +
     s.stats.map(function (x, i) { return listItem("stats", i, s.stats.length, fld("Číslo", "stats." + i + ".n", { half: 1, ph: i ? "napr. 20+" : "napr. 300+" }) + fld("Čo znamená", "stats." + i + ".t", { half: 1, ph: i ? "výkupov" : "predajov pod mojím vedením" }), "Odstrániť číslo"); }).join("") +
     (s.stats.length < 2 ? '<button type="button" class="addb" data-ladd="stats" style="grid-column:1/-1">+ Pridať ďalšie číslo</button>' : "") +
-    '<p class="note">Čísla sa ukážu v úvode webu vo všetkých šablónach, najviac 4. Pri čísle môžeš pridať aj znak, napríklad 250+. Pri načítaní sa pekne napočítajú. Prázdne sa nezobrazia.</p>';
+    '<p class="note">Čísla sa ukážu vo výraznom páse hneď pod úvodom webu, najviac 4. Pri čísle môžeš pridať aj znak, napríklad 250+. Keď ich návštevník uvidí, pekne sa napočítajú. Prázdne sa nezobrazia.</p>';
   $("fKontakt").innerHTML = fld("Telefón", "phone", { half: 1 }) + fld("WhatsApp", "wa", { half: 1, ph: "0905 ..." }) + fld("E-mail", "email") + '<p class="note">Keď vyplníš WhatsApp, na webe sa zobrazí zelené tlačidlo „Napíšte mi“ a pri každej ponuke odkaz s predvyplnenou správou.</p>' +
     fld("Adresa kancelárie", "addr", { ph: "napr. Hviezdoslavova 8, Spišská Nová Ves" }) + fld("Otváracie hodiny", "hours", { ph: "napr. Po – Pi 8:00 – 16:30, víkend po dohode" }) +
     '<label class="chk"><input type="checkbox" data-check="kava"' + (s.kava ? " checked" : "") + '>Ponúknuť kávu v kancelárii (pri adrese, s odkazom na mapu)</label>' +
@@ -308,7 +308,7 @@ function checks() {
   return [
     ch("Fotka makléra", T.fotoMaklera(), ["makler", "u-photo"]),
     ch("Meno, telefón a e-mail", s.name && s.phone && s.email, ["makler", "f-name"]),
-    ch("Čísla v úvode (roky, predaje)", String(s.years).trim() || String(s.sold).trim() || s.stats.some(function (x) { return x.n && x.t; }), ["makler", "f-years"]),
+    ch("Čísla pod úvodom (roky, predaje)", String(s.years).trim() || String(s.sold).trim() || s.stats.some(function (x) { return x.n && x.t; }), ["makler", "f-years"]),
     ch("Úvodný text podľa seba", s.heroTx[s.tpl] && (s.heroTx[s.tpl].t || s.heroTx[s.tpl].l), ["edit"]),
     ch("Text O mne podľa seba", s.about.text !== T.DEF.about.text, ["sekcie", "omne"], !!s.on.omne),
     ch("Úvodná fotka alebo video", s.heroMedia === "video" ? s.heroVideo : s.heroImg, ["vzhlad", "u-heroImg"], T.HERO_IMG_TPLS.indexOf(s.tpl) >= 0),
@@ -458,63 +458,82 @@ function renderShare() {
 
 /* ================================================================ prehľad pre makléra */
 function setView(v) { VIEW = v; $("stage").hidden = v !== "web"; $("dash").hidden = v !== "prehlad"; $("statBtn").setAttribute("aria-pressed", v === "prehlad"); if (v === "prehlad") renderDash(); renderPanel(); }
+// obdobie štatistík: predvolene posledných 30 dní, dá sa zmeniť alebo zadať vlastné dátumy
+var OBD = { typ: "30", od: "", do: "" };
+var OBD_N = [["7", "7 dní"], ["30", "30 dní"], ["90", "3 mesiace"], ["365", "12 mesiacov"], ["rok", "Tento rok"], ["vsetko", "Od spustenia"], ["vlastne", "Vlastné dátumy"]];
+var MES = ["január", "február", "marec", "apríl", "máj", "jún", "júl", "august", "september", "október", "november", "december"];
+function dnes0() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+function zIso(s) { var p = String(s || "").split("-"); return p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2]) : null; }
+function obdobie() {
+  var dn = dnes0(), od = null, dd = dn;
+  if (/^\d+$/.test(OBD.typ)) { od = new Date(dn); od.setDate(dn.getDate() - (+OBD.typ - 1)); }
+  else if (OBD.typ === "rok") od = new Date(dn.getFullYear(), 0, 1);
+  else if (OBD.typ === "vlastne") { od = zIso(OBD.od) || new Date(dn.getFullYear(), dn.getMonth(), 1); dd = zIso(OBD.do) || dn; if (dd > dn) dd = dn; if (od > dd) od = new Date(dd); }
+  return { od: od, do: dd };
+}
+function datTxt(d) { return d.getDate() + ". " + (d.getMonth() + 1) + ". " + d.getFullYear(); }
+function obdNazov(n) { var t = OBD.typ; return t === "7" ? "Posledných 7 dní" : t === "30" ? "Posledných 30 dní" : t === "90" ? "Posledné 3 mesiace" : t === "365" ? "Posledných 12 mesiacov" : t === "rok" ? "Tento rok" : t === "vsetko" ? "Od spustenia webu" : n === 1 ? "Jeden deň" : "Vlastné obdobie"; }
+function obdBar(o) {
+  return '<div class="obd"><div class="seg" role="group" aria-label="Obdobie">' + OBD_N.map(function (x) { return '<button type="button" class="chip" data-obd="' + x[0] + '" aria-pressed="' + (OBD.typ === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" +
+    (OBD.typ === "vlastne" ? '<div class="obd-vl"><label>Od <input type="date" id="obdOd" value="' + isoDen(o.od) + '" max="' + isoDen(dnes0()) + '"></label><label>Do <input type="date" id="obdDo" value="' + isoDen(o.do) + '" max="' + isoDen(dnes0()) + '"></label><button type="button" class="b b-soft b-sm" data-obdok>Zobraziť</button></div>' : "") + "</div>";
+}
 function renderDash() {
-  var el = $("dash"); el.innerHTML = '<div class="dash"><div class="prazdny">Načítavam prehľad…</div></div>';
-  var od = new Date(); od.setHours(0, 0, 0, 0); od.setDate(od.getDate() - 29); var odIso = isoDen(od);
-  var od2 = new Date(od); od2.setDate(od2.getDate() - 30); var od2Iso = isoDen(od2);   // predošlých 30 dní na porovnanie
+  var el = $("dash"), o = obdobie();
+  el.innerHTML = '<div class="dash"><div class="dh"><div><div class="lab">' + obdNazov() + '</div><h2>Štatistiky webu</h2></div></div>' + obdBar(o) + '<div class="prazdny">Načítavam štatistiky…</div></div>';
   var ids = (W.CTX.ponuky || []).map(function (x) { return x.id; }).filter(Boolean);
-  var prazdne = Promise.resolve({ data: [] });
-  Promise.all([
-    sb.from("web_zobrazenia").select("den,pocet").eq("web_id", WEB.id).gte("den", od2Iso),
-    sb.from("web_kontakty").select("*").eq("web_id", WEB.id).order("vytvorene", { ascending: false }).limit(200),
-    ids.length ? sb.from("zobrazenia_ponuk").select("nehnutelnost_id,pocet").in("nehnutelnost_id", ids).gte("den", odIso) : prazdne,
-    sb.from("web_zdroje").select("zdroj,pocet").eq("web_id", WEB.id).gte("den", odIso).then(function (x) { return x.error ? { data: [] } : x; }),
-    sb.from("web_kliky").select("den,typ,ponuka,pocet").eq("web_id", WEB.id).gte("den", od2Iso).then(function (x) { return x.error ? { data: [] } : x; })
-  ]).then(function (r) {
+  var kq = sb.from("web_kontakty").select("*").eq("web_id", WEB.id).order("vytvorene", { ascending: false }).limit(300);
+  if (o.od) { var dp = new Date(o.do); dp.setDate(dp.getDate() + 1); kq = kq.gte("vytvorene", o.od.toISOString()).lt("vytvorene", dp.toISOString()); }
+  Promise.all([sb.rpc("web_statistiky", { p_web_id: WEB.id, p_od: o.od ? isoDen(o.od) : null, p_do: isoDen(o.do), p_ponuky: ids }), kq]).then(function (r) {
     if (r[0].error || r[1].error) throw r[0].error || r[1].error;
-    var den = {}, pred = 0; (r[0].data || []).forEach(function (x) { if (x.den >= odIso) den[x.den] = x.pocet; else pred += x.pocet; });
-    var VIS = Array.from({ length: 30 }, function (_, i) { var d = new Date(od); d.setDate(od.getDate() + i); return den[isoDen(d)] || 0; });
-    var K = r[1].data || [], K30 = K.filter(function (k) { return new Date(k.vytvorene) >= od; }), Kpred = K.filter(function (k) { var t = new Date(k.vytvorene); return t >= od2 && t < od; }).length;
-    var tot = VIS.reduce(function (a, b) { return a + b; }, 0);
-    var pz = {}; (r[2].data || []).forEach(function (x) { pz[x.nehnutelnost_id] = (pz[x.nehnutelnost_id] || 0) + x.pocet; });
-    var ZD = {}, zdTot = 0; (r[3].data || []).forEach(function (x) { ZD[x.zdroj] = (ZD[x.zdroj] || 0) + x.pocet; zdTot += x.pocet; });
-    var KL = { tel: 0, wa: 0, mail: 0 }, klPred = 0, kp = {}; (r[4].data || []).forEach(function (x) { if (x.den < odIso) { klPred += x.pocet; return; } KL[x.typ] = (KL[x.typ] || 0) + x.pocet; if (x.ponuka) kp[x.ponuka] = (kp[x.ponuka] || 0) + x.pocet; });
-    var klTot = KL.tel + KL.wa + KL.mail, uspech = tot ? Math.min(100, Math.round((K30.length + klTot) / tot * 1000) / 10) : 0;
-    var top = (W.CTX.ponuky || []).filter(function (x) { return pz[x.id] || kp[x.id]; }).sort(function (a, b) { return (pz[b.id] || 0) - (pz[a.id] || 0) || (kp[b.id] || 0) - (kp[a.id] || 0); }).slice(0, 5);
-    var odh = K30.filter(function (k) { return k.zdroj === "odhad"; }).length, obh = K30.filter(function (k) { return k.zdroj === "obhliadka"; }).length;
+    var D = r[0].data || {}, od = zIso(D.od) || o.od || dnes0(), dd = zIso(D.do) || o.do, N = Math.round((dd - od) / 864e5) + 1, porovnaj = OBD.typ !== "vsetko";
+    var den = {}; (D.dni || []).forEach(function (x) { den[x[0]] = x[1]; });
+    var VIS = Array.from({ length: N }, function (_, i) { var d = new Date(od); d.setDate(od.getDate() + i); return den[isoDen(d)] || 0; });
+    var tot = VIS.reduce(function (a, b) { return a + b; }, 0), pred = +D.navstevy_pred || 0;
+    var KK = D.kontakty || {}, kTot = Object.keys(KK).reduce(function (a, k) { return a + (+KK[k] || 0); }, 0), Kpred = +D.kontakty_pred || 0, K = r[1].data || [];
+    var pz = D.ponuky || {}, kp = D.kliky_ponuky || {}, ZD = D.zdroje || {}, zdTot = Object.keys(ZD).reduce(function (a, k) { return a + (+ZD[k] || 0); }, 0);
+    var KL = { tel: +((D.kliky || {}).tel) || 0, wa: +((D.kliky || {}).wa) || 0, mail: +((D.kliky || {}).mail) || 0 }, klTot = KL.tel + KL.wa + KL.mail, klPred = +D.kliky_pred || 0;
+    var uspech = tot ? Math.min(100, Math.round((kTot + klTot) / tot * 1000) / 10) : 0;
+    var top = (W.CTX.ponuky || []).filter(function (x) { return pz[x.id] || kp[x.id]; }).sort(function (a, b) { return (pz[b.id] || 0) - (pz[a.id] || 0) || (kp[b.id] || 0) - (kp[a.id] || 0); }).slice(0, 8);
+    var odh = +KK.odhad || 0, obh = +KK.obhliadka || 0, zt = porovnaj ? (N === 1 ? "oproti predošlému dňu" : "oproti predošlým " + N + " dňom") : "";
     var NAZ = { odhad: "Odhad ceny", strazca: "Strážca ponúk", obhliadka: "Obhliadka", callback: "Zavolať späť", dotaznik: "Dotazník", ebook: "E-book", kontakt: "Správa" };
-    var W2 = 640, H2 = 220, pl = 40, pr = 14, pt = 14, pb = 28, mx = Math.max(4, Math.ceil(Math.max.apply(null, VIS) / 4) * 4);
-    var sx = function (i) { return pl + i * (W2 - pl - pr) / 29; }, sy = function (v) { return pt + (H2 - pt - pb) * (1 - v / mx); };
-    var dl = function (i) { var d = new Date(od); d.setDate(od.getDate() + i); return d.getDate() + ". " + (d.getMonth() + 1) + "."; };
-    var line = VIS.map(function (v, i) { return (i ? "L" : "M") + sx(i).toFixed(1) + " " + sy(v).toFixed(1); }).join(" ");
+    // graf: krátke obdobie po dňoch, dlhšie po týždňoch, veľmi dlhé po mesiacoch
+    var gr = N > 400 ? "m" : N > 92 ? "t" : "d", B = [];
+    if (gr === "d") VIS.forEach(function (v, i) { var d = new Date(od); d.setDate(od.getDate() + i); B.push({ v: v, l: d.getDate() + ". " + (d.getMonth() + 1) + ".", t: d.getDate() + ". " + (d.getMonth() + 1) + ". " + d.getFullYear() }); });
+    else if (gr === "t") for (var i = 0; i < N; i += 7) { var a1 = new Date(od); a1.setDate(od.getDate() + i); var a2 = new Date(od); a2.setDate(od.getDate() + Math.min(N - 1, i + 6)); B.push({ v: VIS.slice(i, i + 7).reduce(function (a, b) { return a + b; }, 0), l: a1.getDate() + ". " + (a1.getMonth() + 1) + ".", t: a1.getDate() + ". " + (a1.getMonth() + 1) + ". – " + a2.getDate() + ". " + (a2.getMonth() + 1) + ". " + a2.getFullYear() }); }
+    else VIS.forEach(function (v, i) { var d = new Date(od); d.setDate(od.getDate() + i); var k = d.getFullYear() + "-" + d.getMonth(), last = B[B.length - 1]; if (!last || last.k !== k) B.push({ k: k, v: v, l: (d.getMonth() + 1) + "/" + String(d.getFullYear()).slice(2), t: MES[d.getMonth()] + " " + d.getFullYear() }); else last.v += v; });
+    var L = B.length, W2 = 640, H2 = 220, pl = 40, pr = 14, pt = 14, pb = 28, mx = Math.max(4, Math.ceil(Math.max.apply(null, B.map(function (b) { return b.v; })) / 4) * 4);
+    var sx = function (i) { return L < 2 ? (pl + W2 - pr) / 2 : pl + i * (W2 - pl - pr) / (L - 1); }, sy = function (v) { return pt + (H2 - pt - pb) * (1 - v / mx); };
+    var line = B.map(function (b, i) { return (i ? "L" : "M") + sx(i).toFixed(1) + " " + sy(b.v).toFixed(1); }).join(" ");
     var grid = [0, mx / 4, mx / 2, mx * 3 / 4, mx].map(function (v) { return '<line class="g" x1="' + pl + '" x2="' + (W2 - pr) + '" y1="' + sy(v) + '" y2="' + sy(v) + '"/><text class="t" x="' + (pl - 8) + '" y="' + (sy(v) + 4) + '" font-size="11" text-anchor="end">' + v + "</text>"; }).join("");
-    var xl = [0, 7, 14, 21, 29].map(function (i) { return '<text class="t" x="' + sx(i) + '" y="' + (H2 - 8) + '" font-size="11" text-anchor="' + (i === 0 ? "start" : i === 29 ? "end" : "middle") + '">' + dl(i) + "</text>"; }).join("");
+    var xi = L < 2 ? [0] : [0, 0.25, 0.5, 0.75, 1].map(function (f) { return Math.round(f * (L - 1)); }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+    var xl = xi.map(function (i) { return '<text class="t" x="' + sx(i) + '" y="' + (H2 - 8) + '" font-size="11" text-anchor="' + (L < 2 ? "middle" : i === 0 ? "start" : i === L - 1 ? "end" : "middle") + '">' + B[i].l + "</text>"; }).join("");
+    var nav = function (n) { return n === 1 ? " návšteva" : n > 1 && n < 5 ? " návštevy" : " návštev"; };
     var TR = T.trk();
-    el.innerHTML = '<div class="dash"><div class="dh"><div><div class="lab">Posledných 30 dní</div><h2>Štatistiky webu</h2></div>' + (WEB.zverejnene_kedy ? "" : '<span class="tagx">Web ešte nie je zverejnený</span>') + "</div>" +
+    el.innerHTML = '<div class="dash"><div class="dh"><div><div class="lab">' + obdNazov(N) + " · " + datTxt(od) + (N > 1 ? " – " + datTxt(dd) : "") + '</div><h2>Štatistiky webu</h2></div>' + (WEB.zverejnene_kedy ? "" : '<span class="tagx">Web ešte nie je zverejnený</span>') + "</div>" + obdBar({ od: od, do: dd }) +
       '<div class="dash-mer"><span>Google Analytics: <b>' + (TR.ga ? "napojené" : "nenapojené") + "</b></span><span>Meta Pixel: <b>" + (TR.fb ? "napojený" : "nenapojený") + '</b></span><button type="button" class="b b-soft b-sm" data-ckgo="makler|f-gdpr-gaId">' + (TR.any ? "Upraviť" : "Napojiť Google Analytics alebo Meta Pixel") + "</button></div>" +
-      '<div class="kpis"><div class="kpi"><small>Návštevy webu</small><b>' + T.fmt(tot) + "</b>" + zmena(tot, pred) + "</div>" +
-      '<div class="kpi"><small>Kontakty z formulárov</small><b>' + K30.length + "</b>" + zmena(K30.length, Kpred) + (odh || obh ? "<em>" + [odh ? odh + (odh === 1 ? " odhad ceny" : odh < 5 ? " odhady ceny" : " odhadov ceny") : "", obh ? obh + (obh === 1 ? " obhliadka" : obh < 5 ? " obhliadky" : " obhliadok") : ""].filter(Boolean).join(", ") + "</em>" : "") + "</div>" +
-      '<div class="kpi"><small>Kliky na kontakt</small><b>' + klTot + "</b>" + zmena(klTot, klPred) + "<em>telefón, WhatsApp, e-mail</em></div>" +
+      '<div class="kpis"><div class="kpi"><small>Návštevy webu</small><b>' + T.fmt(tot) + "</b>" + (porovnaj ? zmena(tot, pred, zt) : "") + "</div>" +
+      '<div class="kpi"><small>Kontakty z formulárov</small><b>' + T.fmt(kTot) + "</b>" + (porovnaj ? zmena(kTot, Kpred, zt) : "") + (odh || obh ? "<em>" + [odh ? odh + (odh === 1 ? " odhad ceny" : odh < 5 ? " odhady ceny" : " odhadov ceny") : "", obh ? obh + (obh === 1 ? " obhliadka" : obh < 5 ? " obhliadky" : " obhliadok") : ""].filter(Boolean).join(", ") + "</em>" : "") + "</div>" +
+      '<div class="kpi"><small>Kliky na kontakt</small><b>' + T.fmt(klTot) + "</b>" + (porovnaj ? zmena(klTot, klPred, zt) : "") + "<em>telefón, WhatsApp, e-mail</em></div>" +
       '<div class="kpi"><small>Úspešnosť webu</small><b>' + String(uspech).replace(".", ",") + ' %</b><em>' + (tot ? "návštev skončilo kontaktom alebo klikom" : "keď prídu prvé návštevy") + "</em></div></div>" +
-      '<div class="dgrid"><div class="card2"><h3>Návštevy po dňoch</h3>' + (tot ? '<div class="chart"><svg viewBox="0 0 ' + W2 + " " + H2 + '" role="img" aria-label="Návštevy webu za posledných 30 dní, spolu ' + tot + '">' + grid + '<path class="ar" d="' + line + " L" + sx(29) + " " + sy(0) + " L" + sx(0) + " " + sy(0) + ' Z"/><path class="ln" d="' + line + '" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' + xl +
-        '<circle class="dt" cx="' + sx(29) + '" cy="' + sy(VIS[29]) + '" r="5" stroke-width="2"/><line class="xh" id="vx" x1="0" x2="0" y1="' + pt + '" y2="' + (H2 - pb) + '" stroke-dasharray="3 3" visibility="hidden"/><circle class="dt" id="vd" r="5" stroke-width="2" visibility="hidden"/><rect x="' + pl + '" y="0" width="' + (W2 - pl - pr) + '" height="' + (H2 - pb) + '" fill="transparent" id="vhit"/></svg><div class="tip" id="vtip" hidden></div></div>'
-        : '<div class="prazdny">Zatiaľ žiadne návštevy. Počítajú sa len návštevy zverejneného webu, tvoje vlastné nie.</div>') + "</div>" +
+      '<div class="dgrid"><div class="card2"><h3>Návštevy ' + (gr === "d" ? "po dňoch" : gr === "t" ? "po týždňoch" : "po mesiacoch") + "</h3>" + (tot ? '<div class="chart"><svg viewBox="0 0 ' + W2 + " " + H2 + '" role="img" aria-label="Návštevy webu ' + esc(datTxt(od) + " – " + datTxt(dd)) + ", spolu " + tot + '">' + grid + (L > 1 ? '<path class="ar" d="' + line + " L" + sx(L - 1) + " " + sy(0) + " L" + sx(0) + " " + sy(0) + ' Z"/><path class="ln" d="' + line + '" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' : "") + xl +
+        '<circle class="dt" cx="' + sx(L - 1) + '" cy="' + sy(B[L - 1].v) + '" r="5" stroke-width="2"/><line class="xh" id="vx" x1="0" x2="0" y1="' + pt + '" y2="' + (H2 - pb) + '" stroke-dasharray="3 3" visibility="hidden"/><circle class="dt" id="vd" r="5" stroke-width="2" visibility="hidden"/><rect x="' + pl + '" y="0" width="' + (W2 - pl - pr) + '" height="' + (H2 - pb) + '" fill="transparent" id="vhit"/></svg><div class="tip" id="vtip" hidden></div></div>'
+        : '<div class="prazdny">V tomto období žiadne návštevy. Počítajú sa len návštevy zverejneného webu, tvoje vlastné nie.</div>') + "</div>" +
       zdrojeHtml(ZD, zdTot, tot) + "</div>" +
-      '<div class="dgrid"><div class="card2"><h3>Najsledovanejšie ponuky</h3>' + (top.length ? '<div class="hrow hhead"><span>Ponuka</span><span>Zobrazenia</span><span>Kliky</span></div>' + top.map(function (x) { return '<div class="hrow"><span>' + esc(x.t) + "</span><b>" + (pz[x.id] || 0) + "</b><b>" + (kp[x.id] || 0) + "</b></div>"; }).join("") : '<div class="prazdny">Zatiaľ bez zobrazení.</div>') + "</div>" +
+      '<div class="dgrid"><div class="card2"><h3>Najsledovanejšie ponuky</h3>' + (top.length ? '<div class="hrow hhead"><span>Ponuka</span><span>Zobrazenia</span><span>Kliky</span></div>' + top.map(function (x) { return '<div class="hrow"><span>' + esc(x.t) + "</span><b>" + (pz[x.id] || 0) + "</b><b>" + (kp[x.id] || 0) + "</b></div>"; }).join("") : '<div class="prazdny">V tomto období bez zobrazení.</div>') + "</div>" +
       klikyHtml(KL, klTot) + "</div>" +
       strazcaHtml() +
-      '<div class="card2"><h3>Kontakty z webu</h3><p class="sub">Každý kontakt ti príde aj do zvončeka v aplikácii. Odpovedať môžeš jedným klikom, text je pripravený a pred odoslaním ho ešte uvidíš. Strážca ponúk sa zapíše medzi dopyty v Klientoch.</p>' +
+      '<div class="card2"><h3>Kontakty z webu</h3><p class="sub">Kontakty za vybrané obdobie' + (K.length >= 300 ? " (posledných 300)" : "") + '. Každý kontakt ti príde aj do zvončeka v aplikácii. Odpovedať môžeš jedným klikom, text je pripravený a pred odoslaním ho ešte uvidíš. Strážca ponúk sa zapíše medzi dopyty v Klientoch.</p>' +
       (K.length ? '<div class="tbl"><table><thead><tr><th>Kedy</th><th>Meno</th><th>Kontakt</th><th>Odkiaľ</th><th>Čo chce</th><th>Odpovedať</th><th></th></tr></thead><tbody>' + K.map(function (k) {
         var pon = k.nehnutelnost_id && (W.CTX.ponuky || []).find(function (x) { return x.id === k.nehnutelnost_id; });
         return "<tr><td class=\"num\">" + esc(cas(k.vytvorene)) + "</td><td>" + esc(k.meno || "–") + "</td><td>" + esc(k.kontakt) + '</td><td><span class="src' + (k.vybavene ? "" : " new") + '">' + esc(NAZ[k.zdroj] || k.zdroj) + "</span></td><td>" + esc(k.co || "") + (pon ? '<div class="sub">' + esc(pon.t) + "</div>" : "") +
           '</td><td><div class="odp">' + (window.TYPEK_ODPOVED ? TYPEK_ODPOVED.html(k, odpovedMakler(), pon && pon.t, "b b-soft b-sm") : "") + '</div></td><td><button type="button" class="b b-soft b-sm" data-vyb="' + k.id + '" data-v="' + (k.vybavene ? 0 : 1) + '">' + (k.vybavene ? "Vrátiť" : "Vybavené") + "</button></td></tr>";
-      }).join("") + "</tbody></table></div>" : '<div class="prazdny">Zatiaľ žiadne kontakty. Prídu, keď návštevník vyplní formulár na zverejnenom webe.</div>') + "</div></div>";
+      }).join("") + "</tbody></table></div>" : '<div class="prazdny">V tomto období žiadne kontakty. Prídu, keď návštevník vyplní formulár na zverejnenom webe.</div>') + "</div></div>";
     var hit = $("vhit"); if (!hit) return; var svg = hit.ownerSVGElement, tip = $("vtip");
-    hit.addEventListener("pointermove", function (e) { var r2 = svg.getBoundingClientRect(), x = (e.clientX - r2.left) * W2 / r2.width, i = Math.max(0, Math.min(29, Math.round((x - pl) / ((W2 - pl - pr) / 29))));
-      $("vx").setAttribute("x1", sx(i)); $("vx").setAttribute("x2", sx(i)); $("vx").setAttribute("visibility", "visible"); $("vd").setAttribute("cx", sx(i)); $("vd").setAttribute("cy", sy(VIS[i])); $("vd").setAttribute("visibility", "visible");
-      tip.hidden = false; tip.textContent = dl(i) + ": " + VIS[i] + (VIS[i] === 1 ? " návšteva" : VIS[i] < 5 && VIS[i] > 0 ? " návštevy" : " návštev"); tip.style.left = (sx(i) * r2.width / W2) + "px"; tip.style.top = (sy(VIS[i]) * r2.height / H2) + "px"; });
+    hit.addEventListener("pointermove", function (e) { var r2 = svg.getBoundingClientRect(), x = (e.clientX - r2.left) * W2 / r2.width, i = L < 2 ? 0 : Math.max(0, Math.min(L - 1, Math.round((x - pl) / ((W2 - pl - pr) / (L - 1)))));
+      $("vx").setAttribute("x1", sx(i)); $("vx").setAttribute("x2", sx(i)); $("vx").setAttribute("visibility", "visible"); $("vd").setAttribute("cx", sx(i)); $("vd").setAttribute("cy", sy(B[i].v)); $("vd").setAttribute("visibility", "visible");
+      tip.hidden = false; tip.textContent = B[i].t + ": " + T.fmt(B[i].v) + nav(B[i].v); tip.style.left = (sx(i) * r2.width / W2) + "px"; tip.style.top = (sy(B[i].v) * r2.height / H2) + "px"; });
     hit.addEventListener("pointerleave", function () { tip.hidden = true; $("vx").setAttribute("visibility", "hidden"); $("vd").setAttribute("visibility", "hidden"); });
-  }).catch(function (e) { el.innerHTML = '<div class="dash"><div class="prazdny">Prehľad sa nepodarilo načítať: ' + esc(chybaText(e)) + "</div></div>"; });
+  }).catch(function (e) { el.innerHTML = '<div class="dash"><div class="dh"><div><div class="lab">' + obdNazov() + '</div><h2>Štatistiky webu</h2></div></div>' + obdBar(o) + '<div class="prazdny">Štatistiky sa nepodarilo načítať: ' + esc(chybaText(e)) + "</div></div>"; });
 }
 
 // počet návštev za 30 dní na tlačidle Štatistiky
@@ -528,12 +547,13 @@ function nacitajOdznak() {
   });
 }
 function isoDen(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
-// zmena oproti predošlým 30 dňom
-function zmena(teraz, predtym) {
+// zmena oproti predošlému rovnako dlhému obdobiu
+function zmena(teraz, predtym, txt) {
+  txt = txt || "oproti predošlým 30 dňom";
   if (!teraz && !predtym) return "";
-  if (!predtym) return '<span class="zm hore">nové oproti predošlým 30 dňom</span>';
+  if (!predtym) return '<span class="zm hore">nové ' + txt + "</span>";
   var p = Math.round((teraz - predtym) / predtym * 100);
-  return '<span class="zm ' + (p > 0 ? "hore" : p < 0 ? "dole" : "") + '">' + (p > 0 ? "+" : p < 0 ? "−" : "±") + Math.abs(p) + " % oproti predošlým 30 dňom</span>";
+  return '<span class="zm ' + (p > 0 ? "hore" : p < 0 ? "dole" : "") + '">' + (p > 0 ? "+" : p < 0 ? "−" : "±") + Math.abs(p) + " % " + txt + "</span>";
 }
 var ZDROJE_N = [["google", "Google"], ["facebook", "Facebook"], ["instagram", "Instagram"], ["qr", "QR kód (letáky, tabule)"], ["email", "E-mail"], ["vyhladavac", "Iné vyhľadávače"], ["iny", "Iné weby"], ["priamo", "Priamo"]];
 function zdrojeHtml(ZD, zdTot, tot) {
@@ -559,6 +579,8 @@ function strazcaHtml() {
 document.addEventListener("click", function (e) {
   var t = e.target.closest("button"); if (!t || t.closest("#site") || t.closest("#wlb")) return; var d = t.dataset, s = S();
   if (d.ckgo) { goFix(d.ckgo); return; }
+  if (d.obd) { if (d.obd === "vlastne" && OBD.typ !== "vlastne") { var o0 = obdobie(); OBD.od = isoDen(o0.od || dnes0()); OBD.do = isoDen(o0.do); } OBD.typ = d.obd; renderDash(); return; }
+  if (d.obdok !== undefined) { var vo = $("obdOd").value, vd = $("obdDo").value; if (!vo || !vd) { toast("Vyber oba dátumy", true); return; } if (vo > vd) { var tx = vo; vo = vd; vd = tx; } OBD.od = vo; OBD.do = vd; renderDash(); return; }
   if (d.view) { setView(d.view); return; }
   if (d.zverejnit !== undefined) { zverejnit(); return; }
   if (d.qr) { stiahniQr(d.qr); return; }

@@ -448,7 +448,7 @@
 .site .gbadge .gb-st{color:#E7A92A;letter-spacing:1px;font-size:13px}
 .site .gbadge b{font-family:var(--fh);font-weight:var(--fhw);font-size:16px}
 .site .gbadge span:last-child{color:var(--muted)}
-.t-luxus .hero .gbadge,.t-galeria .hero .gbadge{background:rgba(0,0,0,.28);box-shadow:0 0 0 1px rgba(255,255,255,.35);color:#fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.t-luxus .hero .gbadge,.t-galeria .hero .gbadge{background:rgba(0,0,0,.42);box-shadow:0 0 0 1px rgba(255,255,255,.35);color:#fff}
 .t-galeria .hero .gbadge{background:color-mix(in srgb,var(--surf) 70%,transparent);color:var(--fg);box-shadow:0 0 0 1px var(--line)}
 .t-luxus .hero .gbadge span:last-child{color:rgba(255,255,255,.85)}
 .t-luxus .hero .gbadge{align-self:center}
@@ -520,6 +520,24 @@
 .t-luxus .hero.pos-l .facts-pr{align-self:flex-start}.t-luxus .hero.pos-r .facts-pr{align-self:flex-end}
 .t-vizitka .hero .btns,.t-galeria .hero .box .btns{margin-top:16px}
 .t-vizitka .hero .btns{justify-content:center}
+/* pás s číslami hneď pod úvodom */
+.site .cisla{padding-block:clamp(22px,3.6cqi,40px);border-bottom:1px solid var(--line);background:var(--bg)}
+.site .facts.cp{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:0;width:100%;max-width:1040px;margin-inline:auto}
+.site .facts.cp.n1{--n:1}.site .facts.cp.n2{--n:2}.site .facts.cp.n3{--n:3}.site .facts.cp.n4{--n:4}
+.site .facts.cp div{align-items:center;text-align:center;padding:4px clamp(10px,2cqi,26px)}
+.site .facts.cp div + div{border-left:1px solid var(--line)}
+.site .facts.cp b{font-size:clamp(30px,4.6cqi,48px);line-height:1.05;color:var(--at);letter-spacing:var(--fhls)}
+.site .facts.cp span{font-size:13.5px;margin-top:6px;max-width:22ch;line-height:1.4}
+.site .cisla .facts-pr{display:block;margin:0 auto}
+.t-mestska .cisla{border-bottom:2px solid var(--fg)}
+.t-mestska .facts.cp div + div{border-left:2px solid var(--fg)}
+.t-mestska .facts.cp b{color:var(--fg)}
+.t-mestska .facts.cp span{text-transform:uppercase;letter-spacing:.06em;font-size:11.5px;font-weight:650}
+.t-rodinna .cisla{border-bottom:0}
+.t-rodinna .facts.cp div + div{border-left:0}
+.t-rodinna .facts.cp{gap:12px}
+.t-rodinna .facts.cp div{background:var(--surf);border-radius:calc(var(--r) * 1.6);padding:18px 12px}
+@container (max-width:560px){.site .facts.cp.n3,.site .facts.cp.n4{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:20px}.site .facts.cp.n4 div:nth-child(3),.site .facts.cp.n3 div:nth-child(3){border-left:0}.site .facts.cp.n3 div:nth-child(3){grid-column:1 / -1}.site .facts.cp b{font-size:32px}}
 /* Prečo so mnou */
 .site .preco{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,2cqi,20px)}
 .site .preco.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -576,7 +594,7 @@
 /* pätička: údaje firmy */
 .site footer .ffirma{flex-basis:100%;margin:0;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px}
 .site .mbar-wrap{display:none;position:sticky;bottom:0;z-index:25;padding:0 10px calc(10px + env(safe-area-inset-bottom,0px));pointer-events:none}
-.site .mbar{pointer-events:auto;display:flex;gap:6px;padding:6px;border-radius:999px;background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 9%,transparent),0 18px 36px -16px rgba(0,0,0,.5)}
+.site .mbar{pointer-events:auto;display:flex;gap:6px;padding:6px;border-radius:999px;background:color-mix(in srgb,var(--bg) 96%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 9%,transparent),0 18px 36px -16px rgba(0,0,0,.5)}
 .site .mbar a,.site .mbar button{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 10px;border-radius:999px;border:0;background:var(--surf);color:var(--fg);font:700 14px/1 var(--fb);cursor:pointer;white-space:nowrap}
 .site .mbar .mbar-hl{background:var(--a);color:var(--on-a);flex-grow:1.3}
 .site .mbar svg{width:18px;height:18px;flex:none}
@@ -595,14 +613,15 @@
 @keyframes slovo{from{translate:0 112%;rotate:3deg}to{translate:none;rotate:none}}
 /* úvod: médium sa zľahka hýbe za myšou a pri skrolovaní ide pomalšie (hĺbka) */
 .site.anim .hero{--mx:0;--my:0;--hp:0}
-.site.anim .t-luxus .hero,.site.anim .t-mestska .hero .img{overflow:hidden}
+.t-luxus .hero,.t-mestska .hero .img{overflow:hidden}
 .site.anim .hero .hm{scale:1.09;translate:calc(var(--mx) * -16px) calc(var(--my) * -11px + var(--hp) * 14%);will-change:translate}
-.site.anim .t-luxus .hero .in,.site.anim .t-galeria .hero .box{translate:calc(var(--mx) * 7px) calc(var(--my) * 5px + var(--hp) * -70px);opacity:calc(1 - var(--hp) * 1.15)}
-.site.anim .t-mestska .hero .blk h1{translate:calc(var(--mx) * 6px) 0}
-.site.anim.mys .t-susedska .port,.site.anim.mys .t-rodinna .blob,.site.anim.mys .t-vizitka .hero > .mono{transform:perspective(1100px) rotateY(calc(var(--mx) * 7deg)) rotateX(calc(var(--my) * -6deg));transform-style:preserve-3d}
-.site.anim .t-susedska .hero > div:first-child,.site.anim .t-rodinna .hero > div:first-child{translate:0 calc(var(--hp) * -36px)}
-.site.anim.mys .t-rodinna .blob .badge2{translate:calc(var(--mx) * -20px) calc(var(--my) * -14px)}
-.site.anim .t-rodinna .blob .shape{animation:morph 16s ease-in-out infinite alternate}
+.site.anim.t-luxus .hero .in{translate:calc(var(--mx) * 7px) calc(var(--my) * 5px + var(--hp) * -50px)}
+.site.anim.t-galeria .hero .box{translate:calc(var(--mx) * 7px) calc(var(--my) * 5px)}
+.site.anim.t-mestska .hero .blk h1{translate:calc(var(--mx) * 6px) 0}
+.site.anim.mys.t-susedska .port,.site.anim.mys.t-rodinna .blob,.site.anim.mys.t-vizitka .hero > .mono{transform:perspective(1100px) rotateY(calc(var(--mx) * 7deg)) rotateX(calc(var(--my) * -6deg));transform-style:preserve-3d}
+.site.anim.t-susedska .hero > div:first-child,.site.anim.t-rodinna .hero > div:first-child{translate:0 calc(var(--hp) * -36px)}
+.site.anim.mys.t-rodinna .blob .badge2{translate:calc(var(--mx) * -20px) calc(var(--my) * -14px)}
+.site.anim.t-rodinna .blob .shape{animation:morph 16s ease-in-out infinite alternate}
 @keyframes morph{0%{border-radius:58% 42% 46% 54% / 52% 44% 56% 48%}50%{border-radius:44% 56% 60% 40% / 46% 58% 42% 54%}100%{border-radius:52% 48% 38% 62% / 60% 40% 58% 42%}}
 
 /* odkrývanie pri skrolovaní (triedy pridáva skript až po načítaní – bez neho je všetko viditeľné) */

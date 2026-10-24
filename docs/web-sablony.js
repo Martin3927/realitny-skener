@@ -372,6 +372,8 @@ function facts(cls, bezRokov) {
   if (!f.length) return cls && W.editor && !W.EDIT && !String(s.years).trim() ? '<button type="button" class="facts-pr" data-edgo="makler|f-years">+ Sem pridaj čísla: roky v realitách, počet predajov…</button>' : "";
   return '<div class="facts' + (cls ? " " + cls : "") + (f.length > 2 ? " f4" : "") + " n" + Math.min(4, f.length) + '">' + f.slice(0, 4).join("") + "</div>";
 }
+// pás s číslami hneď pod úvodom (roky, predaje, vlastné čísla)
+function cislaPas() { var f = facts("cp"); return f ? '<div class="cisla"><div class="w">' + f + "</div></div>" : ""; }
 // hlavné tlačidlo v úvode podľa výberu makléra
 var HBTN = { ocenenie: ["Zistiť hodnotu zdarma", "ocenenie"], predat: ["Chcem predať", "ocenenie"], ponuky: ["Pozrieť ponuky", "ponuky"], zavolat: ["Zavolajte mi", "callback"], vykup: ["Chcem výkup", "vykup"], ebook: ["Stiahnuť e-book", "stiahnut"], kontakt: ["Napíšte mi", "kontakt"] };
 function hlavneTl() { var s = W.S, h = HBTN[s.heroBtn]; if (!h) return ""; return '<button type="button" class="btn" data-go="' + (s.on[h[1]] ? h[1] : "kontakt") + '">' + esc(String(s.heroBtnTx || "").trim() || h[0]) + "</button>"; }
@@ -418,17 +420,17 @@ function hero(P) {
   var first = String(s.name || "").split(" ")[0];
   switch (s.tpl) {
     case "galeria": return '<div class="hero pos-' + pozicia() + '">' + heroMedia(P) + '<div class="box"><div class="who">' + av() + "<div><b>" + esc(s.name) + '</b><div class="muted" style="font-size:14px">' + esc(s.area) + "</div></div></div>" + h1 + lead +
-      heroHladaj() + hbRow + facts("hf") + gBadge() + "</div></div>";
-    case "vizitka": return '<div class="w hero">' + av() + '<span class="eb">' + (zena() ? "Realitná maklérka" : "Realitný maklér") + (s.office ? " · " + esc(s.office) : "") + "</span><h1>" + esc(s.name) + "</h1>" + lead + facts("hf") +
+      heroHladaj() + hbRow + gBadge() + "</div></div>";
+    case "vizitka": return '<div class="w hero">' + av() + '<span class="eb">' + (zena() ? "Realitná maklérka" : "Realitný maklér") + (s.office ? " · " + esc(s.office) : "") + "</span><h1>" + esc(s.name) + "</h1>" + lead +
       '<div class="pills">' + (s.phone ? '<a class="num" href="tel:' + esc(String(s.phone).replace(/[^\d+]/g, "")) + '">' + esc(s.phone) + "</a>" : "") + (s.email ? '<a href="mailto:' + esc(s.email) + '">' + esc(s.email) + "</a>" : "") + (s.wa ? '<a href="https://wa.me/' + waNum(s.wa) + '" target="_blank" rel="noopener">WhatsApp</a>' : "") + "</div>" + hbRow + gBadge() + socRow() + "</div>";
     case "luxus": return '<div class="hero pos-' + pozicia() + '">' + heroMedia(P) + '<div class="scrim"></div><div class="in"><span class="eb">' + esc(s.name) + " · " + esc(s.area) + "</span>" + h1 + lead +
-      '<div class="btns">' + (hb && hc !== "ponuky" ? hb + (hc === "ocenenie" ? '<button type="button" class="btn gh" data-go="ponuky">Pozrieť ponuky</button>' : '<button type="button" class="btn gh" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Ocenenie nehnuteľnosti</button>') : '<button type="button" class="btn" data-go="ponuky">' + (hb ? esc(String(s.heroBtnTx || "").trim() || "Pozrieť ponuky") : "Pozrieť ponuky") + '</button><button type="button" class="btn gh" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Ocenenie nehnuteľnosti</button>') + "</div>" + gBadge() + facts("hf") + "</div></div>";
-    case "rodinna": { var a = avg(), y = String(s.years).trim();
-      return '<div class="w hero"><div><span class="eb">Realitný maklér · ' + esc(s.area) + '</span><h1><span class="hl" ' + ed("heroTx.rodinna.t", 1) + ">" + esc(T.t) + "</span></h1>" + lead + btns + gBadge() + facts("hf", !!y) + "</div>" +
-        '<div class="blob"><div class="shape">' + av() + "</div>" + (y || a ? '<div class="badge2"><b class="num">' + (y ? esc(y) + " rokov" : a + " z 5") + "</b><span>" + (y ? "v realitách" : "priemer hodnotení") + "</span></div>" : "") + "</div></div>"; }
-    case "mestska": return '<div class="hero"><div class="blk"><span class="eb">' + esc(s.name) + " · " + esc(s.area) + "</span><div>" + h1 + "</div><div>" + lead + '<div class="btns" style="margin-top:18px">' + (hb || '<button type="button" class="btn" data-go="ponuky">Pozrieť ponuky</button>') + "</div>" + gBadge() + facts("hf") + '</div></div><div class="img">' + heroMedia(P, "mesto") + "</div></div>";
+      '<div class="btns">' + (hb && hc !== "ponuky" ? hb + (hc === "ocenenie" ? '<button type="button" class="btn gh" data-go="ponuky">Pozrieť ponuky</button>' : '<button type="button" class="btn gh" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Ocenenie nehnuteľnosti</button>') : '<button type="button" class="btn" data-go="ponuky">' + (hb ? esc(String(s.heroBtnTx || "").trim() || "Pozrieť ponuky") : "Pozrieť ponuky") + '</button><button type="button" class="btn gh" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Ocenenie nehnuteľnosti</button>') + "</div>" + gBadge() + "</div></div>";
+    case "rodinna": { var a = avg();
+      return '<div class="w hero"><div><span class="eb">Realitný maklér · ' + esc(s.area) + '</span><h1><span class="hl" ' + ed("heroTx.rodinna.t", 1) + ">" + esc(T.t) + "</span></h1>" + lead + btns + gBadge() + "</div>" +
+        '<div class="blob"><div class="shape">' + av() + "</div>" + (a ? '<div class="badge2"><b class="num">' + a + " z 5</b><span>priemer hodnotení</span></div>" : "") + "</div></div>"; }
+    case "mestska": return '<div class="hero"><div class="blk"><span class="eb">' + esc(s.name) + " · " + esc(s.area) + "</span><div>" + h1 + "</div><div>" + lead + '<div class="btns" style="margin-top:18px">' + (hb || '<button type="button" class="btn" data-go="ponuky">Pozrieť ponuky</button>') + "</div>" + gBadge() + '</div></div><div class="img">' + heroMedia(P, "mesto") + "</div></div>";
     default: return '<div class="w hero"><div><span class="eb">Realitn' + (zena() ? "á maklérka" : "ý maklér") + " · " + esc(s.area) + "</span>" + h1 + lead + btns + gBadge() + "</div>" +
-      '<div class="port' + (fotoMaklera() || fotoUkazka() ? " hasimg" : "") + '">' + av() + '<div><b style="font-size:18px">' + esc(s.name || first) + '</b><div class="muted" style="font-size:14px">' + esc(s.office) + "</div></div>" + facts("pf") + socRow() + "</div></div>";
+      '<div class="port' + (fotoMaklera() || fotoUkazka() ? " hasimg" : "") + '">' + av() + '<div><b style="font-size:18px">' + esc(s.name || first) + '</b><div class="muted" style="font-size:14px">' + esc(s.office) + "</div></div>" + socRow() + "</div></div>";
   }
 }
 
@@ -724,7 +726,7 @@ function render() {
   if (W.PAGE.v === "detail") out += detail(W.PAGE.i, P);
   else if (W.PAGE.v === "gdpr") out += gdprPage();
   else {
-    out += hero(P); var i = 0;
+    out += hero(P) + cislaPas(); var i = 0;
     s.order.forEach(function (k) {
       if (!s.on[k] || (!s.custom[k] && !R[k])) return;
       var html = s.custom[k] ? rCustom(k) : R[k](P); if (!html) return;
@@ -759,6 +761,7 @@ function render() {
 function countUp(el) {
   if (PH.sys && !W.vzdyPohyb) return;
   el.querySelectorAll("[data-count]").forEach(function (b) {
+    if (el === W.root && b.closest(".cisla")) return;
     var n = parseInt(b.dataset.count, 10); if (!(n > 0)) return; var t0 = performance.now(), dur = 1100, suf = b.dataset.suf || "", fin = b.textContent;
     function step(t) { var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); b.textContent = String(Math.round(n * e)) + suf; if (k < 1) requestAnimationFrame(step); else b.textContent = fin; }
     b.textContent = "0" + suf; requestAnimationFrame(step);
@@ -919,14 +922,21 @@ function pohyb(root) {
   // úvodný nadpis po slovách (Rodinná má zvýraznenie, tam ostáva pôvodné vysunutie)
   if (W.INTRO && !W.EDIT && W.S.tpl !== "rodinna") { var h1 = root.querySelector(".hero h1"); if (h1) phSlova(h1); }
   phOznac(root);
+  phCisla(root);
   PH.tilt = PH.mag = null;
   phTick(); phApplyMouse();
+}
+function phCisla(root) {
+  if (PH.cislaIo) PH.cislaIo.disconnect();
+  var c = root.querySelector(".cisla"); if (!c || PH.cislaHotovo || W.editor || !("IntersectionObserver" in window)) return;
+  PH.cislaIo = new IntersectionObserver(function (ent) { if (!ent.some(function (e) { return e.isIntersecting; })) return; PH.cislaIo.disconnect(); PH.cislaHotovo = true; countUp(c); }, { threshold: 0.5 });
+  PH.cislaIo.observe(c);
 }
 function phScroll() { if (!PH.raf) PH.raf = requestAnimationFrame(phTick); }
 function phTick() {
   PH.raf = 0; var root = W.root; if (!root || !phOk()) return;
   var r = root.getBoundingClientRect(), vh = window.innerHeight || 800, tot = r.height - vh;
-  root.style.setProperty("--prog", (tot > 0 ? Math.min(1, Math.max(0, -r.top / tot)) : 0).toFixed(4));
+  var fp = root.querySelector(".fprog"); if (fp) fp.style.setProperty("--prog", (tot > 0 ? Math.min(1, Math.max(0, -r.top / tot)) : 0).toFixed(4));
   var h = root.querySelector(".hero");
   if (h) { var hr = h.getBoundingClientRect(); h.style.setProperty("--hp", Math.min(1, Math.max(0, -hr.top / Math.max(1, hr.height))).toFixed(4)); root.classList.toggle("fhd-on", hr.bottom < 70 && r.top < 0); }
   else root.classList.toggle("fhd-on", r.top < -260);
