@@ -5,3 +5,4 @@ app/config.local.js
 app/config.template.js
 data.json
 dashboard_obsah.html
+.typek-cache/

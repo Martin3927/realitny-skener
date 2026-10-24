@@ -41,7 +41,7 @@ async function posli(komu: string, predmet: string, html: string, o: Moznosti = 
     host, port: Number(Deno.env.get("SMTP_PORT") || 465), secure: (Deno.env.get("SMTP_SECURE") ?? "true") !== "false",
     auth: { user: Deno.env.get("SMTP_USER"), pass: Deno.env.get("SMTP_PASS") },
   });
-  await t.sendMail({ from: `"${odMeno}" <${od}>`, to: komu, subject: predmet, html, ...(odpovedat ? { replyTo: odpovedat } : {}), ...(o.hlavicky ? { headers: o.hlavicky } : {}) });
+  await t.sendMail({ from: { name: odMeno, address: od }, to: komu, subject: predmet, html, ...(odpovedat ? { replyTo: odpovedat } : {}), ...(o.hlavicky ? { headers: o.hlavicky } : {}) });
 }
 
 const DRUH: Record<string, [string, string]> = {
@@ -282,6 +282,45 @@ async function strazcaEmaily(db: any) {
   return { ok: chyby.length === 0, odoslane, chyby };
 }
 
+// potvrdenie strážcu (dvojité prihlásenie): klient, ktorý zadal e-mail, dostane jeden e-mail s odkazom na potvrdenie;
+// ponuky mu chodia až po kliknutí. Kto nič nezadal, nič nedostane.
+const KAT: Record<string, string> = { byty: "byt", domy: "dom", pozemky: "pozemok", chaty: "chata" };
+// deno-lint-ignore no-explicit-any
+async function strazcaPotvrdenia(db: any) {
+  const { data: zoz, error } = await db.rpc("_strazca_potvrdenia", { p_limit: 20 });
+  if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const s of (zoz as any[]) ?? []) {
+    try {
+      const mk = s.makler || {}, w = s.web || {}, h = s.hlada || {};
+      const meno = String(w.name || mk.meno || "Váš maklér").trim();
+      const kancelaria = String(w.office || "").trim();
+      const email = String(w.email || mk.email || "").trim();
+      const potvrdit = WEB_URL + "potvrdit.php?t=" + encodeURIComponent(s.token);
+      const hlada = [((h.kategorie || []) as string[]).map((k) => KAT[k] || k).join(", ") || "nehnuteľnosť",
+        h.transakcia === "prenajom" ? "na prenájom" : "", ((h.obce || []) as string[]).join(", "),
+        h.cena_do ? "do " + cisloSk(h.cena_do) + "\u00a0€" : ""].filter(Boolean).join(" · ");
+      const html = `<div style="background:#f7f2e8;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#1e2a35">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;margin:0 auto"><tr><td>
+        <p style="font-size:16px;margin:0 0 10px">Dobrý deň${s.meno ? ", " + esc(s.meno) : ""},</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 14px">na webe ${esc(meno)} ste si zapli strážcu ponúk: <b>${esc(hlada)}</b>.</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 20px">Potvrďte prosím, že nové ponuky môžeme posielať na tento e-mail:</p>
+        <p style="margin:0 0 22px"><a href="${esc(potvrdit)}" style="display:inline-block;background:#1e2a35;color:#fff;font-weight:700;font-size:15px;padding:12px 22px;border-radius:999px;text-decoration:none">Áno, posielajte mi ponuky</a></p>
+        <p style="font-size:14px;line-height:1.55;margin:0">S pozdravom<br><b>${esc(meno)}</b>${kancelaria ? "<br>" + esc(kancelaria) : ""}</p>
+        <p style="font-size:12px;line-height:1.5;color:#7a828c;margin:24px 0 0;border-top:1px solid #e6dccb;padding-top:12px">Ak ste sa neprihlásili vy, tento e-mail pokojne ignorujte. Bez potvrdenia vám už nič nepríde.</p>
+        </td></tr></table></div>`;
+      await posli(s.email, "Potvrďte strážcu ponúk – " + meno, html, { odMeno: meno + (kancelaria ? " · " + kancelaria : ""), odpovedat: email });
+      odoslane++;
+    } catch (e) {
+      chyby.push(String((e as Error).message || e));
+      await db.rpc("_strazca_potvrdenie_chyba", { p_dopyt: s.dopyt_id });
+    }
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
+}
+
 async function sha256(t: string) {
   const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
   return Array.from(new Uint8Array(h)).map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -352,6 +391,7 @@ Deno.serve(async (req) => {
     }
   }
   const web = await webZiadosti(db).catch(() => 0);
+  const potvrdenia = await strazcaPotvrdenia(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
   const strazca = await strazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
-  return Response.json({ ok: true, odoslane, web, strazca });
+  return Response.json({ ok: true, odoslane, web, potvrdenia, strazca });
 });

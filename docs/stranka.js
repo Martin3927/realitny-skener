@@ -5,8 +5,9 @@
   var sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
   var q = new URLSearchParams(location.search);
   // adresa: stranka.html?m=jana-kovacova, stranka.html?jana-kovacova alebo vlastná doména
-  var adresa = q.get("m") || (location.search.replace(/^\?/, "").split("&")[0].indexOf("=") < 0 ? location.search.replace(/^\?/, "").split("&")[0] : "") ||
-    (/realitnytypek\.sk$|github\.io$|localhost|^127\./.test(location.hostname) ? "" : location.hostname.replace(/^www\./, ""));
+  // na vlastnej doméne makléra sa ukazuje vždy jeho web (parameter m sa ignoruje)
+  var vlastna = !/realitnytypek\.sk$|github\.io$|localhost|^127\./.test(location.hostname);
+  var adresa = vlastna ? location.hostname.replace(/^www\./, "") : q.get("m") || (location.search.replace(/^\?/, "").split("&")[0].indexOf("=") < 0 ? location.search.replace(/^\?/, "").split("&")[0] : "");
   var nahlad = q.get("nahlad") === "1";
   var site = document.getElementById("site");
   function chyba(t) { site.innerHTML = '<div class="nacitavam">' + t + "</div>"; }
@@ -28,7 +29,7 @@
     if (!d.nahlad) { W.adresa = d.adresa || adresa; W.domena = d.domena || ""; }
     W.formAdresa = adresa;
     // stará adresa webu (napr. z vytlačeného QR kódu) → v prehliadači sa ukáže nová
-    if (q.get("m") && d.adresa && d.adresa !== String(adresa).toLowerCase()) {
+    if (!vlastna && q.get("m") && d.adresa && d.adresa !== String(adresa).toLowerCase()) {
       try { q.set("m", d.adresa); history.replaceState(null, "", location.pathname + "?" + q.toString() + location.hash); } catch (e) { /* nič */ }
     }
     W.CTX = { ponuky: (d.ponuky || []).map(T.prevod), predane: (d.predane || []).map(T.prevod), recenzie: d.recenzie, makler: m, ukazka: false };

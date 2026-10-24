@@ -417,9 +417,9 @@ function renderDash() {
 
 function odpovedMakler() { var s = S(), m = W.CTX.makler || {}; return { meno: s.name || m.meno || "", telefon: s.phone || m.telefon || "", pohlavie: m.pohlavie }; }
 function strazcaHtml() {
-  var z = (WEB && WEB.strazcovia) || {}, n = +z.aktivni || 0, e = +z.emaily_30 || 0, c = +z.caka || 0;
-  return '<div class="card2"><h3>Strážca ponúk</h3><p class="sub">Klienti, ktorí si na webe zapli strážcu s e-mailom, dostanú tvoje nové a zlacnené ponuky automaticky, najviac raz za 12 hodín. E-mail príde s tvojím menom, odpoveď ide priamo tebe a klient sa vie kedykoľvek odhlásiť.</p>' +
-    '<div class="kpis k3"><div class="kpi"><small>Aktívni strážcovia</small><b>' + n + '</b></div><div class="kpi"><small>Ponuky poslané klientom za 30 dní</small><b>' + e + '</b></div><div class="kpi"><small>Čaká na odoslanie</small><b>' + c + "</b></div></div></div>";
+  var z = (WEB && WEB.strazcovia) || {}, n = +z.aktivni || 0, e = +z.emaily_30 || 0, p = +z.nepotvrdeni || 0;
+  return '<div class="card2"><h3>Strážca ponúk</h3><p class="sub">Klienti, ktorí si na webe zapli strážcu a potvrdili e-mail, dostanú tvoje nové a zlacnené ponuky automaticky, najviac raz za 12 hodín. E-mail príde s tvojím menom, odpoveď ide priamo tebe a klient sa vie kedykoľvek odhlásiť. Každý strážca sa zapíše aj medzi dopyty v Klientoch.</p>' +
+    '<div class="kpis k3"><div class="kpi"><small>Aktívni strážcovia</small><b>' + n + '</b></div><div class="kpi"><small>Ponuky poslané klientom za 30 dní</small><b>' + e + '</b></div><div class="kpi"><small>Čakajú na potvrdenie e-mailu</small><b>' + p + "</b></div></div></div>";
 }
 
 /* ================================================================ udalosti panela */

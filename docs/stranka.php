@@ -23,6 +23,7 @@ function vypis($html, $kod = 200, $cache = 'public, max-age=60') {
   exit;
 }
 
+require __DIR__ . '/_cache.php';
 $sablona = @file_get_contents(__DIR__ . '/stranka.html');
 if ($sablona === false) { http_response_code(500); exit('Stránka sa nenašla.'); }
 $cfg = @file_get_contents(__DIR__ . '/config.js') ?: '';
@@ -31,27 +32,31 @@ preg_match('/supabaseKey:\s*"([^"]+)"/', $cfg, $k);
 $SB = $u ? $u[1] : '';
 
 try {
-  $host = strtolower(preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? '')));
+  $host = cisti(preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? '')));
   $vlastna = $host !== '' && !preg_match('/(^|\.)realitnytypek\.sk$|github\.io$|^localhost$|^127\./', $host);
-  $m = cisti($_GET['m'] ?? '');
-  if ($m === '') {
-    $prvy = explode('&', (string)($_SERVER['QUERY_STRING'] ?? ''))[0];
-    if ($prvy !== '' && strpos($prvy, '=') === false) $m = cisti($prvy);
+  $m = '';
+  if ($vlastna) {
+    // na vlastnej doméne makléra sa ukazuje vždy len jeho web (?m= sa ignoruje)
+    $m = preg_replace('/^www\./', '', $host);
+  } else {
+    $m = cisti($_GET['m'] ?? '');
+    if ($m === '') {
+      $prvy = explode('&', (string)($_SERVER['QUERY_STRING'] ?? ''))[0];
+      if ($prvy !== '' && strpos($prvy, '=') === false) $m = cisti($prvy);
+    }
   }
-  if ($m === '' && $vlastna) $m = preg_replace('/^www\./', '', $host);
   $p = (int)preg_replace('/\D/', '', (string)($_GET['p'] ?? ''));
   $nahlad = ($_GET['nahlad'] ?? '') === '1';
   // náhľad rozpracovaného webu vidí len prihlásený maklér (načíta si ho prehliadač), vyhľadávače nie
   if ($nahlad || $m === '') { header('X-Robots-Tag: noindex'); vypis($sablona, 200, 'no-cache'); }
 
   // údaje zverejneného webu (na 30 sekúnd sa pamätajú, aby bol web rýchly)
-  $subor = rtrim((string)@sys_get_temp_dir(), '/') . '/typek-web-' . md5($m) . '.json';
-  $d = null;
-  if (@is_file($subor) && time() - (int)@filemtime($subor) < 30) {
-    $d = json_decode((string)@file_get_contents($subor), true);
-    if (!is_array($d)) $d = null;
-  }
-  if ($d === null) {
+  $kluc = 'web-' . md5($m);
+  $d = null; $zPamate = false;
+  $ulozene = typek_cache_citaj($kluc, 30);
+  if ($ulozene !== null) { $zPamate = true; $d = json_decode($ulozene, true); }
+  header('X-Typek-Cache: ' . ($zPamate ? 'hit' : (typek_cache_dir() === '' ? 'off' : 'miss')));
+  if (!$zPamate) {
     if (!$u || !$k) vypis($sablona, 200, 'no-store');
     $telo = json_encode(['p_adresa' => $m, 'p_nahlad' => false]);
     $hl = ['Content-Type: application/json', 'apikey: ' . $k[1]];
@@ -65,7 +70,8 @@ try {
     }
     if ($odpoved === false || $kod !== 200) vypis($sablona, 200, 'no-store');
     $d = json_decode($odpoved, true);
-    if (is_array($d)) @file_put_contents($subor, $odpoved, LOCK_EX);
+    // pamätá sa aj „web neexistuje“, aby náhodné adresy nezaťažovali databázu
+    typek_cache_zapis($kluc, is_array($d) ? $odpoved : 'null');
   }
   if (!is_array($d)) {
     // web neexistuje alebo nie je zverejnený

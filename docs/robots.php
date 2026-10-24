@@ -9,5 +9,5 @@ if ($domena !== '') {
   exit;
 }
 echo "User-agent: *\n";
-foreach (['/$', '/index.html', '/web-editor.html', '/report.html', '/sprava.html', '/letak.html', '/recenzia.html', '/ponuka.html', '/zdielaj.php', '/odhlasit.php', '/*nahlad=1'] as $z) echo 'Disallow: ' . $z . "\n";
+foreach (['/$', '/index.html', '/web-editor.html', '/report.html', '/sprava.html', '/letak.html', '/recenzia.html', '/ponuka.html', '/zdielaj.php', '/odhlasit.php', '/potvrdit.php', '/*nahlad=1'] as $z) echo 'Disallow: ' . $z . "\n";
 echo "Allow: /stranka.html\n\nSitemap: " . $APP . "sitemap.xml\n";

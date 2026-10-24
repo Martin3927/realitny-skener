@@ -1,14 +1,15 @@
 <?php
 // spoločné pre sitemap.php a robots.php: kde sme (naša adresa alebo vlastná doména makléra) a zoznam zverejnených webov
 $APP = 'https://app.realitnytypek.sk/';
-$host = strtolower(preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? '')));
+require_once __DIR__ . '/_cache.php';
+$host = strtolower(preg_replace('/[^A-Za-z0-9.-]/', '', preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? ''))));
 $vlastna = $host !== '' && !preg_match('/(^|\.)realitnytypek\.sk$|github\.io$|^localhost$|^127\./', $host);
 $domena = $vlastna ? preg_replace('/^www\./', '', $host) : '';
 
 function zverejnene_weby() {
-  $subor = rtrim((string)@sys_get_temp_dir(), '/') . '/typek-mapa.json';
-  if (@is_file($subor) && time() - (int)@filemtime($subor) < 600) {
-    $d = json_decode((string)@file_get_contents($subor), true);
+  $ulozene = typek_cache_citaj('mapa', 600);
+  if ($ulozene !== null) {
+    $d = json_decode($ulozene, true);
     if (is_array($d)) return $d;
   }
   $cfg = @file_get_contents(__DIR__ . '/config.js') ?: '';
@@ -24,6 +25,6 @@ function zverejnene_weby() {
   if ($o === false || $kod !== 200) return null;
   $d = json_decode($o, true);
   if (!is_array($d)) return null;
-  @file_put_contents($subor, $o, LOCK_EX);
+  typek_cache_zapis('mapa', $o);
   return $d;
 }

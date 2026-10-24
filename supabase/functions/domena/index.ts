@@ -156,8 +156,9 @@ Deno.serve(async (req) => {
     let t: any = {};
     try { t = await req.json(); } catch { /* prázdne */ }
     if (t.akcia === "info") return json({ ok: true, ciel: CIEL, ip: await cielIp() });
-    if (t.akcia === "dns") return json({ ok: true, ...(await overit(cistaDomena(t.domena), String(t.token || ""))) });
     const d = cistaDomena(t.domena);
+    if (!PLATNA.test(d)) return json({ chyba: "Neplatná doména." }, 400);
+    if (t.akcia === "dns") return json({ ok: true, ...(await overit(d, String(t.token || ""))) });
     return json({ ok: true, domena: d, ...(await dostupnost(d)) });
   }
 
@@ -200,6 +201,7 @@ Deno.serve(async (req) => {
     }
     return json({ chyba: "Neznáma akcia." }, 400);
   } catch (e) {
-    return json({ chyba: "Kontrola teraz nefunguje: " + String((e as Error).message || e).slice(0, 160) }, 502);
+    console.error("domena:", String((e as Error).message || e).slice(0, 300));
+    return json({ chyba: "Kontrola teraz nefunguje. Skús to o chvíľu." }, 502);
   }
 });
