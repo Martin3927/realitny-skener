@@ -497,7 +497,8 @@
     var obce = S.me.obce || [];
     var co = obce.length ? "nové súkromné inzeráty z Vašich obcí (" + obce.length + ": " + esc(obce.slice(0, 4).join(", ")) + (obce.length > 4 ? "…" : "") + ")" : "všetky nové súkromné inzeráty z oboch okresov – obmedzíte ich nižšie v Mojich obciach";
     return '<div class="box" id="box-push"><h3>🔔 Upozornenia do mobilu</h3><p class="meta">Keď skener nájde nový súkromný inzerát, pípne vám telefón, aj keď je aplikácia zatvorená. Chodia vám ' + co + ".</p>" +
-      '<div id="push-stav" class="push-stav"><span class="meta">Zisťujem…</span></div></div>';
+      '<div id="push-stav" class="push-stav"><span class="meta">Zisťujem…</span></div>' +
+      '<button class="btn-link" type="button" data-prof="mobil">📲 Návod pre Android a iPhone</button></div>';
   }
   async function napojUpozornenia() {
     var el = $("#push-stav"); if (!el) return;
@@ -552,7 +553,8 @@
     return '<div class="box"><h3>📲 Skener na ploche mobilu</h3>' +
       (instalacia ? '<p class="meta">Skener sa bude otvárať ako aplikácia, bez hľadania odkazu.</p><button class="btn primary" type="button" id="plocha-btn">Pridať na plochu</button>' :
         ios ? '<p class="meta">V Safari ťuknite dole na <b>Zdieľať</b> (štvorček so šípkou) → <b>Pridať na plochu</b> → <b>Pridať</b>.</p>' :
-        '<p class="meta">V Chrome ťuknite vpravo hore na <b>⋮</b> → <b>Pridať na plochu</b> (alebo <b>Inštalovať aplikáciu</b>).</p>') + "</div>";
+        '<p class="meta">V Chrome ťuknite vpravo hore na <b>⋮</b> → <b>Pridať na plochu</b> (alebo <b>Inštalovať aplikáciu</b>).</p>') +
+      '<button class="btn ghost" type="button" data-prof="mobil">📲 Celý návod krok za krokom</button></div>';
   }
 
   // ---------- posledné prihlásenie a aktivita
@@ -1129,7 +1131,7 @@
     }).join("") + '<div class="menu-skup menu-farby"><span class="menu-skup-n">Vzhľad</span><div class="menu-dl">' +
       '<button type="button" class="dl-menu dl-farby" data-pomoc="farby"><span class="dl-menu-ik dl-farby-ik" aria-hidden="true"><i></i><i></i><i></i></span><span>Farebný režim</span></button></div></div>' +
       '<div class="menu-skup menu-pomoc"><span class="menu-skup-n">Pomoc</span><div class="menu-dl">' +
-      [["sprievodca", "Sprievodca aplikáciou", "🧭"], ["novinky", "Čo je nové", "✨"], ["heslo", "Zmeniť heslo", "🔑"]].map(function (x) {
+      [["sprievodca", "Sprievodca aplikáciou", "🧭"], ["mobil", "Skener v mobile", "📲"], ["novinky", "Čo je nové", "✨"], ["heslo", "Zmeniť heslo", "🔑"]].map(function (x) {
         return '<button type="button" class="dl-menu" data-pomoc="' + x[0] + '"><span class="dl-menu-ik dl-menu-emoji" aria-hidden="true">' + x[2] + "</span><span>" + x[1] + "</span>" +
           (x[0] === "novinky" ? '<span class="tab-n" data-novinky-n hidden></span>' : "") + "</button>";
       }).join("") + "</div></div>" +
@@ -1268,7 +1270,7 @@
     if (!S.pwdOpen) { el.innerHTML = ""; return; }
     el.innerHTML = '<div class="box"><h3>Môj profil</h3>' + fotoVolba("ja", S.me.id) +
       '<div class="prof-odkazy"><button class="btn" type="button" data-prof="heslo">🔑 Zmeniť heslo</button><button class="btn" type="button" data-prof="sprievodca">🧭 Sprievodca</button>' +
-        '<button class="btn" type="button" data-prof="novinky">✨ Čo je nové</button></div></div>' +
+        '<button class="btn" type="button" data-prof="novinky">✨ Čo je nové</button><button class="btn" type="button" data-prof="mobil">📲 Návod do mobilu</button></div></div>' +
       '<form class="box heslo-box" id="f-pwd"><h3>🔑 Zmena hesla</h3><p class="meta">Nové heslo platí hneď. Ťuknutím na 👁 si ho skontrolujete.</p><div class="form-grid">' +
       '<label class="field"><span>Nové heslo (aspoň 8 znakov)</span><input type="password" id="pw1" minlength="8" autocomplete="new-password" required></label>' +
       '<label class="field"><span>Zopakujte heslo</span><input type="password" id="pw2" minlength="8" autocomplete="new-password" required></label></div>' +
@@ -1318,6 +1320,67 @@
     if (co === "sprievodca") { S.pwdOpen = false; vykresliHeslo(); window.scrollTo(0, 0); return spustiSprievodcu(); }
     if (co === "novinky") return ukazNovinky(S.novinky || [], false);
     if (co === "farby") return otvorFarby();
+    if (co === "mobil") return ukazNavodMobil();
+  }
+
+  // ------------------------------------------------------------ NÁVOD: skener v mobile (Android + Chrome, iPhone + Safari)
+  function ukazNavodMobil(sys) {
+    var stare = $("#navod-mobil"); if (stare) stare.remove();
+    sys = sys || (jeIos() ? "ios" : "android");
+    var adresa = location.origin + location.pathname.replace(/index\.html$/, "");
+    function kroky(zoz) {
+      return '<ol class="nm-kroky">' + zoz.map(function (k) { return "<li><b>" + k[0] + "</b>" + (k[1] ? "<span>" + k[1] + "</span>" : "") + "</li>"; }).join("") + "</ol>";
+    }
+    var android = '<h4>1. Skener na plochu</h4>' + kroky([
+      ["Otvorte <b>Chrome</b> a zadajte adresu", '<span class="nm-adresa">' + esc(adresa) + "</span>"],
+      ["Prihláste sa svojím e-mailom a heslom.", ""],
+      ["Vpravo hore ťuknite na <b>⋮</b> (tri bodky).", ""],
+      ["Zvoľte <b>Pridať na plochu</b> → <b>Inštalovať</b>.", "Niekde sa to volá <b>Inštalovať aplikáciu</b>. Ikona Realitného týpka sa objaví na ploche."],
+      ["Odteraz otvárajte skener <b>z ikony na ploche</b>.", "Otvorí sa ako samostatná aplikácia, bez hľadania odkazu."]]) +
+      '<h4>2. Upozornenia na nové súkromné inzeráty</h4>' + kroky([
+      ["V aplikácii ťuknite hore na svoju <b>fotku / meno</b> → <b>Môj profil</b>.", ""],
+      ["V časti <b>🔔 Upozornenia do mobilu</b> ťuknite na <b>Zapnúť upozornenia</b>.", ""],
+      ["Telefón sa opýta na povolenie – ťuknite <b>Povoliť</b>.", "Hneď príde skúšobné upozornenie „Upozornenia sú zapnuté“."],
+      ["V Mojom profile si nastavte <b>📍 Moje obce</b>.", "Budú vám chodiť len inzeráty z vašich obcí. Bez obcí chodia všetky z oboch okresov."]]) +
+      '<h4>Keď upozornenia nechodia</h4>' + kroky([
+      ["Podržte prst na ikone <b>Realitný týpek</b> → <b>Informácie o aplikácii</b> → <b>Upozornenia</b> → zapnite.", ""],
+      ["Ak ste omylom ťukli <b>Nepovoliť</b>:", "Chrome → <b>⋮</b> → <b>Nastavenia</b> → <b>Nastavenia stránok</b> → <b>Upozornenia</b> → povoľte adresu skenera. Potom v profile znova <b>Zapnúť upozornenia</b>."],
+      ["Ak upozornenia meškajú:", "Nastavenia telefónu → <b>Batéria</b> → pri aplikácii <b>Chrome</b> zvoľte <b>Bez obmedzení</b>."]]);
+    var ios = '<p class="note">Upozornenia na iPhone fungujú od systému <b>iOS 16.4</b>. Verziu nájdete v Nastavenia → Všeobecné → Informácie.</p>' +
+      '<h4>1. Skener na plochu</h4>' + kroky([
+      ["Otvorte <b>Safari</b> a zadajte adresu", '<span class="nm-adresa">' + esc(adresa) + "</span>"],
+      ["Dole ťuknite na <b>Zdieľať</b>", "Štvorček so šípkou nahor. Na iPade je hore vpravo."],
+      ["Posuňte nižšie a zvoľte <b>Pridať na plochu</b> → <b>Pridať</b>.", "Ikona Realitného týpka sa objaví na ploche."],
+      ["Skener otvárajte <b>len z ikony na ploche</b>.", "Prvýkrát sa v nej <b>prihláste znova</b> – aplikácia na ploche má vlastné prihlásenie, oddelené od Safari."]]) +
+      '<h4>2. Upozornenia na nové súkromné inzeráty</h4>' + kroky([
+      ["V aplikácii <b>z ikony na ploche</b> ťuknite hore na svoju <b>fotku / meno</b> → <b>Môj profil</b>.", "V Safari sa upozornenia zapnúť nedajú – iPhone ich dovolí len aplikácii z plochy."],
+      ["V časti <b>🔔 Upozornenia do mobilu</b> ťuknite na <b>Zapnúť upozornenia</b>.", ""],
+      ["iPhone sa opýta na povolenie – ťuknite <b>Povoliť</b>.", "Hneď príde skúšobné upozornenie „Upozornenia sú zapnuté“."],
+      ["V Mojom profile si nastavte <b>📍 Moje obce</b>.", "Budú vám chodiť len inzeráty z vašich obcí. Bez obcí chodia všetky z oboch okresov."]]) +
+      '<h4>Keď upozornenia nechodia</h4>' + kroky([
+      ["Nastavenia → <b>Upozornenia</b> → <b>Realitný týpek</b> → zapnite <b>Povoliť upozornenia</b>.", "Ak ste omylom ťukli Nepovoliť, zapnete ich tu a potom v profile znova <b>Zapnúť upozornenia</b>."],
+      ["Skontrolujte <b>Sústredenie</b> (Nerušiť, Spánok).", "Keď je zapnuté, upozornenia sa nezobrazia. Realitného týpka môžete v Sústredení pridať medzi povolené aplikácie."],
+      ["Ak ste ikonu z plochy vymazali,", "pridajte ju znova (bod 1) a upozornenia zapnite ešte raz."]]);
+    var o = document.createElement("div"); o.className = "pochvala-var"; o.id = "navod-mobil";
+    o.innerHTML = '<div class="pochvala-karta nov-karta nm-karta" role="dialog" aria-modal="true" aria-labelledby="nm-n">' +
+      '<button type="button" class="nov-x" data-nm="zavriet" aria-label="Zavrieť">×</button>' +
+      '<h3 id="nm-n">📲 Skener v mobile</h3><p class="meta">Aplikácia na ploche + upozornenie, keď pribudne nový súkromný inzerát.</p>' +
+      '<div class="seg nm-prep" role="group" aria-label="Telefón">' + [["android", "🤖 Android (Chrome)"], ["ios", "🍎 iPhone (Safari)"]].map(function (x) {
+        return '<button type="button" data-nm-sys="' + x[0] + '" aria-pressed="' + (sys === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" +
+      '<div class="nm-telo">' + (sys === "ios" ? ios : android) + "</div>" +
+      '<div class="nm-akcie">' + (maSekciu("inzeraty") ? '<button class="btn" type="button" data-nm="upozornenia">🔔 Otvoriť Upozornenia v profile</button>' : "") +
+      '<button class="btn" type="button" data-nm="kopiruj">📋 Kopírovať adresu</button>' +
+      '<button class="btn primary" type="button" data-nm="zavriet">Zavrieť</button></div></div>';
+    document.body.appendChild(o);
+    function zavri() { o.remove(); document.removeEventListener("keydown", esc2); }
+    function esc2(e) { if (e.key === "Escape") zavri(); }
+    document.addEventListener("keydown", esc2);
+    o.addEventListener("click", function (e) {
+      if (e.target === o || e.target.closest('[data-nm="zavriet"]')) return zavri();
+      var p = e.target.closest("[data-nm-sys]"); if (p) { zavri(); return ukazNavodMobil(p.dataset.nmSys); }
+      if (e.target.closest('[data-nm="kopiruj"]')) return kopiruj(adresa, "📋 Adresa skenera je skopírovaná – pošlite si ju do mobilu.");
+      if (e.target.closest('[data-nm="upozornenia"]')) { zavri(); return ukazCiel("upozornenia"); }
+    });
   }
 
   // ------------------------------------------------------------ FAREBNÝ REŽIM (menu → Vzhľad)

@@ -2181,3 +2181,16 @@ a.dl-menu { text-decoration: none; color: inherit }
 :root[data-styl="editor"] .menu-sheet-x { border-color: var(--line); color: var(--ink) }
 :root[data-styl="editor"] .menu-sheet-pozadie { background: rgba(30,42,53,.3) }
 @media (max-width: 640px) { :root[data-styl="editor"] .filters .seg button { flex: 0 0 auto } }
+/* ---------- návod: skener v mobile */
+.nm-karta { width: min(560px, 100%) }
+.nm-karta h3 { margin: 0 }
+.nm-karta h4 { margin: 10px 0 2px; font-size: 15px }
+.nm-prep { display: flex; width: 100% }
+.nm-prep button { flex: 1 1 50%; font-weight: 700; padding: 9px 8px }
+.nm-telo { display: grid; gap: 4px }
+.nm-kroky { margin: 0; padding-left: 22px; display: grid; gap: 7px; font-size: 14px; line-height: 1.5 }
+.nm-kroky li span { display: block; color: var(--muted); font-size: 13px }
+.nm-adresa { display: inline-block !important; margin-top: 2px; padding: 2px 8px; border-radius: 6px; background: var(--surface-2); color: var(--ink) !important; font-family: ui-monospace, monospace; font-size: 13px !important; word-break: break-all }
+.nm-akcie { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px }
+.nm-akcie .btn.primary { margin-left: auto }
+@media (max-width: 520px) { .nm-akcie .btn { flex: 1 1 100% } .nm-akcie .btn.primary { margin-left: 0 } }
