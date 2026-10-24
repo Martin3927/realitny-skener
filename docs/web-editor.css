@@ -36,7 +36,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 .ib:disabled{opacity:.35;cursor:default}
 .ib svg{width:18px;height:18px}
 
-.app{max-width:1520px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+.app{max-width:1520px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
 @media (min-width:1040px){.app{grid-template-columns:400px minmax(0,1fr)}
   .panel{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}}
 
@@ -90,7 +90,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 .chip:disabled{opacity:.4;cursor:default}
 input[type=range]{width:100%;accent-color:var(--c-gold)}
 
-.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .fields label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--c-slate);min-width:0}
 .fields label.full{grid-column:1/-1}
 .fields input:not([type=checkbox]):not([type=file]):not([type=range]),.fields textarea,.fields select{background:var(--c-bg);border:1px solid var(--c-line);border-radius:8px;padding:8px 10px;font-size:14px;min-width:0;width:100%;color:var(--c-ink)}
@@ -218,7 +218,7 @@ input[type=range]{width:100%;accent-color:var(--c-gold)}
 .hbar .tr i{display:block;height:100%;background:var(--c-slate);border-radius:999px}
 .hbar b{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
 .tbl{overflow-x:auto}
-.tbl table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:620px}
+.tbl table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:820px}
 .tbl th{text-align:left;font-size:12px;color:var(--c-slate);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--c-line)}
 .tbl td{padding:9px 8px;border-bottom:1px solid var(--c-line);vertical-align:top}
 .tbl tr:last-child td{border-bottom:0}
@@ -264,3 +264,38 @@ input[type=range]{width:100%;accent-color:var(--c-gold)}
 .qrbox .qr svg{width:100%;height:100%;display:block}
 .qrbox>div:last-child{display:flex;flex-direction:column;gap:6px}
 .qrbtns{display:flex;flex-wrap:wrap;gap:6px}
+/* vlastná doména a adresa */
+.dom-hlava{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.dom-hlava b{font-size:16px}
+.dom-krok{display:flex;flex-direction:column;gap:6px;background:var(--c-bg);border:1px solid var(--c-line);border-radius:12px;padding:10px 12px}
+.dom-krok>b{display:flex;align-items:center;gap:8px;font-size:14px}
+.dom-krok .sub{font-size:12.5px;color:var(--c-slate)}
+.dom-krok.hot{border-color:var(--c-ok);background:var(--c-ok-soft)}
+.dom-krok.cak{border-color:var(--c-gold)}
+.dom-krok>button{align-self:flex-start}
+.dk-n{width:22px;height:22px;border-radius:999px;display:inline-grid;place-items:center;background:var(--c-ink);color:var(--c-paper);font-size:12px;flex:none}
+.dom-krok.hot .dk-n{background:var(--c-ok)}
+.dk-ok{font-size:12px;font-weight:700;color:var(--c-ink-soft)}
+.fields>.full{grid-column:1/-1}
+.dk-zaz{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;align-items:start;background:var(--c-paper);border-radius:10px;padding:8px 10px}
+.dk-zaz .dk-hod{grid-column:1/-1}
+.dk-zaz button{grid-column:1/-1;justify-self:start}
+.dk-zaz span{display:flex;flex-direction:column;min-width:0}
+.dk-zaz small{font-size:11px;color:var(--c-slate)}
+.dk-zaz code{font-size:13px;overflow-wrap:anywhere;color:var(--c-ink)}
+.dom-stav .zle{color:var(--c-danger)}
+.kpis.k3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:760px){.kpis.k3{grid-template-columns:1fr}}
+.odp{display:flex;flex-wrap:wrap;gap:4px}
+.odp a{text-decoration:none;white-space:nowrap}
+.tbl td .sub{font-size:12px;color:var(--c-slate)}
+/* upozornenie pred zverejnením */
+.dlg{border:0;border-radius:18px;padding:22px 22px 18px;max-width:520px;width:calc(100% - 32px);background:var(--c-paper);color:var(--c-ink);box-shadow:0 30px 80px -20px rgba(0,0,0,.45)}
+.dlg::backdrop{background:rgba(19,26,33,.55)}
+.dlg h2{margin:0 0 6px;font-size:20px}
+.dlg .sub{margin:0 0 12px;color:var(--c-slate);font-size:14px}
+.pz{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto}
+.pz li{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--c-bg);border-radius:12px;padding:10px 12px;font-size:14px}
+.pz li button{flex:none}
+.dlg-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.tbl td:nth-child(3){white-space:nowrap}

@@ -12,7 +12,10 @@
   function chyba(t) { site.innerHTML = '<div class="nacitavam">' + t + "</div>"; }
   if (!adresa) return chyba("Stránka sa nenašla.");
 
-  sb.rpc("verejny_web", { p_adresa: adresa, p_nahlad: nahlad }).then(function (r) {
+  // údaje pripravené serverom (stranka.php) ušetria jedno načítanie; náhľad sa vždy načíta s prihlásením
+  var vlozene = document.getElementById("web-data"), nacitanie;
+  try { nacitanie = vlozene && !nahlad ? Promise.resolve({ data: JSON.parse(vlozene.textContent) }) : null; } catch (e) { nacitanie = null; }
+  (nacitanie || sb.rpc("verejny_web", { p_adresa: adresa, p_nahlad: nahlad })).then(function (r) {
     if (r.error) throw r.error;
     var d = r.data;
     if (!d) return chyba(nahlad ? "Náhľad uvidíš, keď si v rovnakom prehliadači prihlásený v Realitnom týpkovi." : "Táto stránka zatiaľ nie je zverejnená.");
@@ -22,12 +25,21 @@
     if (!s.email) s.email = m.email || "";
     if (!s.photo && m.foto) s.photo = m.foto;
     W.S = s;
-    if (!d.nahlad) W.adresa = adresa;
+    if (!d.nahlad) { W.adresa = d.adresa || adresa; W.domena = d.domena || ""; }
+    W.formAdresa = adresa;
+    // stará adresa webu (napr. z vytlačeného QR kódu) → v prehliadači sa ukáže nová
+    if (q.get("m") && d.adresa && d.adresa !== String(adresa).toLowerCase()) {
+      try { q.set("m", d.adresa); history.replaceState(null, "", location.pathname + "?" + q.toString() + location.hash); } catch (e) { /* nič */ }
+    }
     W.CTX = { ponuky: (d.ponuky || []).map(T.prevod), predane: (d.predane || []).map(T.prevod), recenzie: d.recenzie, makler: m, ukazka: false };
     try { if (localStorage.getItem("typek-web-cookies")) W.CK.bar = false; } catch (e) { /* nič */ }
     W.odoslat = function (o) {
-      return sb.rpc("web_kontakt", { p_adresa: adresa, p_zdroj: o.zdroj, p_kontakt: o.kontakt, p_meno: o.meno || null, p_co: o.co || null, p_ponuka: o.ponuka || null, p_dopyt: o.dopyt || null })
-        .then(function (x) { if (x.error) throw new Error(x.error.message || "Správu sa nepodarilo odoslať."); return x.data; });
+      // neviditeľná ochrana: prehliadač vyrieši malú úlohu, server ju overí (každé riešenie platí raz)
+      return T.overenie(adresa, o.zdroj).then(function (ov) {
+        T.overeniePouzite(o.zdroj);
+        return sb.rpc("web_kontakt", { p_adresa: adresa, p_zdroj: o.zdroj, p_kontakt: o.kontakt, p_meno: o.meno || null, p_co: o.co || null, p_ponuka: o.ponuka || null,
+          p_dopyt: o.dopyt || null, p_overenie: { ts: ov.ts, n: ov.n, med: o.med || "" } });
+      }).then(function (x) { if (x.error) throw new Error(x.error.message || "Správu sa nepodarilo odoslať."); return x.data; });
     };
     document.getElementById("nahladPas").hidden = !d.nahlad;
     // titulok, popis a ikona pre prehliadač aj zdieľanie
@@ -35,7 +47,8 @@
     document.title = titul;
     var popis = s.share.desc || T.heroTx().l || ("Predaj, kúpa a prenájom nehnuteľností v regióne " + s.area + ".");
     document.querySelector('meta[name="description"]').setAttribute("content", popis);
-    [["og:title", titul], ["og:description", popis], ["og:image", s.heroImg || s.photo && !/^data:/.test(s.photo) && s.photo || T.aiSrc(T.heroAi(s.tpl === "mestska" ? "mesto" : "dom"))]].forEach(function (x) {
+    // značky pre zdieľanie (ak ich už pripravil server, nedopĺňajú sa druhýkrát)
+    if (!document.querySelector('meta[property="og:title"]')) [["og:title", titul], ["og:description", popis], ["og:image", s.heroImg || s.photo && !/^data:/.test(s.photo) && s.photo || T.aiSrc(T.heroAi(s.tpl === "mestska" ? "mesto" : "dom"))]].forEach(function (x) {
       if (!x[1]) return; var el = document.createElement("meta"); el.setAttribute("property", x[0]); el.setAttribute("content", x[1]); document.head.appendChild(el);
     });
     if (s.logo) document.getElementById("ikona").href = s.logo;

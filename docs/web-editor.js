@@ -15,8 +15,9 @@ function chybaText(e) { return (e && (e.message || e.error_description || e.chyb
 function rpc(fn, args) { return sb.rpc(fn, args || {}).then(function (r) { if (r.error) throw r.error; return r.data; }); }
 function S() { return W.S; }
 function cas(d) { d = new Date(d); return d.getDate() + ". " + (d.getMonth() + 1) + ". " + d.getFullYear() + " o " + d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0"); }
-function verejnyOdkaz() { return new URL("stranka.html?m=" + encodeURIComponent(WEB.adresa), location.href).href; }
-function nahladOdkaz() { return verejnyOdkaz() + "&nahlad=1"; }
+function verejnyOdkaz() { return WEB.domena && WEB.domena_pripojena ? "https://" + WEB.domena + "/" : new URL("stranka.html?m=" + encodeURIComponent(WEB.adresa), location.href).href; }
+function nahladOdkaz() { return new URL("stranka.html?m=" + encodeURIComponent(WEB.adresa), location.href).href + "&nahlad=1"; }
+function adresaText() { return WEB.domena && WEB.domena_pripojena ? WEB.domena : location.host + "/stranka.html?m=" + WEB.adresa; }
 function stav(t, druh) { var e = $("stav"); e.className = "stav" + (druh ? " " + druh : ""); e.querySelector("span").textContent = t; }
 function cistyS() { var c = T.clone(W.S); delete c.dev; delete c.tab; return c; }
 function kopiruj(v, msg, el) { try { navigator.clipboard.writeText(v).then(function () { toast(msg); }, function () { if (el) el.select(); toast("Označené, skopíruj cez Ctrl+C"); }); } catch (e) { if (el) el.select(); toast("Označené, skopíruj cez Ctrl+C"); } }
@@ -311,10 +312,49 @@ function renderPub() {
 function renderAdresa() {
   if (!WEB) return;
   var base = new URL("stranka.html?m=", location.href).href;
-  if (!$("fAdresa").contains(document.activeElement)) $("fAdresa").innerHTML = '<label class="full">Adresa za ' + esc(base) + '<input id="adr" value="' + esc(WEB.adresa) + '" autocomplete="off" spellcheck="false"></label><button type="button" class="b b-soft b-sm" data-adresa style="grid-column:1/-1;justify-self:start">Uložiť adresu</button><p class="note">Malé písmená bez diakritiky, číslice a pomlčky. Po zmene prestane fungovať stará adresa.</p>';
-  if (!$("fDomena").contains(document.activeElement)) $("fDomena").innerHTML = '<label class="full">Doména<input id="dom" value="' + esc(WEB.domena || "") + '" placeholder="napr. janakovacova.sk" autocomplete="off" spellcheck="false"></label>' +
-    '<div style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="b b-soft b-sm" data-domcheck>Overiť, či je voľná</button><button type="button" class="b b-soft b-sm" data-domsave>Uložiť</button><span class="dom-stav" id="domStav"></span></div>' +
-    '<p class="note">Doménu si tu overíš a uložíš. Pripojenie vlastnej domény k webu zapneme v ďalšom kroku, dovtedy web beží na adrese vyššie.</p>';
+  if (!$("fAdresa").contains(document.activeElement)) $("fAdresa").innerHTML =
+    (WEB.adresa_navrh ? '<div class="dom-krok full cak"><b>Čaká na schválenie: ' + esc(WEB.adresa_navrh) + '</b><span class="sub">Admin dostal žiadosť do zvončeka' + (WEB.adresa_navrh_kedy ? " " + esc(cas(WEB.adresa_navrh_kedy)) : "") + '. Kým ju schváli, web beží na adrese ' + esc(WEB.adresa) + '.</span><button type="button" class="b b-soft b-sm" data-adrzrus>Zrušiť žiadosť</button></div>' : "") +
+    '<label class="full">Adresa za ' + esc(base) + '<input id="adr" value="' + esc(WEB.adresa_navrh || WEB.adresa) + '" autocomplete="off" spellcheck="false"></label>' +
+    '<button type="button" class="b b-soft b-sm" data-adresa style="grid-column:1/-1;justify-self:start">' + (WEB.adresa_navrh ? "Zmeniť žiadosť" : "Požiadať o novú adresu") + "</button>" +
+    '<p class="note">Malé písmená bez diakritiky, číslice a pomlčky. Novú adresu schvaľuje admin. Staré odkazy aj vytlačené QR kódy budú fungovať ďalej.</p>';
+  if (!$("fDomena").contains(document.activeElement)) $("fDomena").innerHTML = domenaHtml();
+}
+/* vlastná doména: 1. overenie, či je voľná (register domén), 2. uloženie, 3. DNS záznamy, 4. kontrola, 5. admin pripojí */
+var DOM_INFO = null, DOM_KONTROLA = null;
+function volajDomenu(telo) {
+  return sb.functions.invoke("domena", { body: telo }).then(function (r) {
+    var d = r.data || {};
+    if (r.error) {
+      if (r.error.context && r.error.context.json) return r.error.context.json().then(function (j) { throw new Error((j && j.chyba) || "Kontrola domény teraz nefunguje."); }, function () { throw new Error("Kontrola domény teraz nefunguje."); });
+      throw new Error("Kontrola domény teraz nefunguje.");
+    }
+    if (d.chyba) throw new Error(d.chyba);
+    return d;
+  });
+}
+function kopBtn(hodnota) { return '<button type="button" class="b b-soft b-sm" data-kopit="' + esc(hodnota) + '">Kopírovať</button>'; }
+function domenaHtml() {
+  var d = WEB.domena, ip = (DOM_INFO && DOM_INFO.ip && DOM_INFO.ip[0]) || "", k = DOM_KONTROLA || {};
+  if (!d) return '<label class="full">Doména<input id="dom" value="" placeholder="napr. janakovacova.sk" autocomplete="off" spellcheck="false"></label>' +
+    '<div class="full" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="b b-soft b-sm" data-domcheck>Overiť, či je voľná</button><button type="button" class="b b-soft b-sm" data-domsave>Použiť túto doménu</button></div>' +
+    '<p class="dom-stav full" id="domStav" role="status"></p>' +
+    '<p class="note">Doménu si zaregistruješ u ľubovoľného registrátora (Websupport, Webglobe, Active24…). Overenie sa pýta priamo registra domén. Kým doménu nepripojíme, web beží na adrese vyššie.</p>';
+  if (WEB.domena_pripojena) return '<div class="dom-krok full hot"><b>Web beží na <a href="https://' + esc(d) + '/" target="_blank" rel="noopener">' + esc(d) + "</a></b><span class=\"sub\">Pripojené " + esc(cas(WEB.domena_pripojena)) + ". Odkazy aj QR kód teraz vedú na túto doménu, stará adresa funguje ďalej.</span></div>" +
+    '<div class="full"><button type="button" class="b b-soft b-sm" data-domdel>Odstrániť doménu</button></div>';
+  var ok1 = !!WEB.domena_overena, ok2 = !!WEB.domena_smeruje, krok = function (ok, n, nadpis, telo) {
+    return '<div class="dom-krok full' + (ok ? " hot" : "") + '"><b><span class="dk-n" aria-hidden="true">' + (ok ? "✓" : n) + "</span>" + nadpis + (ok ? ' <span class="dk-ok">hotovo</span>' : "") + "</b>" + telo + "</div>";
+  };
+  var zaznam = function (typ, nazov, hodnota) {
+    return '<div class="dk-zaz"><span><small>Typ</small><code>' + typ + '</code></span><span><small>Názov</small><code>' + esc(nazov) + '</code></span><span class="dk-hod"><small>Hodnota</small><code>' + esc(hodnota) + "</code></span>" + kopBtn(hodnota) + "</div>";
+  };
+  return '<div class="dom-hlava full"><b>' + esc(d) + '</b><button type="button" class="b b-soft b-sm" data-domdel>Zmeniť alebo odstrániť</button></div>' +
+    krok(ok1, 1, "Over, že doména je tvoja", '<span class="sub">U registrátora domény pridaj v nastavení DNS tento záznam:</span>' + zaznam("TXT", "_realitnytypek", WEB.domena_token || "")) +
+    krok(ok2, 2, "Nasmeruj doménu na web", '<span class="sub">Hlavný záznam domény nastav na náš server (starý A záznam nahraď):</span>' + zaznam("A", "@ (prázdny názov)", ip || "načítavam…") +
+      '<span class="sub">Ak chceš, aby fungovalo aj www.' + esc(d) + ':</span>' + zaznam("CNAME", "www", d)) +
+    krok(!!WEB.domena_ziadost && ok1 && ok2, 3, "Pripojenie", '<span class="sub">' + (ok1 && ok2 ? "Všetko je nastavené. Admin doménu pripojí a zapne zabezpečenie (https), zvyčajne do 1 pracovného dňa. Príde ti upozornenie do zvončeka." : "Keď sú prvé dva kroky hotové, admin dostane žiadosť a doménu pripojí.") + "</span>") +
+    '<div class="full" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="b b-ink b-sm" data-domover>Skontrolovať nastavenie</button><span class="dom-stav" id="domStav" role="status">' +
+    (k.konflikt ? '<span class="zle">Túto doménu už overil iný web. Ozvi sa adminovi.</span>' : WEB.domena_kontrola ? "Naposledy skontrolované " + esc(cas(WEB.domena_kontrola)) : "") + "</span></div>" +
+    '<p class="note">Zmena v DNS sa zvyčajne prejaví do hodiny, niekedy až do 24 hodín. Kontrolu môžeš spustiť kedykoľvek znova.</p>';
 }
 function renderVerzie() {
   if (!WEB) return;
@@ -360,9 +400,12 @@ function renderDash() {
         '<circle class="dt" cx="' + sx(29) + '" cy="' + sy(VIS[29]) + '" r="5" stroke-width="2"/><line class="xh" id="vx" x1="0" x2="0" y1="' + pt + '" y2="' + (H2 - pb) + '" stroke-dasharray="3 3" visibility="hidden"/><circle class="dt" id="vd" r="5" stroke-width="2" visibility="hidden"/><rect x="' + pl + '" y="0" width="' + (W2 - pl - pr) + '" height="' + (H2 - pb) + '" fill="transparent" id="vhit"/></svg><div class="tip" id="vtip" hidden></div></div>'
         : '<div class="prazdny">Zatiaľ žiadne návštevy. Počítajú sa len návštevy zverejneného webu, tvoje vlastné nie.</div>') + "</div>" +
       '<div class="card2"><h3>Najsledovanejšie ponuky</h3>' + (top.length ? top.map(function (x) { return '<div class="hbar"><span style="grid-column:1 / span 2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(x.t) + "</span><b>" + pz[x.id] + "</b></div>"; }).join("") : '<div class="prazdny">Zatiaľ bez zobrazení.</div>') + "</div></div>" +
-      '<div class="card2"><h3>Kontakty z webu</h3><p class="sub">Každý kontakt ti príde aj do zvončeka v aplikácii. Strážca ponúk sa zapíše medzi dopyty v Klientoch.</p>' +
-      (K.length ? '<div class="tbl"><table><thead><tr><th>Kedy</th><th>Meno</th><th>Kontakt</th><th>Odkiaľ</th><th>Čo chce</th><th></th></tr></thead><tbody>' + K.map(function (k) {
-        return "<tr><td class=\"num\">" + esc(cas(k.vytvorene)) + "</td><td>" + esc(k.meno || "–") + "</td><td>" + esc(k.kontakt) + '</td><td><span class="src' + (k.vybavene ? "" : " new") + '">' + esc(NAZ[k.zdroj] || k.zdroj) + "</span></td><td>" + esc(k.co || "") + '</td><td><button type="button" class="b b-soft b-sm" data-vyb="' + k.id + '" data-v="' + (k.vybavene ? 0 : 1) + '">' + (k.vybavene ? "Vrátiť" : "Vybavené") + "</button></td></tr>";
+      strazcaHtml() +
+      '<div class="card2"><h3>Kontakty z webu</h3><p class="sub">Každý kontakt ti príde aj do zvončeka v aplikácii. Odpovedať môžeš jedným klikom, text je pripravený a pred odoslaním ho ešte uvidíš. Strážca ponúk sa zapíše medzi dopyty v Klientoch.</p>' +
+      (K.length ? '<div class="tbl"><table><thead><tr><th>Kedy</th><th>Meno</th><th>Kontakt</th><th>Odkiaľ</th><th>Čo chce</th><th>Odpovedať</th><th></th></tr></thead><tbody>' + K.map(function (k) {
+        var pon = k.nehnutelnost_id && (W.CTX.ponuky || []).find(function (x) { return x.id === k.nehnutelnost_id; });
+        return "<tr><td class=\"num\">" + esc(cas(k.vytvorene)) + "</td><td>" + esc(k.meno || "–") + "</td><td>" + esc(k.kontakt) + '</td><td><span class="src' + (k.vybavene ? "" : " new") + '">' + esc(NAZ[k.zdroj] || k.zdroj) + "</span></td><td>" + esc(k.co || "") + (pon ? '<div class="sub">' + esc(pon.t) + "</div>" : "") +
+          '</td><td><div class="odp">' + (window.TYPEK_ODPOVED ? TYPEK_ODPOVED.html(k, odpovedMakler(), pon && pon.t, "b b-soft b-sm") : "") + '</div></td><td><button type="button" class="b b-soft b-sm" data-vyb="' + k.id + '" data-v="' + (k.vybavene ? 0 : 1) + '">' + (k.vybavene ? "Vrátiť" : "Vybavené") + "</button></td></tr>";
       }).join("") + "</tbody></table></div>" : '<div class="prazdny">Zatiaľ žiadne kontakty. Prídu, keď návštevník vyplní formulár na zverejnenom webe.</div>') + "</div></div>";
     var hit = $("vhit"); if (!hit) return; var svg = hit.ownerSVGElement, tip = $("vtip");
     hit.addEventListener("pointermove", function (e) { var r2 = svg.getBoundingClientRect(), x = (e.clientX - r2.left) * W2 / r2.width, i = Math.max(0, Math.min(29, Math.round((x - pl) / ((W2 - pl - pr) / 29))));
@@ -370,6 +413,13 @@ function renderDash() {
       tip.hidden = false; tip.textContent = dl(i) + ": " + VIS[i] + (VIS[i] === 1 ? " návšteva" : VIS[i] < 5 && VIS[i] > 0 ? " návštevy" : " návštev"); tip.style.left = (sx(i) * r2.width / W2) + "px"; tip.style.top = (sy(VIS[i]) * r2.height / H2) + "px"; });
     hit.addEventListener("pointerleave", function () { tip.hidden = true; $("vx").setAttribute("visibility", "hidden"); $("vd").setAttribute("visibility", "hidden"); });
   }).catch(function (e) { el.innerHTML = '<div class="dash"><div class="prazdny">Prehľad sa nepodarilo načítať: ' + esc(chybaText(e)) + "</div></div>"; });
+}
+
+function odpovedMakler() { var s = S(), m = W.CTX.makler || {}; return { meno: s.name || m.meno || "", telefon: s.phone || m.telefon || "", pohlavie: m.pohlavie }; }
+function strazcaHtml() {
+  var z = (WEB && WEB.strazcovia) || {}, n = +z.aktivni || 0, e = +z.emaily_30 || 0, c = +z.caka || 0;
+  return '<div class="card2"><h3>Strážca ponúk</h3><p class="sub">Klienti, ktorí si na webe zapli strážcu s e-mailom, dostanú tvoje nové a zlacnené ponuky automaticky, najviac raz za 12 hodín. E-mail príde s tvojím menom, odpoveď ide priamo tebe a klient sa vie kedykoľvek odhlásiť.</p>' +
+    '<div class="kpis k3"><div class="kpi"><small>Aktívni strážcovia</small><b>' + n + '</b></div><div class="kpi"><small>Ponuky poslané klientom za 30 dní</small><b>' + e + '</b></div><div class="kpi"><small>Čaká na odoslanie</small><b>' + c + "</b></div></div></div>";
 }
 
 /* ================================================================ udalosti panela */
@@ -381,8 +431,12 @@ document.addEventListener("click", function (e) {
   if (d.qr) { stiahniQr(d.qr); return; }
   if (d.kop) { var el = $(d.kop === "pub" ? "pubLink" : "nahLink"); kopiruj(el.value, "Odkaz je skopírovaný", el); return; }
   if (d.adresa !== undefined) { zmenAdresu(); return; }
+  if (d.adrzrus !== undefined) { zmenAdresu(true); return; }
   if (d.domcheck !== undefined) { overDomenu(); return; }
-  if (d.domsave !== undefined) { ulozDomenu(); return; }
+  if (d.domsave !== undefined) { var dn = cistaDomena(); if (!dn) { toast("Najprv napíš doménu.", true); return; } ulozDomenu(dn); return; }
+  if (d.domdel !== undefined) { if (confirm(WEB.domena_pripojena ? "Odstrániť doménu " + WEB.domena + "? Web pobeží znova na adrese " + WEB.adresa + "." : "Odstrániť doménu " + WEB.domena + "? Nastavenie začneš odznova.")) ulozDomenu(null); return; }
+  if (d.domover !== undefined) { skontrolujDomenu(); return; }
+  if (d.kopit !== undefined) { kopiruj(d.kopit, "Skopírované", null); return; }
   if (d.verzia) { obnovVerziu(+d.verzia); return; }
   if (d.vyb) { rpc("vybavit_web_kontakt", { p_id: +d.vyb, p_vybavene: d.v === "1" }).then(renderDash).catch(function (x) { toast(chybaText(x), true); }); return; }
   if (d.logokanc !== undefined) { s.logo = (W.CTX.kancelaria || {}).logo || ""; all(); return; }
@@ -411,7 +465,7 @@ $("panel").addEventListener("click", function (e) {
   var x = Math.max(0, Math.min(100, Math.round((e.clientX - r.left) / r.width * 100))), y = Math.max(0, Math.min(100, Math.round((e.clientY - r.top) / r.height * 100)));
   S().heroFoc = x + "% " + y + "%"; all();
 });
-$("zverejnit").addEventListener("click", zverejnit);
+$("zverejnit").addEventListener("click", function () { zverejnit(); });
 $("editTg").addEventListener("click", function () { W.EDIT = !W.EDIT; all(); if (W.EDIT) toast("Klikni na text v ukážke a prepíš ho"); });
 $("addCustom").addEventListener("click", function () { var k = "c" + Date.now().toString(36), s = S(); s.custom[k] = { title: "Vlastná sekcia", text: "Sem napíš, čo chceš návštevníkom povedať.", img: "", btn: "", link: "" }; s.order.push(k); s.on[k] = true; open.add(k); all();
   requestAnimationFrame(function () { var el = $("f-custom-" + k + "-title"); if (el) { el.focus(); el.select(); } }); });
@@ -479,27 +533,93 @@ document.addEventListener("keydown", function (e) {
 
 /* ================================================================ zverejnenie, adresa, doména, verzie */
 function nacitajWeb() { return rpc("moj_web", { p_makler: MAKLER_ID }).then(function (w) { WEB = w; W.adresa = w && w.zverejnene_kedy ? w.adresa : ""; return w; }); }
-function zverejnit() {
+/* upozornenie pred zverejnením: čo chýba alebo by web vylepšilo (zobrazí sa len pri nových výhradách) */
+function varovania() {
+  var s = S(), out = [], add = function (k, t, go) { out.push({ k: k, t: t, go: go }); };
+  if (!T.fotoMaklera()) add("foto", "Chýba tvoja fotka. Web s fotkou makléra pôsobí dôveryhodnejšie a klienti ťa ľahšie spoznajú.", "makler|u-photo");
+  if (!String(s.phone || "").trim()) add("tel", "Chýba telefón. Klienti ti nebudú vedieť zavolať.", "makler|f-phone");
+  if (!String(s.email || "").trim()) add("mail", "Chýba e-mail.", "makler|f-email");
+  var bez = s.on.ponuky && !W.CTX.ukazka ? (W.CTX.ponuky || []).filter(function (x) { return !(x.foto && x.foto.length); }) : [];
+  if (bez.length) add("ponuky", (bez.length === 1 ? "1 ponuka nemá" : bez.length + (bez.length < 5 ? " ponuky nemajú" : " ponúk nemá")) + " fotky a na webe sa zobrazí bez obrázka: " + bez.slice(0, 3).map(function (x) { return x.t; }).join(", ") + (bez.length > 3 ? " a ďalšie" : "") + ".", "app");
+  if (!(s.gdpr.who && s.gdpr.ico && s.gdpr.addr)) add("gdpr", "Chýba prevádzkovateľ, IČO alebo sídlo v Ochrane osobných údajov. Formuláre na webe zbierajú osobné údaje, preto ich treba doplniť.", "makler|f-gdpr-ico");
+  if (s.on.omne && s.about.text === T.DEF.about.text) add("omne", "Text O mne je stále ukážkový. Napíš pár viet o sebe, alebo ich nechaj napísať AI asistenta.", "sekcie|omne");
+  if (s.on.stiahnut && !s.dl.url) add("ebook", "Sekcia E-book je zapnutá, ale nemá nahraný súbor.", "sekcie|stiahnut");
+  if (s.on.video && !s.video.url) add("video", "Sekcia Video je zapnutá, ale nemá odkaz na video.", "sekcie|video");
+  if (s.on.fotka && !s.img.src) add("fotka", "Sekcia Fotka je zapnutá, ale nemá fotku.", "sekcie|fotka");
+  return out;
+}
+function pzKluc() { return "typek-pz-" + (WEB && WEB.id); }
+function ukazVarovania(v) {
+  var dl = $("predZverejnenim");
+  $("pzList").innerHTML = v.map(function (x) { return '<li><span>' + esc(x.t) + '</span><button type="button" class="b b-soft b-sm" data-pzgo="' + esc(x.go) + '">Doplniť</button></li>'; }).join("");
+  dl.dataset.kluce = v.map(function (x) { return x.k; }).join(",");
+  if (dl.showModal) dl.showModal(); else dl.setAttribute("open", "");
+  var prvy = dl.querySelector("[data-pzgo]"); if (prvy) prvy.focus();
+}
+$("predZverejnenim").addEventListener("click", function (e) {
+  var dl = $("predZverejnenim"), b = e.target.closest("button"); if (!b) { if (e.target === dl) dl.close(); return; }
+  if (b.dataset.pzgo) { dl.close(); goFix(b.dataset.pzgo); return; }
+  if (b.dataset.pz === "spat") { dl.close(); return; }
+  if (b.dataset.pz === "aj-tak") { try { localStorage.setItem(pzKluc(), dl.dataset.kluce || ""); } catch (x) { /* nič */ } dl.close(); zverejnit(true); }
+});
+function zverejnit(ajTak) {
+  if (ajTak !== true) {
+    var v = varovania(), videl = "";
+    try { videl = localStorage.getItem(pzKluc()) || ""; } catch (x) { /* nič */ }
+    var nove = v.filter(function (x) { return ("," + videl + ",").indexOf("," + x.k + ",") < 0; });
+    if (nove.length) { ukazVarovania(v); return; }
+  }
   var b = $("zverejnit"); b.disabled = true; b.textContent = "Zverejňujem…";
   ulozTeraz().then(function () { return rpc("zverejnit_web", { p_koncept: cistyS(), p_makler: MAKLER_ID }); }).then(nacitajWeb).then(function () {
     ZMENY = false; renderPanel(); toast("Web je zverejnený. Klienti vidia aktuálnu verziu.");
   }).catch(function (e) { toast(chybaText(e), true); }).then(function () { b.disabled = false; renderPub(); });
 }
-function zmenAdresu() {
-  var v = $("adr").value;
-  rpc("zmenit_adresu_webu", { p_adresa: v, p_makler: MAKLER_ID }).then(function (a) { WEB.adresa = a; $("addr").textContent = location.host + "/stranka.html?m=" + a; renderPanel(); toast("Adresa je uložená: " + a); }).catch(function (e) { toast(chybaText(e), true); });
+function zmenAdresu(zrusit) {
+  var v = zrusit ? WEB.adresa : $("adr").value;
+  rpc("zmenit_adresu_webu", { p_adresa: v, p_makler: MAKLER_ID }).then(function (r) {
+    WEB.adresa = r.adresa; WEB.adresa_navrh = r.navrh; WEB.adresa_navrh_kedy = r.navrh ? new Date().toISOString() : null;
+    odfokusuj("fAdresa"); $("addr").textContent = adresaText(); renderPanel();
+    toast(zrusit ? "Žiadosť o novú adresu je zrušená." : r.navrh ? "Žiadosť o adresu " + r.navrh + " je odoslaná adminovi." : "Adresa je uložená: " + r.adresa);
+  }).catch(function (e) { toast(chybaText(e), true); });
 }
-function cistaDomena() { return String($("dom").value || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, ""); }
+function odfokusuj(id) { var a = document.activeElement; if (a && $(id).contains(a)) a.blur(); }
+function cistaDomena() { return String(($("dom") || {}).value || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/[/?#].*$/, ""); }
 function overDomenu() {
   var d = cistaDomena(), st = $("domStav");
-  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)) { st.className = "dom-stav zle"; st.textContent = "Napíš doménu v tvare mojemeno.sk"; return; }
-  st.className = "dom-stav"; st.textContent = "Overujem…";
-  fetch("https://dns.google/resolve?name=" + encodeURIComponent(d) + "&type=NS").then(function (r) { return r.json(); }).then(function (j) {
-    if (j.Status === 3) { st.className = "dom-stav ok"; st.textContent = "Vyzerá voľná. Definitívne sa to ukáže pri registrácii."; }
-    else { st.className = "dom-stav zle"; st.textContent = "Doména je už registrovaná. Ak je tvoja, ulož ju."; }
-  }).catch(function () { st.className = "dom-stav"; st.textContent = "Overenie teraz nefunguje, skús o chvíľu."; });
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(d)) { st.className = "dom-stav full zle"; st.textContent = "Napíš doménu v tvare mojemeno.sk"; return; }
+  st.className = "dom-stav full"; st.textContent = "Overujem v registri domén…";
+  volajDomenu({ akcia: "dostupnost", domena: d }).then(function (r) {
+    var kde = r.zdroj && r.zdroj !== "DNS" ? " (register " + r.zdroj + ")" : "";
+    var plat = r.platnost && /^\d{4}-\d{2}-\d{2}/.test(r.platnost) ? String(r.platnost).slice(0, 10).split("-").map(Number) : null;
+    if (r.stav === "volna") { st.className = "dom-stav full ok"; st.textContent = d + " je voľná" + kde + ". Zaregistruj si ju a potom klikni na Použiť túto doménu."; }
+    else if (r.stav === "asi_volna") { st.className = "dom-stav full ok"; st.textContent = d + " vyzerá voľná. Isté to bude až pri registrácii."; }
+    else if (r.stav === "obsadena") { st.className = "dom-stav full zle"; st.textContent = d + " je už registrovaná" + (plat ? ", platná do " + plat[2] + ". " + plat[1] + ". " + plat[0] : "") + kde + ". Ak je tvoja, klikni na Použiť túto doménu."; }
+    else { st.className = "dom-stav full"; st.textContent = "Register domén teraz neodpovedá. Skús to o chvíľu."; }
+  }).catch(function (e) { st.className = "dom-stav full zle"; st.textContent = chybaText(e); });
 }
-function ulozDomenu() { rpc("ulozit_domenu_webu", { p_domena: cistaDomena(), p_makler: MAKLER_ID }).then(function (d) { WEB.domena = d; toast(d ? "Doména je uložená." : "Doména je odstránená."); renderAdresa(); }).catch(function (e) { toast(chybaText(e), true); }); }
+function nacitajDomInfo() {
+  if (DOM_INFO || !WEB || !WEB.domena || WEB.domena_pripojena) return;
+  DOM_INFO = {};
+  volajDomenu({ akcia: "info" }).then(function (r) { DOM_INFO = r; renderAdresa(); }).catch(function () { DOM_INFO = null; });
+}
+function ulozDomenu(d) {
+  rpc("ulozit_domenu_webu", { p_domena: d, p_makler: MAKLER_ID }).then(function (r) {
+    return nacitajWeb().then(function () {
+      DOM_KONTROLA = null; toast(r.domena ? "Doména je uložená. Teraz nastav záznamy v DNS." : "Doména je odstránená."); odfokusuj("fDomena"); renderAdresa(); renderPub(); $("addr").textContent = adresaText(); nacitajDomInfo();
+    });
+  }).catch(function (e) { toast(chybaText(e), true); });
+}
+function skontrolujDomenu() {
+  var st = $("domStav"), b = document.querySelector("[data-domover]"); if (b) b.disabled = true;
+  if (st) { st.className = "dom-stav"; st.textContent = "Kontrolujem DNS…"; }
+  volajDomenu({ akcia: "overit", makler: MAKLER_ID }).then(function (r) {
+    DOM_KONTROLA = r; if (r.ip && r.ip.length) DOM_INFO = { ip: r.ip };
+    return nacitajWeb().then(function () {
+      odfokusuj("fDomena"); renderAdresa();
+      toast(r.konflikt ? "Túto doménu už overil iný web." : r.overena && r.smeruje ? "Všetko je nastavené. Admin doménu pripojí." : !r.overena ? "Záznam TXT zatiaľ nevidno. Ak si ho práve pridal, počkaj chvíľu." : "Doména zatiaľ nesmeruje na náš server. Skontroluj záznam A.", !!r.konflikt);
+    });
+  }).catch(function (e) { if (st) { st.className = "dom-stav zle"; st.textContent = chybaText(e); } }).then(function () { var b2 = document.querySelector("[data-domover]"); if (b2) b2.disabled = false; });
+}
 function obnovVerziu(id) {
   ulozTeraz().then(function () { return rpc("obnovit_verziu_webu", { p_verzia: id }); }).then(function (o) {
     histPush(); var keep = { dev: S().dev, tab: S().tab }; W.S = Object.assign(T.merge(o), keep); ZMENY = true; W.INTRO = true; all(); toast("Verzia je vrátená do rozpracovaného webu. Klienti ju uvidia po zverejnení.");
@@ -565,7 +685,7 @@ sb.auth.getSession().then(function (r) {
       W.poUprave = function (path, v) { save(); renderKontrola(); var pf = document.querySelector('#panel [data-bind="' + path + '"]'); if (pf) pf.value = v; };
       if (CIEL && CIEL !== JA) $("podnadpis").textContent = "Upravuješ web makléra " + (m.meno || "") + ". Zmeny sa ukladajú samy.";
       $("appEd").hidden = false;
-      $("addr").textContent = location.host + "/stranka.html?m=" + w.adresa;
+      $("addr").textContent = adresaText(); nacitajDomInfo();
       T.napoj($("site")); renderTone();
       renderPanel(); T.render(); histPush();
       if (prazdny) { NEULOZENE = true; ulozTeraz(); } else stav("Uložené");

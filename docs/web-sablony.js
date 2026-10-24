@@ -201,6 +201,51 @@ function photo(k, i) { var L = AI[k] || AI.dom; return aiImg(L[(i || 0) % L.leng
 function img(src, alt, lazy) { return '<img class="ph" src="' + esc(src) + '" alt="' + esc(alt || "") + '"' + (lazy === false ? "" : ' loading="lazy"') + ">"; }
 function favSvg(P) { var s = W.S; return s.logo ? '<img src="' + esc(s.logo) + '" alt="">' : '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="' + P.a + '"/><text x="32" y="41" font-size="26" font-weight="800" text-anchor="middle" fill="' + P.onA + '" font-family="system-ui,sans-serif">' + esc(initials(s.name)) + "</text></svg>"; }
 
+/* ================================================================ ochrana formulárov
+   Prehliadač vyrieši malú úlohu (SHA-256 začínajúce štyrmi nulami, priemerne 65 000 pokusov, zlomok sekundy).
+   Robotom to výrazne predraží posielanie spamu, človek nič nevidí. Server každé riešenie prijme len raz. */
+var K256 = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+var SHA_W = new Array(64);
+// prvé 32 bitov SHA-256 z ASCII textu (na overenie stačí začiatok odtlačku)
+function sha256Zaciatok(t) {
+  var n = t.length, l = ((n + 9 + 63) >> 6) << 4, m = new Array(l), i, j;
+  for (i = 0; i < l; i++) m[i] = 0;
+  for (i = 0; i < n; i++) m[i >> 2] |= (t.charCodeAt(i) & 0xff) << (24 - (i & 3) * 8);
+  m[n >> 2] |= 0x80 << (24 - (n & 3) * 8); m[l - 1] = n * 8;
+  var h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a, h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19, w = SHA_W;
+  for (j = 0; j < l; j += 16) {
+    var a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+    for (i = 0; i < 64; i++) {
+      if (i < 16) w[i] = m[j + i] | 0;
+      else { var x = w[i - 15], y = w[i - 2]; w[i] = (((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3)) + w[i - 7] + (((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10)) + w[i - 16] | 0; }
+      var t1 = h + (((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7))) + ((e & f) ^ (~e & g)) + K256[i] + w[i] | 0;
+      var t2 = (((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10))) + ((a & b) ^ (a & c) ^ (b & c)) | 0;
+      h = g; g = f; f = e; e = d + t1 | 0; d = c; c = b; b = a; a = t1 + t2 | 0;
+    }
+    h0 = h0 + a | 0; h1 = h1 + b | 0; h2 = h2 + c | 0; h3 = h3 + d | 0; h4 = h4 + e | 0; h5 = h5 + f | 0; h6 = h6 + g | 0; h7 = h7 + h | 0;
+  }
+  return h0 >>> 0;
+}
+var POW = {};
+function overenie(adresa, zdroj) {
+  var a = String(adresa || "").trim().toLowerCase().replace(/[^\x20-\x7e]/g, ""), now = Math.floor(Date.now() / 1000), c = POW[zdroj];
+  if (c && c.a === a && now - c.ts < 1500) return c.p;
+  var pred = "typek1|" + a + "|" + zdroj + "|" + now + "|", n = 0;
+  var p = new Promise(function (res) {
+    (function krok() {
+      var t0 = Date.now();
+      while (Date.now() - t0 < 25) { for (var i = 0; i < 400; i++, n++) { var k = n.toString(36); if ((sha256Zaciatok(pred + k) >>> 16) === 0) return res({ ts: String(now), n: k }); } }
+      setTimeout(krok, 0);
+    })();
+  });
+  POW[zdroj] = { a: a, ts: now, p: p };
+  return p;
+}
+function overeniePouzite(zdroj) { delete POW[zdroj]; }
+
 /* ================================================================ ponuky z Realitného týpka */
 var CFG = window.SKENER_CONFIG || {};
 var KAT = { byty: "byt", domy: "dom", chaty: "chata", pozemky: "poz" };
@@ -241,6 +286,7 @@ function waPonuka(x) {
 var APP_URL = "https://app.realitnytypek.sk/";
 // odkaz stranka.html?m=adresa&p=ID: Facebook a WhatsApp z neho na serveri prečítajú fotku a názov ponuky
 function odkazPonuky(x) {
+  if (W.domena && x.id) return "https://" + W.domena + "/?p=" + x.id;
   if (W.adresa && x.id) return APP_URL + "stranka.html?m=" + encodeURIComponent(W.adresa) + "&p=" + x.id;
   try { var u = new URL(location.href); u.hash = "p-" + (x.id || ""); return u.href; } catch (e) { return ""; }
 }
@@ -392,11 +438,11 @@ var R = {
   },
   strazca: function () {
     var s = W.S, Wt = W.Wt, places = String(s.watch.places || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean);
-    var right = W.DONE.strazca ? '<div class="done"><b>Ďakujem, mám to zapísané</b><p>' + esc(Wt.typ.join(", ") || "Všetko") + " · " + esc(Wt.place || "celý región") + " · do " + fmt(Wt.max) + ' €</p><p class="muted" style="font-size:14px">Keď sa objaví vhodná ponuka, ozvem sa vám.</p><button type="button" class="qback" data-again="strazca">Upraviť požiadavku</button></div>'
+    var right = W.DONE.strazca ? '<div class="done"><b>Ďakujem, mám to zapísané</b><p>' + esc(Wt.typ.join(", ") || "Všetko") + " · " + esc(Wt.place || "celý región") + " · do " + fmt(Wt.max) + ' €</p><p class="muted" style="font-size:14px">Keď sa objaví vhodná ponuka, ozvem sa vám. Ak ste zadali e-mail, príde vám aj e-mailom.</p><button type="button" class="qback" data-again="strazca">Upraviť požiadavku</button></div>'
       : '<div class="wform" data-form="strazca"><div><span class="lbl">Čo hľadáte</span><div class="wchips">' + ["Byt", "Dom", "Pozemok", "Prenájom"].map(function (t) { var on = Wt.typ.indexOf(t) >= 0; return '<button type="button" class="wchip' + (on ? " on" : "") + '" data-wt="' + t + '" aria-pressed="' + on + '">' + t + "</button>"; }).join("") + "</div></div>" +
         (places.length ? '<div><span class="lbl">Kde</span><div class="wchips">' + places.map(function (p) { return '<button type="button" class="wchip' + (Wt.place === p ? " on" : "") + '" data-wp="' + esc(p) + '" aria-pressed="' + (Wt.place === p) + '">' + esc(p) + "</button>"; }).join("") + "</div></div>" : "") +
         '<div><span class="lbl">Cena do <b class="num" data-wo>' + fmt(Wt.max) + ' €</b></span><input type="range" min="30000" max="400000" step="5000" value="' + Wt.max + '" data-wmax aria-label="Cena do"></div>' +
-        '<div class="two">' + inp("strazca", "meno", "Meno") + inp("strazca", "kontakt", "E-mail alebo telefón") + "</div>" + errMsg("strazca") + '<button type="button" class="btn" data-send="strazca">Dajte mi vedieť</button></div>';
+        '<div class="two">' + inp("strazca", "meno", "Meno") + inp("strazca", "kontakt", "E-mail alebo telefón") + "</div>" + errMsg("strazca") + '<button type="button" class="btn" data-send="strazca">Dajte mi vedieť</button><p class="muted wnote">S e-mailom vám nové ponuky pošlem aj e-mailom, najviac raz za 12 hodín. Odhlásiť sa dá jedným klikom.</p></div>';
     return '<div class="watch"><div><span class="eb">Hľadáte nehnuteľnosť?</span><h2 ' + ed("watch.title", 1) + ">" + esc(s.watch.title) + '</h2><p class="muted" ' + ed("watch.text") + ">" + esc(s.watch.text) + "</p></div>" + right + "</div>";
   },
   omne: function () { var s = W.S; return '<div class="about">' + av() + '<div class="txt"><span class="eb">O mne</span><h2 class="h2" style="margin:10px 0 16px" ' + ed("about.title", 1) + ">" + esc(s.about.title) + "</h2><div " + ed("about.text") + ">" + paras(s.about.text) + '</div><div class="sig">' + esc(s.name) + '</div><div class="muted" style="font-size:14px">' + esc(s.office) + "</div>" + (s.tpl !== "susedska" ? facts() : "") + "</div></div>"; },
@@ -587,6 +633,8 @@ function render() {
   if (ckOn) out += '<div class="ck-wrap"><div class="ck"><p><b>Používame cookies.</b> Nevyhnutné cookies zabezpečujú fungovanie webu.' + (s.gdpr.ga || s.gdpr.fbp ? " S vaším súhlasom použijeme aj analytické" + (s.gdpr.fbp ? " a marketingové" : "") + " cookies." : "") + ' <button type="button" class="flink" data-gdpr>Viac informácií</button></p><div class="btns"><button type="button" class="btn" data-ck="vsetky">Prijať všetky</button><button type="button" class="btn gh" data-ck="nevyhnutne">Len nevyhnutné</button></div></div></div>';
   if (s.wa && !ckOn) out += '<div class="wa-wrap"><a class="wa" href="https://wa.me/' + waNum(s.wa) + '" target="_blank" rel="noopener" aria-label="Napísať na WhatsApp">' + IC.wa + "<span>Napíšte mi</span></a></div>";
   root.innerHTML = out;
+  // pasca na roboty: pole, ktoré človek nevidí a nevyplní
+  if (!W.editor) root.querySelectorAll("[data-form]").forEach(function (f) { if (!f.querySelector('[name="web_url"]')) f.insertAdjacentHTML("beforeend", '<input class="hp" type="text" name="web_url" tabindex="-1" autocomplete="off" aria-hidden="true">'); });
   calc();
   var v = root.querySelector(".hm video"); if (v) v.addEventListener("error", function () { toast("Video sa nepodarilo prehrať."); }, { once: true });
   if (window.TYPEK_MEDIA && window.TYPEK_MEDIA.napoj) { try { window.TYPEK_MEDIA.napoj(root); } catch (e) { /* nič */ } }
@@ -643,7 +691,7 @@ function send(f) {
   if (W.PAGE.v === "detail") { var dx = Z[W.PAGE.i]; if (dx && dx.id) ponuka = dx.id; }
   if (!ponuka && f === "kontakt" && W.ZAUJEM) ponuka = W.ZAUJEM;
   var btn = box && box.querySelector("[data-send]"); if (btn) { btn.disabled = true; btn.textContent = "Odosielam…"; }
-  var odo = W.odoslat ? W.odoslat({ zdroj: f, kontakt: k, meno: v.meno || "", co: co, ponuka: ponuka, dopyt: dopyt }) : Promise.resolve();
+  var odo = W.odoslat ? W.odoslat({ zdroj: f, kontakt: k, meno: v.meno || "", co: co, ponuka: ponuka, dopyt: dopyt, med: v.web_url || "" }) : Promise.resolve();
   Promise.resolve(odo).then(function (r) { if (f === "ebook" && typeof r === "string" && /^https?:\/\//i.test(r)) W.DLURL = r; if (f === "kontakt") W.ZAUJEM = null; delete W.ERR[f]; W.DONE[f] = true; W.FV[f] = {}; render(); })
     .catch(function (e) { W.ERR[f] = (e && e.message) || "Správu sa nepodarilo odoslať. Skúste to znova alebo zavolajte."; render(); });
 }
@@ -711,6 +759,10 @@ function napoj(root) {
     else if (W.PAGE.v !== "home") { var sp = W.PAGE.v === "detail" ? W.PAGE.i : -1; W.PAGE = { v: "home" }; render();
       requestAnimationFrame(function () { var el = sp >= 0 && W.root.querySelector('[data-open="' + sp + '"]'); (el || document.getElementById("s-ponuky") || W.root).scrollIntoView({ block: "center" }); }); }
   });
+  root.addEventListener("focusin", function (e) {
+    var f = e.target.closest && e.target.closest("[data-form]");
+    if (f && !W.editor && W.formAdresa) overenie(W.formAdresa, f.dataset.form);
+  });
   root.addEventListener("change", function (e) { if (e.target.dataset && e.target.dataset.fsort !== undefined) { W.FIL.sort = e.target.value; render(); } });
   root.addEventListener("keydown", function (e) {
     var t = e.target;
@@ -731,7 +783,7 @@ function napoj(root) {
   root.addEventListener("change", function (e) { var t = e.target; if (t.dataset.bl !== undefined) W.BK.l = +t.value; var form = t.closest("[data-form]"); if (form && t.name) (W.FV[form.dataset.form] = W.FV[form.dataset.form] || {})[t.name] = t.value; });
 }
 
-window.TYPEK_WEB = { W: W, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
+window.TYPEK_WEB = { W: W, overenie: overenie, overeniePouzite: overeniePouzite, sha256Zaciatok: sha256Zaciatok, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
   fotoMaklera: function () { return fotoMaklera(); }, merge: merge, clone: clone, esc: esc, get: get, setDeep: setDeep, secName: secName, heroTx: heroTx, pal: pal, photo: photo, favSvg: favSvg, initials: initials, slugD: slugD, url: url, waNum: waNum, fmt: fmt,
   okHex: okHex, isHex: isHex, mix: mix, h2r: h2r, r2h: r2h, prevod: prevod, ZOZ: ZOZ, render: render, napoj: napoj, toast: toast, SV: SV, otvorDetail: otvorDetail };
 })();

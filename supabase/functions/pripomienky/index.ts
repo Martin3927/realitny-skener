@@ -1,5 +1,5 @@
 // Odošle emaily k pripomienkam, ktorým nastal čas (aj automatické uvoľnenie a zníženú cenu),
-// a v pondelok ráno týždenný prehľad výkonu maklérov administrátorom.
+// e-maily strážcu ponúk klientom z webu makléra a v pondelok ráno týždenný prehľad výkonu maklérov administrátorom.
 // Volá ju databáza každú minútu (pg_cron); chránená tajným kľúčom v hlavičke x-kluc.
 // Email: Brevo (BREVO_API_KEY) alebo SMTP cez port 465 (SMTP_HOST, SMTP_USER, SMTP_PASS).
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -17,15 +17,20 @@ function casSk(iso: string) {
   });
 }
 
-async function posli(komu: string, predmet: string, html: string) {
+type Moznosti = { odMeno?: string; odpovedat?: string; hlavicky?: Record<string, string> };
+async function posli(komu: string, predmet: string, html: string, o: Moznosti = {}) {
   const od = Deno.env.get("EMAIL_FROM") || Deno.env.get("SMTP_USER") || "";
-  const odMeno = "Realitný týpek · Alpha Reality";
+  const odMeno = (o.odMeno || "Realitný týpek · Alpha Reality").replace(/["<>\r\n]/g, "").slice(0, 70);
+  const odpovedat = o.odpovedat && /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(o.odpovedat) ? o.odpovedat : "";
   const brevo = Deno.env.get("BREVO_API_KEY");
   if (brevo) {
     const r = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: { "api-key": brevo, "Content-Type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ sender: { name: odMeno, email: od }, to: [{ email: komu }], subject: predmet, htmlContent: html }),
+      body: JSON.stringify({
+        sender: { name: odMeno, email: od }, to: [{ email: komu }], subject: predmet, htmlContent: html,
+        ...(odpovedat ? { replyTo: { email: odpovedat } } : {}), ...(o.hlavicky ? { headers: o.hlavicky } : {}),
+      }),
     });
     if (!r.ok) throw new Error("Brevo " + r.status + ": " + (await r.text()).slice(0, 200));
     return;
@@ -36,7 +41,7 @@ async function posli(komu: string, predmet: string, html: string) {
     host, port: Number(Deno.env.get("SMTP_PORT") || 465), secure: (Deno.env.get("SMTP_SECURE") ?? "true") !== "false",
     auth: { user: Deno.env.get("SMTP_USER"), pass: Deno.env.get("SMTP_PASS") },
   });
-  await t.sendMail({ from: `"${odMeno}" <${od}>`, to: komu, subject: predmet, html });
+  await t.sendMail({ from: `"${odMeno}" <${od}>`, to: komu, subject: predmet, html, ...(odpovedat ? { replyTo: odpovedat } : {}), ...(o.hlavicky ? { headers: o.hlavicky } : {}) });
 }
 
 const DRUH: Record<string, [string, string]> = {
@@ -46,6 +51,7 @@ const DRUH: Record<string, [string, string]> = {
   zmluva: ["📝", "Končí zmluva"],
   zhoda: ["🎯", "Ponuka pre vášho klienta"],
   obhliadka: ["🗝️", "Obhliadka"],
+  web: ["💬", "Kontakt z vášho webu"],
 };
 const WEB_URL = APP_URL.replace(/\/?$/, "/");
 
@@ -184,6 +190,98 @@ async function webZiadosti(db: any) {
   return odoslane;
 }
 
+// strážca ponúk z webu makléra: klientovi príde e-mail s novými alebo zlacnenými ponukami, ktoré zodpovedajú tomu, čo hľadá
+// (najviac 1 e-mail za 12 hodín, odpoveď ide maklérovi, odhlásenie jedným klikom)
+function cisloSk(n: unknown) {
+  return Math.round(Number(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+}
+// deno-lint-ignore no-explicit-any
+function fotkaPonuky(x: any) {
+  const f = Array.isArray(x.fotky) ? x.fotky[0] : null;
+  if (typeof f === "string") return /^https:\/\//.test(f) ? f : "";
+  if (f && typeof f.url === "string" && /^https:\/\//.test(f.url)) return f.url;
+  if (f && f.cesta) return Deno.env.get("SUPABASE_URL") + "/storage/v1/object/public/ponuky/" + String(f.cesta).split("/").map(encodeURIComponent).join("/");
+  return "";
+}
+// deno-lint-ignore no-explicit-any
+function cenaPonuky(x: any) {
+  if (x.zobrazit_cenu === false || x.cena == null) return x.typ_ceny === "na vyžiadanie" ? "Cena na vyžiadanie" : "Cena dohodou";
+  return cisloSk(x.cena) + "\u00a0€" + (x.transakcia === "prenajom" ? " / mes." : "");
+}
+// deno-lint-ignore no-explicit-any
+function nazovPonuky(x: any) {
+  return String(x.nazov || "").trim() || [x.typ || "Nehnuteľnosť", x.obec].filter(Boolean).join(", ");
+}
+// deno-lint-ignore no-explicit-any
+function parametrePonuky(x: any) {
+  const poz = x.kategoria === "pozemky";
+  const pl = poz ? x.plocha_pozemku : (x.plocha_uzitkova ?? x.plocha_zastavana ?? x.plocha_pozemku);
+  const iz = Number(x.izby || 0);
+  return [[x.obec, x.cast_obce].filter(Boolean).join(" – "), pl ? cisloSk(pl) + "\u00a0m²" : "",
+    iz && !poz ? iz + (iz === 1 ? " izba" : iz < 5 ? " izby" : " izieb") : ""].filter(Boolean).join(" · ");
+}
+
+// deno-lint-ignore no-explicit-any
+async function strazcaEmaily(db: any) {
+  const { data: zoz, error } = await db.rpc("_strazca_na_odoslanie", { p_limit: 20 });
+  if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const s of (zoz as any[]) ?? []) {
+    try {
+      const mk = s.makler || {}, w = s.web || {};
+      const meno = String(w.name || mk.meno || "Váš maklér").trim();
+      const zena = mk.pohlavie === "zena";
+      const telefon = String(w.phone || mk.telefon || "").trim();
+      const email = String(w.email || mk.email || "").trim();
+      const kancelaria = String(w.office || "").trim();
+      const zaklad = s.domena ? "https://" + s.domena + "/" : WEB_URL + "stranka.html?m=" + encodeURIComponent(s.adresa);
+      const odkaz = (id: number) => zaklad + (s.domena ? "?p=" : "&p=") + id;
+      const odhlasit = WEB_URL + "odhlasit.php?t=" + encodeURIComponent(s.token);
+      // deno-lint-ignore no-explicit-any
+      const ponuky = (s.ponuky as any[]) || [];
+      if (!ponuky.length) continue;
+      const karty = ponuky.map((x) => {
+        const f = fotkaPonuky(x), u = odkaz(x.id);
+        return `<tr><td style="padding:0 0 18px">
+          <a href="${esc(u)}" style="display:block;text-decoration:none;color:#1e2a35;border:1px solid #e6dccb;border-radius:14px;overflow:hidden;background:#fff">
+            ${f ? `<img src="${esc(f)}" alt="" width="520" style="display:block;width:100%;max-width:520px;height:auto;border:0">` : ""}
+            <div style="padding:14px 16px">
+              ${x.nova_cena ? `<div style="display:inline-block;background:#fdecc8;color:#7a4b00;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;margin-bottom:6px">Znížená cena</div>` : ""}
+              <div style="font-size:17px;font-weight:700;line-height:1.3">${esc(nazovPonuky(x))}</div>
+              <div style="font-size:14px;color:#5a6470;margin-top:4px">${esc(parametrePonuky(x))}</div>
+              <div style="font-size:18px;font-weight:700;margin-top:8px">${esc(cenaPonuky(x))}</div>
+              <div style="margin-top:12px"><span style="display:inline-block;background:#1e2a35;color:#fff;font-weight:700;font-size:14px;padding:9px 16px;border-radius:999px">Pozrieť ponuku</span></div>
+            </div></a></td></tr>`;
+      }).join("");
+      const jedna = ponuky.length === 1;
+      const predmet = jedna
+        ? (ponuky[0].nova_cena ? "Znížená cena: " : "Nová ponuka pre vás: ") + nazovPonuky(ponuky[0]).slice(0, 70) + " – " + cenaPonuky(ponuky[0])
+        : ponuky.length + " nové ponuky podľa toho, čo hľadáte";
+      const html = `<div style="background:#f7f2e8;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#1e2a35">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;margin:0 auto"><tr><td>
+        <p style="font-size:16px;margin:0 0 10px">Dobrý deň${s.meno ? ", " + esc(s.meno) : ""},</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 18px">${jedna ? "mám pre vás novú ponuku, ktorá zodpovedá tomu, čo hľadáte:" : "mám pre vás nové ponuky, ktoré zodpovedajú tomu, čo hľadáte:"}</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">${karty}</table>
+        <p style="font-size:15px;line-height:1.55;margin:4px 0 0">Ak vás niektorá zaujala, stačí odpísať na tento e-mail${telefon ? " alebo zavolať na " + `<a href="tel:${esc(telefon.replace(/[^\d+]/g, ""))}" style="color:#8a5a2b;font-weight:700">${esc(telefon)}</a>` : ""}. Rád${zena ? "a" : ""} vám ju ukážem.</p>
+        <p style="font-size:15px;line-height:1.5;margin:18px 0 0">S pozdravom<br><b>${esc(meno)}</b>${kancelaria ? "<br>" + esc(kancelaria) : ""}${email ? `<br><a href="mailto:${esc(email)}" style="color:#8a5a2b">${esc(email)}</a>` : ""}</p>
+        <p style="font-size:12px;line-height:1.5;color:#7a828c;margin:26px 0 0;border-top:1px solid #e6dccb;padding-top:12px">Tento e-mail vám prišiel, lebo ste si na webe ${esc(meno)} zapli strážcu ponúk. Nové ponuky posielam najviac raz za 12 hodín.
+          <a href="${esc(odhlasit)}" style="color:#7a828c">Odhlásiť strážcu ponúk</a></p>
+        </td></tr></table></div>`;
+      await posli(s.email, predmet, html, {
+        odMeno: meno + (kancelaria ? " · " + kancelaria : ""), odpovedat: email,
+        hlavicky: { "List-Unsubscribe": `<${odhlasit}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      });
+      odoslane++;
+    } catch (e) {
+      chyby.push(String((e as Error).message || e));
+      await db.rpc("_strazca_chyba", { p_dopyt: s.dopyt_id, p_ids: s.ids, p_chyba: String((e as Error).message || e) });
+    }
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
+}
+
 async function sha256(t: string) {
   const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
   return Array.from(new Uint8Array(h)).map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -254,5 +352,6 @@ Deno.serve(async (req) => {
     }
   }
   const web = await webZiadosti(db).catch(() => 0);
-  return Response.json({ ok: true, odoslane, web });
+  const strazca = await strazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
+  return Response.json({ ok: true, odoslane, web, strazca });
 });

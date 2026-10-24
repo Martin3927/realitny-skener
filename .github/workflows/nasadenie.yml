@@ -46,9 +46,20 @@ jobs:
           RewriteEngine On
           RewriteCond %{HTTPS} off
           RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-          # roboty sociálnych sietí dostanú web makléra s fotkou a názvom ponuky (zdielaj.php)
-          RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Viber|SkypeUriPreview|Pinterest|redditbot|vkShare|Snapchat|Iframely|Embedly|Applebot|Mastodon) [NC]
-          RewriteRule ^stranka\.html$ zdielaj.php [L,QSA]
+          # vlastná doména makléra (napr. janakovacova.sk): www → bez www, úvod je jeho web,
+          # stránky softvéru sa otvárajú na app.realitnytypek.sk
+          RewriteCond %{HTTP_HOST} !(^|\.)realitnytypek\.sk$ [NC]
+          RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+          RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+          RewriteCond %{HTTP_HOST} !(^|\.)realitnytypek\.sk$ [NC]
+          RewriteRule ^(index\.html)?$ stranka.php [L,QSA]
+          RewriteCond %{HTTP_HOST} !(^|\.)realitnytypek\.sk$ [NC]
+          RewriteRule ^(?!stranka\.html$)[^/]+\.html$ https://app.realitnytypek.sk/$0 [L,R=302]
+          # web makléra pripravený serverom (Google, Facebook, WhatsApp); stranka.html zostáva ako záloha
+          RewriteRule ^stranka\.html$ stranka.php [L,QSA]
+          RewriteRule ^robots\.txt$ robots.php [L]
+          RewriteRule ^sitemap\.xml$ sitemap.php [L]
+          RewriteRule ^_ - [F]
           <IfModule mod_headers.c>
             <FilesMatch "\.(html|webmanifest)$|^sw\.js$">
               Header set Cache-Control "no-cache"

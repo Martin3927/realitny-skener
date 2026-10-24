@@ -2030,3 +2030,10 @@ a.dl-menu { text-decoration: none; color: inherit }
 :root:not([data-theme="dark"]) .menu-sheet-x { border-color: var(--line); color: var(--ink) }
 :root:not([data-theme="dark"]) .bocne::-webkit-scrollbar-thumb { background: var(--line) }
 }
+.prip-odp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px }
+.prip-odp .btn { padding: 4px 10px; font-size: 13px; text-decoration: none }
+.web-ziad { display: flex; flex-direction: column; gap: 10px; margin-top: 12px }
+.web-ziad-karta { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--surface-2); display: flex; flex-direction: column; gap: 6px }
+.web-ziad-karta ol { margin: 4px 0 0; padding-left: 20px; font-size: 13.5px; line-height: 1.5 }
+.web-ziad-karta code { overflow-wrap: anywhere }
+.web-ziad-btns { display: flex; flex-wrap: wrap; gap: 6px }

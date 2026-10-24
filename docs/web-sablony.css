@@ -531,3 +531,7 @@ dialog.wlb::backdrop{background:rgba(10,14,18,.94)}
 /* Luxusná na mobile: vyšší úvod a menší text, aby bolo vidno fotku */
 @container (max-width:600px){.t-luxus .hero{min-height:min(92svh,760px)}.t-luxus .hero h1{font-size:34px}.t-luxus .hero .lead{font-size:15.5px}.t-luxus .hero .in{gap:14px}}
 
+
+/* pasca na roboty vo formulároch */
+.site .hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0;pointer-events:none}
+.site .wnote{font-size:12.5px;margin:0;line-height:1.45}
