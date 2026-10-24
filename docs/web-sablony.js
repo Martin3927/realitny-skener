@@ -50,7 +50,7 @@ var DEF = { tpl: "susedska", color: "zlata", cc: "#1D6F8F", b2: "", hcol: "text"
   btn: "pill", btnFill: "fill", ph: "plain", anim: true, heroMedia: "foto", heroImg: "", heroVideo: "", heroAiImg: "", heroAiVid: "", heroPos: "", heroFoc: "", bub: "polo",
   order: ["ponuky", "strazca", "omne", "preco", "tim", "postup", "sluzby", "vykup", "cennik", "predane", "lokality", "video", "recenzie", "obhliadka", "ocenenie", "callback", "stiahnut", "faq", "dotaznik", "fotka", "hypoteka", "clanok", "kontakt"],
   on: { ponuky: true, vykup: false, cennik: false, preco: false, tim: false, predane: true, strazca: true, omne: true, postup: true, sluzby: true, lokality: false, video: false, recenzie: true, obhliadka: true, ocenenie: true, callback: true, stiahnut: false, faq: true, dotaznik: false, fotka: false, hypoteka: false, clanok: false, kontakt: true },
-  n: 6, name: "", area: "Spišská Nová Ves a Levoča", office: "", phone: "", email: "", wa: "", photo: "", photo2: "", logo: "", years: "", sold: "",
+  n: 6, name: "", area: "Spišská Nová Ves a Levoča", office: "", phone: "", email: "", wa: "", photo: "", photo2: "", logo: "", years: "", sold: "", yearsTx: "", soldTx: "",
   soc: { fb: "", ig: "", li: "", x: "", tt: "", yt: "" },
   stats: [], addr: "", hours: "", kava: true, online: false, mbar: true,
   heroBtn: "", heroBtnTx: "", svcX: "", soldBand: false, footFirma: false, team: [],
@@ -365,15 +365,15 @@ function avg() { var r = rec(); return r ? String(r.priemer).replace(".", ",") :
 function cislo(v) { v = String(v).trim(); var m = v.match(/^(\d{1,6})(\D{0,6})$/); return m ? '<b class="num" data-count="' + m[1] + '" data-suf="' + esc(m[2]) + '">' + esc(v) + "</b>" : '<b class="num">' + esc(v) + "</b>"; }
 function facts(cls, bezRokov) {
   var s = W.S, f = [];
-  if (String(s.years).trim() && !bezRokov) f.push("<div>" + cislo(s.years) + "<span>rokov v realitách</span></div>");
-  if (String(s.sold).trim()) f.push("<div>" + cislo(s.sold) + "<span>predaných nehnuteľností</span></div>");
+  if (String(s.years).trim() && !bezRokov) f.push("<div>" + cislo(s.years) + "<span>" + esc(String(s.yearsTx || "").trim() || "rokov v realitách") + "</span></div>");
+  if (String(s.sold).trim()) f.push("<div>" + cislo(s.sold) + "<span>" + esc(String(s.soldTx || "").trim() || "predaných nehnuteľností") + "</span></div>");
   (s.stats || []).forEach(function (x) { if (String(x.n || "").trim() && String(x.t || "").trim()) f.push("<div>" + cislo(x.n) + "<span>" + esc(x.t) + "</span></div>"); });
   var a = avg(); if (f.length < 2 && a) f.push('<div><b class="num">' + a + "</b><span>priemer z " + rec().pocet + (rec().pocet === 1 ? " recenzie" : " recenzií") + "</span></div>");
   if (!f.length) return cls && W.editor && !W.EDIT && !String(s.years).trim() ? '<button type="button" class="facts-pr" data-edgo="makler|f-years">+ Sem pridaj čísla: roky v realitách, počet predajov…</button>' : "";
   return '<div class="facts' + (cls ? " " + cls : "") + (f.length > 2 ? " f4" : "") + " n" + Math.min(4, f.length) + '">' + f.slice(0, 4).join("") + "</div>";
 }
 // pás s číslami hneď pod úvodom (roky, predaje, vlastné čísla)
-function cislaPas() { var f = facts("cp"); return f ? '<div class="cisla"><div class="w">' + f + "</div></div>" : ""; }
+function cislaPas() { var f = facts("cp"); return f ? '<div class="cisla"><div class="w">' + f + (W.editor && !W.EDIT && f.indexOf("facts-pr") < 0 ? '<button type="button" class="cisla-ed" data-edgo="makler|f-years">Upraviť čísla</button>' : "") + "</div></div>" : ""; }
 // hlavné tlačidlo v úvode podľa výberu makléra
 var HBTN = { ocenenie: ["Zistiť hodnotu zdarma", "ocenenie"], predat: ["Chcem predať", "ocenenie"], ponuky: ["Pozrieť ponuky", "ponuky"], zavolat: ["Zavolajte mi", "callback"], vykup: ["Chcem výkup", "vykup"], ebook: ["Stiahnuť e-book", "stiahnut"], kontakt: ["Napíšte mi", "kontakt"] };
 function hlavneTl() { var s = W.S, h = HBTN[s.heroBtn]; if (!h) return ""; return '<button type="button" class="btn" data-go="' + (s.on[h[1]] ? h[1] : "kontakt") + '">' + esc(String(s.heroBtnTx || "").trim() || h[0]) + "</button>"; }
@@ -847,6 +847,7 @@ function phNapoj() {
   if (PH.napojene) return; PH.napojene = true;
   var mm = function (q) { return !!(window.matchMedia && matchMedia(q).matches); };
   PH.sys = mm("(prefers-reduced-motion: reduce)");
+  PH.css = !!(window.CSS && CSS.supports && CSS.supports("animation-timeline: scroll()"));
   PH.fine = mm("(hover: hover) and (pointer: fine)");
   window.addEventListener("scroll", phScroll, { passive: true });
   window.addEventListener("resize", phScroll, { passive: true });
@@ -936,12 +937,12 @@ function phScroll() { if (!PH.raf) PH.raf = requestAnimationFrame(phTick); }
 function phTick() {
   PH.raf = 0; var root = W.root; if (!root || !phOk()) return;
   var r = root.getBoundingClientRect(), vh = window.innerHeight || 800, tot = r.height - vh;
-  var fp = root.querySelector(".fprog"); if (fp) fp.style.setProperty("--prog", (tot > 0 ? Math.min(1, Math.max(0, -r.top / tot)) : 0).toFixed(4));
+  // čiara priebehu: v moderných prehliadačoch ju kreslí CSS priamo pri posune, tu len náhrada pre staršie
+  if (!PH.css) { var fp = root.querySelector(".fprog"); if (fp) fp.style.setProperty("--prog", (tot > 0 ? Math.min(1, Math.max(0, -r.top / tot)) : 0).toFixed(4)); }
   var h = root.querySelector(".hero");
-  if (h) { var hr = h.getBoundingClientRect(); h.style.setProperty("--hp", Math.min(1, Math.max(0, -hr.top / Math.max(1, hr.height))).toFixed(4)); root.classList.toggle("fhd-on", hr.bottom < 70 && r.top < 0); }
+  if (h) { var hr = h.getBoundingClientRect(); root.classList.toggle("fhd-on", hr.bottom < 70 && r.top < 0); }
   else root.classList.toggle("fhd-on", r.top < -260);
   if (r.bottom <= vh + 4 && PH.io) root.querySelectorAll("[data-rv]:not(.rv-in)").forEach(function (el) { if (el.getBoundingClientRect().top < vh) { PH.io.unobserve(el); phIn(el, 0); } });   // koniec stránky
-  root.querySelectorAll(".s .media.wide").forEach(function (m) { var b = m.getBoundingClientRect(); if (b.bottom < 0 || b.top > vh) return; m.style.setProperty("--py", (((b.top + b.height / 2) / vh) - 0.5).toFixed(4)); });
 }
 // myš: úvod sa jemne nakláňa za kurzorom, karty sa natáčajú s odleskom, tlačidlá sa „prilepia“
 function phMove(e) {

@@ -529,6 +529,9 @@
 .site .facts.cp b{font-size:clamp(30px,4.6cqi,48px);line-height:1.05;color:var(--at);letter-spacing:var(--fhls)}
 .site .facts.cp span{font-size:13.5px;margin-top:6px;max-width:22ch;line-height:1.4}
 .site .cisla .facts-pr{display:block;margin:0 auto}
+.site .cisla .w{position:relative}
+.site .cisla-ed{position:absolute;top:-14px;right:clamp(16px,3cqi,32px);border:1px dashed color-mix(in srgb,var(--fg) 35%,transparent);background:var(--bg);color:var(--muted);border-radius:999px;padding:4px 12px;font:600 12px/1.3 var(--fb);cursor:pointer}
+.site .cisla-ed:hover{color:var(--fg);border-style:solid}
 .t-mestska .cisla{border-bottom:2px solid var(--fg)}
 .t-mestska .facts.cp div + div{border-left:2px solid var(--fg)}
 .t-mestska .facts.cp b{color:var(--fg)}
@@ -614,12 +617,11 @@
 /* úvod: médium sa zľahka hýbe za myšou a pri skrolovaní ide pomalšie (hĺbka) */
 .site.anim .hero{--mx:0;--my:0;--hp:0}
 .t-luxus .hero,.t-mestska .hero .img{overflow:hidden}
-.site.anim .hero .hm{scale:1.09;translate:calc(var(--mx) * -16px) calc(var(--my) * -11px + var(--hp) * 14%);will-change:translate}
-.site.anim.t-luxus .hero .in{translate:calc(var(--mx) * 7px) calc(var(--my) * 5px + var(--hp) * -50px)}
+.site.anim .hero .hm{scale:1.09}
+.site.anim .hero .hm > *{translate:calc(var(--mx) * -16px) calc(var(--my) * -11px)}
 .site.anim.t-galeria .hero .box{translate:calc(var(--mx) * 7px) calc(var(--my) * 5px)}
 .site.anim.t-mestska .hero .blk h1{translate:calc(var(--mx) * 6px) 0}
 .site.anim.mys.t-susedska .port,.site.anim.mys.t-rodinna .blob,.site.anim.mys.t-vizitka .hero > .mono{transform:perspective(1100px) rotateY(calc(var(--mx) * 7deg)) rotateX(calc(var(--my) * -6deg));transform-style:preserve-3d}
-.site.anim.t-susedska .hero > div:first-child,.site.anim.t-rodinna .hero > div:first-child{translate:0 calc(var(--hp) * -36px)}
 .site.anim.mys.t-rodinna .blob .badge2{translate:calc(var(--mx) * -20px) calc(var(--my) * -14px)}
 .site.anim.t-rodinna .blob .shape{animation:morph 16s ease-in-out infinite alternate}
 @keyframes morph{0%{border-radius:58% 42% 46% 54% / 52% 44% 56% 48%}50%{border-radius:44% 56% 60% 40% / 46% 58% 42% 54%}100%{border-radius:52% 48% 38% 62% / 60% 40% 58% 42%}}
@@ -635,7 +637,7 @@
 .site .sl{display:inline-block;vertical-align:top;overflow:clip;padding:.16em .03em .14em;margin:-.16em -.03em -.14em}
 .site .sli{display:inline-block;transition:translate 1s cubic-bezier(.2,.75,.15,1) calc(var(--rd,0ms) + var(--i) * 55ms),rotate 1s cubic-bezier(.2,.75,.15,1) calc(var(--rd,0ms) + var(--i) * 55ms)}
 .site.anim [data-rv="slova"]:not(.rv-in) .sli{translate:0 112%;rotate:3deg}
-.site.anim .s .media.wide .ph{scale:1.14;translate:0 calc(var(--py,0) * -7%)}
+.site.anim .s .media.wide .ph{scale:1.14}
 
 /* karty ponúk sa natáčajú za myšou a prejde po nich odlesk */
 .site.mys .card .media,.site.mys .tile,.site.mys .lux-row .media,.site.mys .lrow .media{transition:transform .6s cubic-bezier(.2,.7,.2,1),box-shadow .4s}
@@ -645,6 +647,21 @@
 .site.anim .card:hover .media .ph,.site.anim .tile:hover .ph,.site.anim .lux-row:hover .media .ph,.site.anim .lrow:hover .media .ph{scale:1.06;transition:scale 1.1s cubic-bezier(.2,.7,.2,1)}
 /* tlačidlá sa jemne prilepia ku kurzoru */
 .site.mys .btn{translate:var(--bx,0px) var(--by,0px);transition:translate .4s cubic-bezier(.2,.7,.2,1),transform .15s,box-shadow .15s}
+
+/* hĺbka pri skrolovaní: počíta ju prehliadač priamo pri posune stránky, takže sa nič netrasie;
+   prehliadače bez tejto možnosti ju jednoducho nemajú */
+@supports (animation-timeline: scroll()) {
+  .site.anim .hero .hm{animation:hl-hm linear both;animation-timeline:scroll(root);animation-range:0 100vh}
+  .site.anim.t-luxus .hero .in{animation:hl-in linear both;animation-timeline:scroll(root);animation-range:0 100vh}
+  .site.anim.t-susedska .hero > div:first-child,.site.anim.t-rodinna .hero > div:first-child{animation:hl-up linear both;animation-timeline:scroll(root);animation-range:0 100vh}
+  .site.anim .s .media.wide .ph{animation:hl-py linear both;animation-timeline:view();animation-range:cover}
+  .site.anim .fprog{animation:hl-prog linear both;animation-timeline:scroll(root)}
+}
+@keyframes hl-hm{to{translate:0 14%}}
+@keyframes hl-in{to{translate:0 -50px}}
+@keyframes hl-up{to{translate:0 -36px}}
+@keyframes hl-py{from{translate:0 3.5%}to{translate:0 -3.5%}}
+@keyframes hl-prog{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 
 /* plávajúca lišta s kontaktom a čiarou priebehu (len na zverejnenom webe) */
 .site .fhd-wrap{position:sticky;top:0;height:0;z-index:30}

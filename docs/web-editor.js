@@ -271,10 +271,12 @@ function renderPanel() {
   var vz = W.CTX.kancelaria || {};
   $("fMakler").innerHTML = upl("Logo", "logo", { max: 700, logo: 1 }) + (vz.logo && s.logo !== vz.logo ? '<button type="button" class="lbtn" data-logokanc style="grid-column:1/-1;justify-self:start;color:var(--c-ink)">Použiť logo kancelárie</button>' : "") +
     upl("Fotka makléra", "photo", { round: 1, max: 900 }) + upl("Druhá fotka makléra", "photo2", { max: 1400 }) + '<p class="note">Druhá fotka sa ukáže v sekcii O mne a pri kontakte. Hodí sa fotka pri práci, s klientom alebo pred nehnuteľnosťou. Bez nej sa použije hlavná fotka.</p>' + fld("Meno a priezvisko", "name") + fld("Kde pôsobí", "area") + fld("Kancelária", "office") + '<p class="note">Kým nenahráš svoju fotku, ukážka ukazuje ilustračnú fotku od AI. Na zverejnenom webe sa bez fotky zobrazia iniciály.</p>';
-  $("fCisla").innerHTML = fld("Rokov v realitách", "years", { half: 1, ph: "napr. 16+" }) + fld("Predaných nehnuteľností", "sold", { half: 1, ph: "napr. 250+" }) +
-    s.stats.map(function (x, i) { return listItem("stats", i, s.stats.length, fld("Číslo", "stats." + i + ".n", { half: 1, ph: i ? "napr. 20+" : "napr. 300+" }) + fld("Čo znamená", "stats." + i + ".t", { half: 1, ph: i ? "výkupov" : "predajov pod mojím vedením" }), "Odstrániť číslo"); }).join("") +
-    (s.stats.length < 2 ? '<button type="button" class="addb" data-ladd="stats" style="grid-column:1/-1">+ Pridať ďalšie číslo</button>' : "") +
-    '<p class="note">Čísla sa ukážu vo výraznom páse hneď pod úvodom webu, najviac 4. Pri čísle môžeš pridať aj znak, napríklad 250+. Keď ich návštevník uvidí, pekne sa napočítajú. Prázdne sa nezobrazia.</p>';
+  while (s.stats.length < 2) s.stats.push({ n: "", t: "" });
+  $("fCisla").innerHTML = '<p class="note" style="margin-top:0">Ku každému číslu si napíš vlastný popis, napríklad <b>300+</b> a <b>dozorovaných predajov</b>. Ukážu sa vo výraznom páse hneď pod úvodom a pekne sa napočítajú. Prázdne riadky sa nezobrazia.</p>' +
+    '<div class="cis-r"><span>1</span>' + fld("Číslo", "years", { half: 1, ph: "napr. 16+" }) + fld("Popis", "yearsTx", { half: 1, ph: "rokov v realitách" }) + "</div>" +
+    '<div class="cis-r"><span>2</span>' + fld("Číslo", "sold", { half: 1, ph: "napr. 250+" }) + fld("Popis", "soldTx", { half: 1, ph: "predaných nehnuteľností" }) + "</div>" +
+    '<div class="cis-r"><span>3</span>' + fld("Číslo", "stats.0.n", { half: 1, ph: "napr. 300+" }) + fld("Popis", "stats.0.t", { half: 1, ph: "napr. dozorovaných predajov" }) + "</div>" +
+    '<div class="cis-r"><span>4</span>' + fld("Číslo", "stats.1.n", { half: 1, ph: "napr. 20+" }) + fld("Popis", "stats.1.t", { half: 1, ph: "napr. výkupov" }) + "</div>";
   $("fKontakt").innerHTML = fld("Telefón", "phone", { half: 1 }) + fld("WhatsApp", "wa", { half: 1, ph: "0905 ..." }) + fld("E-mail", "email") + '<p class="note">Keď vyplníš WhatsApp, na webe sa zobrazí zelené tlačidlo „Napíšte mi“ a pri každej ponuke odkaz s predvyplnenou správou.</p>' +
     fld("Adresa kancelárie", "addr", { ph: "napr. Hviezdoslavova 8, Spišská Nová Ves" }) + fld("Otváracie hodiny", "hours", { ph: "napr. Po – Pi 8:00 – 16:30, víkend po dohode" }) +
     '<label class="chk"><input type="checkbox" data-check="kava"' + (s.kava ? " checked" : "") + '>Ponúknuť kávu v kancelárii (pri adrese, s odkazom na mapu)</label>' +
