@@ -124,6 +124,13 @@ function logoColors(im) {
 }
 
 /* ================================================================ panel – polia */
+var HBTN_E = [["", "Podľa šablóny"], ["ocenenie", "Zistiť hodnotu zdarma"], ["predat", "Chcem predať"], ["ponuky", "Pozrieť ponuky"], ["zavolat", "Zavolajte mi"], ["vykup", "Chcem výkup"], ["ebook", "Stiahnuť e-book"], ["kontakt", "Napíšte mi"]];
+function hlavneTlPole(s) {
+  var cur = HBTN_E.find(function (x) { return x[0] === s.heroBtn; }) || HBTN_E[0];
+  return '<label class="full" style="margin-top:6px">Hlavné tlačidlo v úvode<select data-bind="heroBtn">' + HBTN_E.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === s.heroBtn ? " selected" : "") + ">" + x[1] + "</option>"; }).join("") + "</select></label>" +
+    (s.heroBtn ? fld("Vlastný text tlačidla (nepovinné)", "heroBtnTx", { ph: cur[1] }) : "") +
+    '<p class="note">Čo má návštevník urobiť ako prvé. Napríklad „Zistiť hodnotu zdarma“ ho pošle rovno na odhad ceny. Keď je cieľová sekcia vypnutá, tlačidlo vedie na kontakt.</p>';
+}
 var get = T.get, setDeep = T.setDeep;
 function fld(label, path, o) {
   o = o || {}; var v = get(path); if (v == null) v = ""; var id = "f-" + path.replace(/\./g, "-");
@@ -148,11 +155,21 @@ function bodyOf(k) {
   if (s.custom[k]) return fld("Nadpis", "custom." + k + ".title") + fld("Text", "custom." + k + ".text", { area: 1, rows: 4 }) + upl("Obrázok (nepovinné)", "custom." + k + ".img", { max: 1600 }) + fld("Text tlačidla", "custom." + k + ".btn", { half: 1, ph: "napr. Viac info" }) + fld("Odkaz tlačidla", "custom." + k + ".link", { half: 1, ph: "www..." }) + '<button type="button" class="lbtn" data-delcustom="' + k + '">Odstrániť sekciu</button>';
   switch (k) {
     case "ponuky": return '<label class="full">Počet ponúk na úvode: <b id="nOut">' + s.n + '</b><input type="range" min="2" max="12" step="1" data-bind="n" data-num value="' + s.n + '"></label><p class="note">Ponuky sa berú samy z Nehnuteľností (aktívne a rezervované). Kliknutím na ponuku sa otvorí detail s fotkami, parametrami, mapou, videom a 3D prehliadkou.</p>';
-    case "predane": return '<p class="note">Ukazujú sa ponuky, ktoré máš v Nehnuteľnostiach označené ako Predané (za posledné 2 roky). Bez predaných ponúk sa sekcia na webe nezobrazí.</p>';
+    case "predane": return '<label class="chk"><input type="checkbox" data-check="soldBand"' + (s.soldBand ? " checked" : "") + '>Výrazný pás PREDANÉ cez celú fotku</label><p class="note">Ukazujú sa ponuky, ktoré máš v Nehnuteľnostiach označené ako Predané (za posledné 2 roky). Bez predaných ponúk sa sekcia na webe nezobrazí.</p>';
+    case "preco": return fld("Nadpis", "heads.preco.h", { ph: "Prečo si vybrať práve mňa" }) + fld("Text pod nadpisom (nepovinné)", "heads.preco.p") +
+      s.why.map(function (x, i) { return listItem("why", i, s.why.length, fld("Dôvod " + (i + 1), "why." + i + ".t", { ph: "napr. Férové ceny" }) + fld("Krátky popis (nepovinné)", "why." + i + ".d", { area: 1, rows: 2 }), "Odstrániť"); }).join("") +
+      (s.why.length < 12 ? '<button type="button" class="addb" data-ladd="why" style="grid-column:1/-1">+ Pridať dôvod</button>' : "") +
+      '<p class="note">Ikona sa vyberie sama podľa názvu (cena, rýchlosť, spoľahlivosť, diskrétnosť, skúsenosti…). Popisy sú ukážkové, prepíš ich podľa seba.</p>';
+    case "tim": return s.team.map(function (x, i) { return listItem("team", i, s.team.length, upl("Fotka", "team." + i + ".img", { max: 900 }) + fld("Meno", "team." + i + ".n", { half: 1 }) + fld("Pozícia", "team." + i + ".r", { half: 1, ph: "napr. Realitná maklérka" }) + fld("Telefón", "team." + i + ".tel", { half: 1 }) + fld("E-mail", "team." + i + ".mail", { half: 1 }), "Odstrániť člena"); }).join("") +
+      '<button type="button" class="addb" data-ladd="team" style="grid-column:1/-1">+ Pridať člena tímu</button>' +
+      (s.team.length ? "" : '<button type="button" class="lbtn" data-timja style="grid-column:1/-1;justify-self:start;color:var(--c-ink)">Pridať mňa ako prvého člena</button>') +
+      '<p class="note">Sekcia sa hodí, keď v kancelárii pracuje viac ľudí. Bez členov sa na webe nezobrazí.</p>';
     case "strazca": return fld("Nadpis", "watch.title") + fld("Text", "watch.text", { area: 1, rows: 3 }) + fld("Lokality na výber (oddeľ čiarkou)", "watch.places") + '<p class="note">Požiadavka sa zapíše medzi tvoje dopyty v Klientoch. Keď pridáš vhodnú ponuku alebo ju nájde skener, aplikácia ti dá vedieť.</p>';
     case "omne": return fld("Nadpis", "about.title") + fld("Text o sebe", "about.text", { area: 1, rows: 5 }) + '<p class="note">Fotku a počet rokov v realitách doplníš v záložke Maklér.</p>';
     case "postup": return s.steps.map(function (x, i) { return listItem("steps", i, s.steps.length, fld("Krok " + (i + 1), "steps." + i + ".t") + fld("Popis", "steps." + i + ".d", { area: 1, rows: 2 }), "Odstrániť krok"); }).join("") + '<button type="button" class="addb" data-ladd="steps" style="grid-column:1/-1">+ Pridať krok</button>';
-    case "sluzby": return s.svc.map(function (x, i) { return listItem("svc", i, s.svc.length, fld("Služba " + (i + 1), "svc." + i + ".t") + fld("Popis", "svc." + i + ".d", { area: 1, rows: 2 }), "Odstrániť službu"); }).join("") + '<button type="button" class="addb" data-ladd="svc" style="grid-column:1/-1">+ Pridať službu</button>';
+    case "sluzby": return s.svc.map(function (x, i) { return listItem("svc", i, s.svc.length, fld("Služba " + (i + 1), "svc." + i + ".t") + fld("Popis", "svc." + i + ".d", { area: 1, rows: 2 }), "Odstrániť službu"); }).join("") + '<button type="button" class="addb" data-ladd="svc" style="grid-column:1/-1">+ Pridať službu</button>' +
+      fld("Doplnkové služby (oddeľ čiarkou, nepovinné)", "svcX", { ph: "napr. Foto a video, Dron, 3D prehliadka, Virtuálny staging, Právny servis" }) +
+      (s.svcX ? "" : '<button type="button" class="lbtn" data-svcx style="grid-column:1/-1;justify-self:start;color:var(--c-ink)">Vložiť príklad</button>') + '<p class="note">Doplnkové služby sa ukážu ako štítky pod službami.</p>';
     case "lokality": return s.loc.map(function (l, i) { return listItem("loc", i, s.loc.length, fld("Obec alebo štvrť", "loc." + i + ".n") + fld("Popis", "loc." + i + ".t", { area: 1, rows: 2 }) + fld("Štítky (oddeľ čiarkou)", "loc." + i + ".g") + upl("Fotka (nepovinné)", "loc." + i + ".img", { max: 1200 }), "Odstrániť lokalitu"); }).join("") + '<button type="button" class="addb" data-ladd="loc" style="grid-column:1/-1">+ Pridať lokalitu</button><p class="note">Popisy sú ukážkové. Prepíš ich podľa toho, čo o lokalitách vieš ty.</p>';
     case "cennik": return fld("Nadpis", "heads.cennik.h", { ph: "Férová a jasná odmena" }) + fld("Text pod nadpisom", "heads.cennik.p", { ph: "Viete vopred, koľko zaplatíte. Bez prekvapení na konci." }) +
       s.cen.rows.map(function (x, i) { return listItem("cen.rows", i, s.cen.rows.length, fld("Typ nehnuteľnosti", "cen.rows." + i + ".t", { half: 1 }) + fld("Cena", "cen.rows." + i + ".c", { half: 1, ph: "napr. 3 % z ceny" }) + fld("Poznámka", "cen.rows." + i + ".p", { ph: "napr. vrátane DPH" }), "Odstrániť riadok"); }).join("") +
@@ -167,13 +184,16 @@ function bodyOf(k) {
     case "dotaznik": return fld("Nadpis", "form.title") + fld("Úvodný text", "form.text", { area: 1, rows: 2 }) + '<p class="note">Otázky: čo plánuje, typ nehnuteľnosti, kedy. Odpovede ti prídu ako nový kontakt do zvončeka.</p>';
     case "stiahnut": return fld("Názov", "dl.title") + fld("Popis", "dl.desc", { area: 1, rows: 3 }) + fld("Text tlačidla", "dl.btn") + upl("Súbor (PDF)", "dl.url", { pdf: 1 }) +
       upl("Obrázok obálky", "dl.img", { max: 1200 }) +
+      '<label class="chk"><input type="checkbox" data-check="dl.news"' + (s.dl.news ? " checked" : "") + '>Ponúknuť aj odber tipov e-mailom (nepovinné zaškrtávacie políčko)</label>' + fld("Text súhlasu", "dl.newsTx", { area: 1, rows: 2 }) +
       (s.dl.url ? '<button type="button" class="lbtn" data-dlobalka style="grid-column:1/-1;justify-self:start;color:var(--c-ink)">Použiť prvú stranu PDF ako obálku</button>' : "") +
       '<p class="note">Po nahratí PDF sa obálka vytvorí sama z jeho prvej strany. Môžeš ju nahradiť vlastným obrázkom. Bez obrázka sa zobrazí farebná obálka s názvom. Návštevník zadá e-mail, hneď si súbor stiahne a ty máš jeho kontakt.</p>';
-    case "faq": return s.faq.map(function (x, i) { return listItem("faq", i, s.faq.length, fld("Otázka", "faq." + i + ".q") + fld("Odpoveď", "faq." + i + ".a", { area: 1, rows: 3 }), "Odstrániť otázku"); }).join("") + '<button type="button" class="addb" data-ladd="faq" style="grid-column:1/-1">+ Pridať otázku</button><p class="note">Odpovede sú ukážkové, skontroluj ich a prepíš podľa seba.</p>';
+    case "faq": return s.faq.map(function (x, i) { return listItem("faq", i, s.faq.length, fld("Otázka", "faq." + i + ".q") + fld("Odpoveď", "faq." + i + ".a", { area: 1, rows: 3 }), "Odstrániť otázku"); }).join("") + '<button type="button" class="addb" data-ladd="faq" style="grid-column:1/-1">+ Pridať otázku</button>' +
+      (s.faq.some(function (x) { return /RSc/.test(x.q || ""); }) ? "" : '<button type="button" class="lbtn" data-faqrsc style="grid-column:1/-1;justify-self:start;color:var(--c-ink)">+ Pridať otázku o titule RSc.</button>') + '<p class="note">Odpovede sú ukážkové, skontroluj ich a prepíš podľa seba.</p>';
     case "recenzie": return fld("Odkaz na Google recenzie (nepovinné)", "rev.google", { ph: "g.page/r/..." }) + fld("Hodnotenie na Google", "rev.gRating", { half: 1, ph: "napr. 4,9" }) + fld("Počet recenzií na Google", "rev.gCount", { half: 1, ph: "napr. 166" }) +
       '<p class="note">Keď vyplníš hodnotenie, v úvode webu sa ukáže odznak „★ 4,9 · 166 recenzií na Google“ s odkazom na tvoje recenzie. Čísla občas aktualizuj.</p>' + '<p class="note">Na webe sa ukazujú schválené recenzie z aplikácie (sekcia Recenzie). Klienta o recenziu požiadaš tam jedným klikom.</p>';
     case "obhliadka": return fld("Časy obhliadok (oddeľ čiarkou)", "book.times", { ph: "9:00, 14:00, 17:30" }) + '<label class="chk"><input type="checkbox" data-check="book.sat"' + (s.book.sat ? " checked" : "") + ">Obhliadky aj v sobotu</label>" + fld("Text pod nadpisom", "book.text", { area: 1, rows: 2 }) + '<p class="note">Záujem o obhliadku ti príde do zvončeka aj s vybranou ponukou a časom. Termín potvrdíš klientovi telefonicky.</p>';
-    case "ocenenie": return fld("Nadpis", "val.title") + fld("Text", "val.text", { area: 1, rows: 3 });
+    case "ocenenie": return fld("Nadpis", "val.title") + fld("Text", "val.text", { area: 1, rows: 3 }) +
+      '<label class="chk"><input type="checkbox" data-check="val.krokyOn"' + (s.val.krokyOn ? " checked" : "") + '>Ukázať postup v krokoch namiesto bodov</label>' + fld("Kroky (každý na nový riadok)", "val.kroky", { area: 1, rows: 3 });
     case "callback": return fld("Nadpis", "cb.title") + fld("Text", "cb.text", { area: 1, rows: 2 });
     case "hypoteka": return fld("Úrok v %", "hypo.rate", { num: 1, half: 1 });
     case "clanok": return fld("Nadpis článku", "post.title") + fld("Úvod článku", "post.text", { area: 1, rows: 3 }) + fld("Odkaz na celý článok (nepovinné)", "post.url", { ph: "www..." });
@@ -234,7 +254,7 @@ function renderPanel() {
       '<div class="seg" style="grid-column:1/-1">' + T.HERO_IMG_TPLS.map(function (id) { return '<button type="button" class="chip" data-tpl="' + id + '">' + T.TPLS.find(function (t) { return t.id === id; }).name + "</button>"; }).join("") + "</div>") +
     '<div class="seg" style="grid-column:1/-1">' + [["foto", "Fotka"], ["pohyb", "Pomaly sa približuje"], ["video", "Video"]].map(function (x) { return '<button type="button" class="chip" data-hm="' + x[0] + '" aria-pressed="' + (s.heroMedia === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" +
     (video ? upl("Vlastné video do úvodu", "heroVideo", { video: 1 }) + '<p class="note">Krátke video bez zvuku, napríklad prelet dronom, 10 až 30 sekúnd. Veľké video zmenším priamo v prehliadači, trvá to asi tak dlho ako samotné video.</p>' + aiVideo
-      : upl("Vlastná úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Najlepšie fungujú fotky na šírku. Pod ilustračnými fotkami od AI sa na webe ukáže poznámka, že sú vytvorené AI.</p>' + aiFoto) + pos + foc;
+      : upl("Vlastná úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Najlepšie fungujú fotky na šírku. Pod ilustračnými fotkami od AI sa na webe ukáže poznámka, že sú vytvorené AI.</p>' + aiFoto) + pos + foc + hlavneTlPole(s);
   seg("btnShape", [["pill", "Pilulka"], ["round", "Zaoblené"], ["square", "Hranaté"]], s.btn, "bs");
   seg("btnFill", [["fill", "Vyplnené"], ["outline", "Obrysové"]], s.btnFill, "bf");
   seg("phStyle", [["plain", "Bez rámika"], ["frame", "S rámikom"], ["shadow", "S tieňom"]], s.ph, "phs");
@@ -250,10 +270,11 @@ function renderPanel() {
   $("rad").value = s.r; $("rOut").textContent = s.r + " px";
   var vz = W.CTX.kancelaria || {};
   $("fMakler").innerHTML = upl("Logo", "logo", { max: 700, logo: 1 }) + (vz.logo && s.logo !== vz.logo ? '<button type="button" class="lbtn" data-logokanc style="grid-column:1/-1;justify-self:start;color:var(--c-ink)">Použiť logo kancelárie</button>' : "") +
-    upl("Fotka makléra", "photo", { round: 1, max: 900 }) + upl("Druhá fotka makléra", "photo2", { max: 1400 }) + '<p class="note">Druhá fotka sa ukáže v sekcii O mne a pri kontakte. Hodí sa fotka pri práci, s klientom alebo pred nehnuteľnosťou. Bez nej sa použije hlavná fotka.</p>' + fld("Meno a priezvisko", "name") + fld("Kde pôsobí", "area") + fld("Kancelária", "office") + fld("Rokov v realitách", "years", { half: 1, ph: "napr. 16+" }) + fld("Predaných nehnuteľností", "sold", { half: 1, ph: "napr. 250+" }) +
+    upl("Fotka makléra", "photo", { round: 1, max: 900 }) + upl("Druhá fotka makléra", "photo2", { max: 1400 }) + '<p class="note">Druhá fotka sa ukáže v sekcii O mne a pri kontakte. Hodí sa fotka pri práci, s klientom alebo pred nehnuteľnosťou. Bez nej sa použije hlavná fotka.</p>' + fld("Meno a priezvisko", "name") + fld("Kde pôsobí", "area") + fld("Kancelária", "office") + '<p class="note">Kým nenahráš svoju fotku, ukážka ukazuje ilustračnú fotku od AI. Na zverejnenom webe sa bez fotky zobrazia iniciály.</p>';
+  $("fCisla").innerHTML = fld("Rokov v realitách", "years", { half: 1, ph: "napr. 16+" }) + fld("Predaných nehnuteľností", "sold", { half: 1, ph: "napr. 250+" }) +
     s.stats.map(function (x, i) { return listItem("stats", i, s.stats.length, fld("Číslo", "stats." + i + ".n", { half: 1, ph: i ? "napr. 20+" : "napr. 300+" }) + fld("Čo znamená", "stats." + i + ".t", { half: 1, ph: i ? "výkupov" : "predajov pod mojím vedením" }), "Odstrániť číslo"); }).join("") +
     (s.stats.length < 2 ? '<button type="button" class="addb" data-ladd="stats" style="grid-column:1/-1">+ Pridať ďalšie číslo</button>' : "") +
-    '<p class="note">Na webe sa ukážu až 4 čísla. Pri čísle môžeš pridať aj znak, napríklad 250+. V úvode sa pekne napočítajú.</p>' + '<p class="note">Kým nenahráš svoju fotku, ukážka ukazuje ilustračnú fotku od AI. Na zverejnenom webe sa bez fotky zobrazia iniciály.</p>';
+    '<p class="note">Čísla sa ukážu v úvode webu vo všetkých šablónach, najviac 4. Pri čísle môžeš pridať aj znak, napríklad 250+. Pri načítaní sa pekne napočítajú. Prázdne sa nezobrazia.</p>';
   $("fKontakt").innerHTML = fld("Telefón", "phone", { half: 1 }) + fld("WhatsApp", "wa", { half: 1, ph: "0905 ..." }) + fld("E-mail", "email") + '<p class="note">Keď vyplníš WhatsApp, na webe sa zobrazí zelené tlačidlo „Napíšte mi“ a pri každej ponuke odkaz s predvyplnenou správou.</p>' +
     fld("Adresa kancelárie", "addr", { ph: "napr. Hviezdoslavova 8, Spišská Nová Ves" }) + fld("Otváracie hodiny", "hours", { ph: "napr. Po – Pi 8:00 – 16:30, víkend po dohode" }) +
     '<label class="chk"><input type="checkbox" data-check="kava"' + (s.kava ? " checked" : "") + '>Ponúknuť kávu v kancelárii (pri adrese, s odkazom na mapu)</label>' +
@@ -261,6 +282,7 @@ function renderPanel() {
     '<label class="chk"><input type="checkbox" data-check="mbar"' + (s.mbar ? " checked" : "") + '>Na mobile zobraziť spodnú lištu Zavolať · WhatsApp · Ocenenie</label>';
   $("fGdpr").innerHTML = fld("Prevádzkovateľ (meno alebo firma)", "gdpr.who") + fld("IČO", "gdpr.ico", { half: 1 }) + fld("E-mail pre GDPR", "gdpr.mail", { half: 1, ph: s.email }) + fld("Sídlo", "gdpr.addr", { ph: "Ulica, PSČ Mesto" }) +
     '<label class="chk"><input type="checkbox" data-check="gdpr.bar"' + (s.gdpr.bar ? " checked" : "") + '>Zobraziť lištu so súhlasom s cookies</label>' +
+    '<label class="chk"><input type="checkbox" data-check="footFirma"' + (s.footFirma ? " checked" : "") + '>Zobraziť firmu, IČO, sídlo a otváracie hodiny aj v pätičke webu</label>' +
 
     '<p class="note">Z týchto údajov sa vyskladá stránka Ochrana osobných údajov aj lišta s cookies. Je to vzorový text, pred spustením ho daj raz skontrolovať právnikovi.</p>';
   var TRK = T.trk(), stavMer = function (ok, vyplnene) { return '<span class="mer-stav' + (ok ? " ok" : vyplnene ? " zle" : "") + '">' + (ok ? "Napojené" : vyplnene ? "Zlý tvar ID" : "Nenapojené") + "</span>"; };
@@ -286,6 +308,7 @@ function checks() {
   return [
     ch("Fotka makléra", T.fotoMaklera(), ["makler", "u-photo"]),
     ch("Meno, telefón a e-mail", s.name && s.phone && s.email, ["makler", "f-name"]),
+    ch("Čísla v úvode (roky, predaje)", String(s.years).trim() || String(s.sold).trim() || s.stats.some(function (x) { return x.n && x.t; }), ["makler", "f-years"]),
     ch("Úvodný text podľa seba", s.heroTx[s.tpl] && (s.heroTx[s.tpl].t || s.heroTx[s.tpl].l), ["edit"]),
     ch("Text O mne podľa seba", s.about.text !== T.DEF.about.text, ["sekcie", "omne"], !!s.on.omne),
     ch("Úvodná fotka alebo video", s.heroMedia === "video" ? s.heroVideo : s.heroImg, ["vzhlad", "u-heroImg"], T.HERO_IMG_TPLS.indexOf(s.tpl) >= 0),
@@ -305,6 +328,7 @@ function renderKontrola() {
   $("ckList").innerHTML = c.sort(function (a, b) { return a.ok - b.ok; }).map(function (x) { return '<li class="' + (x.ok ? "done" : "") + '"><span class="ok">' + (x.ok ? ICP.ok : "") + '</span><span class="t">' + x.t + "</span>" + (x.ok ? "" : '<button type="button" data-ckgo="' + x.go.join("|") + '">Doplniť</button>') + "</li>"; }).join("");
   renderShare();
 }
+W.editorGo = function (g) { goFix(g); };
 function goFix(g) {
   var p = g.split("|"), tab = p[0], id = p[1];
   if (tab === "app") { location.href = "./#nehnutelnosti"; return; }
@@ -560,8 +584,11 @@ document.addEventListener("click", function (e) {
   else if (d.edit) { if (open.has(d.edit)) open.delete(d.edit); else open.add(d.edit); }
   else if (d.clear) { setDeep(d.clear, ""); if (d.clear === "logo") s.logoCols = []; if (d.clear === "dl.url") { s.dl.file = ""; if (s.dl.imgAuto) { s.dl.img = ""; s.dl.imgAuto = false; } } if (d.clear === "dl.img") s.dl.imgAuto = false; }
   else if (d.dlobalka !== undefined) { pdfObalkaZNahraneho(); return; }
-  else if (d.ladd) { var add = { steps: { t: "", d: "" }, svc: { t: "", d: "" }, loc: { n: "", t: "", g: "" }, faq: { q: "", a: "" }, "cen.rows": { t: "", c: "", p: "" }, stats: { n: "", t: "" } }[d.ladd]; if (add) get(d.ladd).push(add); }
+  else if (d.ladd) { var add = { steps: { t: "", d: "" }, svc: { t: "", d: "" }, loc: { n: "", t: "", g: "" }, faq: { q: "", a: "" }, "cen.rows": { t: "", c: "", p: "" }, stats: { n: "", t: "" }, why: { t: "", d: "" }, team: { n: "", r: "", tel: "", mail: "", img: "" } }[d.ladd]; if (add) get(d.ladd).push(add); }
   else if (d.ldel) { var a = d.ldel.split(":"); get(a[0]).splice(+a[1], 1); }
+  else if (d.faqrsc !== undefined) s.faq.push({ q: "Čo znamená titul RSc.?", a: "V slovenskom prostredí znamená skratka RSc. Real Estate Consultant, teda realitný konzultant." });
+  else if (d.svcx !== undefined) s.svcX = "Foto a video, Zábery z dronu, 3D prehliadka, Virtuálny staging, Právny servis";
+  else if (d.timja !== undefined) { var mk = W.CTX.makler || {}; s.team.push({ n: s.name || mk.meno || "", r: s.office ? "Maklér · " + s.office : "Maklér", tel: s.phone || "", mail: s.email || "", img: s.photo || "" }); }
   else if (d.lup) { var b = d.lup.split(":"), A = get(b[0]), k = +b[1], t1 = A[k - 1]; A[k - 1] = A[k]; A[k] = t1; }
   else if (d.ldn) { var c = d.ldn.split(":"), B = get(c[0]), m = +c[1], t2 = B[m + 1]; B[m + 1] = B[m]; B[m] = t2; }
   else if (d.lc) { s.color = "vlastna"; s.cc = d.lc; }
@@ -585,6 +612,7 @@ $("panel").addEventListener("input", function (e) {
   var t = e.target, p = t.dataset.bind; if (!p) return; var v = t.value; if ("num" in t.dataset) v = parseFloat(String(v).replace(",", ".")) || 0; setDeep(p, v);
   if (p === "gdpr.gaId" || p === "gdpr.fbId") { var bl = t.closest(".mer-blok"), st = bl && bl.querySelector(".mer-stav"), TRK = T.trk(), ok = p === "gdpr.gaId" ? !!TRK.ga : !!TRK.fb, vypl = !!String(v || "").trim(); if (st) { st.className = "mer-stav" + (ok ? " ok" : vypl ? " zle" : ""); st.textContent = ok ? "Napojené" : vypl ? "Zlý tvar ID" : "Nenapojené"; } }
   if (p === "n") $("nOut").textContent = v;
+  if (p === "heroBtn") { all(); return; }
   var m = p.match(/^custom\.(\w+)\.title$/); if (m) { var sp = document.querySelector('[data-title="' + m[1] + '"]'); if (sp) sp.textContent = v || "Vlastná sekcia"; }
   soft();
 });
