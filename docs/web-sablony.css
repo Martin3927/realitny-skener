@@ -442,6 +442,71 @@
 .site .wa svg{width:22px;height:22px}
 @container (max-width:520px){.site .wa span{display:none}.site .wa{padding:13px}}
 
+/* odznak hodnotenia z Google v úvode */
+.site .gbadge{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:18px;padding:7px 14px 7px 10px;border-radius:999px;background:color-mix(in srgb,var(--surf) 88%,transparent);box-shadow:0 0 0 1px var(--line);font-size:13.5px;color:var(--fg);text-decoration:none;align-self:flex-start;width:max-content;max-width:100%}
+.site a.gbadge:hover{box-shadow:0 0 0 1px var(--a)}
+.site .gbadge .gb-st{color:#E7A92A;letter-spacing:1px;font-size:13px}
+.site .gbadge b{font-family:var(--fh);font-weight:var(--fhw);font-size:16px}
+.site .gbadge span:last-child{color:var(--muted)}
+.t-luxus .hero .gbadge,.t-galeria .hero .gbadge{background:rgba(0,0,0,.28);box-shadow:0 0 0 1px rgba(255,255,255,.35);color:#fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.t-galeria .hero .gbadge{background:color-mix(in srgb,var(--surf) 70%,transparent);color:var(--fg);box-shadow:0 0 0 1px var(--line)}
+.t-luxus .hero .gbadge span:last-child{color:rgba(255,255,255,.85)}
+.t-luxus .hero .gbadge{align-self:center}
+.t-vizitka .hero .gbadge{align-self:center}
+.t-mestska .hero .gbadge{background:color-mix(in srgb,var(--on-a) 14%,transparent);box-shadow:none;color:var(--on-a)}
+.t-mestska .hero .gbadge span:last-child{color:var(--on-a);opacity:.85}
+.t-mestska .hero .gbadge .gb-st{color:var(--on-a)}
+.site .facts.f4{row-gap:16px}
+
+/* cenník */
+.site .cen{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:clamp(16px,3cqi,28px);align-items:start}
+@container (max-width:760px){.site .cen{grid-template-columns:1fr}}
+.t-mestska #s-cennik .secin,.t-mestska #s-vykup .secin{display:block}
+.t-mestska #s-cennik .secin > .hd,.t-mestska #s-vykup .secin > .hd{position:static;margin:0 0 clamp(24px,4cqi,40px);max-width:820px}
+.site .cen-rows{display:flex;flex-direction:column;gap:10px}
+.site .cen-row{display:flex;align-items:center;justify-content:space-between;gap:14px 20px;flex-wrap:wrap;background:var(--surf);border-radius:var(--r);padding:18px 20px}
+.site .s.alt .cen-row,.site .s.alt .cen-inc{background:var(--bg)}
+.site .cen-row h3{font-size:18px}
+.site .cen-row .muted{display:block;font-size:13.5px;margin-top:3px}
+.site .cen-row b{font-family:var(--fh);font-weight:var(--fhw);font-size:clamp(20px,2.6cqi,26px);color:var(--at);white-space:nowrap}
+.site .s.alt .cen-row,.site .s.alt .cen-inc{background:var(--bg)}
+.site .cen-pozn{margin-top:6px;font-size:14px;color:var(--muted)}
+.site .cen-inc{background:var(--surf);border-radius:var(--r);padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:inset 0 0 0 2px var(--a-soft)}
+.site .cen-inc h3{font-size:18px}
+.site .cen-inc ul,.site .vyk-vyh{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.site .cen-inc li,.site .vyk-vyh li{display:flex;gap:10px;align-items:flex-start;font-size:15px;line-height:1.45}
+.site .cen-inc li svg,.site .vyk-vyh li svg{flex:none;width:20px;height:20px;padding:3px;border-radius:999px;background:var(--a);color:var(--on-a);margin-top:1px}
+.site .cen-inc .btn{align-self:flex-start;margin-top:4px}
+
+/* výkup */
+.site .vyk{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:clamp(20px,4cqi,48px);align-items:start}
+@container (max-width:760px){.site .vyk{grid-template-columns:1fr}}
+.site .vyk-l{display:flex;flex-direction:column;gap:20px}
+.site .vyk-typy{display:flex;flex-wrap:wrap;gap:8px}
+.site .vyk-typy span{padding:7px 14px;border-radius:var(--rb);background:var(--b-soft);color:var(--bt);font-size:14px;font-weight:650}
+.site .btn svg{width:18px;height:18px}
+.site .vyk-kroky{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:k}
+.site .vyk-kroky li{display:flex;align-items:center;gap:14px;background:var(--surf);border-radius:var(--r);padding:14px 16px;font-weight:600}
+.site .s.alt .vyk-kroky li{background:var(--bg)}
+.site .vyk-kroky b{flex:none;width:36px;height:36px;border-radius:999px;display:grid;place-items:center;background:var(--a);color:var(--on-a);font-family:var(--fh);font-weight:var(--fhw)}
+
+/* kontakt: káva v kancelárii, online hovor, otváracie hodiny */
+.site .clist button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:var(--surf);border:0;border-radius:var(--r);padding:14px 18px;font:inherit;color:inherit;cursor:pointer}
+.site .s.alt .clist button{background:var(--bg)}
+.site .clist .cl-ik{position:relative;padding-left:58px}
+.site .clist .cl-ik svg{position:absolute;left:16px;top:50%;translate:0 -50%;width:28px;height:28px;padding:5px;border-radius:10px;background:var(--a-soft);color:var(--at)}
+.site .khod{font-size:14px;color:var(--muted);margin:-6px 0 14px}
+.site .khod b{color:var(--fg);font-weight:650}
+
+/* spodná lišta na mobile */
+.site .mbar-wrap{display:none;position:sticky;bottom:0;z-index:25;padding:0 10px calc(10px + env(safe-area-inset-bottom,0px));pointer-events:none}
+.site .mbar{pointer-events:auto;display:flex;gap:6px;padding:6px;border-radius:999px;background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 9%,transparent),0 18px 36px -16px rgba(0,0,0,.5)}
+.site .mbar a,.site .mbar button{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 10px;border-radius:999px;border:0;background:var(--surf);color:var(--fg);font:700 14px/1 var(--fb);cursor:pointer;white-space:nowrap}
+.site .mbar .mbar-hl{background:var(--a);color:var(--on-a);flex-grow:1.3}
+.site .mbar svg{width:18px;height:18px;flex:none}
+@container (max-width:640px){.site .mbar-wrap{display:block}.site.ma-mbar .wa-wrap{display:none}}
+@container (max-width:380px){.site .mbar{gap:4px;padding:5px}.site .mbar a,.site .mbar button{font-size:12.5px;padding:0 7px;gap:4px;min-height:44px}.site .mbar svg{width:15px;height:15px}}
+
 /* animácie */
 .site.anim.intro .hero h1,.site.anim.intro .hero .lead,.site.anim.intro .hero .btns,.site.anim.intro .hero .eb,.site.anim.intro .hero .search,.site.anim.intro .hero .who{animation:up .9s cubic-bezier(.2,.7,.2,1) both}
 .site.anim.intro .hero .eb,.site.anim.intro .hero .who{animation-delay:.02s}
