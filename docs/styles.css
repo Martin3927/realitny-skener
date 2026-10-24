@@ -2104,3 +2104,80 @@ a.dl-menu { text-decoration: none; color: inherit }
 .web-ziad-karta ol { margin: 4px 0 0; padding-left: 20px; font-size: 13.5px; line-height: 1.5 }
 .web-ziad-karta code { overflow-wrap: anywhere }
 .web-ziad-btns { display: flex; flex-wrap: wrap; gap: 6px }
+
+/* ---------- štýl „Mäkký“ – vzhľad ako editor webu makléra (Farebný režim → Štýl aplikácie) */
+.fp-styly { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.fp-styl { border: 0; background: var(--surface-2); border-radius: 12px; padding: 8px; display: grid; gap: 6px; cursor: pointer; text-align: left; font: inherit; color: var(--ink) }
+.fp-styl:hover { background: var(--gold-soft) }
+.fp-styl[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--gold-strong); background: var(--gold-soft) }
+.fp-styl b { font-size: 13.5px } .fp-styl small { display: block; font-size: 11.5px; color: var(--muted) }
+.fp-styl-nahlad { position: relative; display: block; height: 62px; border-radius: 8px; overflow: hidden; background: #f7f2e8 }
+.fp-styl-nahlad i { position: absolute; display: block }
+.st-klasicky .a { left: 0; top: 0; bottom: 0; width: 22%; background: #1e2a35 }
+.st-klasicky .b { left: 22%; right: 0; top: 0; height: 14px; background: #2b3440 }
+.st-klasicky .c { left: 28%; right: 6%; top: 22px; height: 16px; border: 1px solid #d8ccb4; border-radius: 3px; background: #fffdf8 }
+.st-klasicky .d { left: 28%; width: 30%; top: 44px; height: 10px; border: 1px solid #d8ccb4; border-radius: 3px; background: #fffdf8 }
+.st-klasicky .e { left: 62%; width: 18%; top: 44px; height: 10px; border-radius: 3px; background: var(--gold-strong) }
+.st-editor .a { left: 4%; top: 6px; bottom: 6px; width: 20%; border-radius: 7px; background: #fffdf8; box-shadow: 0 3px 8px -4px rgba(30,42,53,.3) }
+.st-editor .b { left: 30%; width: 34%; top: 8px; height: 8px; border-radius: 99px; background: #1e2a35 }
+.st-editor .c { left: 30%; right: 5%; top: 22px; height: 18px; border-radius: 7px; background: #fffdf8; box-shadow: 0 3px 8px -4px rgba(30,42,53,.3) }
+.st-editor .d { left: 30%; width: 26%; top: 45px; height: 10px; border-radius: 99px; background: #eee6d6 }
+.st-editor .e { left: 60%; width: 20%; top: 45px; height: 10px; border-radius: 99px; background: var(--gold-strong) }
+
+:root[data-styl="editor"] { --display: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif; --body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --soft-shadow: 0 10px 30px -12px rgba(30,42,53,.16) }
+:root[data-styl="editor"][data-theme="dark"] { --soft-shadow: 0 10px 30px -12px rgba(0,0,0,.5) }
+@media (prefers-color-scheme: dark) { :root[data-styl="editor"]:not([data-theme="light"]) { --soft-shadow: 0 10px 30px -12px rgba(0,0,0,.5) } }
+/* karty, tlačidlá, polia */
+:root[data-styl="editor"] .box { border: 0; border-radius: 16px; box-shadow: var(--soft-shadow); padding: 18px }
+:root[data-styl="editor"] .btn { border: 0; border-radius: 999px; background: var(--gold-soft); padding: 8px 15px; color: var(--ink) }
+:root[data-styl="editor"] .btn:hover { filter: brightness(.97) }
+:root[data-styl="editor"] .btn.ghost { background: var(--surface-2) }
+:root[data-styl="editor"] .btn.primary { background: var(--gold-strong); color: var(--on-accent) }
+:root[data-styl="editor"] .btn.danger { background: var(--bad-soft); color: var(--bad) }
+:root[data-styl="editor"] .btn.on { background: var(--good-soft); color: var(--good) }
+:root[data-styl="editor"] select, :root[data-styl="editor"] input[type="search"], :root[data-styl="editor"] input[type="text"], :root[data-styl="editor"] input[type="email"],
+:root[data-styl="editor"] input[type="password"], :root[data-styl="editor"] input[type="tel"], :root[data-styl="editor"] input[type="number"], :root[data-styl="editor"] input[type="date"],
+:root[data-styl="editor"] input[type="datetime-local"], :root[data-styl="editor"] input[type="url"], :root[data-styl="editor"] textarea { border-radius: 12px; border-color: var(--line); background: var(--surface) }
+:root[data-styl="editor"] .chk { border-radius: 999px }
+/* prepínače ako „čipy“ v editore */
+:root[data-styl="editor"] .seg { border: 0; background: transparent; gap: 6px; flex-wrap: wrap; overflow: visible; border-radius: 0 }
+:root[data-styl="editor"] .seg button { border: 0 !important; margin: 0 !important; border-radius: 999px; background: var(--surface); padding: 7px 13px; box-shadow: 0 2px 6px -4px rgba(30,42,53,.25) }
+:root[data-styl="editor"] .seg button:hover:not([aria-pressed="true"]) { background: var(--gold-soft) }
+:root[data-styl="editor"] .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface) }
+:root[data-styl="editor"] .sch-pohlad button { border: 0; border-radius: 16px; box-shadow: var(--soft-shadow) }
+:root[data-styl="editor"] .sch-pohlad button[aria-pressed="true"] { background: var(--ink); color: var(--surface); box-shadow: 0 0 0 2px var(--gold-strong), var(--soft-shadow) }
+:root[data-styl="editor"] .sch-pohlad button[aria-pressed="true"] b { color: var(--surface) }
+/* svetlá hlavička namiesto tmavej lišty */
+:root[data-styl="editor"] header.top { background: var(--bg); color: var(--ink); border-bottom: 0 }
+:root[data-styl="editor"] .hl-titul { color: var(--ink); font-size: 24px; font-weight: 800; letter-spacing: -.02em }
+:root[data-styl="editor"] .hl-titul .menu-ik { background: var(--surface); box-shadow: var(--soft-shadow) }
+:root[data-styl="editor"] .user { color: var(--muted) }
+:root[data-styl="editor"] .user button, :root[data-styl="editor"] .user a { background: var(--surface); border: 0; color: var(--ink); border-radius: 999px; box-shadow: 0 4px 14px -8px rgba(30,42,53,.35) }
+:root[data-styl="editor"] .user .heslo-btn { background: var(--gold-strong); color: var(--on-accent) }
+:root[data-styl="editor"] .me-btn { box-shadow: none !important; background: transparent !important }
+:root[data-styl="editor"] .menu-btn { background: var(--surface); border: 0; color: var(--ink); box-shadow: var(--soft-shadow) }
+:root[data-styl="editor"] .stat { background: var(--surface); border: 0; border-radius: 16px; box-shadow: var(--soft-shadow) }
+:root[data-styl="editor"] .stat b { color: var(--ink) }
+:root[data-styl="editor"] .stat small { color: var(--muted) }
+:root[data-styl="editor"] .stat.gold b { color: var(--gold-strong) }
+:root[data-styl="editor"] .stat[aria-pressed="true"] { background: var(--ink); box-shadow: 0 0 0 2px var(--gold-strong), var(--soft-shadow) }
+:root[data-styl="editor"] .stat[aria-pressed="true"] b, :root[data-styl="editor"] .stat[aria-pressed="true"] small { color: var(--surface) }
+:root[data-styl="editor"] .stat[aria-pressed="true"].gold b { color: var(--gold-strong) }
+:root[data-styl="editor"] .filters { background: var(--bg); border-bottom: 0 }
+/* bočný panel ako panel editora */
+:root[data-styl="editor"] .bocne, :root[data-styl="editor"] .menu-sheet-panel { background: var(--surface); color: var(--ink); border-right: 0; box-shadow: 0 10px 30px -12px rgba(30,42,53,.2) }
+:root[data-styl="editor"] .bocne-logo { border-bottom-color: var(--line) }
+:root[data-styl="editor"] .bocne-logo img { filter: none }
+:root[data-styl="editor"] .bocne-logo span, :root[data-styl="editor"] .menu-skup-n { color: var(--muted) }
+:root[data-styl="editor"] .menu-skup-n { font-family: var(--display); font-weight: 800; letter-spacing: .08em }
+:root[data-styl="editor"] .dl-menu { background: var(--bg); border: 0; color: var(--ink); border-radius: 14px; box-shadow: none }
+:root[data-styl="editor"] .dl-menu:hover { background: var(--gold-soft) }
+:root[data-styl="editor"] .dl-menu-ik { background: var(--surface); color: var(--gold) }
+:root[data-styl="editor"] .dl-menu[aria-current="page"] { background: var(--ink); color: var(--surface); box-shadow: none }
+:root[data-styl="editor"] .dl-menu[aria-current="page"] .dl-menu-ik { background: var(--gold-strong); color: var(--on-accent) }
+:root[data-styl="editor"] .bocne-typek { border-top-color: var(--line) }
+:root[data-styl="editor"] .bocne-typek span { color: var(--muted) }
+:root[data-styl="editor"] .bocne-typek b, :root[data-styl="editor"] .menu-sheet-hl b { color: var(--ink) }
+:root[data-styl="editor"] .menu-sheet-x { border-color: var(--line); color: var(--ink) }
+:root[data-styl="editor"] .menu-sheet-pozadie { background: rgba(30,42,53,.3) }
+@media (max-width: 640px) { :root[data-styl="editor"] .filters .seg button { flex: 0 0 auto } }
