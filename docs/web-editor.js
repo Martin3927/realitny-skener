@@ -157,7 +157,10 @@ function bodyOf(k) {
     case "video": return fld("Odkaz na video", "video.url", { ph: "youtube.com/watch?v=..." }) + fld("Nadpis", "video.title") + fld("Popis", "video.text");
     case "fotka": return upl("Fotka", "img.src", { max: 2000 }) + fld("Nadpis (nepovinné)", "img.title") + fld("Popis pod fotkou", "img.cap");
     case "dotaznik": return fld("Nadpis", "form.title") + fld("Úvodný text", "form.text", { area: 1, rows: 2 }) + '<p class="note">Otázky: čo plánuje, typ nehnuteľnosti, kedy. Odpovede ti prídu ako nový kontakt do zvončeka.</p>';
-    case "stiahnut": return fld("Názov", "dl.title") + fld("Popis", "dl.desc", { area: 1, rows: 3 }) + fld("Text tlačidla", "dl.btn") + upl("Súbor (PDF)", "dl.url", { pdf: 1 }) + '<p class="note">Návštevník zadá e-mail, hneď si súbor stiahne a ty máš jeho kontakt.</p>';
+    case "stiahnut": return fld("Názov", "dl.title") + fld("Popis", "dl.desc", { area: 1, rows: 3 }) + fld("Text tlačidla", "dl.btn") + upl("Súbor (PDF)", "dl.url", { pdf: 1 }) +
+      upl("Obrázok obálky", "dl.img", { max: 1200 }) +
+      (s.dl.url ? '<button type="button" class="lbtn" data-dlobalka style="grid-column:1/-1;justify-self:start;color:var(--c-ink)">Použiť prvú stranu PDF ako obálku</button>' : "") +
+      '<p class="note">Po nahratí PDF sa obálka vytvorí sama z jeho prvej strany. Môžeš ju nahradiť vlastným obrázkom. Bez obrázka sa zobrazí farebná obálka s názvom. Návštevník zadá e-mail, hneď si súbor stiahne a ty máš jeho kontakt.</p>';
     case "faq": return s.faq.map(function (x, i) { return listItem("faq", i, s.faq.length, fld("Otázka", "faq." + i + ".q") + fld("Odpoveď", "faq." + i + ".a", { area: 1, rows: 3 }), "Odstrániť otázku"); }).join("") + '<button type="button" class="addb" data-ladd="faq" style="grid-column:1/-1">+ Pridať otázku</button><p class="note">Odpovede sú ukážkové, skontroluj ich a prepíš podľa seba.</p>';
     case "recenzie": return fld("Odkaz na Google recenzie (nepovinné)", "rev.google", { ph: "g.page/r/..." }) + '<p class="note">Na webe sa ukazujú schválené recenzie z aplikácie (sekcia Recenzie). Klienta o recenziu požiadaš tam jedným klikom.</p>';
     case "obhliadka": return fld("Časy obhliadok (oddeľ čiarkou)", "book.times", { ph: "9:00, 14:00, 17:30" }) + '<label class="chk"><input type="checkbox" data-check="book.sat"' + (s.book.sat ? " checked" : "") + ">Obhliadky aj v sobotu</label>" + fld("Text pod nadpisom", "book.text", { area: 1, rows: 2 }) + '<p class="note">Záujem o obhliadku ti príde do zvončeka aj s vybranou ponukou a časom. Termín potvrdíš klientovi telefonicky.</p>';
@@ -244,10 +247,15 @@ function renderPanel() {
     '<label class="chk"><input type="checkbox" data-check="gdpr.bar"' + (s.gdpr.bar ? " checked" : "") + '>Zobraziť lištu so súhlasom s cookies</label>' +
 
     '<p class="note">Z týchto údajov sa vyskladá stránka Ochrana osobných údajov aj lišta s cookies. Je to vzorový text, pred spustením ho daj raz skontrolovať právnikovi.</p>';
-  $("fMeranie").innerHTML = '<p class="note">Nepovinné. Štatistiky webu (tlačidlo Štatistiky hore) fungujú aj bez nich. Ak chceš merať aj cez Google alebo robíš reklamy na Facebooku a Instagrame, vlož sem ID.</p>' +
-    fld("ID Google Analytics", "gdpr.gaId", { half: 1, ph: "G-XXXXXXXXXX" }) + fld("ID Meta Pixelu", "gdpr.fbId", { half: 1, ph: "napr. 123456789012345" }) +
-    '<div class="help-links"><a href="https://support.google.com/analytics/answer/12270356" target="_blank" rel="noopener">Kde nájdem ID Google Analytics →</a><a href="https://business.facebook.com/events_manager2" target="_blank" rel="noopener">ID Meta Pixelu nájdeš v Správcovi udalostí →</a></div>' +
-    '<p class="note">Na webe sa zapnú až keď návštevník v lište cookies klikne Prijať všetky, preto sa lišta pri vyplnenom ID zobrazí vždy. Meta Pixel zaznamená odoslané formuláre (Lead), kliky na telefón a WhatsApp (Contact) a otvorené ponuky. Zmena sa prejaví po zverejnení webu.</p>';
+  var TRK = T.trk(), stavMer = function (ok, vyplnene) { return '<span class="mer-stav' + (ok ? " ok" : vyplnene ? " zle" : "") + '">' + (ok ? "Napojené" : vyplnene ? "Zlý tvar ID" : "Nenapojené") + "</span>"; };
+  $("fMeranie").innerHTML = '<p class="note">Obe sú nepovinné a navzájom nezávislé. Štatistiky webu (tlačidlo Štatistiky hore) fungujú aj bez nich.</p>' +
+    '<div class="mer-blok"><div class="mer-hl"><b>Google Analytics</b>' + stavMer(!!TRK.ga, !!String(s.gdpr.gaId || "").trim()) + "</div>" +
+      '<p class="note">Podrobné štatistiky návštevnosti v tvojom účte Google.</p>' + fld("ID merania", "gdpr.gaId", { ph: "G-XXXXXXXXXX" }) +
+      '<a class="mer-odkaz" href="https://support.google.com/analytics/answer/12270356" target="_blank" rel="noopener">Kde nájdem ID Google Analytics →</a></div>' +
+    '<div class="mer-blok"><div class="mer-hl"><b>Meta Pixel</b>' + stavMer(!!TRK.fb, !!String(s.gdpr.fbId || "").trim()) + "</div>" +
+      '<p class="note">Pre reklamy na Facebooku a Instagrame. Zaznamená odoslané formuláre, kliky na telefón a WhatsApp a otvorené ponuky, takže uvidíš, čo ti reklama priniesla.</p>' + fld("ID Pixelu", "gdpr.fbId", { ph: "napr. 123456789012345" }) +
+      '<a class="mer-odkaz" href="https://business.facebook.com/events_manager2" target="_blank" rel="noopener">ID Pixelu nájdeš v Správcovi udalostí Meta →</a></div>' +
+    '<p class="note">Na webe sa zapnú až keď návštevník v lište cookies klikne Prijať všetky, preto sa lišta pri vyplnenom ID zobrazí vždy. Zmena sa prejaví po zverejnení webu.</p>';
   $("fSoc").innerHTML = T.SOC.map(function (x) { return fld(x[1], "soc." + x[0], { ph: x[2] }); }).join("") + '<p class="note">Vyplnené siete sa zobrazia ako ikony. Prázdne sa na webe nezobrazia.</p>';
   renderSecs(); renderKontrola(); renderPub(); renderAdresa(); renderVerzie();
   $("stage").classList.toggle("mob", s.dev === "mob");
@@ -288,6 +296,34 @@ function goFix(g) {
   S().tab = tab; if (tab === "sekcie") open.add(id); all();
   requestAnimationFrame(function () { var el = tab === "sekcie" ? document.querySelector('#secs li[data-k="' + id + '"]') : $(id); if (!el) return; el.scrollIntoView({ behavior: "smooth", block: "center" });
     var f = tab === "sekcie" ? el.querySelector(".body input,.body textarea") : (el.matches("input[type=file]") ? el.closest(".up").querySelector("label") : el); if (f && f.focus) f.focus(); });
+}
+/* obálka e-booku z prvej strany PDF (pdf.js sa načíta až keď treba) */
+var PDFJS = null;
+function nacitajPdfJs() {
+  if (PDFJS) return PDFJS;
+  PDFJS = new Promise(function (ok, ko) {
+    var x = document.createElement("script"); x.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    x.onload = function () { var L = window.pdfjsLib; if (!L) { ko(new Error("pdf.js")); return; } L.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; ok(L); };
+    x.onerror = function () { PDFJS = null; ko(new Error("Nepodarilo sa načítať čítačku PDF.")); };
+    document.head.appendChild(x);
+  });
+  return PDFJS;
+}
+function obalkaZPdf(buf) {
+  return nacitajPdfJs().then(function (L) {
+    return L.getDocument({ data: new Uint8Array(buf), isEvalSupported: false, standardFontDataUrl: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/" }).promise;
+  }).then(function (doc) { return doc.getPage(1); }).then(function (p) {
+    var v0 = p.getViewport({ scale: 1 }), k = Math.min(3, 1000 / v0.width), v = p.getViewport({ scale: k }), c = document.createElement("canvas");
+    c.width = Math.round(v.width); c.height = Math.round(v.height); var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+    return p.render({ canvasContext: g, viewport: v }).promise.then(function () { return new Promise(function (ok) { c.toBlob(ok, "image/jpeg", 0.86); }); });
+  }).then(function (b) { if (!b) return ""; return nahraj(b, "obalka-ebooku.jpg", "image/jpeg"); });
+}
+function pdfObalkaZNahraneho() {
+  var s = S(); if (!s.dl.url) return;
+  toast("Robím obálku z prvej strany PDF…");
+  fetch(s.dl.url).then(function (r) { if (!r.ok) throw new Error("PDF sa nepodarilo načítať."); return r.arrayBuffer(); }).then(obalkaZPdf)
+    .then(function (img) { if (!img) throw new Error("Obálku sa nepodarilo vytvoriť."); s.dl.img = img; s.dl.imgAuto = true; all(); toast("Obálka je hotová"); })
+    .catch(function (e) { toast((e && e.message) || "Obálku sa nepodarilo vytvoriť.", true); });
 }
 /* QR kód adresy webu */
 function qrModuly(text) { if (!window.qrcode) return null; var q = window.qrcode(0, "M"); q.addData(text); q.make(); return q; }
@@ -506,7 +542,8 @@ document.addEventListener("click", function (e) {
   else if (d.up !== undefined) { var i = +d.up, tmp = s.order[i - 1]; s.order[i - 1] = s.order[i]; s.order[i] = tmp; }
   else if (d.dn !== undefined) { var j = +d.dn, tmp2 = s.order[j + 1]; s.order[j + 1] = s.order[j]; s.order[j] = tmp2; }
   else if (d.edit) { if (open.has(d.edit)) open.delete(d.edit); else open.add(d.edit); }
-  else if (d.clear) { setDeep(d.clear, ""); if (d.clear === "logo") s.logoCols = []; if (d.clear === "dl.url") s.dl.file = ""; }
+  else if (d.clear) { setDeep(d.clear, ""); if (d.clear === "logo") s.logoCols = []; if (d.clear === "dl.url") { s.dl.file = ""; if (s.dl.imgAuto) { s.dl.img = ""; s.dl.imgAuto = false; } } if (d.clear === "dl.img") s.dl.imgAuto = false; }
+  else if (d.dlobalka !== undefined) { pdfObalkaZNahraneho(); return; }
   else if (d.ladd) { var add = { steps: { t: "", d: "" }, svc: { t: "", d: "" }, loc: { n: "", t: "", g: "" }, faq: { q: "", a: "" } }[d.ladd]; get(d.ladd).push(add); }
   else if (d.ldel) { var a = d.ldel.split(":"); get(a[0]).splice(+a[1], 1); }
   else if (d.lup) { var b = d.lup.split(":"), A = get(b[0]), k = +b[1], t1 = A[k - 1]; A[k - 1] = A[k]; A[k] = t1; }
@@ -530,6 +567,7 @@ $("addCustom").addEventListener("click", function () { var k = "c" + Date.now().
   requestAnimationFrame(function () { var el = $("f-custom-" + k + "-title"); if (el) { el.focus(); el.select(); } }); });
 $("panel").addEventListener("input", function (e) {
   var t = e.target, p = t.dataset.bind; if (!p) return; var v = t.value; if ("num" in t.dataset) v = parseFloat(String(v).replace(",", ".")) || 0; setDeep(p, v);
+  if (p === "gdpr.gaId" || p === "gdpr.fbId") { var bl = t.closest(".mer-blok"), st = bl && bl.querySelector(".mer-stav"), TRK = T.trk(), ok = p === "gdpr.gaId" ? !!TRK.ga : !!TRK.fb, vypl = !!String(v || "").trim(); if (st) { st.className = "mer-stav" + (ok ? " ok" : vypl ? " zle" : ""); st.textContent = ok ? "Napojené" : vypl ? "Zlý tvar ID" : "Nenapojené"; } }
   if (p === "n") $("nOut").textContent = v;
   var m = p.match(/^custom\.(\w+)\.title$/); if (m) { var sp = document.querySelector('[data-title="' + m[1] + '"]'); if (sp) sp.textContent = v || "Vlastná sekcia"; }
   soft();
@@ -553,12 +591,17 @@ $("panel").addEventListener("change", function (e) {
     });
   } else if ("pdf" in t.dataset) {
     if (f.size > 50 * 1024 * 1024) { toast("Súbor je väčší ako 50 MB. Skús menší.", true); renderPanel(); return; }
-    uloha = nahraj(f, f.name, f.type).then(function (u) { setDeep(path, u); s.dl.file = f.name; });
+    uloha = nahraj(f, f.name, f.type).then(function (u) {
+      setDeep(path, u); s.dl.file = f.name;
+      if (s.dl.img && !s.dl.imgAuto) return;   // vlastný obrázok obálky nechám
+      var l = document.querySelector('#panel label[for="u-dl-url"]') || lbl; if (l) l.textContent = "Robím obálku z PDF…";
+      return f.arrayBuffer().then(obalkaZPdf).then(function (img) { if (img) { s.dl.img = img; s.dl.imgAuto = true; toast("Obálku som vytvoril z prvej strany PDF"); } }).catch(function () { /* obálka nie je nutná */ });
+    });
   } else {
     var png = "png" in t.dataset;
     uloha = zmensi(f, +t.dataset.max, png).then(function (r) {
       return nahraj(r.blob, f.name.replace(/\.[^.]+$/, "") + r.ext, r.blob.type).then(function (u) {
-        setDeep(path, u); if (path === "heroImg") s.heroFoc = "";
+        setDeep(path, u); if (path === "heroImg") s.heroFoc = ""; if (path === "dl.img") s.dl.imgAuto = false;
         if (path === "logo" && r.farby.length) { s.logoCols = r.farby; s.color = "vlastna"; s.cc = r.farby[0]; if (r.farby[1]) s.b2 = r.farby[1]; toast("Farby webu som nastavil podľa loga"); }
       });
     });

@@ -294,6 +294,8 @@
 .site .cover small{font-size:11px;letter-spacing:.14em;font-weight:800}
 .site .cover b{font-family:var(--fh);font-weight:var(--fhw);font-size:clamp(20px,2.8cqi,26px);line-height:1.12;letter-spacing:var(--fhls)}
 .site .cover span{font-size:13px}
+.site .cover.cover-img{padding:0;aspect-ratio:auto;overflow:hidden;background:var(--surf);justify-self:center}
+.site .cover.cover-img img{display:block;width:100%;height:auto}
 .site .dl .dlf{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
 .site .dl .dlf .fld{flex:1 1 220px;border-radius:var(--rb)}
 @container (max-width:640px){.site .dl{grid-template-columns:1fr}.site .cover{max-width:200px}}

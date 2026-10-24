@@ -180,8 +180,14 @@ input[type=range]{width:100%;accent-color:var(--c-gold)}
 .b-stat .bdg{background:var(--c-gold);color:#1E2A35;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
 .b-stat[aria-pressed="true"] .bdg{background:#1E2A35;color:var(--c-gold)}
 .dash-mer{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:13px;color:var(--c-slate)}
-.help-links{display:flex;flex-wrap:wrap;gap:8px 16px;grid-column:1/-1;font-size:13px}
-.help-links a{color:var(--c-ink);font-weight:600}
+.mer-blok{grid-column:1/-1;display:grid;gap:8px;padding:12px 14px;border:1px solid var(--c-line);border-radius:14px;background:var(--c-bg)}
+.mer-blok + .mer-blok{margin-top:4px}
+.mer-hl{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mer-hl b{font-size:14.5px;color:var(--c-ink)}
+.mer-stav{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--c-tint);color:var(--c-slate)}
+.mer-stav.ok{background:var(--c-ok-soft);color:var(--c-ok)}
+.mer-stav.zle{background:color-mix(in srgb,var(--c-danger) 14%,transparent);color:var(--c-danger)}
+.mer-odkaz{font-size:13px;font-weight:600;color:var(--c-ink)}
 .b-sm{padding:7px 13px;font-size:13px}
 .cfg{width:100%;height:84px;resize:vertical;background:var(--c-bg);border:1px solid var(--c-line);border-radius:8px;padding:8px;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--c-ink-soft);margin-top:8px}
 

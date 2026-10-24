@@ -58,7 +58,7 @@ var DEF = { tpl: "susedska", color: "zlata", cc: "#1D6F8F", b2: "", hcol: "text"
   video: { url: "", title: "Prehliadka mesiaca", text: "Pozrite si nehnuteľnosť ešte pred obhliadkou." },
   img: { src: "", title: "Môj región", cap: "" },
   form: { title: "Pomôžem vám s ďalším krokom", text: "Odpovedzte na tri krátke otázky a ozvem sa vám s konkrétnym návrhom." },
-  dl: { title: "Ako predať nehnuteľnosť rýchlo a za dobrú cenu", desc: "Krátky e-book o tom, čo ľudí pri predaji stojí najviac peňazí a ako sa tomu vyhnúť.", btn: "Stiahnuť e-book", file: "", url: "" },
+  dl: { title: "Ako predať nehnuteľnosť rýchlo a za dobrú cenu", desc: "Krátky e-book o tom, čo ľudí pri predaji stojí najviac peňazí a ako sa tomu vyhnúť.", btn: "Stiahnuť e-book", file: "", url: "", img: "", imgAuto: false },
   rev: { google: "", auto: true },
   post: { title: "Na čo si dať pozor pri kúpe staršieho bytu na sídlisku", text: "Stúpačky, zateplenie, fond opráv a list vlastníctva. Prejdite si päť vecí, ktoré si oplatí overiť ešte pred rezervačnou zmluvou.", url: "" },
   hypo: { rate: 3.9 }, custom: {},
@@ -516,7 +516,8 @@ var R = {
   },
   stiahnut: function () {
     var s = W.S, f = "ebook", u = W.DLURL || (s.dl.url ? url(s.dl.url) : "");
-    return '<div class="dl"><div class="cover"><small>E-BOOK</small><b>' + esc(s.dl.title) + "</b><span>" + esc(s.name) + '</span></div><div><span class="eb">Na stiahnutie zadarmo</span><h2 class="h2" style="margin:10px 0 14px" ' + ed("dl.title", 1) + ">" + esc(s.dl.title) + '</h2><p class="muted" ' + ed("dl.desc") + ">" + esc(s.dl.desc) + "</p>" +
+    var obal = String(s.dl.img || "").trim();
+    return '<div class="dl">' + (obal ? '<div class="cover cover-img"><img src="' + esc(obal) + '" alt="Obálka: ' + esc(s.dl.title) + '" loading="lazy"></div>' : '<div class="cover"><small>E-BOOK</small><b>' + esc(s.dl.title) + "</b><span>" + esc(s.name) + "</span></div>") + '<div><span class="eb">Na stiahnutie zadarmo</span><h2 class="h2" style="margin:10px 0 14px" ' + ed("dl.title", 1) + ">" + esc(s.dl.title) + '</h2><p class="muted" ' + ed("dl.desc") + ">" + esc(s.dl.desc) + "</p>" +
       (W.DONE[f] ? '<div class="done" style="margin-top:20px"><b>Ďakujem, e-book je váš</b>' + (u ? '<p><a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener" download>Stiahnuť ' + esc(s.dl.file || "e-book") + "</a></p>" : "<p>Pošlem vám ho na e-mail.</p>") + "</div>"
         : '<div class="dlf" data-form="' + f + '">' + inp(f, "kontakt", "Váš e-mail", "email") + '<button type="button" class="btn" data-send="' + f + '">' + esc(s.dl.btn || "Stiahnuť") + "</button></div>" + errMsg(f)) + "</div></div>";
   },
