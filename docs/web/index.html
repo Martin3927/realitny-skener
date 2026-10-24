@@ -327,13 +327,84 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .linkbtn:hover{color:#1E2A35}
 @keyframes wipp{0%,100%{opacity:1}50%{opacity:.3}}
 .wip-dot{width:8px;height:8px;border-radius:999px;background:#1E2A35;animation:wipp 1.6s ease-in-out infinite}
+
+/* ===== POHYB – animácie pri skrolovaní a pohybe myšou (triedy js-pohyb / js-mys pridáva skript, bez neho je všetko viditeľné) ===== */
+.hdr{position:sticky;top:0;z-index:40;transition:transform .5s cubic-bezier(.2,.8,.2,1),background-color .35s,box-shadow .35s}
+.hdr::before{content:'';position:absolute;inset:0;z-index:-1;background:rgba(247,242,232,.78);-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6);box-shadow:0 1px 0 rgba(30,42,53,.08),0 18px 40px -30px rgba(30,42,53,.45);opacity:0;transition:opacity .35s}
+.hdr.hdr-on::before{opacity:1}
+.hdr nav{transition:padding .35s}
+.hdr.hdr-on nav{padding-top:12px !important;padding-bottom:12px !important}
+.hdr.hdr-skry{transform:translateY(-110%)}
+.rt-prog{position:fixed;left:0;top:0;z-index:60;width:100%;height:3px;background:linear-gradient(90deg,#DB9522,#F2C26B);transform-origin:0 50%;transform:scaleX(var(--prog,0));pointer-events:none}
+.js-pohyb section[id]{scroll-margin-top:90px}
+
+.js-pohyb [data-rv]{opacity:0;translate:0 40px;transition:opacity .9s cubic-bezier(.2,.7,.2,1) var(--rd,0ms),translate 1.05s cubic-bezier(.2,.7,.2,1) var(--rd,0ms),scale 1.05s cubic-bezier(.2,.7,.2,1) var(--rd,0ms),clip-path 1.2s cubic-bezier(.2,.7,.2,1) var(--rd,0ms) !important}
+.js-pohyb [data-rv].rv-in{opacity:1;translate:none;scale:none}
+.js-pohyb [data-rv="vpravo"]{translate:48px 0}
+.js-pohyb [data-rv="zoom"]{translate:0 20px;scale:.9}
+.js-pohyb [data-rv="pop"]{translate:0 14px;scale:.6}
+.js-pohyb [data-rv="okno"]{translate:0 60px;scale:.94}
+.js-pohyb [data-rv="karta"]{opacity:1;translate:0 70px;clip-path:inset(7% 4% 0 4% round 36px)}
+.js-pohyb [data-rv="karta"].rv-in{clip-path:inset(0 0 0 0 round 36px)}
+.js-pohyb [data-rv="obr"]{opacity:1;translate:none;clip-path:inset(18% 10% 0 10% round 32px)}
+.js-pohyb [data-rv="obr"].rv-in{clip-path:inset(0 0 0 0 round 32px)}
+.js-pohyb [data-rv="pruh"]{translate:-30px 0}
+.js-pohyb [data-rv="pruh"] > span:last-child{transform-origin:0 50%;transition:transform 1.4s cubic-bezier(.2,.7,.2,1) calc(var(--rd,0ms) + .2s)}
+.js-pohyb [data-rv="pruh"]:not(.rv-in) > span:last-child{transform:scaleX(.03)}
+/* nadpisy po slovách – každé slovo vyjde spod masky */
+.js-pohyb [data-rv="slova"]{opacity:1;translate:none}
+.sl{display:inline-block;vertical-align:top;overflow:clip;padding:.16em .03em .14em;margin:-.16em -.03em -.14em}
+.sli{display:inline-block;transition:translate 1s cubic-bezier(.2,.75,.15,1) calc(var(--rd,0ms) + var(--i) * 50ms),rotate 1s cubic-bezier(.2,.75,.15,1) calc(var(--rd,0ms) + var(--i) * 50ms)}
+.js-pohyb [data-rv="slova"]:not(.rv-in) .sli{translate:0 112%;rotate:4deg}
+/* vstupné animácie čakajú, kým sa časť stránky ukáže */
+.js-pohyb :is(section,.pcard):not(.vid) :is(.pop,.fly){animation-play-state:paused}
+
+/* úvod: maskot, bubliny a pozadie sa hýbu v rôznej hĺbke za myšou a pri skrolovaní */
+.uvod{--mx:0;--my:0;--hp:0}
+.js-pohyb .uvod .uvod-txt{translate:calc(var(--mx) * -6px) calc(var(--my) * -4px + var(--hp) * -50px)}
+.js-pohyb .uvod .mwrap{translate:calc(var(--mx) * -20px) calc(var(--my) * -14px + var(--hp) * 40px)}
+.js-pohyb .uvod .uvod-bg{translate:calc(var(--mx) * 10px) calc(var(--my) * 8px + var(--hp) * 70px)}
+.js-pohyb .uvod .bob1{translate:calc(var(--mx) * 30px) calc(var(--my) * 20px + var(--hp) * -30px)}
+.js-pohyb .uvod .bob2{translate:calc(var(--mx) * -26px) calc(var(--my) * -18px + var(--hp) * -60px)}
+.js-pohyb .uvod .bob3{translate:calc(var(--mx) * 36px) calc(var(--my) * 14px + var(--hp) * -20px)}
+.js-pohyb .uvod .bob4{translate:calc(var(--mx) * 18px) calc(var(--my) * 26px + var(--hp) * -40px)}
+
+/* svetlo pod kurzorom na veľkých kartách a tmavých plochách */
+.pcard{position:relative;isolation:isolate}
+.js-mys .pcard::after,.js-mys .svetlo::after{content:'';position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;background:radial-gradient(680px circle at var(--sx,50%) var(--sy,50%),var(--glow,rgba(219,149,34,.14)),transparent 55%);opacity:0;transition:opacity .6s}
+.js-mys .pcard:hover::after,.js-mys .svetlo:hover::after{opacity:1}
+#p-soft,#p-emailing{--glow:rgba(255,255,255,.55)}
+#p-web{--glow:rgba(242,196,107,.16)}
+.svetlo{position:relative;isolation:isolate}
+/* karty funkcií sa natáčajú za myšou s odleskom */
+.js-mys :is(.feat,.fcard){position:relative;transform-style:preserve-3d}
+.js-mys :is(.feat,.fcard):hover{transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-6px);transition:transform .14s linear,box-shadow .3s ease}
+.js-mys :is(.feat,.fcard)::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(420px circle at var(--gx,50%) var(--gy,0%),rgba(255,255,255,.75),transparent 50%);mix-blend-mode:soft-light;opacity:0;transition:opacity .4s}
+.js-mys :is(.feat,.fcard):hover::after{opacity:1}
+.js-mys .fcard--gold::after{background:radial-gradient(420px circle at var(--gx,50%) var(--gy,0%),rgba(219,149,34,.35),transparent 55%);mix-blend-mode:normal}
+/* náhľad softvéru sa natočí k myši ako skutočná obrazovka */
+.okno-3d{transition:transform .8s cubic-bezier(.2,.7,.2,1)}
+.js-mys .okno-3d:hover{transform:perspective(1600px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .2s linear}
+/* tlačidlá sa jemne prilepia ku kurzoru */
+.js-mys .btn{translate:var(--bx,0px) var(--by,0px);transition:translate .45s cubic-bezier(.2,.7,.2,1),transform .25s ease,box-shadow .25s ease,background .25s}
+
+/* pás textu, ktorý ide do strán podľa skrolovania */
+.pas{padding:clamp(40px,7vw,90px) 0;overflow:hidden;overflow:clip;display:flex;flex-direction:column;gap:clamp(8px,1.4vw,18px);--pas:0}
+.pas-r{display:flex;white-space:nowrap;will-change:transform}
+.pas-r1{transform:translate3d(calc(-8% - var(--pas) * 22%),0,0)}
+.pas-r2{transform:translate3d(calc(-30% + var(--pas) * 22%),0,0)}
+.pas-t{display:inline-flex;align-items:center;gap:clamp(18px,2.6vw,38px);padding-right:clamp(18px,2.6vw,38px);font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,7.2vw,104px);line-height:1;letter-spacing:-.035em;color:#1E2A35}
+.pas-t img{width:.82em;height:.82em;flex:none}
+.pas-r2 .pas-t{color:transparent;-webkit-text-stroke:1.6px #4A6074}
+.pas-t i{width:.28em;height:.28em;border-radius:99px;background:#DB9522;flex:none}
+@media (prefers-reduced-motion: reduce){.pas-r1,.pas-r2{transform:none}.hdr,.hdr nav{transition:none}}
 </style>
 </head>
 <body>
 <div class="rt" style="width: 100%; overflow: hidden; overflow: clip; --acc: #DB9522">
 
 <!-- NAV -->
-<header id="top" style="position: relative; z-index: 5">
+<header id="top" class="hdr">
 <nav aria-label="Hlavné menu" style="max-width: 1200px; margin: 0 auto; padding: 22px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
 <a href="#top" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #1E2A35">
 <img src="typek-head.png" alt="" width="50" height="50" style="display: block; flex: none; width: 50px; height: 50px">
@@ -565,6 +636,12 @@ List vlastníctva na 1 klik
 <p style="margin: 16px 0 0; font-size: 14px; color: #DCE3E9">Zábery z Realitného týpka, ktorý používame v Alpha Reality. Mená, ponuky a údaje na obrázkoch sú ukážkové.</p>
 </div>
 </section>
+
+<!-- PÁS TEXTU – ide do strán podľa skrolovania -->
+<div class="pas" aria-hidden="true">
+<div class="pas-r pas-r1"><div class="pas-t"><span>Realitný skener</span><img src="typek-head.png" alt="" width="80" height="80"><span>Kataster a mapa</span><img src="typek-head.png" alt="" width="80" height="80"><span>Kalendár</span><img src="typek-head.png" alt="" width="80" height="80"><span>Správa ponúk</span><img src="typek-head.png" alt="" width="80" height="80"><span>Osobný web</span><img src="typek-head.png" alt="" width="80" height="80"><span>Emailing</span><img src="typek-head.png" alt="" width="80" height="80"><span>Chat s kolegami</span><img src="typek-head.png" alt="" width="80" height="80"><span>Dokumenty na tlač</span><img src="typek-head.png" alt="" width="80" height="80"></div><div class="pas-t"><span>Realitný skener</span><img src="typek-head.png" alt="" width="80" height="80"><span>Kataster a mapa</span><img src="typek-head.png" alt="" width="80" height="80"><span>Kalendár</span><img src="typek-head.png" alt="" width="80" height="80"><span>Správa ponúk</span><img src="typek-head.png" alt="" width="80" height="80"><span>Osobný web</span><img src="typek-head.png" alt="" width="80" height="80"><span>Emailing</span><img src="typek-head.png" alt="" width="80" height="80"><span>Chat s kolegami</span><img src="typek-head.png" alt="" width="80" height="80"><span>Dokumenty na tlač</span><img src="typek-head.png" alt="" width="80" height="80"></div></div>
+<div class="pas-r pas-r2"><div class="pas-t"><span>Dokumenty na tlač</span><i></i><span>Chat s kolegami</span><i></i><span>Emailing</span><i></i><span>Osobný web</span><i></i><span>Správa ponúk</span><i></i><span>Kalendár</span><i></i><span>Kataster a mapa</span><i></i><span>Realitný skener</span><i></i></div><div class="pas-t"><span>Dokumenty na tlač</span><i></i><span>Chat s kolegami</span><i></i><span>Emailing</span><i></i><span>Osobný web</span><i></i><span>Správa ponúk</span><i></i><span>Kalendár</span><i></i><span>Kataster a mapa</span><i></i><span>Realitný skener</span><i></i></div></div>
+</div>
 
 <!-- FUNKCIE -->
 <section id="funkcie" style="max-width: 1200px; margin: 0 auto; padding: 110px 24px 100px">
@@ -1487,6 +1564,116 @@ List vlastníctva na 1 klik
     .catch(function(){n.textContent='Žiadosť sa nepodarilo odoslať. Skús to prosím znova alebo nám napíš na info@realitnytypek.sk.';})
     .then(function(){BUSY=false;btn.disabled=false;});
   });}
+})();
+</script>
+<script>
+/* POHYB – odkrývanie pri skrolovaní, hĺbka v úvode, svetlo a náklon pod kurzorom, magnetické tlačidlá, pás textu */
+(function(){
+  var d=document,de=d.documentElement;
+  var mm=function(q){return !!(window.matchMedia&&matchMedia(q).matches);};
+  var reduce=mm('(prefers-reduced-motion: reduce)'),fine=mm('(hover: hover) and (pointer: fine)');
+  var hdr=d.querySelector('.hdr'),prog=d.createElement('div');prog.className='rt-prog';prog.setAttribute('aria-hidden','true');d.body.appendChild(prog);
+  var hero=d.querySelector('.rt > section'),pas=d.querySelector('.pas'),mnav=d.querySelector('details.mnav');
+  if(!reduce&&'IntersectionObserver' in window){de.classList.add('js-pohyb');if(fine)de.classList.add('js-mys');}
+  var on=de.classList.contains('js-pohyb');
+  var $$=function(q,r){return Array.prototype.slice.call((r||d).querySelectorAll(q));};
+
+  // ---------- skrolovanie: hlavička, čiara priebehu, hĺbka úvodu, pás textu
+  var lastY=window.scrollY||0,raf=0;
+  function tick(){
+    raf=0;var y=window.scrollY||0,vh=window.innerHeight||800,max=Math.max(1,de.scrollHeight-vh);
+    prog.style.setProperty('--prog',Math.min(1,y/max).toFixed(4));
+    if(hdr){hdr.classList.toggle('hdr-on',y>24);
+      var dole=y>lastY+4,hore=y<lastY-4,otv=mnav&&mnav.open;
+      if(dole&&y>520&&!otv)hdr.classList.add('hdr-skry');else if(hore||y<520||otv)hdr.classList.remove('hdr-skry');}
+    lastY=y;
+    if(!on)return;
+    if(hero){var hr=hero.getBoundingClientRect();if(hr.bottom>0)hero.style.setProperty('--hp',Math.min(1,Math.max(0,-hr.top/Math.max(1,hr.height))).toFixed(4));}
+    if(y>=max-4&&window.__rvKoniec)window.__rvKoniec();
+    if(pas){var pr=pas.getBoundingClientRect();if(pr.bottom>-200&&pr.top<vh+200)pas.style.setProperty('--pas',((vh-pr.top)/(vh+pr.height)).toFixed(4));}
+  }
+  function onScroll(){if(!raf)raf=requestAnimationFrame(tick);}
+  window.addEventListener('scroll',onScroll,{passive:true});window.addEventListener('resize',onScroll,{passive:true});
+  if(mnav)mnav.addEventListener('toggle',onScroll);
+  tick();
+  if(!on)return;
+
+  // ---------- odkrývanie pri skrolovaní (prvky, ktoré sa ukážu naraz, idú krátko po sebe)
+  function slova(el){
+    var n=0;(function walk(node){Array.prototype.slice.call(node.childNodes).forEach(function(c){
+      if(c.nodeType===1){if(c.tagName!=='BR')walk(c);return;}
+      if(c.nodeType!==3||!c.nodeValue.trim())return;var f=d.createDocumentFragment();
+      c.nodeValue.split(/(\s+)/).forEach(function(w){if(!w)return;if(/^\s+$/.test(w)){f.appendChild(d.createTextNode(w));return;}
+        var o=d.createElement('span'),i=d.createElement('span');o.className='sl';i.className='sli';i.style.setProperty('--i',n++);i.textContent=w;o.appendChild(i);f.appendChild(o);});
+      node.replaceChild(f,c);});})(el);
+  }
+  function mark(el,k){
+    if(!el||el.dataset.rv||(hero&&hero.contains(el))||el.closest('.ck,.paybar,dialog'))return;
+    var a=el.parentElement&&el.parentElement.closest('[data-rv]');if(a&&a.dataset.rv!=='karta')return;
+    if(k==='slova')slova(el);el.dataset.rv=k;
+  }
+  $$('.pcard').forEach(function(e){mark(e,'karta');});
+  $$('.rt section h2:not(#wip-t), .pcard h3, #vyskladaj h3').forEach(function(h){
+    mark(h,'slova');
+    $$(':scope > *',h.parentElement).forEach(function(x){if(x!==h)mark(x,'hore');});
+  });
+  $$('#pribeh .photo-ph').forEach(function(e){mark(e,'obr');});
+  var bary=d.querySelector('#pribeh h2')&&d.querySelector('#pribeh h2').parentElement.querySelectorAll(':scope > div');
+  if(bary&&bary[1]){bary[1].removeAttribute('data-rv');$$(':scope > div',bary[1]).forEach(function(e){mark(e,'pruh');});}
+  if(bary&&bary[2]){bary[2].removeAttribute('data-rv');$$(':scope > div',bary[2]).forEach(function(e){mark(e,'pop');var n=e.querySelector('.disp');if(n&&/^\d+$/.test(n.textContent.trim()))n.dataset.cnt=n.textContent.trim();});}
+  $$('#rano > div:nth-of-type(2) > div').forEach(function(e){mark(e,'hore');});
+  var okno=d.querySelector('#nahlad .tabs-x');okno=okno&&okno.nextElementSibling;
+  if(okno){okno.classList.add('okno-3d');mark(okno,'okno');}
+  $$('.feat,.fcard,.step,.wfeat,.pidx,.pre,.mod,.sum,.tabs-x').forEach(function(e){mark(e,'hore');});
+  $$('.qa').forEach(function(e){mark(e,'vpravo');});
+  $$('.hub-node').forEach(function(e){mark(e,'pop');});
+  $$('.hub-core,.team,.ice,.radar').forEach(function(e){mark(e,'zoom');});
+  $$('#pristup img.mfloat').forEach(function(e){mark(e.parentElement,'zoom');});
+  if(pas)mark(pas,'hore');
+  $$('.rt > footer > *').forEach(function(e){mark(e,'hore');});
+  var wip=d.querySelector('[aria-labelledby="wip-t"] > div');if(wip)mark(wip,'hore');
+
+  function pocitaj(el){var n=+el.dataset.cnt,t0=performance.now();el.textContent='0';
+    (function st(t){var k=Math.min(1,(t-t0)/1300),e=1-Math.pow(1-k,3);el.textContent=String(Math.round(n*e));if(k<1)requestAnimationFrame(st);else el.textContent=el.dataset.cnt;})(t0);}
+  var io=new IntersectionObserver(function(ent){
+    var vis=ent.filter(function(e){return e.isIntersecting;}).map(function(e){return e.target;});
+    vis.sort(function(a,b){var ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();return (ra.top-rb.top)||(ra.left-rb.left);});
+    vis.forEach(function(el,i){io.unobserve(el);var dl=Math.min(i,8)*80;el.style.setProperty('--rd',dl+'ms');el.classList.add('rv-in');
+      el.querySelectorAll('[data-cnt]').forEach(function(c){setTimeout(function(){pocitaj(c);},dl+150);});
+      setTimeout(function(){el.classList.remove('rv-in');el.removeAttribute('data-rv');el.style.removeProperty('--rd');},dl+1900);});
+  },{rootMargin:'0px 0px -9% 0px',threshold:0});
+  $$('[data-rv]').forEach(function(el){if(el.getBoundingClientRect().bottom<0){el.removeAttribute('data-rv');return;}io.observe(el);});
+  // na úplnom konci stránky ukáž aj to, čo sa do pásma odkrývania už nedostane
+  window.__rvKoniec=function(){$$('[data-rv]:not(.rv-in)').forEach(function(el){if(el.getBoundingClientRect().top<(window.innerHeight||800)){io.unobserve(el);el.classList.add('rv-in');setTimeout(function(){el.classList.remove('rv-in');el.removeAttribute('data-rv');},1900);}});};
+  // vstupné animácie (pop) sa spustia až keď je ich časť na obrazovke
+  var io2=new IntersectionObserver(function(ent){ent.forEach(function(e){if(e.isIntersecting){e.target.classList.add('vid');io2.unobserve(e.target);}});},{rootMargin:'0px 0px -12% 0px'});
+  $$('.rt > section, .pcard').forEach(function(e){io2.observe(e);});
+
+  // ---------- úvod: značky pre vrstvy hĺbky
+  if(hero){hero.classList.add('uvod');if(hero.children[0])hero.children[0].classList.add('uvod-txt');var mw=hero.querySelector('.mwrap');if(mw&&mw.previousElementSibling)mw.previousElementSibling.classList.add('uvod-bg');}
+  $$('#pribeh,#nahlad').forEach(function(e){e.classList.add('svetlo');});
+  if(!fine)return;
+
+  // ---------- myš
+  var mx=0,my=0,cx=0,cy=0,loop=0,tilt=null,mag=null,glow=null;
+  function plyn(){cx+=(mx-cx)*.08;cy+=(my-cy)*.08;hero.style.setProperty('--mx',cx.toFixed(4));hero.style.setProperty('--my',cy.toFixed(4));
+    loop=Math.abs(mx-cx)+Math.abs(my-cy)>.002?requestAnimationFrame(plyn):0;}
+  function nuluj(el,p){if(el)p.forEach(function(x){el.style.removeProperty(x);});}
+  d.addEventListener('pointermove',function(e){
+    var t=e.target&&e.target.closest?e.target:null;if(!t)return;
+    if(hero){var hr=hero.getBoundingClientRect();if(e.clientY<hr.bottom){mx=Math.max(-1,Math.min(1,(e.clientX-hr.left)/hr.width*2-1));my=Math.max(-1,Math.min(1,(e.clientY-hr.top)/hr.height*2-1));}else{mx=my=0;}
+      if(!loop)loop=requestAnimationFrame(plyn);}
+    var g=t.closest('.pcard,.svetlo');if(glow&&glow!==g)nuluj(glow,['--sx','--sy']);glow=g;
+    if(g){var gb=g.getBoundingClientRect();g.style.setProperty('--sx',(e.clientX-gb.left).toFixed(0)+'px');g.style.setProperty('--sy',(e.clientY-gb.top).toFixed(0)+'px');}
+    var k=t.closest('.feat,.fcard,.okno-3d');if(k&&k.dataset.rv!==undefined)k=null;
+    if(tilt&&tilt!==k)nuluj(tilt,['--rx','--ry','--gx','--gy']);tilt=k;
+    if(k){var b=k.getBoundingClientRect(),px=(e.clientX-b.left)/b.width,py=(e.clientY-b.top)/b.height,sila=k.classList.contains('okno-3d')?3:8;
+      k.style.setProperty('--ry',((px-.5)*sila).toFixed(2)+'deg');k.style.setProperty('--rx',((.5-py)*sila*.8).toFixed(2)+'deg');
+      k.style.setProperty('--gx',(px*100).toFixed(1)+'%');k.style.setProperty('--gy',(py*100).toFixed(1)+'%');}
+    var m=t.closest('.btn');if(mag&&mag!==m)nuluj(mag,['--bx','--by']);mag=m;
+    if(m){var c=m.getBoundingClientRect();m.style.setProperty('--bx',((e.clientX-c.left-c.width/2)*.22).toFixed(1)+'px');m.style.setProperty('--by',((e.clientY-c.top-c.height/2)*.32).toFixed(1)+'px');}
+  },{passive:true});
+  d.addEventListener('pointerleave',function(){mx=my=0;if(!loop)loop=requestAnimationFrame(plyn);nuluj(tilt,['--rx','--ry']);nuluj(mag,['--bx','--by']);});
 })();
 </script>
 </body>

@@ -627,7 +627,7 @@ function render() {
   }
   // v menu len sekcie, ktoré sa naozaj zobrazili (napr. Recenzie bez recenzií nie)
   if (W.PAGE.v === "home") W.SEKCIE = vykreslene;
-  out = nav() + out;
+  out = phFhd() + nav() + out;
   var aiVizual = out.indexOf(AI_BASE) >= 0;
   out += '<footer><div class="w"><span style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px">' + (s.logo ? '<img class="logoimg" src="' + esc(s.logo) + '" alt="">' : "") + "© " + new Date().getFullYear() + " " + esc(s.name) + (s.office ? " · " + esc(s.office) : "") +
     ' · <button type="button" class="flink" data-gdpr>Ochrana osobných údajov</button>' + (s.gdpr.bar ? ' · <button type="button" class="flink" data-ckopen>Nastavenie cookies</button>' : "") + "</span>" + socRow() + (aiVizual ? '<p class="ai-pozn">' + AI_NOTE + "</p>" : "") + "</div></footer>";
@@ -640,7 +640,8 @@ function render() {
   calc();
   var v = root.querySelector(".hm video"); if (v) v.addEventListener("error", function () { toast("Video sa nepodarilo prehrať."); }, { once: true });
   if (window.TYPEK_MEDIA && window.TYPEK_MEDIA.napoj) { try { window.TYPEK_MEDIA.napoj(root); } catch (e) { /* nič */ } }
-  if (W.INTRO && s.anim) { countUp(root); setTimeout(function () { W.INTRO = false; root.classList.remove("intro"); }, 1400); }
+  pohyb(root);
+  if (W.INTRO && s.anim) { countUp(root); setTimeout(function () { W.INTRO = false; root.classList.remove("intro"); }, 1600); }
   if (W.poZmene) W.poZmene();
 }
 function countUp(el) {
@@ -720,6 +721,127 @@ function lbDlg() {
 }
 function lbShow() { document.getElementById("wlbImg").innerHTML = LB.imgs[LB.j]; document.getElementById("wlbCount").textContent = (LB.j + 1) + " / " + LB.imgs.length; }
 function openLB(i, j) { var x = ZOZ()[i]; if (!x) return; LB = { imgs: galeria(x, i, pal()), j: j }; var d = lbDlg(); lbShow(); if (d.showModal) d.showModal(); }
+
+/* ================================================================ pohyb – animácie pri skrolovaní a pohybe myšou
+   Zapína ich prepínač Animácie (W.S.anim). Pri úprave textu (W.EDIT), na mobile bez myši a pri „obmedziť pohyb“
+   v systéme sa vypnú tie rušivé. Obsah sa nikdy neskryje natrvalo – bez JS alebo bez podpory ostane viditeľný. */
+var PH = { seen: {}, io: null, raf: 0, loop: 0, mx: 0, my: 0, cx: 0, cy: 0, fine: false, reduce: false, napojene: false, tilt: null, mag: null };
+var PH_GRIDS = ".cards,.tiles,.rows,.lux-list,.revs,.steps,.svc,.locs,.gal,.val,.faq,.facts";
+function phOk() { return !!(W.S.anim && !PH.reduce && W.root); }
+function phNapoj() {
+  if (PH.napojene) return; PH.napojene = true;
+  var mm = function (q) { return !!(window.matchMedia && matchMedia(q).matches); };
+  PH.reduce = mm("(prefers-reduced-motion: reduce)");
+  PH.fine = mm("(hover: hover) and (pointer: fine)");
+  if (PH.reduce) return;
+  window.addEventListener("scroll", phScroll, { passive: true });
+  window.addEventListener("resize", phScroll, { passive: true });
+  if (PH.fine) document.addEventListener("pointermove", phMove, { passive: true });
+}
+function phIO() {
+  if (PH.io || !("IntersectionObserver" in window)) return PH.io;
+  PH.io = new IntersectionObserver(function (ent) {
+    var vis = ent.filter(function (e) { return e.isIntersecting; }).map(function (e) { return e.target; });
+    vis.sort(function (a, b) { var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return (ra.top - rb.top) || (ra.left - rb.left); });
+    vis.forEach(function (el, i) { PH.io.unobserve(el); phIn(el, Math.min(i, 7) * 85); });
+  }, { rootMargin: "0px 0px -9% 0px", threshold: 0 });
+  return PH.io;
+}
+function phIn(el, d) {
+  el.style.setProperty("--rd", d + "ms"); el.classList.add("rv-in");
+  if (el.dataset.rk) PH.seen[el.dataset.rk] = 1;
+  setTimeout(function () { el.classList.remove("rv-in"); el.removeAttribute("data-rv"); el.removeAttribute("data-rk"); el.style.removeProperty("--rd"); }, d + 1700);
+}
+// nadpis rozdelený na slová, ktoré vyjdú zospodu ako spod masky
+function phSlova(el) {
+  if (el.dataset.split) return; var n = 0;
+  (function walk(node) {
+    Array.prototype.slice.call(node.childNodes).forEach(function (c) {
+      if (c.nodeType === 1) { if (c.tagName !== "BR") walk(c); return; }
+      if (c.nodeType !== 3 || !c.nodeValue.trim()) return;
+      var frag = document.createDocumentFragment();
+      c.nodeValue.split(/(\s+)/).forEach(function (w) {
+        if (!w) return; if (/^\s+$/.test(w)) { frag.appendChild(document.createTextNode(w)); return; }
+        var o = document.createElement("span"), i = document.createElement("span"); o.className = "sl"; i.className = "sli"; i.style.setProperty("--i", n++); i.textContent = w; o.appendChild(i); frag.appendChild(o);
+      });
+      node.replaceChild(frag, c);
+    });
+  })(el);
+  el.dataset.split = "1";
+}
+function phOznac(root) {
+  var io = phIO(); if (!io) return;
+  io.disconnect();   // staré prvky po prekreslení už neexistujú
+  if (W.EDIT || W.PAGE.v !== "home") return;
+  var vh = window.innerHeight || 800;
+  root.querySelectorAll(".s").forEach(function (sec) {
+    var inn = sec.querySelector(".secin"); if (!inn) return; var items = [];
+    Array.prototype.forEach.call(inn.children, function (c) {
+      if (c.classList.contains("hd")) { Array.prototype.forEach.call(c.children, function (h) { items.push([h, h.tagName === "H2" ? "slova" : "hore"]); }); return; }
+      var g = c.matches(PH_GRIDS) ? c : c.querySelector(":scope > " + PH_GRIDS.split(",").join(",:scope > "));
+      if (g && g !== c) Array.prototype.forEach.call(c.children, function (x) { if (x !== g) items.push([x, "hore"]); });
+      if (g) Array.prototype.forEach.call(g.children, function (x) { items.push([x, "hore"]); });
+      else items.push([c, c.classList.contains("media") || c.tagName === "FIGURE" ? "obr" : "hore"]);
+    });
+    items.forEach(function (it, i) {
+      var el = it[0], k = sec.id + ":" + i + ":" + el.tagName; if (PH.seen[k]) return;
+      if (el.getBoundingClientRect().bottom < 0) { PH.seen[k] = 1; return; }   // už prešiel nad oknom – ukáž hneď
+      if (it[1] === "slova") phSlova(el);
+      el.dataset.rv = it[1]; el.dataset.rk = k; io.observe(el);
+    });
+  });
+}
+function phFhd() {
+  if (W.editor || !W.S.anim) return "";
+  var s = W.S, tel = String(s.phone || "").replace(/[^\d+]/g, "");
+  return '<div class="fhd-wrap"><div class="fprog" aria-hidden="true"></div><div class="fhd"><div class="brand" data-home="top">' + (s.logo ? '<img class="logoimg" src="' + esc(s.logo) + '" alt="' + esc(s.name) + '">' : av() + "<span>" + esc(s.name) + "</span>") + "</div>" +
+    (tel ? '<a class="fhd-tel num" href="tel:' + esc(tel) + '"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>' + esc(s.phone) + "</a>" : "") +
+    '<button type="button" class="btn" data-go="' + (s.on.callback ? "callback" : "kontakt") + '">Zavolajte mi</button></div></div>';
+}
+function pohyb(root) {
+  phNapoj();
+  var ok = phOk();
+  root.classList.toggle("mys", ok && PH.fine && !W.EDIT);
+  if (!ok) return;
+  // úvodný nadpis po slovách (Rodinná má zvýraznenie, tam ostáva pôvodné vysunutie)
+  if (W.INTRO && !W.EDIT && W.S.tpl !== "rodinna") { var h1 = root.querySelector(".hero h1"); if (h1) phSlova(h1); }
+  phOznac(root);
+  PH.tilt = PH.mag = null;
+  phTick(); phApplyMouse();
+}
+function phScroll() { if (!PH.raf) PH.raf = requestAnimationFrame(phTick); }
+function phTick() {
+  PH.raf = 0; var root = W.root; if (!root || !phOk()) return;
+  var r = root.getBoundingClientRect(), vh = window.innerHeight || 800, tot = r.height - vh;
+  root.style.setProperty("--prog", (tot > 0 ? Math.min(1, Math.max(0, -r.top / tot)) : 0).toFixed(4));
+  var h = root.querySelector(".hero");
+  if (h) { var hr = h.getBoundingClientRect(); h.style.setProperty("--hp", Math.min(1, Math.max(0, -hr.top / Math.max(1, hr.height))).toFixed(4)); root.classList.toggle("fhd-on", hr.bottom < 70 && r.top < 0); }
+  else root.classList.toggle("fhd-on", r.top < -260);
+  if (r.bottom <= vh + 4 && PH.io) root.querySelectorAll("[data-rv]:not(.rv-in)").forEach(function (el) { if (el.getBoundingClientRect().top < vh) { PH.io.unobserve(el); phIn(el, 0); } });   // koniec stránky
+  root.querySelectorAll(".s .media.wide").forEach(function (m) { var b = m.getBoundingClientRect(); if (b.bottom < 0 || b.top > vh) return; m.style.setProperty("--py", (((b.top + b.height / 2) / vh) - 0.5).toFixed(4)); });
+}
+// myš: úvod sa jemne nakláňa za kurzorom, karty sa natáčajú s odleskom, tlačidlá sa „prilepia“
+function phMove(e) {
+  var root = W.root; if (!root || !root.classList.contains("mys")) return;
+  var h = root.querySelector(".hero");
+  if (h) { var hr = h.getBoundingClientRect(); if (e.clientY < hr.bottom + 40) { PH.mx = Math.max(-1, Math.min(1, (e.clientX - hr.left) / hr.width * 2 - 1)); PH.my = Math.max(-1, Math.min(1, (e.clientY - hr.top) / hr.height * 2 - 1)); } else { PH.mx = PH.my = 0; } if (!PH.loop) PH.loop = requestAnimationFrame(phLoop); }
+  var t = e.target && e.target.closest ? e.target.closest(".card,.tile,.lux-row,.lrow") : null;
+  t = t && root.contains(t) && !t.closest(".sold") ? (t.classList.contains("tile") ? t : t.querySelector(".media")) : null;
+  if (PH.tilt && PH.tilt !== t) { ["--rx", "--ry", "--gx", "--gy"].forEach(function (p) { PH.tilt.style.removeProperty(p); }); }
+  PH.tilt = t;
+  if (t) { var b = t.getBoundingClientRect(), px = (e.clientX - b.left) / b.width, py = (e.clientY - b.top) / b.height;
+    t.style.setProperty("--ry", ((px - 0.5) * 9).toFixed(2) + "deg"); t.style.setProperty("--rx", ((0.5 - py) * 7).toFixed(2) + "deg");
+    t.style.setProperty("--gx", (px * 100).toFixed(1) + "%"); t.style.setProperty("--gy", (py * 100).toFixed(1) + "%"); }
+  var m = e.target && e.target.closest ? e.target.closest(".btn") : null; if (m && !root.contains(m)) m = null;
+  if (PH.mag && PH.mag !== m) { PH.mag.style.removeProperty("--bx"); PH.mag.style.removeProperty("--by"); }
+  PH.mag = m;
+  if (m) { var c = m.getBoundingClientRect(); m.style.setProperty("--bx", ((e.clientX - c.left - c.width / 2) * 0.22).toFixed(1) + "px"); m.style.setProperty("--by", ((e.clientY - c.top - c.height / 2) * 0.3).toFixed(1) + "px"); }
+}
+function phLoop() {
+  PH.cx += (PH.mx - PH.cx) * 0.09; PH.cy += (PH.my - PH.cy) * 0.09; phApplyMouse();
+  PH.loop = Math.abs(PH.mx - PH.cx) + Math.abs(PH.my - PH.cy) > 0.002 ? requestAnimationFrame(phLoop) : 0;
+}
+function phApplyMouse() { var h = W.root && W.root.querySelector(".hero"); if (!h) return; h.style.setProperty("--mx", PH.cx.toFixed(4)); h.style.setProperty("--my", PH.cy.toFixed(4)); }
 
 function napoj(root) {
   W.root = root;
