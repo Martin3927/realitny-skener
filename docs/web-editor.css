@@ -227,7 +227,9 @@ input[type=range]{width:100%;accent-color:var(--c-gold)}
 .mail{background:var(--c-bg);border-radius:10px;padding:12px 14px;font-size:13.5px;white-space:pre-wrap;line-height:1.5}
 .mail small{display:block;color:var(--c-slate);margin-bottom:6px;white-space:normal}
 
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){:not(.site.pohyb-vzdy, .site.pohyb-vzdy *){transition:none!important;animation:none!important}}
+.anim-pozn{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--c-tint);font-size:13px;line-height:1.45;color:var(--c-ink)}
+.anim-pozn button{margin-top:8px}
 
 /* doplnky pre editor v aplikácii */
 .top .stav{font-size:13px;color:var(--c-slate);display:flex;align-items:center;gap:6px;min-height:40px}

@@ -43,6 +43,14 @@
       }).then(function (x) { if (x.error) throw new Error(x.error.message || "Správu sa nepodarilo odoslať."); return x.data; });
     };
     document.getElementById("nahladPas").hidden = !d.nahlad;
+    // náhľad na počítači s vypnutými animáciami: vysvetlenie a tlačidlo, ktorým si ich maklér zobrazí
+    if (d.nahlad && W.S.anim && T.bezPohybu && T.bezPohybu() && !W.vzdyPohyb) {
+      var pas = document.getElementById("nahladPas"), bt = document.createElement("button");
+      pas.appendChild(document.createTextNode(" Animácie nevidíš, lebo ich máš vypnuté v nastaveniach počítača. "));
+      bt.type = "button"; bt.textContent = "Ukázať animácie"; bt.style.cssText = "font:inherit;font-weight:700;border:0;border-radius:999px;padding:3px 12px;background:#1E2A35;color:#F7F2E8;cursor:pointer";
+      bt.addEventListener("click", function () { try { localStorage.setItem("typek-web-pohyb", "1"); } catch (e) { /* nič */ } W.vzdyPohyb = true; W.INTRO = true; T.render(); bt.remove(); });
+      pas.appendChild(bt);
+    }
     // titulok, popis a ikona pre prehliadač aj zdieľanie
     var titul = s.share.title || (s.name + " | Realitn" + (m.pohlavie === "zena" ? "á maklérka" : "ý maklér") + (s.area ? ", " + s.area : ""));
     document.title = titul; W.titulDomov = titul;

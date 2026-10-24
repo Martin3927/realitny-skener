@@ -227,6 +227,10 @@ function renderPanel() {
   seg("phStyle", [["plain", "Bez rámika"], ["frame", "S rámikom"], ["shadow", "S tieňom"]], s.ph, "phs");
   seg("bubSeg", [["plne", "Plné"], ["polo", "Polopriehľadné"], ["sklo", "Sklo"]], s.bub, "bub");
   seg("animSeg", [["1", "Zapnuté"], ["0", "Vypnuté"]], s.anim ? "1" : "0", "an");
+  // počítač s vypnutými animáciami v systéme ich v ukážke neukáže – vysvetlenie a možnosť pozrieť si ich aj tak
+  $("animPozn").innerHTML = s.anim && T.bezPohybu() ? '<div class="anim-pozn">' + (W.vzdyPohyb
+    ? "Animácie sa v ukážke zobrazujú, hoci ich máš v počítači vypnuté. Klienti ich uvidia podľa svojho nastavenia.<br><button type=\"button\" class=\"chip\" data-pohybvzdy=\"0\">Skryť animácie v ukážke</button>"
+    : "Animácie v ukážke nevidíš, lebo ich máš vypnuté v nastaveniach počítača (zjednodušenie ovládania). Klienti so zapnutými animáciami ich na webe uvidia.<br><button type=\"button\" class=\"chip\" data-pohybvzdy=\"1\">Ukázať animácie v ukážke</button>") + "</div>" : "";
   seg("viewSeg", [["web", "Web"], ["prehlad", "Prehľad"]], VIEW, "view");
   seg("dev", [["pc", "Počítač"], ["mob", "Mobil"]], s.dev, "dev");
   $("dev").hidden = $("editTg").hidden = VIEW !== "web";
@@ -443,6 +447,7 @@ document.addEventListener("click", function (e) {
   if (d.tab) s.tab = d.tab; else if (d.tpl) { s.tpl = d.tpl; W.INTRO = true; W.PAGE = { v: "home" }; } else if (d.col) s.color = d.col; else if (d.font) s.font = d.font; else if (d.bg) s.bg = d.bg; else if (d.dev) s.dev = d.dev;
   else if (d.set) { var x = T.SETS.find(function (z) { return z.id === d.set; }); s.color = "vlastna"; s.cc = x.a; s.b2 = x.b; s.hcol = x.h; s.bg = x.bg; }
   else if (d.hc) s.hcol = d.hc; else if (d.bs) s.btn = d.bs; else if (d.bf) s.btnFill = d.bf; else if (d.phs) s.ph = d.phs; else if (d.bub) s.bub = d.bub; else if (d.an !== undefined) { s.anim = d.an === "1"; W.INTRO = s.anim; }
+  else if (d.pohybvzdy !== undefined) { W.vzdyPohyb = d.pohybvzdy === "1"; try { localStorage.setItem("typek-web-pohyb", W.vzdyPohyb ? "1" : "0"); } catch (x) { /* nič */ } W.INTRO = W.vzdyPohyb; }
   else if (d.aiimg) { s.heroAiImg = d.aiimg; s.heroImg = ""; s.heroFoc = ""; } else if (d.aivid) { s.heroAiVid = d.aivid; s.heroVideo = ""; } else if (d.hpos) s.heroPos = d.hpos; else if (d.focreset !== undefined) s.heroFoc = "";
   else if (d.hm) s.heroMedia = d.hm;
   else if (d.up !== undefined) { var i = +d.up, tmp = s.order[i - 1]; s.order[i - 1] = s.order[i]; s.order[i] = tmp; }

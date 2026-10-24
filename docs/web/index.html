@@ -309,7 +309,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 }
 @media (max-width: 400px){.mnav-t{display:none}.mnav summary{padding:0 14px}}
 .noanim *,.noanim *::before,.noanim *::after{animation:none !important}
-@media (prefers-reduced-motion: reduce){.rt *{animation:none !important}}
+@media (prefers-reduced-motion: reduce){html:not(.pohyb-vzdy) .rt *{animation:none !important}}
 @media (max-width: 640px){.hide-sm{display:none !important}.mwrap{left:12% !important;right:12% !important}}
 .ck{position:fixed;left:16px;bottom:16px;z-index:60;width:min(560px, calc(100% - 32px));max-height:calc(100vh - 32px);overflow-y:auto;box-sizing:border-box;background:#FFFDF8;border-radius:26px;padding:22px;box-shadow:0 1px 0 rgba(30,42,53,.06),0 30px 60px -24px rgba(30,42,53,.55);animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
 .ck a{color:#1E2A35;font-weight:600}
@@ -397,7 +397,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .pas-t img{width:.82em;height:.82em;flex:none}
 .pas-r2 .pas-t{color:transparent;-webkit-text-stroke:1.6px #4A6074}
 .pas-t i{width:.28em;height:.28em;border-radius:99px;background:#DB9522;flex:none}
-@media (prefers-reduced-motion: reduce){.pas-r1,.pas-r2{transform:none}.hdr,.hdr nav{transition:none}}
+@media (prefers-reduced-motion: reduce){html:not(.pohyb-vzdy) .pas-r1,html:not(.pohyb-vzdy) .pas-r2{transform:none}html:not(.pohyb-vzdy) .hdr,html:not(.pohyb-vzdy) .hdr nav{transition:none}}
 </style>
 </head>
 <body>
@@ -1473,7 +1473,7 @@ List vlastníctva na 1 klik
     });
     if(g==='web'||g==='font'||g==='mode'||g==='shape')document.querySelectorAll('[data-webprev]').forEach(paint);
   }
-  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches&&!/[?&]pohyb=1(&|$)/.test(location.search);
   var AUTO=!reduce, step=0;
   var autoBtn=document.querySelector('[data-action="auto"]');
   var prog=document.querySelector('.wb-prog');
@@ -1571,7 +1571,9 @@ List vlastníctva na 1 klik
 (function(){
   var d=document,de=d.documentElement;
   var mm=function(q){return !!(window.matchMedia&&matchMedia(q).matches);};
-  var reduce=mm('(prefers-reduced-motion: reduce)'),fine=mm('(hover: hover) and (pointer: fine)');
+  // ?pohyb=1 v adrese ukáže animácie aj na počítači, ktorý ich má vypnuté v systéme (na kontrolu)
+  var vzdy=/[?&]pohyb=1(&|$)/.test(location.search);if(vzdy)de.classList.add('pohyb-vzdy');
+  var reduce=mm('(prefers-reduced-motion: reduce)')&&!vzdy,fine=mm('(hover: hover) and (pointer: fine)');
   var hdr=d.querySelector('.hdr'),prog=d.createElement('div');prog.className='rt-prog';prog.setAttribute('aria-hidden','true');d.body.appendChild(prog);
   var hero=d.querySelector('.rt > section'),pas=d.querySelector('.pas'),mnav=d.querySelector('details.mnav');
   if(!reduce&&'IntersectionObserver' in window){de.classList.add('js-pohyb');if(fine)de.classList.add('js-mys');}

@@ -140,7 +140,9 @@ var W = {
   S: merge({}), CTX: { ponuky: [], predane: [], recenzie: null, makler: null, ukazka: true },
   Q: { step: 0, a: [] }, Wt: { typ: ["Byt"], place: "", max: 160000 }, BK: { d: 0, t: "", l: 0 }, VF: { typ: "Byt", stav: "Po rekonštrukcii" }, CBT: "Čo najskôr",
   CK: { bar: true }, PAGE: { v: "home" }, DONE: {}, ERR: {}, FV: {}, EDIT: false, INTRO: true, VSETKY: false, FIL: { k: "", t: "", o: "", sort: "" }, adresa: "",
-  editor: false, odoslat: null, root: null, poZmene: null
+  editor: false, odoslat: null, root: null, poZmene: null,
+  // maklér si animácie môže zobraziť v ukážke aj vtedy, keď ich má v systéme vypnuté (pamätá sa v prehliadači)
+  vzdyPohyb: (function () { try { return localStorage.getItem("typek-web-pohyb") === "1"; } catch (e) { return false; } })()
 };
 function S() { return W.S; }
 function get(p) { return p.split(".").reduce(function (o, k) { return o == null ? o : o[k]; }, W.S); }
@@ -645,7 +647,7 @@ function render() {
   if (W.poZmene) W.poZmene();
 }
 function countUp(el) {
-  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (PH.sys && !W.vzdyPohyb) return;
   el.querySelectorAll("[data-count]").forEach(function (b) {
     var n = parseInt(b.dataset.count, 10); if (!(n > 0)) return; var t0 = performance.now(), dur = 1100;
     function step(t) { var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); b.textContent = String(Math.round(n * e)); if (k < 1) requestAnimationFrame(step); else b.textContent = b.dataset.count; }
@@ -725,15 +727,14 @@ function openLB(i, j) { var x = ZOZ()[i]; if (!x) return; LB = { imgs: galeria(x
 /* ================================================================ pohyb – animácie pri skrolovaní a pohybe myšou
    Zapína ich prepínač Animácie (W.S.anim). Pri úprave textu (W.EDIT), na mobile bez myši a pri „obmedziť pohyb“
    v systéme sa vypnú tie rušivé. Obsah sa nikdy neskryje natrvalo – bez JS alebo bez podpory ostane viditeľný. */
-var PH = { seen: {}, io: null, raf: 0, loop: 0, mx: 0, my: 0, cx: 0, cy: 0, fine: false, reduce: false, napojene: false, tilt: null, mag: null };
+var PH = { seen: {}, io: null, raf: 0, loop: 0, mx: 0, my: 0, cx: 0, cy: 0, fine: false, sys: false, reduce: false, napojene: false, tilt: null, mag: null };
 var PH_GRIDS = ".cards,.tiles,.rows,.lux-list,.revs,.steps,.svc,.locs,.gal,.val,.faq,.facts";
 function phOk() { return !!(W.S.anim && !PH.reduce && W.root); }
 function phNapoj() {
   if (PH.napojene) return; PH.napojene = true;
   var mm = function (q) { return !!(window.matchMedia && matchMedia(q).matches); };
-  PH.reduce = mm("(prefers-reduced-motion: reduce)");
+  PH.sys = mm("(prefers-reduced-motion: reduce)");
   PH.fine = mm("(hover: hover) and (pointer: fine)");
-  if (PH.reduce) return;
   window.addEventListener("scroll", phScroll, { passive: true });
   window.addEventListener("resize", phScroll, { passive: true });
   if (PH.fine) document.addEventListener("pointermove", phMove, { passive: true });
@@ -800,6 +801,8 @@ function phFhd() {
 }
 function pohyb(root) {
   phNapoj();
+  PH.reduce = PH.sys && !W.vzdyPohyb;
+  root.classList.toggle("pohyb-vzdy", PH.sys && !!W.vzdyPohyb);
   var ok = phOk();
   root.classList.toggle("mys", ok && PH.fine && !W.EDIT);
   if (!ok) return;
@@ -907,7 +910,7 @@ function napoj(root) {
   root.addEventListener("change", function (e) { var t = e.target; if (t.dataset.bl !== undefined) W.BK.l = +t.value; var form = t.closest("[data-form]"); if (form && t.name) (W.FV[form.dataset.form] = W.FV[form.dataset.form] || {})[t.name] = t.value; });
 }
 
-window.TYPEK_WEB = { W: W, overenie: overenie, overeniePouzite: overeniePouzite, sha256Zaciatok: sha256Zaciatok, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
+window.TYPEK_WEB = { W: W, bezPohybu: function () { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }, overenie: overenie, overeniePouzite: overeniePouzite, sha256Zaciatok: sha256Zaciatok, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
   fotoMaklera: function () { return fotoMaklera(); }, merge: merge, clone: clone, esc: esc, get: get, setDeep: setDeep, secName: secName, heroTx: heroTx, pal: pal, photo: photo, favSvg: favSvg, initials: initials, slugD: slugD, url: url, waNum: waNum, fmt: fmt,
   okHex: okHex, isHex: isHex, mix: mix, h2r: h2r, r2h: r2h, prevod: prevod, ZOZ: ZOZ, render: render, napoj: napoj, toast: toast, SV: SV, otvorDetail: otvorDetail };
 })();
