@@ -1999,6 +1999,67 @@ a.dl-menu { text-decoration: none; color: inherit }
 .hm-seg { flex-wrap: wrap; overflow: visible }
 @media (max-width: 640px) { .hm-seg { display: flex; width: 100% } .hm-seg button { flex: 1 1 auto; border-bottom: 1px solid var(--line) } .hm-box #hm-obd { width: 100% } }
 
+/* ---------- farebný režim (menu → Vzhľad) – rovnaký štýl ako pri webe makléra */
+.dl-farby-ik { display: flex; gap: 0; padding: 0; overflow: hidden; background: none !important }
+.dl-farby-ik i { flex: 1; height: 100% }
+.dl-farby-ik i:nth-child(1) { background: var(--gold-strong) }
+.dl-farby-ik i:nth-child(2) { background: var(--graphite); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12) }
+.dl-farby-ik i:nth-child(3) { background: var(--gold-soft) }
+.fp-var { background: rgba(15,17,20,.22); backdrop-filter: none; -webkit-backdrop-filter: none }
+@media (min-width: 1100px) { .fp-var { place-items: center end; padding-right: 32px } }
+.fp-karta { width: min(560px, 100%); gap: 14px; padding: 20px 20px 18px }
+.fp-karta h3 { margin: 0 0 2px }
+.fp-uvod { text-align: center; margin: -4px 0 0 }
+.fp-komu { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.fp-komu button { display: flex; align-items: center; gap: 10px; text-align: left; border: 2px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 10px 12px; cursor: pointer; color: var(--ink); font: inherit }
+.fp-komu button:hover { border-color: rgb(var(--accent-rgb) / .6) }
+.fp-komu .fp-k-ik { font-size: 22px; line-height: 1 }
+.fp-komu b { display: block; font-size: 14px; font-family: var(--display) }
+.fp-komu small { display: block; font-size: 12px; color: var(--muted) }
+.fp-komu button[aria-pressed="true"] { border-color: var(--gold-strong); background: var(--gold-soft); box-shadow: 0 4px 14px rgb(var(--accent-rgb) / .2) }
+.fp-grp { display: grid; gap: 8px }
+.fp-grp h4 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; align-items: baseline }
+.fp-grp h4 output { font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0; color: var(--ink) }
+.fp-grp > .meta { margin: 0; font-size: 12.5px }
+.fp-rezim { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px }
+.fp-rezim button { border: 0; background: var(--surface-2); border-radius: 12px; padding: 9px 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; display: flex; gap: 6px; align-items: center; justify-content: center }
+.fp-rezim button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--gold-strong); background: var(--gold-soft) }
+.fp-sady { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px }
+.fp-set { border: 0; background: var(--surface-2); border-radius: 12px; padding: 8px 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left; font: inherit; font-size: 13px; color: var(--ink); min-width: 0; transition: background .12s }
+.fp-set:hover { background: var(--gold-soft) }
+.fp-set > span:last-child { min-width: 0; display: grid }
+.fp-set b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.fp-set small { font-size: 11.5px; color: var(--muted) }
+.fp-set[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--gold-strong); background: var(--gold-soft) }
+.fp-set[aria-pressed="true"] b { font-weight: 700 }
+.fp-set .trio { display: flex; flex: none }
+.fp-set .trio i { width: 16px; height: 22px; display: block }
+.fp-set .trio i:first-child { border-radius: 6px 0 0 6px }
+.fp-set .trio i:last-child { border-radius: 0 6px 6px 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1) }
+.fp-kanc { grid-column: 1 / -1 }
+.fp-dots { display: flex; flex-wrap: wrap; gap: 9px; padding: 2px }
+.fp-dot { position: relative; width: 32px; height: 32px; border-radius: 999px; border: 0; padding: 0; cursor: pointer; background: var(--sw); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px transparent; transition: transform .12s }
+.fp-dot:hover { transform: scale(1.08) }
+.fp-dot[aria-pressed="true"], .fp-own[data-on="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink) }
+.fp-own { background: conic-gradient(#DB9522, #A8482E, #6E3A5E, #1D6F8F, #1F6B57, #6E7B2C, #DB9522); display: grid; place-items: center }
+.fp-own i { width: 15px; height: 15px; border-radius: 999px; background: var(--sw); box-shadow: 0 0 0 2px var(--surface) }
+.fp-own input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; border: 0; padding: 0 }
+.fp-own-row { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 12px; padding: 7px 10px }
+.fp-own-row input { width: 110px; flex: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font: 14px ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; color: var(--ink) }
+.fp-own-row input[aria-invalid="true"] { border-color: var(--bad) }
+.fp-own-row small { font-size: 12px; color: var(--muted) }
+.fp-prepisat { background: var(--warn-soft); border-radius: 12px; padding: 10px 12px; font-size: 13.5px }
+.fp-akcie { display: flex; gap: 8px; justify-content: flex-end; position: sticky; bottom: -18px; background: var(--surface); padding: 10px 0 2px; margin-top: -4px }
+.fp-akcie .btn { flex: 0 1 auto }
+@media (max-width: 520px) {
+  .fp-komu { grid-template-columns: 1fr }
+  .fp-sady { grid-template-columns: 1fr 1fr }
+  .fp-set { padding: 8px }
+  .fp-set .trio i { width: 12px }
+  .fp-set { font-size: 12.5px }
+  .fp-akcie .btn { flex: 1 1 auto }
+}
+
 /* ---------- svetlý režim: svetlý aj bočný panel a menu na mobile */
 :root[data-theme="light"] .bocne, :root[data-theme="light"] .menu-sheet-panel { background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 60%, var(--bg) 100%); color: var(--ink); border-right: 1px solid var(--line); box-shadow: 2px 0 14px rgba(30,42,53,.05) }
 :root[data-theme="light"] .menu-sheet-panel { box-shadow: 0 20px 50px rgba(30,42,53,.25) }

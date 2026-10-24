@@ -293,6 +293,12 @@
     oranzova: ["Oranžová", "#f08a2c", "#b85c0c", "#fdebd9", "#2a2522"],
     fialova: ["Fialová", "#8d73ee", "#6247cc", "#ece7fd", "#231f36"],
     grafit: ["Grafitová", "#a3adbb", "#566170", "#eceef2", "#212429"],
+    tatry: ["Tatranská zelená", "#2f8f72", "#1f6b57", "#dcefe7", "#1b2a25"],
+    more: ["More a koral", "#2a8bb0", "#1d6f8f", "#dcedf4", "#1a2a33"],
+    tehla: ["Tehla a krém", "#c4603f", "#a8482e", "#f6e2d9", "#2f2522"],
+    slivka: ["Slivka a med", "#a4568a", "#6e3a5e", "#f2e2ec", "#2a1f28"],
+    salvia: ["Šalvia a terakota", "#7b9a7d", "#5f7a61", "#e6eee5", "#232a24"],
+    noc: ["Nočný luxus", "#c9a45c", "#9a7a38", "#efe6d3", "#15191c"],
   };
   var VODOZNAK_PREDV = { pozicia: "pd", styl: "farebne", priehladnost: 0.62, velkost: 0.2 };
   function hexRgb(h) { h = String(h || "#000000").replace("#", ""); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
@@ -333,13 +339,27 @@
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#dab967"; }
   // vzhľad sa pamätá v prehliadači, aby sa farby a logo ukázali hneď (aj na prihlasovacej obrazovke)
   try { S.vzhlad = JSON.parse(localStorage.getItem("typek-vzhlad") || "null") || {}; } catch (e) { S.vzhlad = {}; }
-  aplikujVzhlad(S.vzhlad);
+  try { S.farbyCache = JSON.parse(localStorage.getItem("typek-moje-farby") || "null"); } catch (e) { S.farbyCache = null; }
+  aplikujVzhlad(vzhladPreMna());
+  // vlastné farby makléra (ak si ich vybral) majú prednosť pred farbami kancelárie
+  function mojeFarby() {
+    var f = S.me ? S.me.farby : S.farbyCache;
+    return f && f.schema && (SCHEMY[f.schema] || f.schema === "vlastna") ? f : null;
+  }
+  function vzhladPreMna() { var m = mojeFarby(); return m ? Object.assign({}, S.vzhlad, { schema: m.schema, farba: m.farba || null }) : S.vzhlad; }
+  function obnovMojeFarby() {
+    var m = S.me ? (S.me.farby || null) : null, k = JSON.stringify(m);
+    if (k === JSON.stringify(S.farbyCache || null)) return;
+    S.farbyCache = m;
+    try { localStorage.setItem("typek-moje-farby", k); } catch (e) { /* bez úložiska */ }
+    if (!S.fp) aplikujVzhlad(vzhladPreMna());
+  }
   async function nacitajVzhlad() {
     var v = await rpc("vzhlad_kancelarie", {});
     var zmena = JSON.stringify(v || {}) !== JSON.stringify(S.vzhlad || {});
     S.vzhlad = v || {};
     try { localStorage.setItem("typek-vzhlad", JSON.stringify(S.vzhlad)); } catch (e) { /* bez úložiska */ }
-    if (zmena) aplikujVzhlad(S.vzhlad);
+    if (zmena && !S.fp) aplikujVzhlad(vzhladPreMna());
     return zmena;
   }
 
@@ -415,6 +435,7 @@
       return obrazovkaLogin(r.data && !r.data.aktivny ? "Váš účet je deaktivovaný. Kontaktujte administrátora." : "Účet sa nenašiel. Kontaktujte administrátora.");
     }
     S.me = r.data;
+    obnovMojeFarby(); aplikujVzhlad(vzhladPreMna());
     // hlavný správca Realitného týpka – vidí prepínač do správy zákazníkov
     try { var hs = await sb.rpc("je_hlavny_spravca"); S.hlavny = !hs.error && hs.data === true; } catch (e) { S.hlavny = false; }
     try { await nacitajNastavenia(); } catch (e) { /* predvolené */ }
@@ -848,6 +869,7 @@
     S.makleri = r.data; S.mById = {};
     r.data.forEach(function (m) { S.mById[m.id] = m; });
     if (S.mById[S.me.id]) S.me = S.mById[S.me.id];
+    obnovMojeFarby();
   }
   async function nacitajOdhady() {
     S.canUnder = admin() || !!S.me.vidi_podhodnotene;
@@ -1015,7 +1037,7 @@
   // ------------------------------------------------------------ kostra stránky
   function vykresli() {
     if (!tabPovoleny(S.tab)) S.tab = "domov";
-    if (S.tab !== "vzhlad" && S.vzhladDraft) { S.vzhladDraft = null; aplikujVzhlad(S.vzhlad); }
+    if (S.tab !== "vzhlad" && S.vzhladDraft) { S.vzhladDraft = null; aplikujVzhlad(vzhladPreMna()); }
     var tabs = SEKCIE.filter(function (x) { return maSekciu(x[0]); }).map(function (x) { return x[0] === "provizie" && !admin() ? ["provizie", "Moje provízie", "euro"] : x; });
     if (admin()) tabs.push(["vykon", "Výkon", "vykon"], ["makleri", "Makléri", "makleri"], ["vzhlad", "Vzhľad", "farby"], ["historia", "História zmien", "historia"]);
     var aktualna = tabs.find(function (t) { return t[0] === S.tab; }) || ["domov", "Prehľad", "domov"];
@@ -1097,7 +1119,9 @@
         return '<button type="button" class="dl-menu" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + '><span class="dl-menu-ik">' + ikona(t[2]) + "</span>" +
           "<span>" + esc(t[1]) + "</span>" + (t[0] === "chat" ? '<span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
       }).join("") + "</div></div>";
-    }).join("") + '<div class="menu-skup menu-pomoc"><span class="menu-skup-n">Pomoc</span><div class="menu-dl">' +
+    }).join("") + '<div class="menu-skup menu-farby"><span class="menu-skup-n">Vzhľad</span><div class="menu-dl">' +
+      '<button type="button" class="dl-menu dl-farby" data-pomoc="farby"><span class="dl-menu-ik dl-farby-ik" aria-hidden="true"><i></i><i></i><i></i></span><span>Farebný režim</span></button></div></div>' +
+      '<div class="menu-skup menu-pomoc"><span class="menu-skup-n">Pomoc</span><div class="menu-dl">' +
       [["sprievodca", "Sprievodca aplikáciou", "🧭"], ["novinky", "Čo je nové", "✨"], ["heslo", "Zmeniť heslo", "🔑"]].map(function (x) {
         return '<button type="button" class="dl-menu" data-pomoc="' + x[0] + '"><span class="dl-menu-ik dl-menu-emoji" aria-hidden="true">' + x[2] + "</span><span>" + x[1] + "</span>" +
           (x[0] === "novinky" ? '<span class="tab-n" data-novinky-n hidden></span>' : "") + "</button>";
@@ -1286,6 +1310,138 @@
     zavriMenu();
     if (co === "sprievodca") { S.pwdOpen = false; vykresliHeslo(); window.scrollTo(0, 0); return spustiSprievodcu(); }
     if (co === "novinky") return ukazNovinky(S.novinky || [], false);
+    if (co === "farby") return otvorFarby();
+  }
+
+  // ------------------------------------------------------------ FAREBNÝ REŽIM (menu → Vzhľad)
+  var FARBY_RYCHLE = [["#DB9522", "Zlatá"], ["#1E2A35", "Atramentová"], ["#1F6B57", "Smaragdová"], ["#A8482E", "Tehlová"], ["#1D6F8F", "Morská"],
+    ["#6E3A5E", "Slivková"], ["#6E7B2C", "Olivová"], ["#4A6074", "Sivomodrá"]];
+  function otvorFarby() {
+    var m = mojeFarby(), V = S.vzhlad || {};
+    S.fp = { komu: "ja", schema: m ? m.schema : "", farba: m ? m.farba || "" : "", prepisat: false };
+    S.fpTim = { schema: V.schema || "typek", farba: V.farba || "" };
+    vykresliFarby();
+  }
+  function fpVyber() { return S.fp.komu === "tim" ? S.fpTim : S.fp; }
+  function fpNahlad() {
+    var v = fpVyber();
+    if (S.fp.komu === "ja" && !v.schema) return aplikujVzhlad(S.vzhlad);
+    aplikujVzhlad(Object.assign({}, S.vzhlad, { schema: v.schema, farba: v.schema === "vlastna" ? v.farba : null }));
+  }
+  function zavriFarby() {
+    var o = $("#farby-okno"); if (o) o.remove();
+    document.removeEventListener("keydown", fpKlaves);
+    S.fp = null; S.fpTim = null; aplikujVzhlad(vzhladPreMna());
+  }
+  function fpKlaves(e) { if (e.key === "Escape") zavriFarby(); }
+  function fpZmenene() {
+    var fp = S.fp, V = S.vzhlad || {};
+    if (fp.komu === "tim") return S.fpTim.schema !== (V.schema || "typek") || (S.fpTim.schema === "vlastna" && S.fpTim.farba !== (V.farba || "")) || fp.prepisat;
+    var m = mojeFarby();
+    var teraz = [fp.schema || "", fp.schema === "vlastna" ? fp.farba : ""], bolo = m ? [m.schema, m.schema === "vlastna" ? m.farba || "" : ""] : ["", ""];
+    return teraz.join("|") !== bolo.join("|");
+  }
+  function vykresliFarby() {
+    var fp = S.fp, tim = fp.komu === "tim", v = fpVyber(), V = S.vzhlad || {};
+    var kanc = farbySchemy(V);
+    function trio(f) { return '<span class="trio"><i style="background:' + f[1] + '"></i><i style="background:' + f[4] + '"></i><i style="background:' + f[3] + '"></i></span>'; }
+    var sady = (tim ? "" : '<button type="button" class="fp-set fp-kanc" data-fp-schema="" aria-pressed="' + !v.schema + '">' + trio(kanc) + "<span><b>Farby kancelárie</b><small>ako má celý tím</small></span></button>") +
+      Object.keys(SCHEMY).map(function (k) {
+        return '<button type="button" class="fp-set" data-fp-schema="' + k + '" aria-pressed="' + (v.schema === k) + '">' + trio(SCHEMY[k]) + "<span><b>" + esc(SCHEMY[k][0]) + "</b></span></button>";
+      }).join("");
+    var vl = v.schema === "vlastna" ? (v.farba || "") : "", akt = vl || (v.schema ? farbySchemy({ schema: v.schema })[1] : kanc[1]);
+    var rychla = FARBY_RYCHLE.some(function (x) { return x[0].toLowerCase() === vl.toLowerCase(); });
+    var bodky = FARBY_RYCHLE.map(function (x) {
+      return '<button type="button" class="fp-dot" style="--sw:' + x[0] + '" data-fp-farba="' + x[0] + '" aria-pressed="' + (vl.toLowerCase() === x[0].toLowerCase()) + '" title="' + x[1] + '" aria-label="' + x[1] + '"></button>';
+    }).join("") + '<label class="fp-dot fp-own" style="--sw:' + esc(akt) + '" title="Vlastná farba – vyberte ľubovoľnú" data-on="' + (!!vl && !rychla) + '"><i></i>' +
+      '<input type="color" id="fp-pick" value="' + esc(akt) + '" aria-label="Vybrať vlastnú farbu"></label>';
+    var ostatniVlastne = (S.makleri || []).filter(function (m) { return m.id !== S.me.id && m.aktivny && m.farby && m.farby.schema; }).length;
+    var tema = document.documentElement.dataset.theme || "";
+    var h = '<button type="button" class="nov-x" data-fp="x" aria-label="Zavrieť">×</button>' +
+      '<h3 id="fp-n">🎨 Farebný režim</h3>' +
+      (admin() ? '<div class="fp-komu" role="group" aria-label="Pre koho">' +
+        [["ja", "👤", "Len pre mňa", "uvidíš ich len ty"], ["tim", "👥", "Pre ostatných maklérov", "farby celého tímu"]].map(function (x) {
+          return '<button type="button" data-fp-komu="' + x[0] + '" aria-pressed="' + (fp.komu === x[0]) + '"><span class="fp-k-ik" aria-hidden="true">' + x[1] + "</span><span><b>" + x[2] + "</b><small>" + x[3] + "</small></span></button>";
+        }).join("") + "</div>" : "") +
+      '<p class="meta fp-uvod">' + (tim ? "Farby uvidia všetci makléri, ktorí si nevybrali vlastné." + (mojeFarby() ? " Ty máš vlastné farby – tie ti ostanú." : "") :
+        "Farby si nastavíš len pre seba – ostatní makléri ich neuvidia.") + "</p>" +
+      (tim ? "" : '<section class="fp-grp"><h4>Režim</h4><div class="fp-rezim" role="group" aria-label="Svetlý alebo tmavý režim">' +
+        [["light", "☀️", "Svetlý"], ["dark", "🌙", "Tmavý"], ["", "🖥️", "Podľa zariadenia"]].map(function (x) {
+          return '<button type="button" data-fp-tema="' + x[0] + '" aria-pressed="' + (tema === x[0]) + '"><span aria-hidden="true">' + x[1] + "</span>" + x[2] + "</button>"; }).join("") +
+        "</div></section>") +
+      '<section class="fp-grp"><h4>Farebné sady</h4><div class="fp-sady">' + sady + "</div>" +
+        '<p class="meta">Celá aplikácia zladená jedným klikom – hneď vidíte náhľad.</p></section>' +
+      '<section class="fp-grp"><h4>Vlastná farba <output>' + (vl ? esc(vl.toUpperCase()) : "") + '</output></h4><div class="fp-dots">' + bodky + "</div>" +
+        '<div class="fp-own-row"><input type="text" id="fp-hex" maxlength="7" spellcheck="false" placeholder="#DB9522" value="' + esc(vl ? vl.toUpperCase() : "") + '" aria-label="Kód farby"><small>kód farby, napr. z vášho loga</small></div></section>' +
+      (tim && ostatniVlastne ? '<label class="chk fp-prepisat"><input type="checkbox" id="fp-prepisat"' + (fp.prepisat ? " checked" : "") + "> Zmeniť aj maklérom, ktorí si vybrali vlastné farby (" + ostatniVlastne + ")</label>" : "") +
+      '<div class="fp-akcie"><button type="button" class="btn ghost" data-fp="x">Zrušiť</button><button type="button" class="btn primary" data-fp="ulozit"' + (fpZmenene() ? "" : " disabled") + ">" +
+        (tim ? "Uložiť pre všetkých maklérov" : "Uložiť pre mňa") + "</button></div>";
+    var o = $("#farby-okno");
+    if (!o) {
+      o = document.createElement("div"); o.className = "pochvala-var fp-var"; o.id = "farby-okno";
+      o.innerHTML = '<div class="pochvala-karta nov-karta fp-karta" role="dialog" aria-modal="true" aria-labelledby="fp-n"></div>';
+      document.body.appendChild(o);
+      document.addEventListener("keydown", fpKlaves);
+      o.addEventListener("click", klikFarby);
+      o.addEventListener("input", function (e) {
+        if (e.target.id === "fp-pick") { var v2 = fpVyber(); v2.schema = "vlastna"; v2.farba = e.target.value.toLowerCase(); fpNahlad(); fpPopis(); }
+        if (e.target.id === "fp-hex") {
+          var x = e.target.value.trim(); if (x && x[0] !== "#") x = "#" + x;
+          if (/^#[0-9a-f]{6}$/i.test(x)) { var v3 = fpVyber(); v3.schema = "vlastna"; v3.farba = x.toLowerCase(); fpNahlad(); fpPopis(); e.target.removeAttribute("aria-invalid"); }
+          else e.target.setAttribute("aria-invalid", "true");
+        }
+      });
+      o.addEventListener("change", function (e) {
+        if (e.target.id === "fp-pick" || e.target.id === "fp-hex") vykresliFarby();
+        if (e.target.id === "fp-prepisat") { S.fp.prepisat = e.target.checked; vykresliFarby(); }
+      });
+    }
+    var kar = o.querySelector(".fp-karta"), sc = kar.scrollTop;
+    kar.innerHTML = h; kar.scrollTop = sc;
+  }
+  // počas ťahania vo výbere farby len obnoví popis a tlačidlo (bez prekreslenia okna)
+  function fpPopis() {
+    var o = $("#farby-okno"); if (!o) return;
+    var v = fpVyber(), out = o.querySelector(".fp-grp output"); if (out) out.textContent = (v.farba || "").toUpperCase();
+    o.querySelectorAll(".fp-set").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+    var own = o.querySelector(".fp-own"); if (own) { own.style.setProperty("--sw", v.farba); own.dataset.on = "true"; }
+    var u = o.querySelector('[data-fp="ulozit"]'); if (u) u.disabled = !fpZmenene();
+  }
+  async function klikFarby(e) {
+    var o = $("#farby-okno");
+    if (e.target === o || e.target.closest('[data-fp="x"]')) return zavriFarby();
+    var b;
+    if ((b = e.target.closest("[data-fp-komu]"))) { S.fp.komu = b.dataset.fpKomu; fpNahlad(); return vykresliFarby(); }
+    if ((b = e.target.closest("[data-fp-tema]"))) {
+      var t = b.dataset.fpTema;
+      if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+      try { if (t) localStorage.setItem(TEMA_KEY, t); else localStorage.removeItem(TEMA_KEY); } catch (er) { /* nevadí */ }
+      popisTemy(); return vykresliFarby();
+    }
+    if ((b = e.target.closest("[data-fp-schema]"))) { var v = fpVyber(); v.schema = b.dataset.fpSchema; fpNahlad(); return vykresliFarby(); }
+    if ((b = e.target.closest("[data-fp-farba]"))) { var w = fpVyber(); w.schema = "vlastna"; w.farba = b.dataset.fpFarba.toLowerCase(); fpNahlad(); return vykresliFarby(); }
+    if ((b = e.target.closest('[data-fp="ulozit"]'))) {
+      b.disabled = true;
+      try {
+        if (S.fp.komu === "tim") {
+          var prep = !!S.fp.prepisat;
+          var r = await rpc("nastavit_farby_timu", { p_schema: S.fpTim.schema, p_farba: S.fpTim.schema === "vlastna" ? S.fpTim.farba : null, p_prepisat: prep });
+          S.vzhlad = (r && r.vzhlad) || S.vzhlad;
+          try { localStorage.setItem("typek-vzhlad", JSON.stringify(S.vzhlad)); } catch (er) { /* bez úložiska */ }
+          if (prep) (S.makleri || []).forEach(function (m) { if (m.id !== S.me.id) m.farby = null; });
+          var ja = !!mojeFarby();
+          zavriFarby(); vykresli();
+          toast(ja ? "🎨 Farby sú uložené pre ostatných maklérov. Ty máš vlastné – tie ti ostali." : "🎨 Farby sú uložené pre celý tím.");
+        } else {
+          var f = S.fp.schema ? { schema: S.fp.schema, farba: S.fp.schema === "vlastna" ? S.fp.farba : null } : {};
+          var nove = await rpc("nastavit_moje_farby", { p: f });
+          S.me.farby = nove || null; if (S.mById && S.mById[S.me.id]) S.mById[S.me.id].farby = S.me.farby;
+          obnovMojeFarby(); zavriFarby(); vykresli();
+          toast(nove ? "🎨 Farby sú uložené – vidíš ich len ty." : "🎨 Máš znova farby kancelárie.");
+        }
+        konfety({ pocet: 50 });
+      } catch (er) { toast(chybaText(er), true); b.disabled = false; }
+    }
   }
 
   // ------------------------------------------------------------ INZERÁTY
@@ -5218,10 +5374,10 @@
       b.onclick = async function () {
         var a = b.dataset.vz;
         if (a === "logo-predv") { D.logo = null; return zmena(true); }
-        if (a === "zrusit") { S.vzhladDraft = null; aplikujVzhlad(S.vzhlad); return vykresliVzhlad(); }
+        if (a === "zrusit") { S.vzhladDraft = null; aplikujVzhlad(vzhladPreMna()); return vykresliVzhlad(); }
         if (a === "ulozit") {
           b.disabled = true;
-          try { await rpc("ulozit_vzhlad", { p: D }); S.vzhladDraft = null; await nacitajVzhlad(); aplikujVzhlad(S.vzhlad); toast("🎨 Vzhľad je uložený – uvidí ho celý tím."); konfety({ pocet: 70 }); vykresli(); }
+          try { await rpc("ulozit_vzhlad", { p: D }); S.vzhladDraft = null; await nacitajVzhlad(); aplikujVzhlad(vzhladPreMna()); toast(mojeFarby() ? "🎨 Vzhľad je uložený pre tím. Ty máš vlastné farby – zmeníš ich v menu → Farebný režim." : "🎨 Vzhľad je uložený – uvidí ho celý tím."); konfety({ pocet: 70 }); vykresli(); }
           catch (err) { b.disabled = false; toast(chybaText(err), true); }
         }
       };
