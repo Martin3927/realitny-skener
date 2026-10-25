@@ -544,6 +544,9 @@ a.brand:focus-visible { outline: 2px solid var(--gold-strong); outline-offset: 4
 .lesk { position: relative; display: block; overflow: hidden; justify-self: center; border-radius: 6px }
 .lesk::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent); animation: lesk 1.4s .4s ease-in-out both; pointer-events: none }
 .lesk .login-logo { margin-bottom: 0 }
+/* prihlásenie: hlavička týpka namiesto loga kancelárie, lesk prejde iba po kľúči */
+.lesk-typek { border-radius: 50% }
+.login-logo-typek { height: 84px; width: auto }
 .brand img { transition: filter .25s ease, transform .25s ease }
 a.brand:hover img { filter: drop-shadow(0 0 8px rgb(var(--accent-rgb) / .55)); transform: scale(1.03) }
 .btn { transition: transform .08s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease }

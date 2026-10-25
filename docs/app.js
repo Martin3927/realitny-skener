@@ -385,13 +385,13 @@
     $("#app").innerHTML =
       '<div class="login"><div class="login-typek" aria-hidden="true"><img src="typek-postava.png" alt="" width="568" height="640"><span class="login-bublina">Ahoj! Poďme predávať 🔑</span></div>' +
       '<form class="login-box" id="f-login">' +
-      '<span class="lesk"><img class="login-logo" src="' + esc(logoUrl()) + '" alt="' + esc(nazovKancelarie()) + '"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
+      '<span class="lesk lesk-typek"><img class="login-logo login-logo-typek" src="typek-hlavicka.png?v=202610251320" alt="Realitný týpek" width="239" height="240"></span><h1 class="login-nazov">Realitný <span>týpek</span></h1><p>Prihláste sa svojím maklérskym účtom.</p>' +
       '<label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
       '<button class="btn primary wide" type="submit">Prihlásiť sa</button>' +
       "<p>Účet vám vytvorí administrátor. Ak ste zabudli heslo, požiadajte ho o nové.</p>" + PRAVA + "</form>" +
-      '<div class="login-pata"><img src="typek-hlava.png" alt="" width="28" height="28"><span><b>Realitný týpek</b></span></div></div>';
+      '</div>';
     pridajOko($("#f-login"));
     $("#f-login").addEventListener("submit", async function (e) {
       e.preventDefault();
@@ -413,7 +413,7 @@
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
-      '<img class="login-logo" src="' + esc(logoUrl()) + '" alt="' + esc(nazovKancelarie()) + '"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
+      '<img class="login-logo login-logo-typek" src="typek-hlavicka.png?v=202610251320" alt="Realitný týpek" width="239" height="240"><h1 class="login-nazov">Realitný <span>týpek</span></h1>' +
       "<p>Vitajte. Vytvorte účet administrátora – s ním budete pridávať maklérov a nastavovať ich práva.</p>" +
       '<label class="field"><span>Meno a priezvisko</span><input type="text" id="p-meno" required></label>' +
       '<label class="field"><span>Email</span><input type="email" id="p-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required></label>' +
