@@ -534,7 +534,7 @@
         var j = s.toJSON();
         await rpc("ulozit_push_odber", { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth,
           p_zariadenie: (jeIos() ? "iPhone" : /android/i.test(navigator.userAgent) ? "Android" : "Počítač") + (naPloche() ? " (aplikácia)" : "") });
-        rg.showNotification("🔔 Upozornenia sú zapnuté", { body: "Takto vám príde správa o novom súkromnom inzeráte.", icon: "ikona-192.png", badge: "favicon-32.png", tag: "push-test" });
+        rg.showNotification("🔔 Upozornenia sú zapnuté", { body: "Takto vám príde správa o novom súkromnom inzeráte.", icon: "typek-ikona-192.png", badge: "typek-odznak-96.png", tag: "push-test" });
         toast("🔔 Upozornenia sú zapnuté.");
       } catch (err) { toast(chybaText(err), true); }
       napojUpozornenia();
@@ -6648,7 +6648,7 @@
   function systemoveUpozornenie(titul, text, tag, adresa) {
     if (!document.hidden || !("Notification" in window) || Notification.permission !== "granted" || !navigator.serviceWorker) return;
     navigator.serviceWorker.ready.then(function (reg) {
-      reg.showNotification(titul, { body: String(text || "").slice(0, 180), icon: "ikona-192.png", badge: "favicon-32.png", tag: tag, renotify: true,
+      reg.showNotification(titul, { body: String(text || "").slice(0, 180), icon: "typek-ikona-192.png", badge: "typek-odznak-96.png", tag: tag, renotify: true,
         data: { url: location.href.split("#")[0] + "#" + adresa } });
     }).catch(function () {});
   }

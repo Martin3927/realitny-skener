@@ -1,16 +1,16 @@
 {
-  "name": "Realitný týpek · Alpha Reality",
+  "name": "Realitný týpek",
   "short_name": "Týpek",
-  "description": "Realitný skener – súkromné inzeráty v okresoch Spišská Nová Ves a Levoča pre maklérov Alpha Reality",
+  "description": "Realitný týpek – softvér pre realitné kancelárie a maklérov: skener súkromných inzerátov, ponuky, web makléra, kalendár a chat s kolegami na jednom mieste",
   "lang": "sk",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#2b2f36",
-  "theme_color": "#2b2f36",
+  "background_color": "#1e2a35",
+  "theme_color": "#1e2a35",
   "icons": [
-    { "src": "ikona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "ikona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "ikona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "typek-ikona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "typek-ikona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "typek-ikona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
