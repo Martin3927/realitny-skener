@@ -466,6 +466,7 @@
     setTimeout(zacniSprievodcuAkTreba, 2200);
     nacitajNovinky().then(function () { popisNovinky(); setTimeout(zacniNovinkyAkTreba, 3200); }, function () {});
     spustiOdpocet();
+    spustiMeranieCasu();
     somTu();
     var chatTik = 0;
     var tik = function () { chatTik++; if (!document.hidden || chatTik % 2 === 0) chatNove(); };
@@ -717,6 +718,58 @@
   });
   var pohybT = 0;
   window.addEventListener("mousemove", function () { if (S.me && Date.now() - pohybT > 2000) { pohybT = Date.now(); zaznamenajAktivitu(); } }, { passive: true });
+
+  // ---------- čas v týpkovi (štatistika zo srandy)
+  // počíta sa len otvorené okno, v ktorom niekto v posledných 2 minútach klikol, písal alebo posúval;
+  // raz za minútu sa sekundy podľa sekcií pošlú do databázy, zvyšok pri zatvorení počká na ďalšie otvorenie
+  var CAS_NECINNOST = 2 * 60000, KLUC_CAS = "typek-cas-zvysok";
+  var casM = { buf: {}, tik: 0, posiela: false };
+  function casTik() {
+    var t = Date.now(), d = casM.tik ? Math.min(5000, t - casM.tik) : 0;
+    casM.tik = t;
+    if (!S.me || document.hidden || d <= 0 || t - poslednaAktivita() > CAS_NECINNOST) return;
+    var k = TABY.indexOf(S.tab) >= 0 ? S.tab : "domov";
+    casM.buf[k] = (casM.buf[k] || 0) + d;
+  }
+  async function casPosli() {
+    if (!S.me || casM.posiela) return;
+    var b = {}, n = 0;
+    Object.keys(casM.buf).forEach(function (k) {
+      var s = Math.floor(casM.buf[k] / 1000);
+      if (s > 0) { b[k] = s; n += s; casM.buf[k] -= s * 1000; }
+    });
+    if (!n) return;
+    casM.posiela = true;
+    try { await rpc("pripocitaj_cas", { p_sekcie: b }); }
+    catch (e) { Object.keys(b).forEach(function (k) { casM.buf[k] = (casM.buf[k] || 0) + b[k] * 1000; }); }
+    casM.posiela = false;
+  }
+  function casUlozZvysok() {
+    if (!S.me) return;
+    var b = {}, n = 0;
+    Object.keys(casM.buf).forEach(function (k) { if (casM.buf[k] >= 1000) { b[k] = casM.buf[k]; n++; } });
+    try { if (n) localStorage.setItem(KLUC_CAS, JSON.stringify({ id: S.me.id, cas: Date.now(), buf: b })); } catch (e) { /* bez úložiska */ }
+  }
+  function spustiMeranieCasu() {
+    // zvyšok z minulého zatvorenia (najviac pol dňa starý a len pre toho istého makléra)
+    try {
+      var z = JSON.parse(localStorage.getItem(KLUC_CAS) || "null");
+      localStorage.removeItem(KLUC_CAS);
+      if (z && z.id === S.me.id && Date.now() - z.cas < 12 * 3600e3 && z.buf) {
+        Object.keys(z.buf).forEach(function (k) { if (TABY.indexOf(k) >= 0) casM.buf[k] = (casM.buf[k] || 0) + Math.min(300000, Number(z.buf[k]) || 0); });
+      }
+    } catch (e) { /* nič */ }
+    casM.tik = Date.now();
+    setInterval(casTik, 1000);
+    setInterval(casPosli, 60000);
+    setTimeout(casPosli, 5000);
+    document.addEventListener("visibilitychange", function () {
+      casM.tik = Date.now();
+      if (document.hidden) casPosli();
+    });
+    window.addEventListener("pagehide", casUlozZvysok);
+    window.addEventListener("pageshow", function (e) { if (e.persisted) try { localStorage.removeItem(KLUC_CAS); } catch (x) { /* nič */ } });
+  }
   function formatOdpocet(ms) {
     var s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
     return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(ss).padStart(2, "0");
@@ -2812,7 +2865,7 @@
           '<span class="dl-ikona">' + ikona(d[1]) + (upozorni ? '<span class="dl-bod">' + (d[0] === "chat" ? neprec : prip) + "</span>" : "") + "</span>" +
           '<span class="dl-text"><b>' + esc(d[2]) + "</b><small>" + esc(d[3]) + "</small>" +
           (d[4] || d[5] || d[6] ? '<span class="dl-stav">' + [d[4], d[5], d[6]].filter(Boolean).map(esc).join(" · ") + "</span>" : "") + "</span></button>";
-      }).join("") + "</div></div>";
+      }).join("") + "</div>" + casKartaHtml() + "</div>";
     if (mojeO.length) {
       var kl = "typek-oslava-" + mdK + "-" + new Date().getFullYear();
       var uz = false; try { uz = localStorage.getItem(kl); localStorage.setItem(kl, "1"); } catch (e2) { /* bez úložiska */ }
@@ -2900,6 +2953,138 @@
         '<p class="meta">Žiadny váš inzerát sa v najbližších 6 hodinách neuvoľní.</p>', uvol.length ? "moje" : "", "Moje inzeráty") +
       "</div></section>";
   }
+  // ---------- karta „Kto najviac týpkuje“ – aktívny čas v aplikácii (zo srandy)
+  var CAS_OBDOBIA = [["dnes", "Dnes"], ["tyzden", "Týždeň"], ["mesiac", "Mesiac"], ["vsetko", "Celkovo"]];
+  var CAS_SEKCIE = { domov: "Prehľad", vykon: "Výkon", makleri: "Makléri", vzhlad: "Vzhľad", historia: "História zmien" };
+  SEKCIE.forEach(function (x) { CAS_SEKCIE[x[0]] = x[1]; });
+  function casText(s) {
+    s = Math.round(Number(s) || 0);
+    if (s <= 0) return "0 min";
+    if (s < 60) return "< 1 min";
+    var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60);
+    return h ? h + " h" + (m ? " " + m + " min" : "") : m + " min";
+  }
+  function prveVelke(t) { return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
+  function tvar(n, jeden, dva, pat) { return n === 1 ? jeden : n >= 2 && n <= 4 ? dva : pat; }
+  function casRozsah(obd) {
+    var d = new Date(), od = null;
+    if (obd === "dnes") od = d;
+    else if (obd === "tyzden") od = zaciatokTyzdna();
+    else if (obd === "mesiac") od = new Date(d.getFullYear(), d.getMonth(), 1);
+    return { p_od: od ? lokalnyCas(od).slice(0, 10) : null, p_do: lokalnyCas(d).slice(0, 10) };
+  }
+  function casStav() { if (!S.cas) S.cas = { obd: "tyzden", data: null, pre: null, kedy: 0 }; return S.cas; }
+  async function casNacitaj(sila) {
+    var c = casStav(), obd = c.obd;
+    if (c.nacitava || (!sila && c.pre === obd && Date.now() - c.kedy < 55000)) return;
+    c.nacitava = true;
+    try { var d = await rpc("cas_v_typkovi", casRozsah(obd)); if (c.obd === obd) { c.data = d; c.pre = obd; c.kedy = Date.now(); c.chyba = null; } }
+    catch (e) { c.chyba = chybaText(e); c.chybaKedy = Date.now(); }
+    c.nacitava = false;
+    var el = $("#cas-typek"); if (el) el.outerHTML = casKartaHtml();
+  }
+  function casOdznaky(riadky) {
+    function sucetHodin(m, hodiny) { return hodiny.reduce(function (a, h) { return a + Number((m.hodiny || {})[h] || 0); }, 0); }
+    function najviac(fn, min) {
+      var naj = null, max = min;
+      riadky.forEach(function (m) { var v = fn(m); if (v > max) { max = v; naj = m; } });
+      return naj ? { m: naj, v: max } : null;
+    }
+    var o = [];
+    var sova = najviac(function (m) { return sucetHodin(m, ["20", "21", "22", "23", "0", "1", "2", "3", "4"]); }, 300);
+    if (sova) o.push(["🦉", "Nočná sova", sova.m, casText(sova.v) + " po 20:00"]);
+    var vta = najviac(function (m) { return sucetHodin(m, ["5", "6", "7"]); }, 300);
+    if (vta) o.push(["🐓", "Ranné vtáča", vta.m, casText(vta.v) + " pred 8:00"]);
+    var chat = najviac(function (m) { return Number((m.sekcie || {}).chat || 0); }, 300);
+    if (chat) o.push(["💬", "Duša tímového chatu", chat.m, casText(chat.v)]);
+    if (casStav().obd !== "dnes") {
+      var den = najviac(function (m) { return Number(m.najdlhsi_den || 0); }, 600);
+      if (den) o.push(["📅", "Najdlhší deň", den.m, casText(den.v)]);
+    }
+    return o;
+  }
+  function casVtip(s, ja) {
+    var obh = Math.floor(s / 2700), kavy = Math.round(s / 600);
+    var kto = !ja ? "za ten čas by ste stihli" : rodMaklera(S.me) === "zena" ? "za ten čas by si stihla" : "za ten čas by si stihol";
+    if (obh >= 1) return kto + " " + obh + " " + tvar(obh, "obhliadku", "obhliadky", "obhliadok") + " bytu.";
+    if (kavy >= 1) return "to je ako " + kavy + " " + tvar(kavy, "káva", "kávy", "káv") + " v kancelárii.";
+    return s > 0 ? "rozbieha sa to – každá minúta sa počíta." : "";
+  }
+  function casKartaHtml() {
+    var c = casStav(), d = c.pre === c.obd ? c.data : null;
+    var seg = '<div class="seg ct-obd" role="group" aria-label="Obdobie">' + CAS_OBDOBIA.map(function (o) {
+      return '<button type="button" data-cas-obd="' + o[0] + '" aria-pressed="' + (c.obd === o[0]) + '">' + o[1] + "</button>";
+    }).join("") + "</div>";
+    var vsetci = !d || d.vsetci || admin();
+    var h = '<section class="cas-typek" id="cas-typek"><div class="ct-hlava"><div><h3>' + (vsetci ? "Kto najviac týpkuje" : "Môj čas v týpkovi") + "</h3>" +
+      '<p class="meta">Aktívny čas v Realitnom týpkovi – len zo srandy</p></div>' + seg + "</div>";
+    if (!d) {
+      if (!c.nacitava && (!c.chyba || Date.now() - c.chybaKedy > 55000)) setTimeout(casNacitaj, 0);
+      return h + '<div class="meta ct-nacitavam">' + (c.chyba ? esc(c.chyba) : "Načítavam…") + "</div></section>";
+    }
+    if (Date.now() - c.kedy > 60000 && !c.nacitava) setTimeout(casNacitaj, 0);
+    var riadky = (d.makleri || []).filter(function (m) { return S.mById[m.id]; }).sort(function (a, b) {
+      return (b.sekundy - a.sekundy) || meno(a.id).localeCompare(meno(b.id), "sk");
+    });
+    var max = riadky.reduce(function (a, m) { return Math.max(a, m.sekundy); }, 0);
+    var spolu = riadky.reduce(function (a, m) { return a + Number(m.sekundy || 0); }, 0);
+    function oblubena(m) {
+      var k = Object.keys(m.sekcie || {}).sort(function (a, b) { return m.sekcie[b] - m.sekcie[a]; })[0];
+      return k ? CAS_SEKCIE[k] || k : "";
+    }
+    function popis(m) {
+      var p = [];
+      if (m.sekundy >= 60 && oblubena(m)) p.push("najčastejšie: " + oblubena(m));
+      if (c.obd !== "dnes" && m.dni) p.push(m.dni + " " + tvar(m.dni, "deň", "dni", "dní"));
+      return p.length ? p.join(" · ") : m.sekundy ? "" : "zatiaľ bez týpkovania";
+    }
+    var zaciatok = d.zaciatok ? datum(d.zaciatok) : datum(new Date().toISOString());
+    if (!vsetci) {
+      var ja = riadky.find(function (m) { return m.id === S.me.id; }) || { sekundy: 0, sekcie: {}, dni: 0 };
+      h += '<div class="ct-ja"><b class="ct-velke">' + casText(ja.sekundy) + "</b><span>" + esc(popis(ja)) + "</span></div>" +
+        (ja.sekundy ? '<p class="ct-vtip">' + esc(prveVelke(casVtip(ja.sekundy, true))) + "</p>" : '<p class="ct-vtip">Zatiaľ nič – prvé minúty pribudnú hneď, ako sa v týpkovi pustíš do práce.</p>');
+    } else {
+      var zobraz = riadky.slice(0, 10);
+      if (!zobraz.some(function (m) { return m.id === S.me.id; })) zobraz = zobraz.concat(riadky.filter(function (m) { return m.id === S.me.id; }));
+      h += '<ol class="ct-rebricek">' + zobraz.map(function (m) {
+        var poradie = riadky.indexOf(m) + 1, p = popis(m);
+        var trieda = (m.id === S.me.id ? " ja" : "") + (m.sekundy && poradie <= 3 ? " miesto-" + poradie : "");
+        return '<li class="ct-riadok' + trieda + '"><span class="ct-poradie" aria-label="' + poradie + '. miesto">' + poradie + "</span>" + avatar(m.id, 34) +
+          '<span class="ct-meno"><b>' + esc(oslovenie(S.mById[m.id]) || meno(m.id)) + (m.id === S.me.id ? ' <small class="ct-ty">ty</small>' : "") + "</b>" +
+          (p ? "<small>" + esc(p) + "</small>" : "") + "</span>" +
+          '<span class="ct-pas" aria-hidden="true"><i style="width:' + (max ? Math.max(m.sekundy ? 3 : 0, Math.round(m.sekundy / max * 100)) : 0) + '%"></i></span>' +
+          '<b class="ct-cas">' + casText(m.sekundy) + "</b></li>";
+      }).join("") + "</ol>";
+      var odz = casOdznaky(riadky);
+      var vtip = casVtip(spolu, false);
+      h += '<div class="ct-pata">' + (spolu ? '<p class="ct-vtip">Spolu <b>' + casText(spolu) + "</b> – " + esc(vtip) + "</p>" : '<p class="ct-vtip">Zatiaľ je tu ticho – prvé minúty pribudnú hneď, ako sa v týpkovi začne pracovať.</p>') +
+        (odz.length ? '<div class="ct-odznaky">' + odz.map(function (o) {
+          return '<span class="ct-odznak" title="' + esc(o[3]) + '"><span aria-hidden="true">' + o[0] + "</span>" + esc(o[1]) + ": <b>" + esc(oslovenie(S.mById[o[2].id]) || meno(o[2].id)) + '</b><small>' + esc(o[3]) + "</small></span>";
+        }).join("") + "</div>" : "") + "</div>";
+    }
+    h += '<div class="ct-spodok"><span class="meta">Počíta sa len čas, keď je týpek otvorený a niečo v ňom robíš. Meriame od ' + esc(zaciatok) + "</span>" +
+      (admin() ? '<label class="ct-prepinac"><input type="checkbox" data-cas-vsetci' + (d.vsetci ? " checked" : "") + "> Rebríček vidia aj makléri</label>" : "") + "</div>";
+    return h + "</section>";
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("#cas-typek [data-cas-obd]");
+    if (!b) return;
+    var c = casStav(); if (c.obd === b.dataset.casObd) return;
+    c.obd = b.dataset.casObd; c.chyba = null;
+    var el = $("#cas-typek"); if (el) el.outerHTML = casKartaHtml();
+    casNacitaj(true);
+  });
+  document.addEventListener("change", async function (e) {
+    var x = e.target.closest("#cas-typek [data-cas-vsetci]");
+    if (!x || !admin()) return;
+    x.disabled = true;
+    try {
+      await rpc("nastavit_cas_rebricek", { p_vsetci: x.checked });
+      toast(x.checked ? "Rebríček teraz vidia všetci makléri." : "Makléri teraz vidia len svoj vlastný čas.");
+    } catch (er) { x.checked = !x.checked; toast(chybaText(er), true); }
+    x.disabled = false;
+    casNacitaj(true);
+  });
   document.addEventListener("click", function (e) {
     var md = e.target.closest("[data-mojden]");
     if (md) {

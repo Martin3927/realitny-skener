@@ -680,6 +680,47 @@ a.brand:hover img { filter: drop-shadow(0 0 8px rgb(var(--accent-rgb) / .55)); t
 [data-anim] .moj-den { animation: vstup .45s .2s ease-out both }
 @media (max-width: 760px) { .md-grid { grid-template-columns: 1fr } }
 
+/* ---------- Prehľad: Kto najviac týpkuje (aktívny čas v aplikácii, zo srandy) */
+.cas-typek { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px 12px; margin: 14px 0 0 }
+.ct-hlava { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 10px }
+.ct-hlava h3 { margin: 0; font-family: var(--display); font-size: 16px }
+.ct-hlava .meta { margin: 2px 0 0; font-size: 13px }
+.ct-obd { flex: none }
+.ct-nacitavam { padding: 8px 0 4px }
+.ct-rebricek { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.ct-riadok { display: grid; grid-template-columns: 26px 34px minmax(0, 1fr) minmax(70px, 32%) 92px; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 12px; background: var(--surface-2) }
+.ct-riadok.ja { background: rgb(var(--accent-rgb) / .14); box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / .45) }
+.ct-poradie { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;
+  color: var(--muted); font-variant-numeric: tabular-nums }
+.miesto-1 .ct-poradie { background: #db9522; color: #1e2a35 }
+.miesto-2 .ct-poradie { background: #c9d4dd; color: #1e2a35 }
+.miesto-3 .ct-poradie { background: #e3c79f; color: #1e2a35 }
+.ct-meno { display: flex; flex-direction: column; min-width: 0 }
+.ct-meno b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.ct-meno small { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.ct-ty { display: inline-block; background: var(--ink); color: var(--surface); border-radius: 999px; font-size: 10.5px; font-weight: 700; padding: 1px 6px; margin-left: 4px; vertical-align: middle; text-transform: uppercase; letter-spacing: .04em }
+.ct-pas { height: 8px; border-radius: 999px; background: rgb(var(--accent-rgb) / .14); overflow: hidden }
+.ct-pas i { display: block; height: 100%; border-radius: 999px; background: var(--gold-strong); transition: width .6s ease-out }
+.ct-cas { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
+.ct-ja { display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; padding: 6px 0 2px }
+.ct-velke { font-family: var(--display); font-size: 30px; line-height: 1.1 }
+.ct-ja span { color: var(--muted); font-size: 14px }
+.ct-pata { margin-top: 10px }
+.ct-vtip { margin: 0; font-size: 14px }
+.ct-odznaky { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px }
+.ct-odznak { display: inline-flex; align-items: center; gap: 5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px }
+.ct-odznak small { color: var(--muted); font-size: 12px }
+.ct-spodok { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12.5px }
+.ct-prepinac { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; white-space: nowrap }
+.ct-prepinac input { accent-color: var(--gold-strong); width: 16px; height: 16px; margin: 0 }
+[data-anim] .cas-typek { animation: vstup .45s .3s ease-out both }
+@media (max-width: 560px) {
+  .ct-riadok { grid-template-columns: 26px 34px minmax(0, 1fr) auto; grid-template-areas: "p a m c" "p a s s"; row-gap: 5px }
+  .ct-poradie { grid-area: p } .ct-riadok .av { grid-area: a } .ct-meno { grid-area: m } .ct-cas { grid-area: c } .ct-pas { grid-area: s }
+  .ct-obd { width: 100% } .ct-obd button { flex: 1 1 auto }
+  .ct-meno small { white-space: normal }
+}
+
 /* ---------- chat: systémové správy */
 .sprava-sys { align-self: center; max-width: min(560px, 92%); margin: 10px 0 4px; text-align: center; background: linear-gradient(135deg, var(--gold-soft), var(--surface)); border: 1px solid var(--gold-strong);
   border-radius: 14px; padding: 8px 14px; font-size: 14px; line-height: 1.45 }
