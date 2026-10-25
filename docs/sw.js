@@ -19,7 +19,7 @@ self.addEventListener("push", function (e) {
   var d = {};
   try { d = e.data ? e.data.json() : {}; } catch (x) { d = { title: "Realitný týpek", body: e.data ? e.data.text() : "" }; }
   e.waitUntil(self.registration.showNotification(d.title || "Realitný týpek", {
-    body: d.body || "", icon: "typek-ikona-192.png", badge: "typek-odznak-96.png", tag: d.tag || undefined, renotify: !!d.tag,
+    body: d.body || "", icon: "typek-ikona-192.png?v=202610251300", badge: "typek-odznak-96.png?v=202610251300", tag: d.tag || undefined, renotify: !!d.tag,
     data: { url: d.url || "./#inzeraty" }
   }));
 });
