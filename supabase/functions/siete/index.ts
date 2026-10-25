@@ -39,6 +39,8 @@ Deno.serve(async (req) => {
 
   const { data: p } = await db.from("nehnutelnosti").select("id, makler_id, stav, fotky").eq("id", Number(telo.ponuka_id)).maybeSingle();
   if (!p) return json({ chyba: "Ponuka neexistuje." }, 404);
+  // zverejniť môže len maklér, ktorému ponuka patrí, alebo administrátor
+  if (p.makler_id !== m.id && m.rola !== "admin") return json({ chyba: "Zverejniť môžete len svoju ponuku." }, 403);
   if (!["aktivne", "rezervovane"].includes(p.stav)) return json({ chyba: "Zverejniť sa dá len aktívna alebo rezervovaná ponuka." }, 400);
 
   // fotky: verejné adresy, najviac 10; Instagram berie len pomer strán 4:5 až 1,91:1

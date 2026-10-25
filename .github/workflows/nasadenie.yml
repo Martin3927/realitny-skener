@@ -64,6 +64,20 @@ jobs:
             <FilesMatch "\.(html|webmanifest)$|^sw\.js$">
               Header set Cache-Control "no-cache"
             </FilesMatch>
+            # bezpečnosť: prehliadač nehádá typ súborov, neposiela celé adresy cudzím webom
+            Header always set X-Content-Type-Options "nosniff"
+            Header always set Referrer-Policy "strict-origin-when-cross-origin"
+            # aplikáciu (prihlásenie, správa, editor webu) nemôže cudzia stránka vložiť do rámčeka
+            <FilesMatch "^(index|sprava|web-editor)\.html$">
+              Header always set X-Frame-Options "SAMEORIGIN"
+            </FilesMatch>
+          </IfModule>
+          # len pre app.realitnytypek.sk: prehliadač sa sem pripája vždy cez HTTPS (vlastné domény maklérov sa nemenia)
+          <IfModule mod_setenvif.c>
+            SetEnvIf Host "^app\.realitnytypek\.sk$" TYPEK_APP
+            <IfModule mod_headers.c>
+              Header always set Strict-Transport-Security "max-age=31536000" env=TYPEK_APP
+            </IfModule>
           </IfModule>
           EOF
           cat > build/web/.htaccess <<'EOF'
@@ -75,7 +89,11 @@ jobs:
           <IfModule mod_headers.c>
             <FilesMatch "\.html$">
               Header set Cache-Control "no-cache"
+              Header always set X-Frame-Options "SAMEORIGIN"
             </FilesMatch>
+            Header always set X-Content-Type-Options "nosniff"
+            Header always set Referrer-Policy "strict-origin-when-cross-origin"
+            Header always set Strict-Transport-Security "max-age=31536000"
           </IfModule>
           EOF
 
@@ -91,7 +109,6 @@ jobs:
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq lftp >/dev/null
           lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "
             set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30;
-            cls -1 /;
             mirror -R --verbose=1 --parallel=4 build/app/ $DIR_APP;
             mirror -R --verbose=1 --parallel=4 build/web/ $DIR_WEB;
             bye"

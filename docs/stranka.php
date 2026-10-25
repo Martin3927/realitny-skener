@@ -50,6 +50,14 @@ try {
   // náhľad rozpracovaného webu vidí len prihlásený maklér (načíta si ho prehliadač), vyhľadávače nie
   if ($nahlad || $m === '') { header('X-Robots-Tag: noindex'); vypis($sablona, 200, 'no-cache'); }
 
+  // adresa webu (napr. jana-kovacova) alebo doména makléra; čokoľvek iné rovno „nenašla sa“ – bez dotazu do databázy a bez zápisu na disk
+  $platna = (bool)preg_match('/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/', $m)
+    || (strlen($m) <= 253 && (bool)preg_match('/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/', $m));
+  if (!$platna) {
+    header('X-Robots-Tag: noindex');
+    vypis(str_replace('<title>Realitný maklér</title>', '<title>Stránka sa nenašla</title>', $sablona), 404, 'no-store');
+  }
+
   // údaje zverejneného webu (na 30 sekúnd sa pamätajú, aby bol web rýchly)
   $kluc = 'web-' . md5($m);
   $d = null; $zPamate = false;
@@ -72,6 +80,8 @@ try {
     $d = json_decode($odpoved, true);
     // pamätá sa aj „web neexistuje“, aby náhodné adresy nezaťažovali databázu
     typek_cache_zapis($kluc, is_array($d) ? $odpoved : 'null');
+    // pamäť platí 30 s – staršie súbory (najmä neexistujúce adresy) sa občas zmažú
+    if (mt_rand(1, 20) === 1) typek_cache_uprac('web-', 300);
   }
   if (!is_array($d)) {
     // web neexistuje alebo nie je zverejnený

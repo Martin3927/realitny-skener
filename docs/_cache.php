@@ -25,3 +25,12 @@ function typek_cache_zapis($kluc, $obsah) {
   $tmp = $f . '.' . getmypid() . '.' . mt_rand() . '.tmp';
   if (@file_put_contents($tmp, $obsah, LOCK_EX) !== false) { @chmod($tmp, 0600); if (!@rename($tmp, $f)) @unlink($tmp); }
 }
+// upratanie: zmaže staré súbory s danou predponou (napr. web-), aby náhodné adresy nezapĺňali disk hostingu
+function typek_cache_uprac($predpona, $starsie_ako_s) {
+  $d = typek_cache_dir();
+  if ($d === '') return;
+  $hranica = time() - (int)$starsie_ako_s;
+  foreach ((array)@glob($d . '/' . preg_replace('/[^a-z0-9_-]/', '', $predpona) . '*') as $f) {
+    if (is_string($f) && @is_file($f) && !@is_link($f) && (int)@filemtime($f) < $hranica) @unlink($f);
+  }
+}

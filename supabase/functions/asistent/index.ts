@@ -25,6 +25,10 @@ Deno.serve(async (req) => {
   const spravy = (telo.spravy || []).filter((x) => (x.role === "user" || x.role === "assistant") && typeof x.content === "string")
     .slice(-12).map((x) => ({ role: x.role, content: x.content.slice(0, 8000) }));
   if (!spravy.length || spravy[spravy.length - 1].role !== "user") return json({ chyba: "Napíšte otázku." }, 400);
+  // denný limit otázok na makléra (chráni pred nečakaným účtom za AI); dá sa zmeniť tajomstvom AI_DENNY_LIMIT
+  const limit = Math.max(1, Number(Deno.env.get("AI_DENNY_LIMIT")) || 150);
+  const { data: vLimite, error: chybaLimitu } = await db.rpc("asistent_pocitaj", { p_makler: u.user.id, p_limit: limit });
+  if (!chybaLimitu && vLimite === false) return json({ chyba: "Dnes ste už položili " + limit + " otázok, čo je denný limit AI asistenta. Zajtra môžete pokračovať." }, 429);
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": kluc, "anthropic-version": "2023-06-01", "content-type": "application/json" },

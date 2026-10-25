@@ -4,9 +4,8 @@
 alter table public.prispevky_siete add column if not exists kluc text;
 alter table public.prispevky_siete add column if not exists vysledok jsonb not null default '{}';
 
--- adresa webhooku scenára Make „Realitný týpek – príspevok FB + IG“ (nečitateľná z aplikácie, používa ju len server)
-insert into public.nastavenia (kluc, hodnota) values ('make_siete_webhook', 'https://hook.eu1.make.com/1ttiiy58m76mxsbkc0a8toexekxf72bu')
-on conflict (kluc) do nothing;
+-- adresa webhooku scenára Make „Realitný týpek – príspevok FB + IG“ sa NEUKLADÁ do repozitára (je verejný).
+-- Je iba v databáze: nastavenia.kluc = 'make_siete_webhook' (čítať ju vie len server). Zmena: priamo v databáze.
 
 -- terén pozemku (povinný údaj pre domy, chaty, objekty a pozemky v Realsofte)
 alter table public.nehnutelnosti add column if not exists uc_teren int;
