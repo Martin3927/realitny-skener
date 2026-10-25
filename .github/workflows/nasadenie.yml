@@ -74,7 +74,7 @@ jobs:
           </IfModule>
           # len pre app.realitnytypek.sk: prehliadač sa sem pripája vždy cez HTTPS (vlastné domény maklérov sa nemenia)
           <IfModule mod_setenvif.c>
-            SetEnvIf Host "^app\.realitnytypek\.sk$" TYPEK_APP
+            SetEnvIfNoCase Host "^app\.realitnytypek\.sk$" TYPEK_APP
             <IfModule mod_headers.c>
               Header always set Strict-Transport-Security "max-age=31536000" env=TYPEK_APP
             </IfModule>
