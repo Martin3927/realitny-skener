@@ -883,6 +883,39 @@
   function maNeulozene() { return !!document.querySelector("#obsah [data-zmenene]"); }
   function odistBezUlozenia() { return !maNeulozene() || window.confirm("Máte neuložené zmeny. Odísť bez uloženia?"); }
   window.addEventListener("beforeunload", function (e) { if (S.me && maNeulozene()) { e.preventDefault(); e.returnValue = ""; } });
+
+  // ---------- nová verzia aplikácie: keď sa maklér do aplikácie vráti, načíta sa sama (netreba ju zatvárať)
+  function verziaZo(text) { var m = /app\.js\?v=(\d+)/.exec(text || ""); return m ? Number(m[1]) : 0; }
+  var MOJA_VERZIA = verziaZo((document.querySelector('script[src*="app.js"]') || { getAttribute: function () { return ""; } }).getAttribute("src"));
+  var novaVerzia = 0, verziaKontrola = 0;
+  function zistiNovuVerziu() {
+    if (!MOJA_VERZIA || novaVerzia || Date.now() - verziaKontrola < 60000) return Promise.resolve(novaVerzia);
+    verziaKontrola = Date.now();
+    return fetch(location.pathname + "?verzia=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.text() : ""; })
+      .then(function (t) { var v = verziaZo(t); if (v > MOJA_VERZIA) novaVerzia = v; return novaVerzia; }, function () { return novaVerzia; });
+  }
+  function mozemObnovit() {
+    if (!S.me || maNeulozene() || S.pwdOpen || (S.zvonOpen && S.pripForm)) return false;
+    // rozpísaný formulár v aktuálnej sekcii – obnovíme až nabudúce
+    var t = S.tab, form = (t === "nehnutelnosti" && S.ponukaEdit) || (t === "klienti" && S.dopytEdit) || (t === "kalendar" && S.kalForm) ||
+      (t === "recenzie" && S.recForm) || (t === "provizie" && S.provForm) || (t === "schrankovanie" && (S.schEdit || S.sidForm)) ||
+      (t === "inzeraty" && Object.keys(S.open).some(function (k) { return ["hovor", "zvon", "tel"].indexOf(S.open[k]) >= 0; }));
+    if (form) return false;
+    var a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.value) return false;
+    var ch = $("#chat-text"); if (ch && ch.value.trim()) return false;
+    return true;
+  }
+  function obnovNaNovuVerziu() {
+    if (!novaVerzia || !mozemObnovit()) return;
+    try { if (sessionStorage.getItem("typek-verzia") === String(novaVerzia)) return; sessionStorage.setItem("typek-verzia", String(novaVerzia)); } catch (e) { return; }
+    location.reload();
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { zistiNovuVerziu(); return; }
+    if (novaVerzia) obnovNaNovuVerziu(); else zistiNovuVerziu().then(function (v) { if (v) obnovNaNovuVerziu(); });
+  });
+  setInterval(function () { zistiNovuVerziu(); }, 10 * 60000);
   document.addEventListener("keydown", function (e) {
     if (!(e.ctrlKey || e.metaKey) || e.altKey || String(e.key).toLowerCase() !== "s") return;
     var zoz = Array.prototype.slice.call(document.querySelectorAll("#obsah [data-ulozit]")).filter(function (b) { return b.offsetParent && !b.disabled; });
@@ -1708,13 +1741,14 @@
     // ťuknutie na už označenú dlaždicu (Súkromní, Moje, Nové…) výber zruší – späť na všetky inzeráty
     if (v !== "vsetky" && aktPredvolba() === v) v = "vsetky";
     zrusJeden();
-    Object.assign(S.f, { predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", q: "" });
+    // dlaždica ukáže presne to, čo je na nej napísané – zruší aj vybraného makléra a archív zmiznutých
+    Object.assign(S.f, { predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", q: "", kto: "", stav: "aktivne" });
     if (v === "sukr") S.f.predajca = "sukr";
     if (v === "sukr24") { S.f.predajca = "sukr"; S.f.novost = "1"; }
     if (v === "moje") S.f.praca = "moje";
     if (v === "nove") S.f.novost = "1";
     if (v === "under") { S.f.under = true; S.f.sort = "under"; }
-    S.shown = 100; ulozFiltre(); vykresliFiltreInz(); vykresliZoznam();
+    S.shown = 100; ulozFiltre(); vykresliFiltreInz(); vykresliStaty(); vykresliZoznam();
   }
 
   function viditelne() {
@@ -1760,7 +1794,7 @@
   // dlaždica hore ostane označená, kým platí jej výber (Súkromní, Moje, Nové…)
   function aktPredvolba() {
     var f = S.f;
-    if (S.jedenId || f.q || f.typ || f.okres || f.kto) return "";
+    if (S.jedenId || f.q || f.typ || f.okres || f.kto || (f.stav && f.stav !== "aktivne")) return "";
     var pr = f.predajca || "vsetci", pc = f.praca || "vsetky", nv = f.novost || "", un = !!f.under;
     if (pr === "vsetci" && pc === "vsetky" && !nv && !un) return "vsetky";
     if (pr === "sukr" && pc === "vsetky" && !nv && !un) return "sukr";
