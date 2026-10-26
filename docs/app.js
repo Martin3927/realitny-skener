@@ -2905,7 +2905,7 @@
     var den = Date.now() - 864e5, nove = sukr.filter(function (z) { return new Date(z.prvy_krat).getTime() > den; }).length;
     var moje = Object.values(S.prev).filter(function (p) { return p.makler_id === S.me.id; }).length;
     var sch = S.sch.filter(function (r) { return !r.zmazane; }).length;
-    var prip = splatne().length, pripVsetky = mojeAktivne().length;
+    var prip = splatne().length, pripVsetky = mojeAktivne().length, pripNove = splatne().filter(function (p) { return noveOd(p.cas); }).length;
     var neprec = pocetNeprecitanych();
     var krstne = oslovenie(S.me);
     var mot = ((S.osobne || {})[S.me.id] || {}).motivacia || "", vety = mot.split("\n").filter(function (x) { return x.trim(); });
@@ -2975,9 +2975,9 @@
         (odkaz.autor && S.mById[odkaz.autor] ? "<small>" + esc(S.mById[odkaz.autor].meno) + "</small>" : "") + reakcieBar("odkaz:" + hashTextu(odkaz.text)) + "</div></div>" : "") +
       kalendarDomovHtml() + mojDen +
       '<div class="dlazdice">' + dlazdice.map(function (d) {
-        var upozorni = (d[0] === "chat" && neprec) || (d[0] === "zvon" && prip);
+        var upozorni = (d[0] === "chat" && neprec) || (d[0] === "zvon" && pripNove);
         return '<button type="button" class="dlazdica' + (upozorni ? " upozorni" : "") + '" data-domov="' + d[0] + '">' +
-          '<span class="dl-ikona">' + ikona(d[1]) + (upozorni ? '<span class="dl-bod">' + (d[0] === "chat" ? neprec : prip) + "</span>" : "") + "</span>" +
+          '<span class="dl-ikona">' + ikona(d[1]) + (upozorni ? '<span class="dl-bod">' + (d[0] === "chat" ? neprec : pripNove) + "</span>" : "") + "</span>" +
           '<span class="dl-text"><b>' + esc(d[2]) + "</b><small>" + esc(d[3]) + "</small>" +
           (d[4] || d[5] || d[6] ? '<span class="dl-stav">' + [d[4], d[5], d[6]].filter(Boolean).map(esc).join(" · ") + "</span>" : "") + "</span></button>";
       }).join("") + "</div>" + casKartaHtml() + "</div>";
@@ -7943,12 +7943,41 @@
     }
     linky.forEach(function (l) { l.href = S.ikonaZvonUrl; });
   }
+  // zvonček: ťuknutie naň = „pozrel som si“ – červené číslo potom počíta len to, čo pribudlo neskôr
+  // (obsah zvončeka ostáva, kým ho maklér nevybaví; čas sa ukladá k maklérovi, takže platí na všetkých zariadeniach)
+  function zvonOd() {
+    var s = S.me && S.me.zvoncek_videne ? Date.parse(S.me.zvoncek_videne) : 0;
+    return Math.max(S.zvonVidene || 0, s || 0);
+  }
+  function noveOd(t) { return !!t && new Date(t).getTime() > zvonOd(); }
+  function zvonNove() {
+    var o = { prip: splatne().filter(function (p) { return noveOd(p.cas); }), spr: [], ign: [], inz: noveInzeraty().filter(function (z) { return noveOd(z.prvy_krat); }) };
+    if (S.reak && maSekciu("chat")) {
+      o.spr = neprecitaneKonv("").concat(S.dm.filter(function (m) { return m.komu_id === S.me.id && !m.precitane; }))
+        .filter(function (m) { return noveOd(m.vytvorene); });
+      o.ign = ignoracieNevidene().filter(function (r) { return noveOd(r.vytvorene); });
+    }
+    return o;
+  }
+  function zvonVideny() {
+    if (!S.me) return;
+    var o = zvonNove(), t = Date.now();
+    var vsetko = o.prip.map(function (x) { return x.cas; }).concat(o.spr.map(function (x) { return x.vytvorene; }),
+      o.ign.map(function (x) { return x.vytvorene; }), o.inz.map(function (x) { return x.prvy_krat; }));
+    if (!vsetko.length) return;
+    vsetko.forEach(function (c) { t = Math.max(t, new Date(c).getTime() || 0); });
+    S.zvonVidene = t + 1;
+    rpc("zvoncek_videny", { p_cas: new Date(S.zvonVidene).toISOString() }).catch(function () {});
+    popisZvoncek();
+    var dl = document.querySelector('.dlazdica[data-domov="zvon"]');
+    if (dl) { dl.classList.remove("upozorni"); var bod = dl.querySelector(".dl-bod"); if (bod) bod.remove(); }
+  }
   function popisZvoncek() {
     var b = $("#zvon-n");
     if (!b || !S.me) return;
-    var p = splatne().length, sp = S.reak ? pocetDoZvoncka() : 0, n = p + sp;
-    var ni = S.reak && maSekciu("chat") ? ignoracieNevidene().length : 0, ns = sp - ni, nz = noveInzeraty().length;
-    n += nz;
+    var nove = zvonNove();
+    var p = nove.prip.length, ni = nove.ign.length, ns = nove.spr.length, sp = ns + ni, nz = nove.inz.length;
+    var n = p + sp + nz;
     b.hidden = n === 0; b.textContent = n > 9 ? "9+" : String(n);
     $("#zvon-btn").classList.toggle("ring", n > 0);
     $("#zvon-btn").classList.toggle("ma-spravu", sp > 0);
@@ -7964,6 +7993,7 @@
   function vykresliZvoncek() {
     var el = $("#zvon"); if (!el) return;
     if (!S.zvonOpen) { el.innerHTML = ""; return; }
+    zvonVideny();
     var t = Date.now(), dnesKoniec = new Date(); dnesKoniec.setHours(23, 59, 59, 999);
     var moje = mojeAktivne();
     var po = moje.filter(function (p) { return new Date(p.cas).getTime() <= t; });
