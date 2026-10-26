@@ -38,7 +38,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Kontrola portálov
+        timeout-minutes: 35
         env:
+          PYTHONUNBUFFERED: "1"
           # adresa a verejný kľúč databázy (nie sú tajné – práva stráži databáza)
           SUPABASE_URL: https://uwxziqapghlyktwpipjd.supabase.co
           SUPABASE_KEY: sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf
@@ -54,6 +56,8 @@ jobs:
           PLAN: ${{ github.event.schedule }}
           REZIM: ${{ inputs.rezim }}
         run: |
+          set -o pipefail
+          {
           if [ "$PLAN" = "17 1 * * *" ] || [ "$REZIM" = "plny" ]; then
             python skener.py --plny
           elif [ -n "$PLAN" ]; then
@@ -63,3 +67,13 @@ jobs:
           else
             python skener.py
           fi
+          } 2>&1 | tee beh.log
+
+      # strážca: zlyhanú kontrolu zapíše do databázy; po 2. zlyhaní po sebe pošle adminovi upozornenie do mobilu
+      - name: Strážca – upozornenie adminovi
+        if: failure()
+        env:
+          SUPABASE_URL: https://uwxziqapghlyktwpipjd.supabase.co
+          SUPABASE_KEY: sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf
+          SKENER_KLUC: ${{ secrets.SKENER_KLUC }}
+        run: python skener.py --zlyhanie beh.log || true

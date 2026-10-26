@@ -1067,7 +1067,7 @@
   async function nacitajVsetko() {
     await nacitajMaklerov();
     var meta = sb.from("stav_skenera").select("meta, upravene").maybeSingle().then(function (r) { S.meta = (r.data && r.data.meta) || {}; });
-    await Promise.all([nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
+    await Promise.all([nacitajStrazcu(), nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
       nacitajPredajcov().catch(function () { S.pred = null; }), nacitajMatterport().catch(function () { S.mp = null; })]);
   }
   var obnovuje = false;
@@ -1077,7 +1077,7 @@
     try {
       var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), chatNove(), inzeratyNoveNacitaj().catch(function () {})];
       if (Date.now() - S.lastInzLoad > 10 * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
-      uloha.push(nacitajNastavenia().catch(function () {}), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy());
+      uloha.push(nacitajNastavenia().catch(function () {}), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajStrazcu());
       if (S.ponuky && !S.ponukaEdit) uloha.push(nacitajPonuky().catch(function () {}));
       else if (S.dopyty && !S.dopytEdit) uloha.push(nacitajDopyty().catch(function () {}));
       if (S.tab === "inzeraty" || S.tab === "klienti") uloha.push(nacitajPredajcov().catch(function () {}));
@@ -1743,10 +1743,20 @@
     return vek > (hod >= 8 && hod <= 22 ? 3 : 7) ? vek : null;
   }
   function vekText(h) { return h >= 48 ? Math.floor(h / 24) + " dni" : h >= 24 ? "viac ako deň" : Math.round(h) + " h"; }
+  // strážca skenera (vidí len admin): koľko kontrol po sebe zlyhalo a posledná chyba
+  function nacitajStrazcu() {
+    if (!admin()) { S.strazca = null; return Promise.resolve(); }
+    return sb.from("skener_strazca").select("zlyhania, prve_zlyhanie, posledna_chyba").maybeSingle()
+      .then(function (r) { S.strazca = r.error ? null : r.data; }, function () { S.strazca = null; });
+  }
   function bannerSkenera() {
-    var m = S.meta || {}, vek = skenerStoji(), chyby = m.chyby || [];
-    if (!vek && !chyby.length && !S.skOprava) return "";
+    var m = S.meta || {}, vek = skenerStoji(), chyby = m.chyby || [], st = admin() && S.strazca && S.strazca.zlyhania >= 2 ? S.strazca : null;
+    if (!vek && !chyby.length && !S.skOprava && !st) return "";
     var h = "";
+    if (st && !vek) h += '<div class="sk-stav zle" role="status"><span>⚠️ <b>Posledné ' + st.zlyhania + " kontroly skenera zlyhali</b>" +
+      (st.prve_zlyhanie ? " (od " + datum(st.prve_zlyhanie, true) + ")" : "") + " – nové inzeráty sa neukladajú." +
+      (st.posledna_chyba ? '<br><span class="meta">Chyba: ' + esc(st.posledna_chyba) + "</span>" : "") + "</span>" +
+      '<button class="btn" type="button" data-sk="oprav">🔧 Opraviť skener</button></div>';
     if (vek || chyby.length) h += '<div class="sk-stav' + (vek ? " zle" : "") + '" role="status"><span>' + (vek ?
       "⚠️ <b>Skener " + vekText(vek) + " nekontroloval portály</b> – nové inzeráty sa teraz neobjavujú. Posledná kontrola " + datum(m.posledna_kontrola, true) + "." + (admin() ? "" : " Dajte vedieť administrátorovi.") :
       "⚠️ Pri poslednej kontrole sa nepodarilo načítať: " + esc(chyby.join("; ")) + ". Ostatné portály bežia normálne.") + "</span>" +

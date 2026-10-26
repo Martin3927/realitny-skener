@@ -1312,31 +1312,100 @@ def posli_push(ids):
     ciele = _rpc("skener_push_ciele", p_kluc=SKENER_KLUC, p_ids=ids) or []
     if not ciele:
         return
-    from pywebpush import WebPushException, webpush
     ok, zrusit, poslane = [], [], 0
     for c in ciele:
-        data = json.dumps(text_push(c["inzerat"]), ensure_ascii=False)
-        for o in c.get("odbery") or []:
-            try:
-                webpush({"endpoint": o["endpoint"], "keys": {"p256dh": o["p256dh"], "auth": o["auth"]}}, data,
-                        vapid_private_key=k["private"], vapid_claims={"sub": PUSH_KONTAKT}, ttl=6 * 3600, timeout=15)
-                ok.append(o["id"]); poslane += 1
-            except WebPushException as e:
-                kod = getattr(e.response, "status_code", None)
-                if kod in (404, 410):
-                    zrusit.append(o["id"])   # telefón odber zrušil
-                else:
-                    log(f"  ! upozornenie neodoslané ({kod}): {str(e)[:120]}")
-            except Exception as e:  # noqa
-                log(f"  ! upozornenie neodoslané: {str(e)[:120]}")
+        o, z = _posli_odberom(c.get("odbery") or [], text_push(c["inzerat"]), k["private"])
+        ok += o; zrusit += z; poslane += len(o)
     _rpc("skener_push_vysledok", p_kluc=SKENER_KLUC, p_ok=sorted(set(ok)), p_zrusit=sorted(set(zrusit)))
     log(f"Upozornenia do mobilu: odoslané {poslane}" + (f", zrušené odbery {len(set(zrusit))}" if zrusit else ""))
+
+
+def _posli_odberom(odbery, sprava, privatny, ttl=6 * 3600):
+    """pošle jednu správu na zoznam telefónov; vráti (úspešné id, zrušené id)"""
+    from pywebpush import WebPushException, webpush
+    data = json.dumps(sprava, ensure_ascii=False)
+    ok, zrusit = [], []
+    for o in odbery:
+        try:
+            webpush({"endpoint": o["endpoint"], "keys": {"p256dh": o["p256dh"], "auth": o["auth"]}}, data,
+                    vapid_private_key=privatny, vapid_claims={"sub": PUSH_KONTAKT}, ttl=ttl, timeout=15)
+            ok.append(o["id"])
+        except WebPushException as e:
+            kod = getattr(e.response, "status_code", None)
+            if kod in (404, 410):
+                zrusit.append(o["id"])   # telefón odber zrušil
+            else:
+                log(f"  ! upozornenie neodoslané ({kod}): {str(e)[:120]}")
+        except Exception as e:  # noqa
+            log(f"  ! upozornenie neodoslané: {str(e)[:120]}")
+    return ok, zrusit
+
+
+# ---------------------------------------------------------------- strážca: upozornenie adminovi, keď skener zlyháva
+
+def _miestny_cas(iso):
+    try:
+        return datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone(ZoneInfo("Europe/Bratislava")).strftime("%-d.%-m. %H:%M")
+    except Exception:  # noqa
+        return ""
+
+
+def chyba_z_logu(subor):
+    """posledná zmysluplná chyba z výpisu zlyhanej kontroly"""
+    try:
+        riadky = [r.strip() for r in Path(subor).read_text(encoding="utf-8", errors="replace").splitlines() if r.strip()]
+    except OSError:
+        riadky = []
+    for r in reversed(riadky):
+        if re.match(r"^[A-Za-z_.]*(Error|Exception)\b", r) or r.startswith(("! ", "Traceback")):
+            return r[:400]
+    return "Kontrola sa nedokončila (trvala príliš dlho alebo ju GitHub zastavil)." if riadky else "Kontrola sa nespustila."
+
+
+def strazca_zlyhanie(subor):
+    chyba = chyba_z_logu(subor)
+    log(f"Strážca: zlyhaná kontrola – {chyba}")
+    r = _rpc("skener_zlyhanie", p_kluc=SKENER_KLUC, p_chyba=chyba) or {}
+    log(f"Strážca: zlyhaní po sebe {r.get('zlyhania')}")
+    if not r.get("upozornit"):
+        return
+    k = vapid_kluce()
+    if not r.get("odbery") or not k or not k.get("private"):
+        log("Strážca: admin nemá zapnuté upozornenia do mobilu – porucha je len v aplikácii.")
+        return
+    od = _miestny_cas(r.get("od"))
+    ok, zrusit = _posli_odberom(r["odbery"], {
+        "title": "⚠️ Skener nefunguje",
+        "body": f"Posledné {r['zlyhania']} kontroly zlyhali" + (f" (od {od})" if od else "") + ". Nové inzeráty sa teraz neukladajú.\n" + (r.get("chyba") or "")[:180],
+        "url": "./#inzeraty", "tag": "skener-porucha"}, k["private"], ttl=3 * 3600)
+    _rpc("skener_push_vysledok", p_kluc=SKENER_KLUC, p_ok=ok, p_zrusit=zrusit)
+    log(f"Strážca: upozornenie adminovi odoslané {len(ok)}×")
+
+
+def strazca_uspech():
+    r = _rpc("skener_uspech", p_kluc=SKENER_KLUC) or {}
+    if not r.get("obnovene") or not r.get("odbery"):
+        return
+    k = vapid_kluce()
+    if not k or not k.get("private"):
+        return
+    od = _miestny_cas(r.get("od"))
+    ok, zrusit = _posli_odberom(r["odbery"], {
+        "title": "✅ Skener opäť funguje",
+        "body": "Kontrola portálov prebehla v poriadku" + (f" (porucha od {od})" if od else "") + ".",
+        "url": "./#inzeraty", "tag": "skener-porucha"}, k["private"], ttl=3 * 3600)
+    _rpc("skener_push_vysledok", p_kluc=SKENER_KLUC, p_ok=ok, p_zrusit=zrusit)
+    log(f"Strážca: správa „skener opäť funguje“ odoslaná {len(ok)}×")
 
 
 # ---------------------------------------------------------------- hlavný beh
 
 def main():
     args = set(sys.argv[1:])
+    if "--zlyhanie" in args:   # krok „Strážca“ po zlyhanej kontrole: python skener.py --zlyhanie beh.log
+        if POUZI_DB:
+            strazca_zlyhanie(sys.argv[sys.argv.index("--zlyhanie") + 1] if len(sys.argv) > sys.argv.index("--zlyhanie") + 1 else "beh.log")
+        return
     stav = nacitaj_stav()
     inzeraty = stav["inzeraty"]
     meta = stav["meta"]
@@ -1552,6 +1621,11 @@ def main():
     if prvy_beh:
         meta["spusteny"] = NOW_ISO
     uloz_stav(stav)
+    if POUZI_DB:
+        try:
+            strazca_uspech()
+        except Exception as e:  # noqa
+            log(f"! strážca: {e}")
 
     try:
         archivuj(plny, rychly)
