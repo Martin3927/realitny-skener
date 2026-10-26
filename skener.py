@@ -624,6 +624,9 @@ def skenuj_topreality(plny, max_stran):
 
 # ---------------------------------------------------------------- normalizácia
 
+CENA_MAX = 50_000_000  # vyššia cena je preklep alebo „zástupná“ cena
+
+
 def zaznam(**kw):
     z = {
         "id": None, "portal": None, "portaly": [], "url": None, "nazov": "", "typ": None, "izby": None,
@@ -632,6 +635,11 @@ def zaznam(**kw):
         "publikovane": None, "podtyp": None, "lat": None, "lon": None, "ulica": None,
     }
     z.update(kw)
+    # nezmyselné čísla od predávajúcich (napr. cena „111 111 111 111 €“) – databáza by odmietla celú dávku
+    if z["cena"] is not None and not 0 < z["cena"] <= CENA_MAX:
+        z["cena"] = None
+    if z["izby"] is not None and not 0 < z["izby"] <= 30:
+        z["izby"] = None
     if z["plocha"]:
         lo, hi = ROZSAH[z["typ"]]
         if not lo <= z["plocha"] <= hi:
@@ -842,6 +850,10 @@ def _riadok(z):
     r["portaly"] = r["portaly"] or []
     r["dalsie_odkazy"] = r["dalsie_odkazy"] or []
     r["historia_cien"] = r["historia_cien"] or []
+    if r["cena"] is not None and not 0 < r["cena"] <= CENA_MAX:
+        r["cena"], r["cena_m2"] = None, None
+    if r["izby"] is not None and not 0 < r["izby"] <= 30:
+        r["izby"] = None
     if r["plocha"] is not None:
         r["plocha"] = float(r["plocha"])
     if r["cena_m2"] is not None:
