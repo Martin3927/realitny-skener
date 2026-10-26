@@ -1675,28 +1675,39 @@
     if (!S.canUnder) { f.under = false; if (f.sort === "under") f.sort = "novy"; }
     $("#f-okres").value = f.okres; if ($("#f-okres").value !== f.okres) f.okres = "";
     $("#f-kto").value = f.kto || ""; if ($("#f-kto").value !== (f.kto || "")) f.kto = "";
-    $("#f-kto").onchange = function () { f.kto = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
+    $("#f-kto").onchange = function () { zrusJeden(); f.kto = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
     if (f.novost === "30") f.novost = "p30";
     $("#f-novost").value = f.novost; if ($("#f-novost").value !== f.novost) f.novost = ""; $("#f-sort").value = f.sort; $("#f-stav").value = f.stav || "aktivne";
     var fl = $("#filters");
-    fl.addEventListener("click", function (e) {
+    // onclick (nie addEventListener): pri každom prekreslení filtrov sa obsluha nahradí, nepridá sa ďalšia navyše
+    fl.onclick = function (e) {
       var b = e.target.closest(".seg button"); if (!b) return;
+      zrusJeden();
       f[b.closest(".seg").dataset.seg] = b.dataset.v; S.shown = 100;
       fl.querySelectorAll(".seg").forEach(function (s) {
         s.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x.dataset.v === f[s.dataset.seg])); });
       });
       ulozFiltre(); vykresliZoznam();
-    });
+    };
     var t;
-    $("#q").addEventListener("input", function () { var v = this.value; clearTimeout(t); t = setTimeout(function () { f.q = v; S.shown = 100; vykresliZoznam(); }, 150); });
-    $("#f-okres").onchange = function () { f.okres = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
-    $("#f-novost").onchange = function () { f.novost = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
-    $("#f-stav").onchange = function () { f.stav = this.value; S.shown = 100; ulozFiltre(); vykresliStaty(); vykresliZoznam(); };
+    $("#q").addEventListener("input", function () { var v = this.value; clearTimeout(t); t = setTimeout(function () { zrusJeden(); f.q = v; S.shown = 100; vykresliZoznam(); }, 150); });
+    $("#f-okres").onchange = function () { zrusJeden(); f.okres = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
+    $("#f-novost").onchange = function () { zrusJeden(); f.novost = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
+    $("#f-stav").onchange = function () { zrusJeden(); f.stav = this.value; S.shown = 100; ulozFiltre(); vykresliStaty(); vykresliZoznam(); };
     $("#f-sort").onchange = function () { f.sort = this.value; ulozFiltre(); vykresliZoznam(); };
-    if ($("#f-under")) $("#f-under").onchange = function () { f.under = this.checked; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
+    if ($("#f-under")) $("#f-under").onchange = function () { zrusJeden(); f.under = this.checked; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
   }
 
+  // zmena filtra ukončí zobrazenie jedného inzerátu (otvoreného zo zvončeka, mapy…), inak by sa zoznam nezmenil
+  function zrusJeden() {
+    if (!S.jedenId) return;
+    S.jedenId = null;
+    if (S.tab === "inzeraty") history.replaceState({ tab: "inzeraty" }, "", "#inzeraty");
+  }
   function predvolba(v) {
+    // ťuknutie na už označenú dlaždicu (Súkromní, Moje, Nové…) výber zruší – späť na všetky inzeráty
+    if (v !== "vsetky" && aktPredvolba() === v) v = "vsetky";
+    zrusJeden();
     Object.assign(S.f, { predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", q: "" });
     if (v === "sukr") S.f.predajca = "sukr";
     if (v === "sukr24") { S.f.predajca = "sukr"; S.f.novost = "1"; }
@@ -1737,14 +1748,19 @@
       var under = akt.filter(function (z) { return S.odh[z.id] && S.odh[z.id].podhodnotene; }).length;
       h += '<button class="stat" type="button" data-act="preset" data-v="under"><b>' + nf.format(under) + "</b><small>Podhodnotené</small></button>";
     }
-    el.innerHTML = h;
+    // dlaždice neprepisujeme celé (obnova každú minútu by inak „zjedla“ práve prebiehajúce ťuknutie) – meníme len čísla
+    var tmp = document.createElement("div"); tmp.innerHTML = h;
+    var nove = tmp.children, stare = el.children;
+    if (stare.length === nove.length && Array.prototype.every.call(stare, function (b, i) { return b.dataset.v === nove[i].dataset.v; })) {
+      Array.prototype.forEach.call(stare, function (b, i) { if (b.innerHTML !== nove[i].innerHTML) b.innerHTML = nove[i].innerHTML; });
+    } else el.innerHTML = h;
     oznacStaty();
     if (document.body.hasAttribute("data-anim")) animujCisla(el);
   }
   // dlaždica hore ostane označená, kým platí jej výber (Súkromní, Moje, Nové…)
   function aktPredvolba() {
     var f = S.f;
-    if (f.q || f.typ || f.okres || f.kto) return "";
+    if (S.jedenId || f.q || f.typ || f.okres || f.kto) return "";
     var pr = f.predajca || "vsetci", pc = f.praca || "vsetky", nv = f.novost || "", un = !!f.under;
     if (pr === "vsetci" && pc === "vsetky" && !nv && !un) return "vsetky";
     if (pr === "sukr" && pc === "vsetky" && !nv && !un) return "sukr";
