@@ -56,7 +56,7 @@
     var d = r.data;
     if (!d) return chyba(nahlad ? "Náhľad uvidíš, keď si v rovnakom prehliadači prihlásený v Realitnom týpkovi." : "Táto stránka zatiaľ nie je zverejnená.");
     var m = d.makler || {}, s = T.merge(d.web || {});
-    if (!s.name) s.name = m.meno || "";
+    if (!s.name) s.name = m.meno_cele || m.meno || "";
     if (!s.phone) s.phone = m.telefon || "";
     if (!s.email) s.email = m.email || "";
     if (!s.photo && m.foto) s.photo = m.foto;

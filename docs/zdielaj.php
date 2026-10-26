@@ -56,7 +56,7 @@ header($d ? 'Cache-Control: public, max-age=600' : 'Cache-Control: no-store');
 
 $web = ($d && is_array($d['web'] ?? null)) ? $d['web'] : [];
 $mk = ($d && is_array($d['makler'] ?? null)) ? $d['makler'] : [];
-$meno = trim((string)($web['name'] ?? '')) ?: (string)($mk['meno'] ?? '');
+$meno = trim((string)($web['name'] ?? '')) ?: (string)($mk['meno_cele'] ?? $mk['meno'] ?? '');
 $zena = ($mk['pohlavie'] ?? '') === 'zena';
 $area = trim((string)($web['area'] ?? ''));
 $share = is_array($web['share'] ?? null) ? $web['share'] : [];

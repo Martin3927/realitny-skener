@@ -46,10 +46,10 @@
   document.getElementById("napisat").href = "recenzia.html?m=" + encodeURIComponent(id || "");
   T.rpc("verejny_makler", { p_id: id }).then(function (m) {
     if (!m) { document.getElementById("hero").innerHTML = '<div><h1>Stránka nie je dostupná</h1></div>'; return; }
-    document.title = m.meno + " · Alpha Reality";
+    document.title = (m.meno_cele || m.meno) + " · Alpha Reality";
     var tel = T.telOdkaz(m.telefon), zena = m.pohlavie === "zena";
     document.getElementById("napisat").parentNode.querySelector(".v-lok").textContent = "Budem " + (zena ? "rada" : "rád") + " za vašu recenziu – pomôže ďalším klientom.";
-    document.getElementById("hero").innerHTML = T.avatar(m, 110) + '<div><div class="m-rola">' + (zena ? "Realitná maklérka" : "Realitný maklér") + "</div><h1>" + esc(m.meno) + '</h1><div class="v-lok" style="color:#c9c5bb">Alpha Reality · Spišská Nová Ves a Levoča</div><div class="m-hodn" id="hodn"></div></div>' +
+    document.getElementById("hero").innerHTML = T.avatar(m, 110) + '<div><div class="m-rola">' + (zena ? "Realitná maklérka" : "Realitný maklér") + "</div><h1>" + esc(m.meno_cele || m.meno) + '</h1><div class="v-lok" style="color:#c9c5bb">Alpha Reality · Spišská Nová Ves a Levoča</div><div class="m-hodn" id="hodn"></div></div>' +
       '<div class="m-kont">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 ' + esc(m.telefon) + '</a><a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(m.telefon)) + '" target="_blank" rel="noopener">WhatsApp</a>' : "") +
       (m.email ? '<a class="v-btn" style="background:transparent;color:#f1efe8;border-color:rgba(255,255,255,.25)" href="mailto:' + esc(m.email) + '">✉️ ' + esc(m.email) + "</a>" : "") + "</div>";
     var w = document.createElement("div"); w.setAttribute("data-typek-ponuky", ""); w.setAttribute("data-makler", m.id); w.setAttribute("data-filtre", "1");

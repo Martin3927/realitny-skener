@@ -74,7 +74,7 @@
           (o.spatna_vazba ? esc(o.spatna_vazba) : '<span class="r-pozn">Bez spätnej väzby.</span>') + "</span></li>";
       }).join("") + "</ul>" : '<p class="r-pozn">Zatiaľ neprebehla žiadna obhliadka. Ponuku aktívne ponúkame klientom a na portáloch.</p>') + "</section>" +
       (hc.length > 1 ? '<section class="v-box"><h2>Vývoj ceny</h2><p class="r-cena">' + hc.map(function (x) { return esc(T.datum(x[0])) + " – <b>" + esc(T.eur(x[1])) + "</b>"; }).join(" → ") + "</p></section>" : "") +
-      '<section class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno || "Alpha Reality") + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · Alpha Reality</small></div></div>" +
+      '<section class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno_cele || m.meno || "Alpha Reality") + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · Alpha Reality</small></div></div>" +
       '<div class="v-btns dva">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Zavolať</a>' : "") + (m.email ? '<a class="v-btn" href="mailto:' + esc(m.email) + '">✉️ Napísať</a>' : "") + "</div></section>" +
       '<p class="r-pozn">Report sa aktualizuje priebežne · stav k ' + esc(T.datum(R.vygenerovane, true)) + ". Zobrazenia sa počítajú na stránke ponuky Alpha Reality (nie na portáloch).</p>";
   }

@@ -105,7 +105,7 @@ h1 { font-family: var(--display); font-size: 21pt; line-height: 1.15; margin: 0;
     if (p.energ_certifikat) kluc.push([p.energ_certifikat, "energ. certifikát"]);
     if (p.rok_vystavby) kluc.push([p.rok_vystavby, "rok výstavby"]);
     kluc = kluc.slice(0, 4);
-    var ini = String(m.meno || "AR").split(/\s+/).map(function (x) { return x.charAt(0); }).slice(0, 2).join("").toUpperCase();
+    var ini = String(m.meno || "AR").split(",")[0].split(/\s+/).filter(function (x) { return x && !/\.$/.test(x); }).map(function (x) { return x.charAt(0); }).slice(0, 2).join("").toUpperCase();
     var stitok = p.stav === "rezervovane" ? "Rezervované" : p.exkluzivne ? "Exkluzívne" : (p.specialne || [])[0] || "";
     var url = T.verejnyOdkaz(p.id);
     document.title = "Leták – " + T.nazov(p) + " · Alpha Reality";
@@ -119,7 +119,7 @@ h1 { font-family: var(--display); font-size: 21pt; line-height: 1.15; margin: 0;
       '<div class="text">' + esc(text(p)) + "</div>" +
       ((p.vybavenie || []).length ? '<div class="vyb">' + p.vybavenie.slice(0, 10).map(function (v) { return "<span>" + esc(v) + "</span>"; }).join("") + "</div>" : "") + "</div>" +
       '<div class="pata"><div class="mk">' + (m.foto ? '<img src="' + esc(m.foto) + '" alt="">' : '<span class="ini">' + esc(ini) + "</span>") +
-      '<div class="kont"><b>' + esc(m.meno || "Alpha Reality") + "</b>" + (m.telefon ? "<strong>" + esc(m.telefon) + "</strong><br>" : "") + (m.email ? esc(m.email) : "") +
+      '<div class="kont"><b>' + esc(m.meno_cele || m.meno || "Alpha Reality") + "</b>" + (m.telefon ? "<strong>" + esc(m.telefon) + "</strong><br>" : "") + (m.email ? esc(m.email) : "") +
       (p.cislo ? '<div class="cislo">Číslo ponuky: ' + esc(p.cislo) + "</div>" : "") + "</div></div>" +
       (o.qr ? '<div class="qr">' + qrSvg(url) + "Viac fotiek a detaily</div>" : "") + "</div>" +
       '<div class="web">ALPHA REALITY · REALITNÁ KANCELÁRIA · WWW.ALPHAREALITY.SK</div>';

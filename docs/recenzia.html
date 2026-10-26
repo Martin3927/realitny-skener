@@ -61,7 +61,7 @@ input:focus, textarea:focus { outline: 2px solid var(--gold-strong); border-colo
   // meno a fotka makléra z jeho verejných ponúk / profilu
   T.rpc("verejny_makler", { p_id: m }).then(function (x) {
     if (!x) { document.getElementById("mk").innerHTML = "<div><h1>Alpha Reality</h1><span class=\"v-lok\">Realitná kancelária</span></div>"; return; }
-    document.getElementById("mk").innerHTML = T.avatar(x, 58) + "<div><h1>" + esc(x.meno) + '</h1><span class="v-lok">' + (x.pohlavie === "zena" ? "maklérka" : "maklér") + " · Alpha Reality</span></div>";
+    document.getElementById("mk").innerHTML = T.avatar(x, 58) + "<div><h1>" + esc(x.meno_cele || x.meno) + '</h1><span class="v-lok">' + (x.pohlavie === "zena" ? "maklérka" : "maklér") + " · Alpha Reality</span></div>";
   }).catch(function () { document.getElementById("mk").innerHTML = "<div><h1>Alpha Reality</h1></div>"; });
   document.getElementById("f").onsubmit = function (e) {
     e.preventDefault();

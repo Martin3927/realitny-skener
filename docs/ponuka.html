@@ -49,7 +49,7 @@
   function makler() {
     var m = P.makler || {};
     var tel = T.telOdkaz(m.telefon), sprava = "Dobrý deň, mám záujem o ponuku: " + T.nazov(P) + (P.cislo ? " (č. " + P.cislo + ")" : "") + " " + location.href.split("#")[0];
-    return '<div class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + '<div><b><a href="makler.html?id=' + esc(m.id || "") + '" style="color:inherit;text-decoration:none">' + esc(m.meno || "Alpha Reality") + "</a></b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · Alpha Reality</small>" +
+    return '<div class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + '<div><b><a href="makler.html?id=' + esc(m.id || "") + '" style="color:inherit;text-decoration:none">' + esc(m.meno_cele || m.meno || "Alpha Reality") + "</a></b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · Alpha Reality</small>" +
       '<div class="v-hodn" id="mk-hodn"></div></div></div>' +
       '<div class="v-btns">' +
       (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 ' + esc(m.telefon) + "</a>" : "") +

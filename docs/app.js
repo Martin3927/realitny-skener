@@ -77,8 +77,15 @@
     if (f && f.indexOf("data:image/") === 0) return '<span class="av"' + styl + '><img src="' + esc(f) + '" alt=""></span>';
     if (f === "avatar:zena") return '<span class="av"' + styl + ">" + SVG_ZENA + "</span>";
     if (f === "avatar:muz") return '<span class="av"' + styl + ">" + SVG_MUZ + "</span>";
-    var n = (m && (m.meno || m.email) || "?").trim().split(/\s+/);
+    var n = String(m && (m.meno || m.email) || "?").split(",")[0].trim().split(/\s+/).filter(function (x) { return !/\.$/.test(x); });
+    if (!n.length) n = ["?"];
     return '<span class="av"' + styl + ">" + esc(((n[0] || "?")[0] + (n.length > 1 ? n[n.length - 1][0] : "")).toUpperCase()) + "</span>";
+  }
+  // celé meno s titulmi: „Mgr. Martina Macejová, RSc“
+  function celeMeno(m) {
+    if (!m) return "";
+    var z = [m.titul_pred, m.meno || m.email].filter(function (x) { return x && String(x).trim(); }).join(" ");
+    return m.titul_za ? z + ", " + m.titul_za : z;
   }
   // fotka zo súboru → štvorec 256 px JPEG (data URL)
   function spracujFoto(subor) {
@@ -458,6 +465,8 @@
       if (S.tab === "nehnutelnosti" && Number(jedenAdresa[2])) { S.ponukaDetail = Number(jedenAdresa[2]); stavAdresy.detail = S.ponukaDetail; }
       if (S.tab === "inzeraty") { S.jedenId = decodeURIComponent(jedenAdresa[2]); stavAdresy.jeden = S.jedenId; }
     }
+    if (location.hash === "#zvoncek") S.zvonOpen = true;   // upozornenie na nový kontakt z webu
+    zistiOdber();
     history.replaceState(stavAdresy, "", "#" + S.tab);
     try { await nacitajVsetko(); } catch (e) { toast(chybaText(e), true); }
     vykresli();
@@ -493,11 +502,35 @@
     for (var i = 0; i < r.length; i++) o[i] = r.charCodeAt(i);
     return o;
   }
+  var DRUHY_UPOZ = [["spravy", "✉️ Správy v chate"], ["inzeraty", "🔎 Nové inzeráty v skeneri"], ["kontakty", "💬 Nové kontakty z webu"]];
+  // chce maklér tento druh upozornení? (admin ich zapína a vypína každému zvlášť; predvolene zapnuté)
+  function chceUpoz(druh, m) { var u = (m || S.me || {}).upozornenia; return !u || u[druh] !== false; }
+  function textZariadeni(m) {
+    if (!S.pushZar) return "Zisťujem zariadenia…";
+    var n = S.pushZar[m.id] || 0, z = rodMaklera(m) === "zena";
+    return n ? "Upozornenia má zapnuté na " + n + (n === 1 ? " zariadení." : " zariadeniach.") :
+      "Zatiaľ si upozornenia v mobile nezapol" + (z ? "a" : "") + " – zapne si ich v Môj profil → Upozornenia do mobilu.";
+  }
+  // je na tomto zariadení zapnutý odber upozornení? (vtedy ich posiela server a aplikácia ich neopakuje)
+  function zistiOdber() {
+    if (!pushPodpora() || Notification.permission !== "granted") { S.pushOdber = false; return; }
+    Promise.race([navigator.serviceWorker.ready, new Promise(function (ok) { setTimeout(function () { ok(null); }, 5000); })])
+      .then(function (reg) { return reg ? reg.pushManager.getSubscription() : null; })
+      .then(function (sub) { S.pushOdber = !!sub; }, function () { S.pushOdber = false; });
+  }
   function boxUpozornenia() {
-    if (!maSekciu("inzeraty")) return "";
-    var obce = S.me.obce || [];
-    var co = obce.length ? "nové súkromné inzeráty z Vašich obcí (" + obce.length + ": " + esc(obce.slice(0, 4).join(", ")) + (obce.length > 4 ? "…" : "") + ")" : "všetky nové súkromné inzeráty z oboch okresov – obmedzíte ich nižšie v Mojich obciach";
-    return '<div class="box" id="box-push"><h3>🔔 Upozornenia do mobilu</h3><p class="meta">Keď skener nájde nový súkromný inzerát, pípne vám telefón, aj keď je aplikácia zatvorená. Chodia vám ' + co + ".</p>" +
+    var obce = S.me.obce || [], zap = [], vyp = [];
+    var dostupne = DRUHY_UPOZ.filter(function (x) { return x[0] === "spravy" ? maSekciu("chat") : x[0] === "inzeraty" ? maSekciu("inzeraty") : true; });
+    dostupne.forEach(function (x) { (chceUpoz(x[0]) ? zap : vyp).push(x); });
+    var co = zap.map(function (x) {
+      if (x[0] === "spravy") return "<li>✉️ nová správa v chate</li>";
+      if (x[0] === "kontakty") return "<li>💬 nový kontakt z vášho webu</li>";
+      return "<li>🔎 nový súkromný inzerát – " + (obce.length ? "z Vašich obcí (" + obce.length + ": " + esc(obce.slice(0, 4).join(", ")) + (obce.length > 4 ? "…" : "") + ")" : "z oboch okresov, obmedzíte ich nižšie v Mojich obciach") + "</li>";
+    }).join("");
+    return '<div class="box" id="box-push"><h3>🔔 Upozornenia do mobilu</h3>' +
+      (zap.length ? '<p class="meta">Telefón vám pípne, aj keď je aplikácia zatvorená, keď príde:</p><ul class="push-druhy">' + co + "</ul>" :
+        '<p class="meta">Administrátor vám všetky upozornenia do mobilu vypol.</p>') +
+      (vyp.length && zap.length ? '<p class="meta">Administrátor vám vypol: ' + vyp.map(function (x) { return x[1].replace(/^\S+\s/, "").toLowerCase(); }).join(", ") + ".</p>" : "") +
       '<div id="push-stav" class="push-stav"><span class="meta">Zisťujem…</span></div>' +
       '<button class="btn-link" type="button" data-prof="mobil">📲 Návod pre Android a iPhone</button></div>';
   }
@@ -535,14 +568,15 @@
         var j = s.toJSON();
         await rpc("ulozit_push_odber", { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth,
           p_zariadenie: (jeIos() ? "iPhone" : /android/i.test(navigator.userAgent) ? "Android" : "Počítač") + (naPloche() ? " (aplikácia)" : "") });
-        rg.showNotification("🔔 Upozornenia sú zapnuté", { body: "Takto vám príde správa o novom súkromnom inzeráte.", icon: "typek-ikona-192.png?v=202610251300", badge: "typek-odznak-96.png?v=202610251300", tag: "push-test" });
+        S.pushOdber = true;
+        rg.showNotification("🔔 Upozornenia sú zapnuté", { body: "Takto vám telefón dá vedieť o novej správe, inzeráte alebo kontakte.", icon: "typek-ikona-192.png?v=202610251300", badge: "typek-odznak-96.png?v=202610251300", tag: "push-test" });
         toast("🔔 Upozornenia sú zapnuté.");
       } catch (err) { toast(chybaText(err), true); }
       napojUpozornenia();
     };
     if (vyp) vyp.onclick = async function () {
       vyp.disabled = true;
-      try { await rpc("zrusit_push_odber", { p_endpoint: sub.endpoint }); await sub.unsubscribe().catch(function () {}); toast("Upozornenia sú na tomto zariadení vypnuté."); }
+      try { await rpc("zrusit_push_odber", { p_endpoint: sub.endpoint }); await sub.unsubscribe().catch(function () {}); S.pushOdber = false; toast("Upozornenia sú na tomto zariadení vypnuté."); }
       catch (err) { toast(chybaText(err), true); }
       napojUpozornenia();
     };
@@ -886,6 +920,16 @@
   }
   // odkaz #nehnutelnosti/ID alebo #inzeraty/ID otvorený v už bežiacej aplikácii
   window.addEventListener("hashchange", function () {
+    if (!S.me) return;
+    if (location.hash === "#zvoncek") {
+      history.replaceState({ tab: S.tab }, "", "#" + S.tab);
+      S.zvonOpen = true; S.pripForm = null; vykresliZvoncek(); window.scrollTo(0, 0); return;
+    }
+    var dm = location.hash.match(/^#chat\/([0-9a-f-]{36})$/i);
+    if (dm && tabPovoleny("chat")) {
+      S.chatS = dm[1]; history.replaceState({ tab: "chat" }, "", "#chat");
+      S.tab = "chat"; S.zvonOpen = false; vykresli(); window.scrollTo(0, 0); return;
+    }
     var m = location.hash.match(/^#(nehnutelnosti|inzeraty)\/(.+)$/);
     if (!m || !S.me || !tabPovoleny(m[1])) return;
     if (m[1] === "nehnutelnosti") {
@@ -2601,7 +2645,7 @@
     return '<small class="meta mk-reakcie">Reakcie na vaše vety: ' + Object.keys(poc).map(function (e) { return e + " " + poc[e]; }).join(" · ") + "</small>";
   }
   function otvorMaklera(id) {
-    S.mkPohlad = id || null; S.hesloEdit = null; S.pochvalaEdit = null; S.hmData = null; S.hmViac = 0;
+    S.mkPohlad = id || null; S.hesloEdit = null; S.pochvalaEdit = null; S.hmData = null; S.hmViac = 0; S.pushZar = undefined;
     if (!id) S.newUser = null;
     history.pushState({ tab: "makleri", mk: S.mkPohlad }, "", "#makleri");
     vykresliMaklerov(); window.scrollTo(0, 0);
@@ -2663,7 +2707,9 @@
       '<div id="novinky-adm"></div></div></details>';
     var hTim = h; h = "";
     h += '<form class="box" id="f-novy"><h3>Pridať makléra</h3><div class="form-grid">' +
-      '<label class="field"><span>Meno a priezvisko</span><input type="text" id="n-meno" required></label>' +
+      '<label class="field"><span>Titul pred menom</span><input type="text" id="n-titul-pred" maxlength="40" placeholder="napr. Ing., Mgr."></label>' +
+      '<label class="field"><span>Meno a priezvisko</span><input type="text" id="n-meno" required placeholder="bez titulov"></label>' +
+      '<label class="field"><span>Titul za menom</span><input type="text" id="n-titul-za" maxlength="40" placeholder="napr. PhD."></label>' +
       '<label class="field"><span>Email (prihlasovacie meno)</span><input type="email" id="n-email" required autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></label>' +
       '<label class="field"><span>Heslo</span><input type="text" id="n-heslo" minlength="8" required autocomplete="off" value="' + noveHeslo() + '"></label>' +
       '<label class="field"><span>Rola</span><select id="n-rola"><option value="makler">Maklér</option><option value="admin">Administrátor</option></select></label>' +
@@ -2681,7 +2727,11 @@
         var ja = m.id === S.me.id;
         return '<div class="mk-card" data-m="' + m.id + '" data-strazit>' +
           '<div class="mk-foto">' + fotoVolba("makler", m.id) + "</div>" +
-          '<div class="mk-hlavne"><input type="text" data-f="meno" value="' + esc(m.meno) + '" aria-label="Meno"><div class="meta">' + esc(m.email || "") +
+          '<div class="mk-hlavne"><div class="mk-meno-riadok">' +
+            '<label class="field mk-titul"><span>Titul pred</span><input type="text" data-f="titul_pred" maxlength="40" value="' + esc(m.titul_pred || "") + '" placeholder="Ing."></label>' +
+            '<label class="field mk-meno"><span>Meno a priezvisko</span><input type="text" data-f="meno" value="' + esc(m.meno) + '"></label>' +
+            '<label class="field mk-titul"><span>Titul za</span><input type="text" data-f="titul_za" maxlength="40" value="' + esc(m.titul_za || "") + '" placeholder="PhD."></label></div>' +
+          '<div class="meta">' + esc(m.email || "") +
           " · prevzatých " + (prevzate[m.id] || 0) + '</div><div class="meta mk-online">' + onlineStav(m.id).html + "</div></div>" +
           '<div class="mk-prava"><select data-f="pohlavie" aria-label="Rod (pre text SMS)"><option value="muz"' + (rodMaklera(m) === "muz" ? " selected" : "") + '>Muž</option><option value="zena"' + (rodMaklera(m) === "zena" ? " selected" : "") + ">Žena</option></select>" +
           '<select data-f="rola"' + (ja ? " disabled" : "") + ' aria-label="Rola"><option value="makler"' + (m.rola === "makler" ? " selected" : "") + '>Maklér</option><option value="admin"' + (m.rola === "admin" ? " selected" : "") + ">Administrátor</option></select>" +
@@ -2690,6 +2740,10 @@
           '<div class="mk-pristup"><span class="meta">Vidí sekcie</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor vidí všetko vrátane Výkonu a Maklérov.</span>' :
             SEKCIE.map(function (x) { return '<button type="button" class="cip" data-pristup="' + x[0] + '" aria-pressed="' + ((m.pristup || []).indexOf(x[0]) >= 0) + '">' + x[1] + "</button>"; }).join("")) + "</div></div>" +
           '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
+          '<div class="mk-upoz"><div><b>🔔 Upozornenia do mobilu</b><small class="meta" id="mk-zar-' + m.id + '">' + textZariadeni(m) + "</small></div>" +
+            '<div class="cipy">' + DRUHY_UPOZ.map(function (x) {
+              return '<button type="button" class="cip" data-upoz="' + x[0] + '" aria-pressed="' + chceUpoz(x[0], m) + '">' + x[1] + "</button>";
+            }).join("") + '</div><small class="meta">Zapnuté upozornenia ' + (rodMaklera(m) === "zena" ? "jej" : "mu") + ' pípnu v telefóne, aj keď má aplikáciu zatvorenú. E-mail o novom kontakte z webu chodí vždy, aby sa žiadny kontakt nestratil.</small></div>' +
           '<div class="mk-spr"><img src="typek-hlava.png" alt="" width="40" height="40"><div><b>🧭 Prehliadka aplikácie</b><small class="meta">' +
             (m.sprievodca_videny ? "Videl" + (rodMaklera(m) === "zena" ? "a" : "") + " ju " + datum(m.sprievodca_videny) : "Spustí sa pri najbližšom otvorení aplikácie.") + "</small></div>" +
             (m.sprievodca_videny ? '<button class="btn primary" type="button" data-m-act="sprievodca">Zapnúť prehliadku znova</button>' : '<span class="chip">✓ Zapnutá</span>') + "</div>" +
@@ -2711,7 +2765,7 @@
       }).join("") + "</div>" +
       '<p class="meta">Administrátor vidí podhodnotené ponuky vždy. Maklérom ich zapnete v stĺpci „Vidí podhodnotené“. Deaktivovaný maklér sa neprihlási a nič nevidí. Prevzatý inzerát sa automaticky uvoľní, ak sa pri ňom 24 hodín nič nezapíše (nie pri budúcej pripomienke, dohodnutom stretnutí alebo získanom do ponuky) – maklérovi príde upozornenie do zvončeka aj emailom.</p>';
     var spat = '<button class="btn ghost mk-spat" type="button" data-mk-otvor="">← Všetci makléri</button>';
-    if (mkDetail) el.innerHTML = spat + '<div class="mk-detail-hl">' + avatar(mkDetail.id, 54) + "<div><h2>" + esc(mkDetail.meno || mkDetail.email) + '</h2><span class="meta">' + esc(mkDetail.email || "") + " · " +
+    if (mkDetail) el.innerHTML = spat + '<div class="mk-detail-hl">' + avatar(mkDetail.id, 54) + "<div><h2>" + esc(celeMeno(mkDetail)) + '</h2><span class="meta">' + esc(mkDetail.email || "") + " · " +
       (mkDetail.rola === "admin" ? "administrátor" : rodMaklera(mkDetail) === "zena" ? "maklérka" : "maklér") + (mkDetail.aktivny ? "" : " · deaktivovaný") + "</span></div></div>" + h + sekciaHistorieMaklera(mkDetail.id);
     else if (pohlad === "novy") el.innerHTML = spat + hNovy;
     else el.innerHTML = hz + hTim + (S.newUser ? hNovy : "");
@@ -2729,6 +2783,27 @@
         try { var n = await rpc("pochvalit_vsetkych", { p_text: t, p_typ: b.dataset.vsetkym }); $("#vsetkym-text").value = "";
           toast((b.dataset.vsetkym === "tim" ? "⭐ Pochvala odoslaná " : "📣 Oznam odoslaný ") + n + (n === 1 ? " maklérovi." : " maklérom.")); konfety({ pocet: 90 }); }
         catch (err) { toast(chybaText(err), true); }
+      };
+    });
+    if (mkDetail && S.pushZar === undefined) {
+      S.pushZar = null;
+      rpc("push_zariadenia_maklerov", {}).then(function (z) { S.pushZar = z || {}; }, function () { S.pushZar = {}; }).then(function () {
+        S.makleri.forEach(function (x) { var t = $("#mk-zar-" + x.id); if (t) t.textContent = textZariadeni(x); });
+      });
+    }
+    el.querySelectorAll("[data-upoz]").forEach(function (b) {
+      b.onclick = async function () {
+        var id = b.closest("[data-m]").dataset.m, m = S.mById[id]; if (!m) return;
+        var druh = b.dataset.upoz, zap = !chceUpoz(druh, m);
+        b.disabled = true;
+        try {
+          await rpc("nastavit_upozornenie_maklera", { p_id: id, p_druh: druh, p_zapnute: zap });
+          m.upozornenia = Object.assign({}, m.upozornenia || {}); m.upozornenia[druh] = zap;
+          if (S.me && S.me.id === id) S.me.upozornenia = m.upozornenia;
+          b.setAttribute("aria-pressed", String(zap));
+          toast((m.meno || "Maklér") + ": upozornenia – " + b.textContent.replace(/^\S+\s/, "").toLowerCase() + (zap ? " zapnuté." : " vypnuté."));
+        } catch (err) { toast(chybaText(err), true); }
+        b.disabled = false;
       };
     });
     el.querySelectorAll("[data-pristup]").forEach(function (b) {
@@ -2780,6 +2855,8 @@
       try {
         var nov = await funkcia({ akcia: "vytvorit", meno: $("#n-meno").value, email: email, heslo: heslo, rola: $("#n-rola").value });
         if (S.novyFoto) await rpc("nastavit_foto", { p_id: nov.id, p_foto: S.novyFoto });
+        var ntp = $("#n-titul-pred").value.trim(), ntz = $("#n-titul-za").value.trim();
+        if (ntp || ntz) await rpc("nastavit_tituly_maklera", { p_id: nov.id, p_pred: ntp, p_za: ntz });
         S.novyFoto = null;
         S.newUser = { email: email, heslo: heslo }; S.hesla[nov.id] = heslo;
         await nacitajMaklerov(); toast("Účet je vytvorený.");
@@ -6868,7 +6945,8 @@
   function citajLS(k) { try { return Number(localStorage.getItem(lsKluc(k))) || 0; } catch (e) { return 0; } }
   function pisLS(k, v) { try { if (v > citajLS(k)) localStorage.setItem(lsKluc(k), String(v)); } catch (e) { /* nič */ } }
   function rod(id, muz, zena) { var m = S.mById[id]; return m && m.pohlavie === "zena" ? zena : muz; }
-  function systemoveUpozornenie(titul, text, tag, adresa) {
+  function systemoveUpozornenie(titul, text, tag, adresa, druh) {
+    if (druh && (S.pushOdber || !chceUpoz(druh))) return;
     if (!document.hidden || !("Notification" in window) || Notification.permission !== "granted" || !navigator.serviceWorker) return;
     navigator.serviceWorker.ready.then(function (reg) {
       reg.showNotification(titul, { body: String(text || "").slice(0, 180), icon: "typek-ikona-192.png?v=202610251300", badge: "typek-odznak-96.png?v=202610251300", tag: tag, renotify: true,
@@ -6910,9 +6988,9 @@
     if (!cudzie.length || !maSekciu("chat")) return;
     cudzie.forEach(function (m) { pisLS(m.dm ? "dm" : "tim", m.id); });
     var m = cudzie[cudzie.length - 1];
-    if (!o.ticho && nastChat("zvuk")) cinknut();
+    if (!o.ticho && nastChat("zvuk") && chceUpoz("spravy")) cinknut();
     if (!o.ticho) systemoveUpozornenie(m.dm ? "✉️ Nová správa od: " + meno(m.makler_id) : "✉️ Nová správa v spoločnom chate" + (m.makler_id ? " · " + meno(m.makler_id) : ""),
-      m.text + (cudzie.length > 1 ? "  (+" + (cudzie.length - 1) + " ďalšie)" : ""), m.dm ? "typek-dm-" + m.makler_id : "typek-chat", "chat" + (m.dm ? "/" + m.makler_id : ""));
+      m.text + (cudzie.length > 1 ? "  (+" + (cudzie.length - 1) + " ďalšie)" : ""), m.dm ? "typek-dm-" + m.makler_id : "typek-chat", "chat" + (m.dm ? "/" + m.makler_id : ""), "spravy");
     obnovZvoncek();
     if (!nastChat("popup")) return;
     S.obalky = S.obalky || [];
@@ -7689,6 +7767,8 @@
           p_id: id, p_meno: tr.querySelector('[data-f="meno"]').value, p_rola: tr.querySelector('[data-f="rola"]').value,
           p_aktivny: tr.querySelector('[data-f="aktivny"]').checked, p_vidi_podhodnotene: tr.querySelector('[data-f="vidi"]').checked,
         });
+        var tp = tr.querySelector('[data-f="titul_pred"]').value.trim(), tz = tr.querySelector('[data-f="titul_za"]').value.trim();
+        if (tp !== (m.titul_pred || "") || tz !== (m.titul_za || "")) await rpc("nastavit_tituly_maklera", { p_id: id, p_pred: tp, p_za: tz });
         var osl = tr.querySelector('[data-f="oslovenie"]').value, mot = tr.querySelector('[data-f="motivacia"]').value;
         if (mot.split("\n").filter(function (x) { return x.trim(); }).length > 5) toast("Uložím prvých 5 viet.", true);
         var mn = tr.querySelector('[data-f="meniny"]').value.trim(), mnD = null;
@@ -7808,12 +7888,12 @@
     nove.forEach(function (z) { z._t = norm([z.nazov, z.obec, z.predajca, z.popis].join(" ")); });
     S.inz = S.inz.concat(nove);
     var sukr = nove.filter(function (z) { return z.aktivny && ptyp(z) !== "rk"; });
-    if (sukr.length) {
+    if (sukr.length && chceUpoz("inzeraty")) {
       var z = sukr[sukr.length - 1];
       toast("🏠 " + (sukr.length === 1 ? "Nový súkromný inzerát: " + (z.nazov || "") + (z.obec ? " – " + z.obec : "") : sukr.length + " nové súkromné inzeráty v skeneri") + " 🔔");
       if (nastChat("zvuk")) cinknut();
       systemoveUpozornenie("🏠 " + (sukr.length === 1 ? "Nový súkromný inzerát" : sukr.length + " nové súkromné inzeráty"),
-        (z.nazov || "") + (z.obec ? " · " + z.obec : "") + (z.cena ? " · " + eur(z.cena) : ""), "typek-inz", "inzeraty");
+        (z.nazov || "") + (z.obec ? " · " + z.obec : "") + (z.cena ? " · " + eur(z.cena) : ""), "typek-inz", "inzeraty", "inzeraty");
     }
     if (S.tab === "inzeraty") { vykresliStaty(); vykresliZoznam(); }
     obnovZvoncek();

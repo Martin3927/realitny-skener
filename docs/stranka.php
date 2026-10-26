@@ -93,7 +93,7 @@ try {
   $web = is_array($d['web'] ?? null) ? $d['web'] : [];
   $mk = is_array($d['makler'] ?? null) ? $d['makler'] : [];
   $kanc = is_array($d['kancelaria'] ?? null) ? $d['kancelaria'] : [];
-  $meno = trim((string)($web['name'] ?? '')) ?: (string)($mk['meno'] ?? '');
+  $meno = trim((string)($web['name'] ?? '')) ?: (string)($mk['meno_cele'] ?? $mk['meno'] ?? '');
   $zena = ($mk['pohlavie'] ?? '') === 'zena';
   $rola = $zena ? 'Realitná maklérka' : 'Realitný maklér';
   $area = trim((string)($web['area'] ?? ''));

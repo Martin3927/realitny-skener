@@ -577,7 +577,7 @@ function klikyHtml(KL, klTot) {
   return '<div class="card2"><h3>Kliky na kontakt</h3>' + (klTot ? rows.map(function (z) { var n = KL[z[0]] || 0; return '<div class="hbar"><span>' + z[1] + '</span><span class="tr"><i style="width:' + (n ? Math.max(3, Math.round(n / mx * 100)) : 0) + '%"></i></span><b>' + n + "</b></div>"; }).join("")
     : '<div class="prazdny">Zatiaľ žiadne kliky. Počítajú sa od 24. 10. 2026.</div>') + '<p class="sub">Každý návštevník sa pri jednom druhu kontaktu ráta raz za návštevu. Tvoje vlastné kliky sa nerátajú.</p></div>';
 }
-function odpovedMakler() { var s = S(), m = W.CTX.makler || {}; return { meno: s.name || m.meno || "", telefon: s.phone || m.telefon || "", pohlavie: m.pohlavie }; }
+function odpovedMakler() { var s = S(), m = W.CTX.makler || {}; return { meno: s.name || m.meno_cele || m.meno || "", telefon: s.phone || m.telefon || "", pohlavie: m.pohlavie }; }
 function strazcaHtml() {
   var z = (WEB && WEB.strazcovia) || {}, n = +z.aktivni || 0, e = +z.emaily_30 || 0, p = +z.nepotvrdeni || 0;
   return '<div class="card2"><h3>Strážca ponúk</h3><p class="sub">Klienti, ktorí si na webe zapli strážcu a potvrdili e-mail, dostanú tvoje nové a zlacnené ponuky automaticky, najviac raz za 12 hodín. E-mail príde s tvojím menom, odpoveď ide priamo tebe a klient sa vie kedykoľvek odhlásiť. Každý strážca sa zapíše aj medzi dopyty v Klientoch.</p>' +
@@ -620,7 +620,7 @@ document.addEventListener("click", function (e) {
   else if (d.ldel) { var a = d.ldel.split(":"); get(a[0]).splice(+a[1], 1); }
   else if (d.faqrsc !== undefined) s.faq.push({ q: "Čo znamená titul RSc.?", a: "V slovenskom prostredí znamená skratka RSc. Real Estate Consultant, teda realitný konzultant." });
   else if (d.svcx !== undefined) s.svcX = "Foto a video, Zábery z dronu, 3D prehliadka, Virtuálny staging, Právny servis";
-  else if (d.timja !== undefined) { var mk = W.CTX.makler || {}; s.team.push({ n: s.name || mk.meno || "", r: s.office ? "Maklér · " + s.office : "Maklér", tel: s.phone || "", mail: s.email || "", img: s.photo || "" }); }
+  else if (d.timja !== undefined) { var mk = W.CTX.makler || {}; s.team.push({ n: s.name || mk.meno_cele || mk.meno || "", r: s.office ? "Maklér · " + s.office : "Maklér", tel: s.phone || "", mail: s.email || "", img: s.photo || "" }); }
   else if (d.lup) { var b = d.lup.split(":"), A = get(b[0]), k = +b[1], t1 = A[k - 1]; A[k - 1] = A[k]; A[k] = t1; }
   else if (d.ldn) { var c = d.ldn.split(":"), B = get(c[0]), m = +c[1], t2 = B[m + 1]; B[m + 1] = B[m]; B[m] = t2; }
   else if (d.lc) { s.color = "vlastna"; s.cc = d.lc; }
@@ -842,7 +842,7 @@ $("aiGo").addEventListener("click", function () {
 /* ================================================================ štart */
 function predvolby(s, m, vz) {
   var zena = m && m.pohlavie === "zena";
-  s.name = (m && m.meno) || ""; s.phone = (m && m.telefon) || ""; s.email = (m && m.email) || "";
+  s.name = (m && (m.meno_cele || m.meno)) || ""; s.phone = (m && m.telefon) || ""; s.email = (m && m.email) || "";
   s.office = (vz && vz.nazov) || "Alpha Reality"; s.wa = s.phone;
   s.about.title = "Reality robím tak, ako by som ich chcel" + (zena ? "a" : "") + " pre seba.";
   s.gdpr.who = s.name; s.gdpr.mail = "";
