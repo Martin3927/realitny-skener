@@ -499,6 +499,9 @@ a.brand:focus-visible { outline: 2px solid var(--gold-strong); outline-offset: 4
 .odhl-nast h3 { margin: 0 0 4px }
 .odhl-nast p { margin: 0; max-width: 620px }
 .odhl-nast select { min-width: 180px }
+.odhl-volby { display: flex; gap: 12px; flex-wrap: wrap; align-items: end }
+.odhl-volby .field { flex: 1 1 180px; min-width: 0 }
+.odhl-volby select { width: 100% }
 .odhl-var { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: rgba(15, 17, 20, .55); backdrop-filter: blur(4px); animation: fadeIn .25s ease-out }
 .odhl-karta { position: relative; width: min(360px, 100%); background: var(--surface); border-radius: 18px; padding: 26px 22px 20px; text-align: center; display: grid; gap: 10px; justify-items: center;
   box-shadow: 0 20px 60px rgba(0,0,0,.35); animation: vstupZoom .35s cubic-bezier(.2,.8,.2,1) }

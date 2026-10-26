@@ -694,10 +694,25 @@
 
   // ---------- automatické odhlásenie pri nečinnosti
   var KLUC_AKT = "typek-aktivita", aktPamat = 0, aktZapis = 0;
+  // mobil a tablet (nainštalovaná aplikácia aj prehliadač v mobile) majú vlastný čas odhlásenia
+  function vMobile() {
+    var ua = navigator.userAgent || "";
+    if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
+    if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) return true;   // iPad hlási počítač
+    return !!(window.matchMedia && window.matchMedia("(pointer: coarse) and (hover: none)").matches);
+  }
+  // „po 1 hodine“, „po 7 dňoch“…
+  function dobaPo(min) {
+    if (min >= 1440 && min % 1440 === 0) { var d = min / 1440; return d === 1 ? "1 dni" : d + " dňoch"; }
+    if (min >= 60 && min % 60 === 0) { var h = min / 60; return h === 1 ? "1 hodine" : h + " hodinách"; }
+    return min + " minútach";
+  }
   async function nacitajNastavenia() {
     nacitajVzhlad().then(function (zmena) { if (zmena && S.me) vykresli(); }).catch(function () {});
     var n = await rpc("nastavenia_aplikacie", {});
-    S.odhlMin = Number(n.odhlasenie_min) || 0;
+    S.odhlPc = Number(n.odhlasenie_min) || 0;
+    S.odhlMobil = n.odhlasenie_mobil_min == null ? S.odhlPc : Number(n.odhlasenie_mobil_min) || 0;
+    S.odhlMin = vMobile() ? S.odhlMobil : S.odhlPc;
     S.odkaz = { text: n.odkaz_text || "", zapnuty: !!n.odkaz_zapnuty, autor: n.odkaz_autor || null };
   }
   function poslednaAktivita() {
@@ -772,6 +787,7 @@
   }
   function formatOdpocet(ms) {
     var s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+    if (h >= 24) return Math.floor(h / 24) + " d " + (h % 24) + " h";
     return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(ss).padStart(2, "0");
   }
   function tikOdpocet() {
@@ -813,7 +829,7 @@
     var min = S.odhlMin;
     S.me = null;
     try {
-      sessionStorage.setItem("typek-odhlaseny", "Boli ste automaticky odhlásený po " + (min >= 60 && min % 60 === 0 ? min / 60 + (min === 60 ? " hodine" : " hodinách") : min + " minútach") + " nečinnosti. Prihláste sa znova.");
+      sessionStorage.setItem("typek-odhlaseny", "Boli ste automaticky odhlásený po " + dobaPo(min) + " nečinnosti. Prihláste sa znova.");
       localStorage.removeItem(KLUC_AKT);
     } catch (e) { /* bez úložiska */ }
     await sb.auth.signOut({ scope: "local" }).catch(function () {});
@@ -2614,7 +2630,12 @@
     var prevzate = {}, hovory = {};
     Object.values(S.prev).forEach(function (p) { if (p.makler_id) prevzate[p.makler_id] = (prevzate[p.makler_id] || 0) + 1; });
     var MOZNOSTI = [[0, "Vypnuté"], [15, "15 minút"], [30, "30 minút"], [60, "1 hodina"], [120, "2 hodiny"], [240, "4 hodiny"], [480, "8 hodín"]];
-    if (S.odhlMin && !MOZNOSTI.some(function (x) { return x[0] === S.odhlMin; })) MOZNOSTI.push([S.odhlMin, S.odhlMin + " minút"]);
+    var MOZ_MOBIL = MOZNOSTI.concat([[1440, "1 deň"], [4320, "3 dni"], [10080, "7 dní"], [43200, "30 dní"]]);
+    function volbyOdhl(zoz, akt) {
+      zoz = zoz.slice();
+      if (akt && !zoz.some(function (x) { return x[0] === akt; })) zoz.push([akt, akt + " minút"]);
+      return zoz.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === akt ? " selected" : "") + ">" + x[1] + "</option>"; }).join("");
+    }
     var pohlad = S.mkPohlad || null, mkDetail = pohlad && pohlad !== "novy" ? S.mById[pohlad] : null;
     if (pohlad && pohlad !== "novy" && !mkDetail) { pohlad = S.mkPohlad = null; }
     var aktivni = S.makleri.filter(function (m) { return m.aktivny; }).length;
@@ -2622,10 +2643,10 @@
       '<div class="nehn-akcie"><input type="search" id="mk-hladat" placeholder="Hľadať meno alebo email…" value="' + esc(S.mkHladat || "") + '" aria-label="Hľadať makléra">' +
       '<button class="btn primary" type="button" data-mk-otvor="novy">+ Pridať makléra</button></div></div><div class="mk-riadky" id="mk-riadky"></div></div>';
     var h = '<details class="box mk-tim-nast"' + (S.mkNastOtv ? " open" : "") + '><summary><b>⚙️ Nastavenia tímu</b><span class="meta">automatické odhlásenie, odkaz na hlavnej obrazovke, správa a pochvala pre všetkých, novinky v aplikácii</span></summary>' +
-      '<div class="box odhl-nast"><div><h3>⏱ Automatické odhlásenie</h3><p class="meta">Maklér, ktorý nič nerobí, sa po nastavenom čase odhlási. Minútu pred odhlásením ho upozorníme. Platí pre všetkých vrátane vás.</p></div>' +
-      '<select id="odhl-min" aria-label="Čas automatického odhlásenia">' + MOZNOSTI.map(function (x) {
-        return '<option value="' + x[0] + '"' + (x[0] === S.odhlMin ? " selected" : "") + ">" + x[1] + "</option>";
-      }).join("") + "</select></div>";
+      '<div class="box odhl-nast"><div><h3>⏱ Automatické odhlásenie</h3><p class="meta">Maklér, ktorý nič nerobí, sa po nastavenom čase odhlási. Minútu pred odhlásením ho upozorníme. Platí pre všetkých vrátane vás. ' +
+        "Na mobile a tablete (v aplikácii aj v prehliadači) môže byť čas dlhší, lebo telefón má vlastný zámok obrazovky.</p></div>" +
+      '<div class="odhl-volby"><label class="field"><span>💻 Počítač</span><select id="odhl-min" aria-label="Čas automatického odhlásenia na počítači">' + volbyOdhl(MOZNOSTI, S.odhlPc) + "</select></label>" +
+      '<label class="field"><span>📱 Mobil a tablet</span><select id="odhl-mobil" aria-label="Čas automatického odhlásenia v mobile">' + volbyOdhl(MOZ_MOBIL, S.odhlMobil) + "</select></label></div></div>";
     var ok0 = S.odkaz || { text: "", zapnuty: false };
     h += '<form class="box odkaz-nast" id="f-odkaz"><h3>📣 Odkaz pre všetkých</h3>' +
       '<p class="meta">Jedna veta, ktorú uvidia všetci makléri na hlavnej obrazovke – napríklad cieľ mesiaca alebo pochvala tímu.</p>' +
@@ -2736,11 +2757,18 @@
       try { await rpc("nastavit_odkaz", { p_text: t, p_zapnuty: z }); await nacitajNastavenia(); toast(z ? "Odkaz sa zobrazuje všetkým." : "Odkaz je uložený a skrytý."); }
       catch (err) { toast(chybaText(err), true); }
     });
-    if ($("#odhl-min")) $("#odhl-min").onchange = async function () {
-      var v = Number(this.value);
-      try { await rpc("nastavit_odhlasenie", { p_min: v }); S.odhlMin = v; zaznamenajAktivitu(true); tikOdpocet(); toast(v ? "Automatické odhlásenie: po " + this.options[this.selectedIndex].text + " nečinnosti." : "Automatické odhlásenie je vypnuté."); }
-      catch (err) { toast(chybaText(err), true); }
-    };
+    [["#odhl-min", "nastavit_odhlasenie", "odhlPc", "na počítači"], ["#odhl-mobil", "nastavit_odhlasenie_mobil", "odhlMobil", "v mobile"]].forEach(function (o) {
+      var sel = $(o[0]); if (!sel) return;
+      sel.onchange = async function () {
+        var v = Number(this.value);
+        try {
+          await rpc(o[1], { p_min: v });
+          S[o[2]] = v; S.odhlMin = vMobile() ? S.odhlMobil : S.odhlPc;
+          zaznamenajAktivitu(true); tikOdpocet();
+          toast(v ? "Automatické odhlásenie " + o[3] + ": po " + dobaPo(v) + " nečinnosti." : "Automatické odhlásenie " + o[3] + " je vypnuté.");
+        } catch (err) { toast(chybaText(err), true); }
+      };
+    });
     if ($("#n-copy")) $("#n-copy").onclick = function () {
       var t = "Skener Alpha Reality: " + location.origin + location.pathname + "\nEmail: " + S.newUser.email + "\nHeslo: " + S.newUser.heslo;
       navigator.clipboard.writeText(t).then(function () { toast("Skopírované."); }, function () { toast("Kopírovanie nefunguje – označte text ručne.", true); });
