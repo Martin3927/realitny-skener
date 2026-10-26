@@ -1686,6 +1686,7 @@
     }
     $("#filters").innerHTML = '<div class="filters"><div class="wrap">' +
       '<input type="search" id="q" placeholder="Hľadať v názve, obci, predajcovi…" aria-label="Hľadať" value="' + esc(f.q) + '">' +
+      '<button type="button" class="btn f-vymaz" id="f-vymaz">✕ Vymazať filter<span class="f-vymaz-n"></span></button>' +
       seg("praca", [["vsetky", "Všetky"], ["volne", "Voľné", 1], ["moje", "Moje", 1], ["prevzate", "Prevzaté", 1]]) +
       '<select id="f-kto" aria-label="Maklér"><option value="">👤 Všetci makléri</option>' + S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) {
         return '<option value="' + m.id + '">' + esc(m.meno || m.email) + (m.id === S.me.id ? " (ja)" : "") + "</option>"; }).join("") + "</select>" +
@@ -1722,8 +1723,8 @@
       });
       ulozFiltre(); vykresliZoznam();
     };
-    var t;
-    $("#q").addEventListener("input", function () { var v = this.value; clearTimeout(t); t = setTimeout(function () { zrusJeden(); f.q = v; S.shown = 100; vykresliZoznam(); }, 150); });
+    $("#q").addEventListener("input", function () { var v = this.value; clearTimeout(S.qT); S.qT = setTimeout(function () { zrusJeden(); f.q = v; S.shown = 100; vykresliZoznam(); }, 150); });
+    $("#f-vymaz").onclick = vymazFilter;
     $("#f-okres").onchange = function () { zrusJeden(); f.okres = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
     $("#f-novost").onchange = function () { zrusJeden(); f.novost = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
     $("#f-stav").onchange = function () { zrusJeden(); f.stav = this.value; S.shown = 100; ulozFiltre(); vykresliStaty(); vykresliZoznam(); };
@@ -1731,6 +1732,25 @@
     if ($("#f-under")) $("#f-under").onchange = function () { zrusJeden(); f.under = this.checked; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
   }
 
+  // tlačidlo „Vymazať filter“: počet zapnutých filtrov a návrat na všetky aktívne inzeráty (zoradenie ostáva)
+  function pocetFiltrov() {
+    var f = S.f;
+    return [f.q, f.predajca && f.predajca !== "vsetci", f.typ, f.okres, f.novost, f.praca && f.praca !== "vsetky", f.under, f.kto,
+      f.stav && f.stav !== "aktivne", S.jedenId].filter(Boolean).length;
+  }
+  function stavVymazania() {
+    var b = $("#f-vymaz"); if (!b) return;
+    var n = pocetFiltrov();
+    b.disabled = !n; b.classList.toggle("aktivny", !!n);
+    b.querySelector(".f-vymaz-n").textContent = n ? " (" + n + ")" : "";
+    b.title = n ? "Zrušiť všetky filtre a zobraziť všetky aktívne inzeráty" : "Žiadny filter nie je zapnutý";
+  }
+  function vymazFilter() {
+    clearTimeout(S.qT); zrusJeden();
+    Object.assign(S.f, { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, kto: "", stav: "aktivne" });
+    S.shown = 100; ulozFiltre(); vykresliFiltreInz(); vykresliStaty(); vykresliZoznam();
+    toast("Filtre sú vymazané – zobrazujem všetky aktívne inzeráty.");
+  }
   // zmena filtra ukončí zobrazenie jedného inzerátu (otvoreného zo zvončeka, mapy…), inak by sa zoznam nezmenil
   function zrusJeden() {
     if (!S.jedenId) return;
@@ -1913,9 +1933,11 @@
     h += '<div class="bar"><span>' + nf.format(out.length) + (out.length === 1 ? " inzerát" : out.length > 1 && out.length < 5 ? " inzeráty" : " inzerátov") + "</span>" +
       (S.canUnder ? "<span>Porovnanie: cena/m² oproti mediánu podobných aktuálnych ponúk</span>" : "") + "</div>";
     h += out.length ? '<div class="list" id="list">' + out.slice(0, S.shown).map(karta).join("") + "</div>" :
-      '<div class="empty">Nič nezodpovedá filtrom. Skúste „Všetky“ a „Všetci“ alebo zrušte obmedzenie času.</div>';
+      '<div class="empty">Nič nezodpovedá filtrom.' + (pocetFiltrov() ? ' <button type="button" class="btn primary" data-vymaz-filter>✕ Vymazať filter</button>' : "") + "</div>";
     if (out.length > S.shown) h += '<button class="btn more" type="button" id="more">Zobraziť ďalšie (zostáva ' + nf.format(out.length - S.shown) + ")</button>";
     el.innerHTML = h;
+    stavVymazania();
+    var vf = el.querySelector("[data-vymaz-filter]"); if (vf) vf.onclick = vymazFilter;
     napojBannerSkenera(el);
     if ($("#more")) $("#more").onclick = function () { S.shown += 100; vykresliZoznam(); };
     if ($("#vsetky-inz")) $("#vsetky-inz").onclick = function () { S.jedenId = null; history.replaceState({ tab: "inzeraty" }, "", "#inzeraty"); vykresliZoznam(); };

@@ -90,6 +90,11 @@ nav.tabs button .n { color: var(--gold-strong); font-weight: 700; margin-left: 4
 /* ---------- filtre */
 .filters { background: var(--bg); border-bottom: 1px solid var(--line) }
 .filters .wrap { padding-block: 10px; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center }
+.f-vymaz { flex: none; padding-block: 9px }
+.f-vymaz:disabled { opacity: .45; cursor: default }
+.f-vymaz.aktivny { background: var(--gold-soft); border-color: var(--gold-strong); color: var(--ink) }
+.f-vymaz.aktivny:hover { background: var(--gold-strong); color: var(--on-accent) }
+.empty .btn { margin-left: 8px; vertical-align: middle }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); max-width: 100%; overflow-x: auto }
 .seg button { border: 0; background: transparent; font-size: 13px; padding: 7px 10px; cursor: pointer; border-right: 1px solid var(--line); white-space: nowrap }
 .seg button:last-child { border-right: 0 }
