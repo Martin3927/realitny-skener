@@ -1855,6 +1855,11 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .zs-nahlad { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .zs-odl { font-size: 12px; color: var(--gold); font-weight: 600; margin-top: 1px }
 .zs-pol .btn { flex: none }
+.zs-klik { cursor: pointer; transition: border-color .15s, background-color .15s; -webkit-tap-highlight-color: transparent }
+.zs-klik:hover { border-color: var(--gold) }
+.zs-klik:active { background: var(--gold-soft) }
+.zs-klik:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px }
+.zvon-box .prip.ma-ciel .prip-text { cursor: pointer }
 .zs-ign { background: transparent }
 .zs-vsetky { justify-self: end }
 .sprava-stav.ign { color: #c0392b; font-weight: 600 }

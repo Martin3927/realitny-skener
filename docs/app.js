@@ -1159,6 +1159,9 @@
   // ------------------------------------------------------------ kostra stránky
   function vykresli() {
     if (!tabPovoleny(S.tab)) S.tab = "domov";
+    // prechod do inej sekcie zatvorí zvonček aj Môj profil – inak by ostali hore a novú sekciu by zakryli
+    if (S.vykreslenaSekcia && S.vykreslenaSekcia !== S.tab) { S.pwdOpen = false; S.zvonOpen = false; S.pripForm = null; }
+    S.vykreslenaSekcia = S.tab;
     if (S.tab !== "vzhlad" && S.vzhladDraft) { S.vzhladDraft = null; aplikujVzhlad(vzhladPreMna()); }
     var tabs = SEKCIE.filter(function (x) { return maSekciu(x[0]); }).map(function (x) { return x[0] === "provizie" && !admin() ? ["provizie", "Moje provízie", "euro"] : x; });
     if (admin()) tabs.push(["vykon", "Výkon", "vykon"], ["makleri", "Makléri", "makleri"], ["vzhlad", "Vzhľad", "farby"], ["historia", "História zmien", "historia"]);
@@ -1191,10 +1194,10 @@
       if (t) {
         e.preventDefault();
         // klik na sekciu v hlavičke vráti na zoznam (nie na naposledy otvorený detail)
-        if (t.dataset.tab === "nehnutelnosti" && !S.ponukaEdit) { S.ponukaDetail = null; S.ponukaExport = false; if (S.tab === "nehnutelnosti") { history.pushState({ tab: "nehnutelnosti" }, "", "#nehnutelnosti"); vykresliNehnutelnosti(); window.scrollTo(0, 0); return; } }
+        if (t.dataset.tab === "nehnutelnosti" && !S.ponukaEdit) { S.ponukaDetail = null; S.ponukaExport = false; if (S.tab === "nehnutelnosti") { zatvorPanely(); history.pushState({ tab: "nehnutelnosti" }, "", "#nehnutelnosti"); vykresliNehnutelnosti(); window.scrollTo(0, 0); return; } }
         if (t.dataset.tab === "provizie") S.provForm = null;
-        if (t.dataset.tab === "historia" && S.tab === "historia") { vykresliHistoriu(); return; }
-        if (t.dataset.tab === "klienti" && !S.dopytEdit) { S.dopytDetail = null; S.predDetail = null; if (S.tab === "klienti") { history.pushState({ tab: "klienti" }, "", "#klienti"); vykresliKlientov(); window.scrollTo(0, 0); return; } }
+        if (t.dataset.tab === "historia" && S.tab === "historia") { zatvorPanely(); vykresliHistoriu(); window.scrollTo(0, 0); return; }
+        if (t.dataset.tab === "klienti" && !S.dopytEdit) { S.dopytDetail = null; S.predDetail = null; if (S.tab === "klienti") { zatvorPanely(); history.pushState({ tab: "klienti" }, "", "#klienti"); vykresliKlientov(); window.scrollTo(0, 0); return; } }
         prejdi(t.dataset.tab); return;
       }
       var pm = e.target.closest("[data-pomoc]");
@@ -1250,6 +1253,10 @@
       }).join("") + "</div></div>" +
       (S.hlavny ? '<div class="menu-skup menu-sprava"><span class="menu-skup-n">Realitný týpek</span><div class="menu-dl">' +
         '<a class="dl-menu" href="sprava.html"><span class="dl-menu-ik dl-menu-emoji" aria-hidden="true">⇄</span><span>Správa zákazníkov</span></a></div></div>' : "");
+  }
+  function zatvorPanely() {
+    if (!S.pwdOpen && !S.zvonOpen) return;
+    S.pwdOpen = false; S.zvonOpen = false; S.pripForm = null; vykresliHeslo(); vykresliZvoncek();
   }
   function otvorMenu() {
     var m = $("#menu-sheet"); if (!m) return;
@@ -7252,7 +7259,7 @@
     var h = '<div class="zvon-spravy">';
     if (konv.length) h += "<h4>✉️ Nové správy (" + n + ")</h4>" + konv.map(function (k) {
       var id = k[0], zoz = k[1], m = zoz[zoz.length - 1], odl = odlozenaKonv(id), c = zoz.length;
-      return '<div class="zs-pol">' + (id ? avatar(id, 36) : '<span class="zs-tim">' + ikona("chat") + "</span>") +
+      return '<div class="zs-pol zs-klik" data-zvon-konv="' + esc(id) + '" role="button" tabindex="0" title="Otvoriť konverzáciu">' + (id ? avatar(id, 36) : '<span class="zs-tim">' + ikona("chat") + "</span>") +
         '<div class="zs-text"><div class="zs-hl"><b>' + esc(id ? meno(id) : "Spoločný chat") + '</b><span class="meta">' + c + (c === 1 ? " nová" : c <= 4 ? " nové" : " nových") + " · " + esc(casKonverzacie(m.vytvorene)) + "</span></div>" +
         '<div class="zs-nahlad">' + (id ? "🔒 " : m.makler_id ? esc(krstneMeno(m.makler_id)) + ": " : "") + esc(m.text) + "</div>" +
         (odl ? '<div class="zs-odl">⏰ Pripomeniem ' + esc(kedyOdlozene(odl.pripomenut)) + "</div>" : "") + "</div>" +
@@ -7903,7 +7910,7 @@
     var moje = (S.me.obce || []).length ? zoz.filter(function (z) { return S.me.obce.indexOf(z.obec) >= 0; }).length : -1;
     return '<div class="zvon-spravy zvon-inz"><h4>🏠 Nové súkromné inzeráty (' + zoz.length + ")" + (moje >= 0 ? " · " + moje + " vo vašich obciach" : "") + "</h4>" +
       zoz.slice(0, 5).map(function (z) {
-        return '<div class="zs-pol">' + (z.foto ? '<img class="zs-foto" src="' + esc(z.foto) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="zs-tim">🏠</span>') +
+        return '<div class="zs-pol zs-klik" data-zvon-inz="' + esc(z.id) + '" role="button" tabindex="0" title="Otvoriť celý inzerát">' + (z.foto ? '<img class="zs-foto" src="' + esc(z.foto) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="zs-tim">🏠</span>') +
           '<div class="zs-text"><div class="zs-hl"><b>' + esc(z.nazov || TYP[z.typ] || "Inzerát") + '</b><span class="meta">' + esc(casKonverzacie(z.prvy_krat)) + "</span></div>" +
           '<div class="zs-nahlad">' + esc([z.obec, z.cena ? eur(z.cena) : "", PORTAL[z.portal] || z.portal, (PRED[ptyp(z)] || [""])[0]].filter(Boolean).join(" · ")) + "</div></div>" +
           '<button class="btn primary" type="button" data-zvon-inz="' + esc(z.id) + '">Otvoriť</button></div>';
@@ -7921,7 +7928,24 @@
       if (S.tab === "inzeraty" && !S.jedenId) { vykresliFiltreInz(); vykresliZoznam(); window.scrollTo(0, 0); } else prejdi("inzeraty");
       return;
     }
-    prejdi("inzeraty", a.dataset.zvonInz);
+    otvorCelyInzerat(a.dataset.zvonInz);
+  });
+  // otvorí jeden inzerát rovno s celým popisom a fotkami a posunie obrazovku naň (zo zvončeka)
+  async function otvorCelyInzerat(id) {
+    prejdi("inzeraty", id);
+    if (S.tab !== "inzeraty" || S.jedenId !== id) return;
+    S.open[id] = "detail"; prekresliKartu(id);
+    var k = document.querySelector('#obsah .card[data-id="' + CSS.escape(id) + '"]');
+    if (k) { var ciel = (k.closest("#obsah").querySelector(".note") || k); window.scrollTo(0, Math.max(0, ciel.getBoundingClientRect().top + window.scrollY - 8)); }
+    if (id in S.arch) return;
+    try { var ra = await sb.from("archiv").select("*").eq("inzerat_id", id).maybeSingle(); S.arch[id] = ra.data || null; }
+    catch (e) { S.arch[id] = null; }
+    if (S.tab === "inzeraty" && S.jedenId === id && S.open[id] === "detail") prekresliKartu(id);
+  }
+  // celý riadok v zvončeku sa dá otvoriť aj klávesom Enter / medzerníkom
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== "Enter" && e.key !== " ") || !e.target.classList || !e.target.classList.contains("zs-klik")) return;
+    e.preventDefault(); e.target.click();
   });
   // ikona karty v prehliadači: logo, pri novej správe alebo pripomienke červený zvonček
   function ikonaKarty(zvon) {
@@ -8019,7 +8043,7 @@
       }
       if (p.druh === "web" && !p.web_kontakt_id && /^(Žiadosť o adresu|Pripojiť doménu)/.test(p.poznamka || "")) ciel = '<a href="#" data-prip-web>🌐 Otvoriť Osobný web</a>';
       var splatna = new Date(p.cas).getTime() <= t;
-      return '<div class="prip' + (splatna ? " due" : "") + '" data-prip="' + p.id + '">' +
+      return '<div class="prip' + (splatna ? " due" : "") + (ciel ? " ma-ciel" : "") + '" data-prip="' + p.id + '">' +
         '<div class="prip-cas">' + datum(p.cas, true) + "</div>" +
         '<div class="prip-text">' + (cudzia ? avatar(p.makler_id, 20) + " <b>" + esc(meno(p.makler_id)) + "</b> · " : "") + (p.druh && p.druh !== "pripomienka" ? DRUH_IKONA[p.druh] + " " : "") + esc(p.poznamka || "Pripomienka") +
         (ciel ? '<div class="meta">' + ciel + "</div>" : "") + odp +
@@ -8096,11 +8120,17 @@
       return;
     }
     if (e.target.closest('[data-act="prip-nova"]')) { S.pripForm = {}; vykresliZvoncek(); return; }
+    // ťuknutie na text pripomienky otvorí to, čoho sa týka (inzerát, ponuku, udalosť, schránkovanie)
+    var pt = e.target.closest("#zvon .prip-text");
+    if (pt && !e.target.closest("a, button, input, select, textarea, .prip-odp")) {
+      var cl = pt.querySelector("[data-prip-inz], [data-prip-nehn], [data-prip-udalost], [data-prip-sch], [data-prip-web]");
+      if (cl) { e.preventDefault(); cl.click(); return; }
+    }
     var li = e.target.closest("[data-prip-inz]");
     if (li) {
       e.preventDefault();
-      S.zvonOpen = false;
-      prejdi("inzeraty", li.dataset.pripInz);
+      S.zvonOpen = false; vykresliZvoncek();
+      otvorCelyInzerat(li.dataset.pripInz);
       return;
     }
     var lu = e.target.closest("[data-prip-udalost]");
