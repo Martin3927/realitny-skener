@@ -356,7 +356,12 @@ function socRow() {
   if (!it.length) return "";
   return '<div class="soc">' + it.map(function (x) { return '<a href="' + esc(url(s.soc[x[0]])) + '" target="_blank" rel="noopener" aria-label="' + x[1] + '" title="' + x[1] + '">' + IC[x[0]] + "</a>"; }).join("") + "</div>";
 }
-function H(k, eb, h, p) { return '<div class="hd"><span class="eb">' + esc(eb) + "</span><h2 " + ed("heads." + k + ".h", 1) + ">" + esc(head(k, "h", h)) + "</h2>" + (p ? "<p " + ed("heads." + k + ".p") + ">" + esc(head(k, "p", p)) + "</p>" : "") + "</div>"; }
+// nadpis sekcie: nadtitulok (e), nadpis (h) a text pod nadpisom (p) si maklér môže prepísať; vlastný text sa ukáže aj pri sekcii bez predvoleného textu
+function H(k, eb, h, p) {
+  var e = head(k, "e", eb), pp = head(k, "p", p || "");
+  return '<div class="hd">' + (e || W.EDIT ? '<span class="eb" ' + ed("heads." + k + ".e", 1) + ">" + esc(e) + "</span>" : "") + "<h2 " + ed("heads." + k + ".h", 1) + ">" + esc(head(k, "h", h)) + "</h2>" +
+    (p || pp ? "<p " + ed("heads." + k + ".p") + ">" + esc(pp) + "</p>" : "") + "</div>";
+}
 function fv(f, n) { return esc((W.FV[f] || {})[n] || ""); }
 function inp(f, n, ph, type) { return '<input class="fld" name="' + n + '" type="' + (type || "text") + '" placeholder="' + esc(ph) + '" value="' + fv(f, n) + '" aria-label="' + esc(ph) + '"' + (type === "email" ? ' autocomplete="email"' : type === "tel" ? ' autocomplete="tel"' : n === "meno" ? ' autocomplete="name"' : "") + ">"; }
 function errMsg(f) { return W.ERR[f] ? '<p class="err" role="alert">' + esc(W.ERR[f]) + "</p>" : ""; }
@@ -507,7 +512,7 @@ var R = {
     var st = W.S.steps.map(function (s, i) { return [s, i]; }).filter(function (x) { return x[0].t || x[0].d; }), n = st.length;
     if (!n) return "";
     return H("postup", "Postup predaja", "Ako prebieha predaj so mnou", n + " " + (n === 1 ? "krok" : n < 5 ? "kroky" : "krokov") + " od prvého stretnutia po odovzdanie kľúčov.") +
-      '<ol class="steps">' + st.map(function (x) { return "<li><div><h3 " + ed("steps." + x[1] + ".t", 1) + ">" + esc(x[0].t) + "</h3><p " + ed("steps." + x[1] + ".d") + ">" + esc(x[0].d) + "</p></div></li>"; }).join("") + "</ol>";
+      '<ol class="steps' + (n === 4 ? " n4" : "") + '">' + st.map(function (x) { return "<li><div><h3 " + ed("steps." + x[1] + ".t", 1) + ">" + esc(x[0].t) + "</h3><p " + ed("steps." + x[1] + ".d") + ">" + esc(x[0].d) + "</p></div></li>"; }).join("") + "</ol>";
   },
   sluzby: function () { if (!W.S.svc.some(function (x) { return x.t || x.d; })) return ""; return H("sluzby", "Služby", "S čím vám pomôžem") + '<div class="svc">' + W.S.svc.map(function (x, i) { return "<div><i>" + IC[SVC_IC[i % 4]] + "</i><h3 " + ed("svc." + i + ".t", 1) + ">" + esc(x.t) + "</h3><p " + ed("svc." + i + ".d") + ">" + esc(x.d) + "</p></div>"; }).join("") + "</div>" + svcX(); },
   preco: function () {

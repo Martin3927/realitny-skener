@@ -314,14 +314,17 @@
 
 /* Postup predaja */
 .site .steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,2cqi,22px);counter-reset:st}
+/* štyri kroky v jednom rade (inak by štvrtý ostal sám) */
+.site .steps.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@container (max-width:1060px){.site .steps.n4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .site .steps li{counter-increment:st;background:var(--surf);border-radius:var(--r);padding:22px;display:flex;flex-direction:column;gap:12px}
 .site .s.alt .steps li{background:var(--bg)}
 .site .steps li::before{content:counter(st);width:38px;height:38px;border-radius:999px;background:var(--a);color:var(--on-a);display:grid;place-items:center;font-family:var(--fh);font-weight:var(--fhw);font-size:17px;flex:none}
 .site .steps h3{font-size:19px;margin-bottom:6px}
 .site .steps p{font-size:14.5px;color:var(--muted)}
 @container (max-width:860px){.site .steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@container (max-width:480px){.site .steps{grid-template-columns:1fr}}
-.t-vizitka .steps,.t-mestska .steps{grid-template-columns:1fr}
+@container (max-width:480px){.site .steps,.site .steps.n4{grid-template-columns:1fr}}
+.t-vizitka .steps,.t-mestska .steps,.t-vizitka .steps.n4,.t-mestska .steps.n4{grid-template-columns:1fr}
 .t-vizitka .steps li,.t-mestska .steps li{flex-direction:row;align-items:flex-start;gap:16px}
 
 /* Rezervácia obhliadky */
