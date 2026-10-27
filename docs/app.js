@@ -6969,7 +6969,7 @@
     if (!S.obalkyStart) { S.obalkyStart = true; setTimeout(obalkyPoSpusteni, 2600); }
   }
   function partner(m) { return m.od_id === S.me.id ? m.komu_id : m.od_id; }
-  function normDm(m) { return { id: m.id, makler_id: m.od_id, komu_id: m.komu_id, text: m.text, vytvorene: m.vytvorene, precitane: m.precitane, dm: true }; }
+  function normDm(m) { return { id: m.id, makler_id: m.od_id, komu_id: m.komu_id, text: m.text, prilohy: m.prilohy, vytvorene: m.vytvorene, precitane: m.precitane, dm: true }; }
   function oknoSpravy() {
     if (!S.chatS) return S.chat;
     return S.dm.filter(function (m) { return partner(m) === S.chatS; }).map(normDm);
@@ -7109,7 +7109,7 @@
     var m = cudzie[cudzie.length - 1];
     if (!o.ticho && nastChat("zvuk") && chceUpoz("spravy")) cinknut();
     if (!o.ticho) systemoveUpozornenie(m.dm ? "✉️ Nová správa od: " + meno(m.makler_id) : "✉️ Nová správa v spoločnom chate" + (m.makler_id ? " · " + meno(m.makler_id) : ""),
-      m.text + (cudzie.length > 1 ? "  (+" + (cudzie.length - 1) + " ďalšie)" : ""), m.dm ? "typek-dm-" + m.makler_id : "typek-chat", "chat" + (m.dm ? "/" + m.makler_id : ""), "spravy");
+      nahladSpravy(m) + (cudzie.length > 1 ? "  (+" + (cudzie.length - 1) + " ďalšie)" : ""), m.dm ? "typek-dm-" + m.makler_id : "typek-chat", "chat" + (m.dm ? "/" + m.makler_id : ""), "spravy");
     obnovZvoncek();
     if (!nastChat("popup")) return;
     S.obalky = S.obalky || [];
@@ -7272,12 +7272,14 @@
     p.innerHTML = (E.spravy.length > 4 ? '<div class="meta ob-viac">+ ' + (E.spravy.length - 4) + " starších v konverzácii</div>" : "") +
       '<div class="ob-spravy">' + zoz.map(function (m) {
         return '<div class="ob-sprava">' + (!dm ? '<b class="ob-kto">' + esc(m.makler_id ? meno(m.makler_id) : "Tím Alpha Reality") + "</b>" : "") +
-          "<p>" + textSpravy(m.text) + '</p><time class="meta">' + esc(casKonverzacie(m.vytvorene)) + "</time></div>";
+          (m.prilohy && m.prilohy.length ? '<div class="ob-pril">' + htmlPriloh(m.prilohy, "o" + (m.dm ? "d" : "t") + m.id) + "</div>" : "") +
+          (String(m.text || "").trim() ? "<p>" + textSpravy(m.text) + "</p>" : "") + '<time class="meta">' + esc(casKonverzacie(m.vytvorene)) + "</time></div>";
       }).join("") + "</div>" +
       '<form class="ob-odp"><input type="text" maxlength="2000" placeholder="' + esc(dm ? "Odpovedať " + krstneMeno(E.konv) + "…" : "Odpovedať tímu…") + '" aria-label="Rýchla odpoveď">' +
       '<button type="submit" aria-label="Odoslať"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z" fill="currentColor"/></svg></button></form>' +
       '<div class="ob-rad"><button class="btn" type="button" data-ob="otvor">Otvoriť konverzáciu →</button><button class="btn ghost" type="button" data-ob="zavriet">Zavrieť</button></div>';
     panelObalky("list");
+    doplnPrilohy(p);
     var inp = p.querySelector("input");
     if (window.matchMedia("(pointer: fine)").matches) setTimeout(function () { inp.focus({ preventScroll: true }); }, 450);
     p.querySelector(".ob-odp").onsubmit = async function (e) {
@@ -7346,7 +7348,7 @@
   }
   function textIgnorovanej(r) {
     var m = r.druh === "dm" ? S.dm.find(function (x) { return x.id === r.sprava_id; }) : S.chat.find(function (x) { return x.id === r.sprava_id; });
-    return m ? m.text : "";
+    return m ? nahladSpravy(m) : "";
   }
   function kedyOdlozene(iso) {
     var d = new Date(iso), dnes = new Date(); dnes.setHours(0, 0, 0, 0);
@@ -7373,7 +7375,7 @@
       var id = k[0], zoz = k[1], m = zoz[zoz.length - 1], odl = odlozenaKonv(id), c = zoz.length;
       return '<div class="zs-pol zs-klik" data-zvon-konv="' + esc(id) + '" role="button" tabindex="0" title="Otvoriť konverzáciu">' + (id ? avatar(id, 36) : '<span class="zs-tim">' + ikona("chat") + "</span>") +
         '<div class="zs-text"><div class="zs-hl"><b>' + esc(id ? meno(id) : "Spoločný chat") + '</b><span class="meta">' + c + (c === 1 ? " nová" : c <= 4 ? " nové" : " nových") + " · " + esc(casKonverzacie(m.vytvorene)) + "</span></div>" +
-        '<div class="zs-nahlad">' + (id ? "🔒 " : m.makler_id ? esc(krstneMeno(m.makler_id)) + ": " : "") + esc(m.text) + "</div>" +
+        '<div class="zs-nahlad">' + (id ? "🔒 " : m.makler_id ? esc(krstneMeno(m.makler_id)) + ": " : "") + esc(nahladSpravy(m)) + "</div>" +
         (odl ? '<div class="zs-odl">⏰ Pripomeniem ' + esc(kedyOdlozene(odl.pripomenut)) + "</div>" : "") + "</div>" +
         '<button class="btn primary" type="button" data-zvon-konv="' + esc(id) + '">Prečítať</button></div>';
     }).join("");
@@ -7474,6 +7476,407 @@
   }
   function odtienMena(id) { var h = 0; String(id || "").split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) % 360; }); return h; }
   var IKONA_KOS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // ---------- PRÍLOHY V CHATE: fotky, Word, Excel, PDF…
+  // Súbory sú v súkromnom úložisku chat-prilohy: tim/… vidí celý tím, dm/<od>/<komu>/… len títo dvaja.
+  // Fotka sa pred odoslaním zmenší (najviac 2560 px) a dostane malý náhľad, aby sa chat v mobile načítal rýchlo.
+  var PRIL_B = "chat-prilohy", PRIL_MAX = 25 * 1024 * 1024, PRIL_FOTO_MAX = 60 * 1024 * 1024, PRIL_POCET = 10;
+  var PRIL_TYPY = {
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif", heic: "image/heic", heif: "image/heif",
+    pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    odt: "application/vnd.oasis.opendocument.text", rtf: "application/rtf",
+    xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ods: "application/vnd.oasis.opendocument.spreadsheet", csv: "text/csv",
+    ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation", txt: "text/plain"
+  };
+  var PRIL_PRIJAT = "image/*,.pdf,.doc,.docx,.odt,.rtf,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.txt";
+  var IKONA_SPINKA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.6-7.9 7.9a5 5 0 0 1-7.1-7.1l8.3-8.3a3.4 3.4 0 0 1 4.8 4.8l-8.3 8.3a1.7 1.7 0 0 1-2.4-2.4l7.6-7.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // náhodné id súboru v tvare UUID (databáza iný tvar neprijme)
+  function idPrilohy() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    var b = new Uint8Array(16); crypto.getRandomValues(b); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    var h = Array.prototype.map.call(b, function (x) { return (x + 256).toString(16).slice(1); }).join("");
+    return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+  }
+  function priponaSuboru(n) { var m = /\.([a-z0-9]{1,5})$/i.exec(String(n || "")); return m ? m[1].toLowerCase() : ""; }
+  function typPrilohy(f) {
+    var t = String(f.type || "").toLowerCase(), p = priponaSuboru(f.name);
+    if (t === "image/jpg") t = "image/jpeg";
+    if (t === "application/x-pdf") t = "application/pdf";
+    for (var k in PRIL_TYPY) if (PRIL_TYPY[k] === t) return t;
+    return PRIL_TYPY[p] || "";
+  }
+  // fotka, ktorú vie zobraziť každý prehliadač (HEIC z iPhonu ukážeme ako súbor na stiahnutie)
+  function jeFotka(typ) { return /^image\/(jpeg|png|webp|gif)$/.test(typ || ""); }
+  function druhPrilohy(p) {
+    var t = p.typ || "", x = priponaSuboru(p.nazov);
+    if (jeFotka(t)) return "foto";
+    if (/^image\//.test(t)) return "obr";
+    if (t === "application/pdf") return "pdf";
+    if (/word|opendocument\.text|rtf/.test(t) || /^(docx?|odt|rtf)$/.test(x)) return "word";
+    if (/excel|spreadsheet|csv/.test(t) || /^(xlsx?|ods|csv)$/.test(x)) return "excel";
+    if (/powerpoint|presentation/.test(t)) return "ppt";
+    return "text";
+  }
+  var PRIL_DRUH = { pdf: ["PDF", "PDF"], word: ["W", "Word"], excel: ["X", "Excel"], ppt: ["P", "PowerPoint"], obr: ["IMG", "Fotka"], text: ["TXT", "Dokument"] };
+  function velkostText(b) {
+    b = Number(b) || 0;
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return Math.max(1, Math.round(b / 1024)) + " kB";
+    return (b / 1048576).toLocaleString("sk-SK", { maximumFractionDigits: b < 10 * 1048576 ? 1 : 0 }) + " MB";
+  }
+  function slovoFotky(n) { return n === 1 ? "fotka" : n <= 4 ? "fotky" : "fotiek"; }
+  function slovoSubory(n) { return n === 1 ? "súbor" : n <= 4 ? "súbory" : "súborov"; }
+  // krátky popis do zoznamu konverzácií, zvončeka a upozornení: „📷 Fotka“, „📎 zmluva.pdf“, „📷 3 fotky“
+  function popisPriloh(pr) {
+    if (!pr || !pr.length) return "";
+    var f = pr.filter(function (p) { return /^image\//.test(p.typ || ""); }).length, n = pr.length;
+    if (n === 1) return f ? "📷 Fotka" : "📎 " + (pr[0].nazov || "Súbor");
+    return f === n ? "📷 " + n + " " + slovoFotky(n) : "📎 " + n + " " + slovoSubory(n);
+  }
+  function nahladSpravy(m) {
+    var t = String((m && m.text) || "").trim(), p = popisPriloh(m && m.prilohy);
+    return t && p ? t + " · " + p : t || p;
+  }
+  function cestyPriloh(pr) {
+    var c = [];
+    (pr || []).forEach(function (p) { if (p.cesta) c.push(p.cesta); if (p.nahlad) c.push(p.nahlad); });
+    return c;
+  }
+
+  // ---------- adresy súborov (podpísané na hodinu; po 50 minútach si vypýtame nové)
+  S.prilUrl = S.prilUrl || {};
+  async function podpisPrilohy(cesty) {
+    var t = Date.now(), chyba = [], out = {};
+    cesty.forEach(function (c) { if (c && !(S.prilUrl[c] && S.prilUrl[c].do > t) && chyba.indexOf(c) < 0) chyba.push(c); });
+    for (var i = 0; i < chyba.length; i += 100) {
+      var r;
+      try { r = await sb.storage.from(PRIL_B).createSignedUrls(chyba.slice(i, i + 100), 3600); } catch (e) { r = { error: e }; }
+      if (r.error || !r.data) continue;
+      r.data.forEach(function (x) { if (x && x.signedUrl && !x.error) S.prilUrl[x.path] = { url: x.signedUrl, do: t + 50 * 60000 }; });
+    }
+    cesty.forEach(function (c) { if (S.prilUrl[c]) out[c] = S.prilUrl[c].url; });
+    return out;
+  }
+  // PDF a fotky sa otvoria v prehliadači, ostatné (Word, Excel…) sa stiahnu s pôvodným názvom
+  function odkazPrilohy(url, nazov, typ, stiahnut) {
+    return !stiahnut && (typ === "application/pdf" || jeFotka(typ)) ? url : url + "&download=" + encodeURIComponent(nazov || "subor");
+  }
+  function doplnPrilohy(root) {
+    root = root || document;
+    var imgs = Array.prototype.slice.call(root.querySelectorAll("img[data-pril-src]:not([data-ok])"));
+    var docs = Array.prototype.slice.call(root.querySelectorAll("a[data-pril-subor]:not([data-ok])"));
+    if (!imgs.length && !docs.length) return;
+    var cesty = imgs.map(function (i) { return i.dataset.prilSrc; }).concat(docs.map(function (a) { return a.dataset.prilSubor; }));
+    // adresy, ktoré už máme, doplníme hneď (pri prekreslení chatu fotky neblikajú)
+    var t = Date.now(), vsetkyZnam = cesty.every(function (c) { return S.prilUrl[c] && S.prilUrl[c].do > t; });
+    if (vsetkyZnam) {
+      var hned = {}; cesty.forEach(function (c) { hned[c] = S.prilUrl[c].url; });
+      return doplnAdresy(hned);
+    }
+    podpisPrilohy(cesty).then(doplnAdresy);
+    function doplnAdresy(u) {
+      imgs.forEach(function (i) {
+        var x = u[i.dataset.prilSrc], b = i.closest(".pril-foto");
+        if (!x) { if (b) b.classList.add("chyba"); return; }
+        i.dataset.ok = "1";
+        i.onload = function () { if (b) b.classList.add("nacitane"); };
+        i.onerror = function () { if (b) b.classList.add("chyba"); };
+        i.src = x;
+        if (i.complete && i.naturalWidth && b) b.classList.add("nacitane");
+      });
+      docs.forEach(function (a) {
+        var x = u[a.dataset.prilSubor]; if (!x) return;
+        a.dataset.ok = "1"; a.href = odkazPrilohy(x, a.dataset.nazov, a.dataset.typ);
+      });
+    }
+  }
+  // prílohy v bubline: fotky v mriežke, dokumenty ako kartičky
+  function htmlPriloh(pr, sada) {
+    if (!pr || !pr.length) return "";
+    var fotky = pr.filter(function (p) { return jeFotka(p.typ); }), subory = pr.filter(function (p) { return !jeFotka(p.typ); }), h = "";
+    if (fotky.length) {
+      var ukaz = fotky.slice(0, 6), navyse = fotky.length - ukaz.length;
+      h += '<div class="pril-fotky n' + Math.min(ukaz.length, 6) + '" data-pril-sada="' + esc(sada) + '">' + ukaz.map(function (p, i) {
+        var pomer = p.w && p.h ? Math.max(0.6, Math.min(1.9, p.w / p.h)) : 1.333;
+        return '<button type="button" class="pril-foto" data-pril-foto="' + i + '" data-cesta="' + esc(p.cesta) + '" data-nazov="' + esc(p.nazov || "") + '"' +
+          (fotky.length === 1 ? ' style="aspect-ratio:' + pomer.toFixed(3) + '"' : "") + ' aria-label="Otvoriť fotku ' + esc(p.nazov || "") + '">' +
+          '<img alt="" loading="lazy" decoding="async" data-pril-src="' + esc(p.nahlad || p.cesta) + '">' +
+          (navyse && i === ukaz.length - 1 ? '<span class="pril-viac">+' + navyse + "</span>" : "") + "</button>";
+      }).join("") +
+      fotky.slice(6).map(function (p, i) { return '<span hidden data-pril-foto="' + (i + 6) + '" data-cesta="' + esc(p.cesta) + '" data-nazov="' + esc(p.nazov || "") + '"></span>'; }).join("") + "</div>";
+    }
+    if (subory.length) h += '<div class="pril-subory">' + subory.map(function (p) {
+      var d = druhPrilohy(p), z = PRIL_DRUH[d] || PRIL_DRUH.text, stiahnut = !(p.typ === "application/pdf");
+      return '<a class="pril-subor ' + d + '" href="#" rel="noopener"' + (stiahnut ? "" : ' target="_blank"') + ' data-pril-subor="' + esc(p.cesta) + '" data-nazov="' + esc(p.nazov || "") + '" data-typ="' + esc(p.typ || "") + '">' +
+        '<span class="pril-ik" aria-hidden="true">' + z[0] + '</span><span class="pril-info"><b>' + esc(p.nazov || "Súbor") + "</b><small>" + esc(z[1] + (p.velkost ? " · " + velkostText(p.velkost) : "")) + "</small></span>" +
+        '<span class="pril-akcia" aria-hidden="true">' + (stiahnut ? "⬇" : "↗") + "</span></a>";
+    }).join("") + "</div>";
+    return h;
+  }
+  // klik na dokument: adresa je pripravená vopred; keď už vypršala, vypýtame novú
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("a[data-pril-subor]"); if (!a) return;
+    var c = a.dataset.prilSubor, z = S.prilUrl[c];
+    if (a.dataset.ok && z && z.do > Date.now()) return;
+    e.preventDefault();
+    var noveOkno = a.target === "_blank" ? window.open("", "_blank") : null;
+    delete S.prilUrl[c];
+    podpisPrilohy([c]).then(function (u) {
+      var x = u[c];
+      if (!x) { if (noveOkno) noveOkno.close(); return toast("Súbor sa nepodarilo otvoriť – možno ho odosielateľ medzičasom zmazal.", true); }
+      var h = odkazPrilohy(x, a.dataset.nazov, a.dataset.typ); a.href = h; a.dataset.ok = "1";
+      if (noveOkno) { noveOkno.opener = null; noveOkno.location.href = h; }
+      else { var t = document.createElement("a"); t.href = h; t.rel = "noopener"; document.body.appendChild(t); t.click(); t.remove(); }
+    });
+  });
+
+  // ---------- prehliadač fotiek (celá obrazovka, šípky, potiahnutie prstom, stiahnutie)
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest(".pril-foto"); if (!b) return;
+    var sada = b.closest("[data-pril-sada]"); if (!sada) return;
+    var zoz = Array.prototype.slice.call(sada.querySelectorAll("[data-pril-foto]")).map(function (x) {
+      var img = x.querySelector("img");
+      return { cesta: x.dataset.cesta, nazov: x.dataset.nazov, nahlad: img && img.src ? img.src : "" };
+    });
+    otvorFotky(zoz, Number(b.dataset.prilFoto) || 0);
+  });
+  function otvorFotky(zoz, i) {
+    var o = $("#pril-okno");
+    if (!o) {
+      o = document.createElement("div"); o.id = "pril-okno"; o.className = "pril-okno"; o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Fotka");
+      document.body.appendChild(o);
+    }
+    S.prilOkno = { zoz: zoz, i: i };
+    o.innerHTML = '<div class="po-hore"><span class="po-nazov" id="po-nazov"></span><span class="po-pocet" id="po-pocet"></span>' +
+      '<a class="po-btn" id="po-stiahnut" href="#" title="Stiahnuť fotku" aria-label="Stiahnuť fotku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>' +
+      '<button type="button" class="po-btn" data-po="zavriet" aria-label="Zavrieť">×</button></div>' +
+      '<div class="po-scena" data-po="pozadie"><img id="po-img" alt=""></div>' +
+      (zoz.length > 1 ? '<button type="button" class="po-sipka vlavo" data-po="vlavo" aria-label="Predošlá fotka">‹</button><button type="button" class="po-sipka vpravo" data-po="vpravo" aria-label="Ďalšia fotka">›</button>' : "");
+    o.onclick = function (e) {
+      var a = e.target.closest("[data-po]"); if (!a) return;
+      var k = a.dataset.po;
+      if (k === "zavriet" || (k === "pozadie" && e.target === a)) zavriFotky();
+      if (k === "vlavo") posunFotky(-1);
+      if (k === "vpravo") posunFotky(1);
+    };
+    var x0 = null;
+    o.ontouchstart = function (e) { x0 = e.touches.length === 1 ? e.touches[0].clientX : null; };
+    o.ontouchend = function (e) { if (x0 == null) return; var dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 50) posunFotky(dx < 0 ? 1 : -1); };
+    if (!S.prilOknoKl) {
+      S.prilOknoKl = function (e) {
+        if (!S.prilOkno) return;
+        if (e.key === "Escape") { e.stopPropagation(); zavriFotky(); }
+        if (e.key === "ArrowLeft") posunFotky(-1);
+        if (e.key === "ArrowRight") posunFotky(1);
+      };
+      document.addEventListener("keydown", S.prilOknoKl, true);
+    }
+    document.documentElement.classList.add("bez-posuvu");
+    ukazFotku();
+    setTimeout(function () { var z = o.querySelector('[data-po="zavriet"]'); if (z) z.focus({ preventScroll: true }); }, 30);
+  }
+  function posunFotky(k) {
+    var P = S.prilOkno; if (!P || P.zoz.length < 2) return;
+    P.i = (P.i + k + P.zoz.length) % P.zoz.length; ukazFotku();
+  }
+  function ukazFotku() {
+    var P = S.prilOkno, f = P && P.zoz[P.i]; if (!f) return;
+    var img = $("#po-img"), st = $("#po-stiahnut");
+    $("#po-nazov").textContent = f.nazov || "";
+    $("#po-pocet").textContent = P.zoz.length > 1 ? (P.i + 1) + " / " + P.zoz.length : "";
+    img.classList.add("nacitava");
+    if (f.nahlad) img.src = f.nahlad; else img.removeAttribute("src");
+    st.removeAttribute("href");
+    var cesta = f.cesta;
+    podpisPrilohy([cesta]).then(function (u) {
+      var x = u[cesta]; if (!S.prilOkno || S.prilOkno.zoz[S.prilOkno.i] !== f) return;
+      if (!x) { img.classList.remove("nacitava"); return toast("Fotku sa nepodarilo načítať.", true); }
+      var plna = new Image();
+      plna.onload = function () { if (S.prilOkno && S.prilOkno.zoz[S.prilOkno.i] === f) { img.src = x; img.classList.remove("nacitava"); } };
+      plna.onerror = function () { img.classList.remove("nacitava"); };
+      plna.src = x;
+      st.href = odkazPrilohy(x, f.nazov, "", true);
+    });
+  }
+  function zavriFotky() {
+    S.prilOkno = null;
+    var o = $("#pril-okno"); if (o) o.remove();
+    document.documentElement.classList.remove("bez-posuvu");
+  }
+
+  // ---------- výber súborov pred odoslaním (každá konverzácia má svoje)
+  S.chatPril = S.chatPril || {};
+  function prilohyKonv(k) { return S.chatPril[k || ""] || (S.chatPril[k || ""] = []); }
+  function pridajPrilohyChat(subory) {
+    var k = S.chatS || "", zoz = prilohyKonv(k), zle = [], velke = [], pridane = 0;
+    if (S.chatOdosiela && S.chatOdosiela[k]) return toast("Počkajte, kým sa odošlú predošlé súbory.", true);
+    Array.prototype.slice.call(subory || []).forEach(function (f) {
+      var typ = typPrilohy(f), foto = /^image\/(jpeg|png|webp)$/.test(typ);
+      if (!typ) return zle.push(f.name || "súbor");
+      if (f.size > (foto ? PRIL_FOTO_MAX : PRIL_MAX)) return velke.push(f.name || "súbor");
+      if (zoz.length >= PRIL_POCET) return;
+      var nazov = f.name && !/^image\.(png|jpe?g|gif|webp)$/i.test(f.name) ? f.name :
+        "Snímka " + new Date().toLocaleString("sk-SK", { day: "numeric", month: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(/\s+/g, " ").replace(/[\/:]/g, "-") + "." + (priponaSuboru(f.name) || typ.split("/")[1] || "png");
+      zoz.push({ id: idPrilohy(), subor: f, nazov: nazov, typ: typ, velkost: f.size, foto: jeFotka(typ), url: jeFotka(typ) ? URL.createObjectURL(f) : "" });
+      pridane++;
+    });
+    var celkom = (subory || []).length;
+    if (zle.length) toast("„" + zle.slice(0, 2).join("“, „") + "“ sa v chate poslať nedá. Poslať môžete fotky, PDF, Word, Excel, PowerPoint a textové súbory.", true);
+    else if (velke.length) toast("„" + velke.slice(0, 2).join("“, „") + "“ " + (velke.length > 1 ? "sú väčšie" : "je väčší") + " ako 25 MB – v chate sa poslať nedá.", true);
+    else if (pridane < celkom) toast("Naraz môžete poslať najviac " + PRIL_POCET + " súborov.", true);
+    kresliZasobnik();
+    var t = $("#chat-text"); if (t && window.matchMedia("(pointer: fine)").matches) t.focus();
+  }
+  function zrusPrilohu(k, id) {
+    var zoz = prilohyKonv(k);
+    S.chatPril[k] = zoz.filter(function (p) { if (p.id === id && p.url) URL.revokeObjectURL(p.url); return p.id !== id; });
+  }
+  function vycistiPrilohy(k) {
+    prilohyKonv(k).forEach(function (p) { if (p.url) URL.revokeObjectURL(p.url); });
+    S.chatPril[k] = [];
+  }
+  function kresliZasobnik() {
+    var el = $("#chat-pril-zas"); if (!el) return;
+    var k = S.chatS || "", zoz = prilohyKonv(k), stav = S.chatOdosiela && S.chatOdosiela[k];
+    el.hidden = !zoz.length;
+    var tl = $("#f-chat .chat-poslat"); if (tl) tl.classList.toggle("s-prilohou", !!zoz.length);
+    if (!zoz.length) { el.innerHTML = ""; return vyskaChatu(); }
+    var vel = zoz.reduce(function (s, p) { return s + (p.velkost || 0); }, 0);
+    el.innerHTML = '<div class="cpz-hl"><b>' + (stav ? esc(stav) : zoz.length + " " + (zoz.every(function (p) { return p.foto; }) ? slovoFotky(zoz.length) : slovoSubory(zoz.length)) + " na odoslanie") + "</b>" +
+      '<span class="meta">' + (stav ? "" : esc(velkostText(vel) + " · uvidí " + (S.chatS ? "len " + krstneMeno(S.chatS) : "celý tím"))) + "</span>" +
+      (stav ? "" : '<button type="button" class="btn-link" data-pril-zrus="vsetky">Zrušiť</button>') + "</div>" +
+      '<div class="cpz-zoz">' + zoz.map(function (p) {
+        var d = druhPrilohy(p), z = PRIL_DRUH[d] || PRIL_DRUH.text;
+        return '<div class="cpz-pol ' + (p.foto ? "foto" : "dok " + d) + (p.hotovo ? " hotovo" : "") + (stav && !p.hotovo ? " caka" : "") + '" title="' + esc(p.nazov) + '">' +
+          (p.foto ? '<img src="' + esc(p.url) + '" alt="">' : '<span class="pril-ik" aria-hidden="true">' + z[0] + '</span><span class="cpz-meno">' + esc(p.nazov) + "</span><small>" + esc(velkostText(p.velkost)) + "</small>") +
+          (stav ? "" : '<button type="button" class="cpz-x" data-pril-zrus="' + esc(p.id) + '" aria-label="Odobrať ' + esc(p.nazov) + '">×</button>') + "</div>";
+      }).join("") +
+      (stav || zoz.length >= PRIL_POCET ? "" : '<button type="button" class="cpz-pridat" data-pril-pridat title="Pridať ďalšie" aria-label="Pridať ďalšie súbory">+</button>') + "</div>";
+    vyskaChatu();
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-pril-zrus]"); if (!b) return;
+    var k = S.chatS || "";
+    if (b.dataset.prilZrus === "vsetky") vycistiPrilohy(k); else zrusPrilohu(k, b.dataset.prilZrus);
+    kresliZasobnik();
+  });
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest("[data-pril-pridat]")) return;
+    var inp = $("#chat-pril-inp"); if (inp) inp.click();
+  });
+  document.addEventListener("change", function (e) {
+    var inp = e.target.closest("[data-pril-vyber]"); if (!inp) return;
+    var f = inp.files; if (f && f.length) pridajPrilohyChat(f);
+    inp.value = "";
+  });
+  // zmenšenie fotky (a malý náhľad do chatu); keď ju prehliadač nevie otvoriť (napr. HEIC v Chrome), pošle sa originál
+  function nacitajObrazok(subor) {
+    return new Promise(function (ok) {
+      var img = new Image(), url = URL.createObjectURL(subor);
+      img.onload = function () { URL.revokeObjectURL(url); ok(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); ok(null); };
+      img.src = url;
+    });
+  }
+  function platnoNaJpeg(img, max, kvalita) {
+    var k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    var c = document.createElement("canvas"); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+    var g = c.getContext("2d"); g.fillStyle = "#ffffff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+    return new Promise(function (ok) { c.toBlob(function (b) { ok(b ? { blob: b, w: c.width, h: c.height } : null); }, "image/jpeg", kvalita); });
+  }
+  async function pripravSubor(p) {
+    var out = { blob: p.subor, typ: p.typ, nazov: p.nazov, pripona: priponaSuboru(p.nazov) || (Object.keys(PRIL_TYPY).find(function (x) { return PRIL_TYPY[x] === p.typ; }) || "bin") };
+    // supabase-js pri nahrávaní berie typ zo samotného súboru – niektoré prehliadače ho pri .docx či .xlsx nevyplnia
+    if (out.blob.type !== p.typ) out.blob = new Blob([p.subor], { type: p.typ });
+    if (!/^image\//.test(p.typ) || p.typ === "image/gif") return out;
+    var img = await nacitajObrazok(p.subor);
+    if (!img || !img.naturalWidth) return out;
+    var velka = p.subor.size > 1.5 * 1048576 || Math.max(img.naturalWidth, img.naturalHeight) > 2560 || !jeFotka(p.typ);
+    if (velka) {
+      var z = await platnoNaJpeg(img, 2560, 0.86);
+      if (z) { out.blob = z.blob; out.typ = "image/jpeg"; out.pripona = "jpg"; out.nazov = String(p.nazov).replace(/\.[a-z0-9]{1,5}$/i, "") + ".jpg"; out.w = z.w; out.h = z.h; }
+    }
+    if (!out.w) { out.w = img.naturalWidth; out.h = img.naturalHeight; }
+    if (Math.max(out.w, out.h) > 700 || out.blob.size > 300 * 1024) {
+      var n = await platnoNaJpeg(img, 640, 0.8);
+      if (n) out.nahlad = n.blob;
+    }
+    return out;
+  }
+  function chybaNahratia(err, nazov) {
+    var m = String((err && (err.message || err.error)) || err || "");
+    if (/exceeded|too large|maximum allowed size|413/i.test(m)) return "„" + nazov + "“ je väčší ako 25 MB – v chate sa poslať nedá.";
+    if (/mime|not supported|invalid_mime/i.test(m)) return "„" + nazov + "“ sa v chate poslať nedá – tento druh súboru nie je povolený.";
+    return "„" + nazov + "“ sa nepodarilo nahrať: " + chybaText(err);
+  }
+  // nahrá vybrané súbory a pošle správu (komu = null → celý tím)
+  async function odosliSPrilohami(komu, text) {
+    var k = komu || "", zoz = prilohyKonv(k).slice(), nahrate = [], prilohy = [];
+    var predpona = komu ? "dm/" + S.me.id + "/" + komu + "/" : "tim/";
+    S.chatOdosiela = S.chatOdosiela || {};
+    try {
+      for (var i = 0; i < zoz.length; i++) {
+        var p = zoz[i];
+        S.chatOdosiela[k] = "Nahrávam " + (zoz.length > 1 ? (i + 1) + " z " + zoz.length + "…" : "súbor…");
+        if ((S.chatS || "") === k) kresliZasobnik();
+        var s = await pripravSubor(p), id = idPrilohy(), cesta = predpona + id + "." + s.pripona;
+        var r = await sb.storage.from(PRIL_B).upload(cesta, s.blob, { contentType: s.typ, upsert: false, cacheControl: "31536000" }).catch(function (e) { return { error: e }; });
+        if (r.error) throw new Error(chybaNahratia(r.error, p.nazov));
+        nahrate.push(cesta);
+        var zaznam = { cesta: cesta, nazov: s.nazov };
+        if (s.w) { zaznam.w = s.w; zaznam.h = s.h; }
+        if (s.nahlad) {
+          var cn = predpona + id + "-n.jpg";
+          var rn = await sb.storage.from(PRIL_B).upload(cn, s.nahlad, { contentType: "image/jpeg", upsert: false, cacheControl: "31536000" }).catch(function (e) { return { error: e }; });
+          if (!rn.error) { nahrate.push(cn); zaznam.nahlad = cn; }
+        }
+        prilohy.push(zaznam);
+        p.hotovo = true;
+      }
+      S.chatOdosiela[k] = "Odosielam…";
+      if ((S.chatS || "") === k) kresliZasobnik();
+      if (komu) await rpc("poslat_sukromnu_spravu", { p_komu: komu, p_text: text, p_prilohy: prilohy });
+      else await rpc("poslat_spravu", { p_text: text, p_prilohy: prilohy });
+    } catch (err) {
+      zoz.forEach(function (p) { p.hotovo = false; });
+      if (nahrate.length) sb.storage.from(PRIL_B).remove(nahrate).catch(function () {});
+      S.chatOdosiela[k] = "";
+      if ((S.chatS || "") === k) kresliZasobnik();
+      throw err;
+    }
+    S.chatOdosiela[k] = "";
+    vycistiPrilohy(k);
+    if ((S.chatS || "") === k) kresliZasobnik();
+  }
+  // pri zmazaní správy zmažeme aj jej súbory v úložisku
+  function zmazSuboryPriloh(pr) {
+    var c = cestyPriloh(pr); if (!c.length) return;
+    c.forEach(function (x) { delete S.prilUrl[x]; });
+    sb.storage.from(PRIL_B).remove(c).catch(function () {});
+  }
+  // panel „Fotky a súbory“ – všetko, čo si v konverzácii poslali
+  function htmlSuboryKonverzacie() {
+    var zoz = oknoSpravy().filter(function (m) { return m.prilohy && m.prilohy.length; });
+    var fotky = [], dok = [];
+    zoz.forEach(function (m) { m.prilohy.forEach(function (p) { (jeFotka(p.typ) ? fotky : dok).push({ p: p, m: m }); }); });
+    fotky.reverse(); dok.reverse();
+    if (!fotky.length && !dok.length) return '<div class="prazdne"><span class="dl-ikona velka">' + IKONA_SPINKA + "</span><b>Zatiaľ žiadne súbory</b><span class=\"meta\">Fotky, zmluvy a dokumenty, ktoré si tu pošlete, nájdete na jednom mieste.</span></div>";
+    return '<div class="chat-subory">' +
+      (fotky.length ? "<h4>📷 Fotky (" + fotky.length + ')</h4><div class="cs-fotky" data-pril-sada="subory">' + fotky.map(function (x, i) {
+        return '<button type="button" class="pril-foto" data-pril-foto="' + i + '" data-cesta="' + esc(x.p.cesta) + '" data-nazov="' + esc(x.p.nazov || "") + '" title="' + esc((x.m.makler_id === S.me.id ? "Vy" : krstneMeno(x.m.makler_id)) + " · " + datum(x.m.vytvorene, true)) + '">' +
+          '<img alt="" loading="lazy" data-pril-src="' + esc(x.p.nahlad || x.p.cesta) + '"></button>';
+      }).join("") + "</div>" : "") +
+      (dok.length ? "<h4>📎 Dokumenty (" + dok.length + ')</h4><div class="cs-dok">' + dok.map(function (x) {
+        return '<div class="cs-dok-pol">' + htmlPriloh([x.p], "") + '<span class="meta">' + esc((x.m.makler_id === S.me.id ? "Vy" : krstneMeno(x.m.makler_id)) + " · " + datum(x.m.vytvorene, true)) + "</span></div>";
+      }).join("") + "</div>" : "") + "</div>";
+  }
+  function bublinaSpravy(m, cas) {
+    var pr = m.prilohy && m.prilohy.length ? m.prilohy : null, txt = String(m.text || "").trim();
+    if (!pr) return '<div class="bublina">' + textSpravy(m.text) + '<span class="sprava-cas">' + cas + "</span></div>";
+    var lenFotky = !txt && pr.every(function (p) { return jeFotka(p.typ); });
+    return '<div class="bublina s-pril' + (lenFotky ? " len-fotky" : "") + (pr.length === 1 && jeFotka(pr[0].typ) ? " jedna-fotka" : "") + '">' + htmlPriloh(pr, (m.dm ? "d" : "t") + m.id) +
+      (txt ? '<span class="bublina-text">' + textSpravy(m.text) + "</span>" : "") + '<span class="sprava-cas">' + cas + "</span></div>";
+  }
   function htmlSpravy(m, predosla) {
     var ja = m.makler_id === S.me.id, h = "";
     if (!m.makler_id) {
@@ -7490,7 +7893,7 @@
     return h + '<div class="sprava' + (ja ? " ja" : "") + (spojit ? " spojena" : "") + '" data-sprava="' + m.id + '">' +
       (!ja ? '<span class="sprava-av">' + (spojit ? "" : avatar(m.makler_id, 36)) + "</span>" : "") +
       '<div class="sprava-telo">' + (!ja && !spojit && !m.dm ? '<div class="sprava-meno" style="--h:' + odtienMena(m.makler_id) + '">' + esc(meno(m.makler_id)) + "</div>" : "") +
-      '<div class="bublina">' + textSpravy(m.text) + '<span class="sprava-cas">' + cas + "</span></div></div>" + zmaz + "</div>";
+      bublinaSpravy(m, cas) + "</div>" + zmaz + "</div>";
   }
   // pod mojou poslednou súkromnou správou: Doručené / Prečítané
   function znackaPrecitania() {
@@ -7528,12 +7931,12 @@
         (n ? '<span class="kto-n" aria-label="' + n + ' neprečítané">' + (n > 99 ? "99+" : n) + "</span>" : "") + "</button>";
     }
     var h = pol("", '<span class="kto-tim">' + ikona("chat") + "</span>", "Celý tím", "Tím",
-      tPosl ? (tPosl.makler_id === S.me.id ? "Vy: " : tPosl.makler_id ? krstneMeno(tPosl.makler_id) + ": " : "") + tPosl.text : "Správy pre všetkých",
+      tPosl ? (tPosl.makler_id === S.me.id ? "Vy: " : tPosl.makler_id ? krstneMeno(tPosl.makler_id) + ": " : "") + nahladSpravy(tPosl) : "Správy pre všetkých",
       tPosl ? casKonverzacie(tPosl.vytvorene) : "", nT, false);
     h += kolegovia.map(function (k) {
       var p = posl[k.id];
       return pol(k.id, avatar(k.id, 40), k.meno || k.email, krstneMeno(k.id),
-        p ? (p.od_id === S.me.id ? "Vy: " : "") + p.text : "🔒 Napísať súkromne",
+        p ? (p.od_id === S.me.id ? "Vy: " : "") + nahladSpravy(p) : "🔒 Napísať súkromne",
         p ? casKonverzacie(p.vytvorene) : "", neprecOd(k.id), jeOnline(k));
     }).join("");
     el.innerHTML = h;
@@ -7571,7 +7974,8 @@
     var h = '<div class="box chat"><div class="chat-rozl">' +
       '<nav class="chat-kto" aria-label="Konverzácie"><div class="chat-kto-hl"><b>Správy</b><span class="meta">Celému tímu alebo len jednému kolegovi</span></div>' +
       '<div class="chat-kto-zoz" id="chat-kto"></div></nav>' +
-      '<div class="chat-hlavny"><div class="chat-hlava">' + hlava +
+      '<div class="chat-hlavny" data-pustit="' + esc("Pustite súbory sem – uvidí ich " + (s ? "len " + krstneMeno(s.id) : "celý tím")) + '"><div class="chat-hlava">' + hlava +
+      '<button type="button" class="chat-nast-btn chat-sub-btn" id="chat-sub-btn" aria-pressed="' + !!S.chatSubory + '" title="Fotky a súbory" aria-label="Fotky a súbory v tejto konverzácii">' + IKONA_SPINKA + "</button>" +
       '<button type="button" class="chat-nast-btn" id="chat-nast-btn" aria-expanded="' + !!S.chatNast + '" title="Upozornenia" aria-label="Nastavenia upozornení">🔔</button></div>' +
       (S.chatNast ? '<div class="chat-nast"><b>Upozornenia na nové správy</b>' +
         '<label class="toggle"><input type="checkbox" data-chat-nast="popup"' + (nastChat("popup") ? " checked" : "") + "> Okno s obálkou pri novej správe</label>" +
@@ -7579,12 +7983,18 @@
         ("Notification" in window ? (Notification.permission === "granted" ? '<span class="meta">✅ Upozornenia mimo aplikácie sú povolené (keď je Týpek otvorený na pozadí).</span>' :
           Notification.permission === "denied" ? '<span class="meta">Upozornenia mimo aplikácie sú v prehliadači zablokované – povoľte ich v nastaveniach stránky.</span>' :
           '<button type="button" class="btn" id="chat-notif">📱 Povoliť upozornenia aj mimo aplikácie</button>') : "") + "</div>" : "") +
-      '<div class="chat-spravy" id="chat-spravy">' +
+      '<div class="chat-spravy" id="chat-spravy"' + (S.chatSubory ? " hidden" : "") + ">" +
       (zoz.length ? zoz.map(function (m, i) { return htmlSpravy(m, zoz[i - 1]); }).join("") : prazdne) +
       "</div>" +
+      (S.chatSubory ? '<div class="chat-spravy chat-subory-box" id="chat-subory"><div class="cs-hl"><div><b>Fotky a súbory</b><span class="meta">' +
+        esc(s ? "🔒 Len vy dvaja – " + (s.meno || s.email) : "Všetko, čo si poslal celý tím") + '</span></div><button type="button" class="btn" id="chat-sub-spat">← Späť na správy</button></div>' +
+        '<div id="chat-subory-obsah">' + htmlSuboryKonverzacie() + "</div></div>" : "") +
+      '<div class="chat-pril-zas" id="chat-pril-zas" hidden></div>' +
       '<div class="chat-emoji" id="chat-emoji" hidden>' + ["👍", "👏", "🔥", "😂", "🙏", "💪", "🎉", "🏠", "🔑", "📞", "✅", "❤️"].map(function (x) {
         return '<button type="button" data-emoji="' + x + '" aria-label="Vložiť ' + x + '">' + x + "</button>"; }).join("") + "</div>" +
       '<form class="chat-form" id="f-chat"><button type="button" class="chat-emoji-btn" id="chat-emoji-btn" aria-label="Smajlíky" aria-expanded="false">😊</button>' +
+      '<button type="button" class="chat-emoji-btn chat-pril-btn" id="chat-pril-btn" aria-label="Priložiť fotku alebo súbor" title="Priložiť fotku alebo súbor">' + IKONA_SPINKA + "</button>" +
+      '<input type="file" id="chat-pril-inp" multiple accept="' + PRIL_PRIJAT + '" data-pril-vyber hidden>' +
       '<textarea id="chat-text" rows="1" maxlength="2000" data-konv="' + esc(S.chatS || "") + '" placeholder="' + esc(s ? "Napíšte súkromnú správu…" : "Správa pre celý tím…") + '" aria-label="Správa"></textarea>' +
       '<button class="chat-poslat" type="submit" aria-label="Odoslať"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z" fill="currentColor"/></svg></button></form></div></div></div>';
     el.innerHTML = h;
@@ -7594,13 +8004,33 @@
       var b = e.target.closest("[data-konv]"); if (!b) return;
       var id = b.dataset.konv || null;
       if (id === S.chatS) return;
-      S.chatS = id; vykresliChat();
+      S.chatS = id; S.chatSubory = false; vykresliChat();
       if (window.matchMedia("(pointer: fine)").matches) $("#chat-text").focus();
     };
     var box = $("#chat-spravy");
     znackaPrecitania();
+    kresliZasobnik();
     vyskaChatu(); box.scrollTop = box.scrollHeight;
+    doplnPrilohy(el);
     var t = $("#chat-text");
+    // prílohy: spinka, potiahnutie súborov do chatu, vloženie snímky obrazovky (Ctrl+V)
+    $("#chat-pril-btn").onclick = function () { $("#chat-pril-inp").click(); };
+    $("#chat-sub-btn").onclick = function () { S.chatSubory = !S.chatSubory; vykresliChat(); };
+    var spat = $("#chat-sub-spat"); if (spat) spat.onclick = function () { S.chatSubory = false; vykresliChat(); };
+    var hl = el.querySelector(".chat-hlavny");
+    var suSubory = function (e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0; };
+    ["dragenter", "dragover"].forEach(function (ev) {
+      hl.addEventListener(ev, function (e) { if (!suSubory(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; hl.classList.add("nad"); });
+    });
+    hl.addEventListener("dragleave", function (e) { if (!e.relatedTarget || !hl.contains(e.relatedTarget)) hl.classList.remove("nad"); });
+    hl.addEventListener("drop", function (e) {
+      hl.classList.remove("nad");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) { e.preventDefault(); pridajPrilohyChat(e.dataTransfer.files); }
+    });
+    t.addEventListener("paste", function (e) {
+      var f = e.clipboardData && e.clipboardData.files;
+      if (f && f.length) { e.preventDefault(); pridajPrilohyChat(f); }
+    });
     $("#chat-nast-btn").onclick = function () { S.chatNast = !S.chatNast; vykresliChat(); };
     el.querySelectorAll("[data-chat-nast]").forEach(function (c) { c.onchange = function () { nastavChat(c.dataset.chatNast, c.checked); if (c.checked && c.dataset.chatNast === "zvuk") cinknut(); }; });
     var nb = $("#chat-notif");
@@ -7616,15 +8046,27 @@
     });
     $("#f-chat").addEventListener("submit", async function (e) {
       e.preventDefault();
-      var v = t.value.trim(); if (!v) return;
+      var komu = S.chatS, k = komu || "", pr = prilohyKonv(k);
+      var v = t.value.trim(); if (!v && !pr.length) return;
+      if (S.chatOdosiela && S.chatOdosiela[k]) return;
       var btn = e.target.querySelector(".chat-poslat"); btn.disabled = true;
-      var komu = S.chatS;
       try {
-        if (komu) { await rpc("poslat_sukromnu_spravu", { p_komu: komu, p_text: v }); oznacLokalnePrecitane(komu); }
+        if (pr.length) {
+          t.readOnly = true;
+          await odosliSPrilohami(komu, v);
+          if (komu) oznacLokalnePrecitane(komu); else S.me.chat_precitane = posledneTim();
+        }
+        else if (komu) { await rpc("poslat_sukromnu_spravu", { p_komu: komu, p_text: v }); oznacLokalnePrecitane(komu); }
         else { await rpc("poslat_spravu", { p_text: v }); S.me.chat_precitane = posledneTim(); }
-        t.value = ""; t.style.height = "auto"; await chatNove();
+        // ak medzičasom prešiel do inej konverzácie, jeho rozpísaný text tam nemažeme
+        var tt = $("#chat-text");
+        if (tt && (tt.dataset.konv || "") === k) { tt.value = ""; tt.style.height = "auto"; }
+        else if (S.chatKoncepty) S.chatKoncepty[k] = "";
+        await chatNove();
       } catch (err) { toast(chybaText(err), true); }
-      btn.disabled = false; t.focus();
+      t.readOnly = false;
+      var b2 = $("#f-chat .chat-poslat"); if (b2) b2.disabled = false;
+      var t2 = $("#chat-text"); if (t2) { t2.readOnly = false; t2.focus(); }
     });
     oznacPrecitane();
   }
@@ -7650,16 +8092,20 @@
     var html = nove.map(function (m, i) { return htmlSpravy(m, vsetky[start + i - 1]); }).join("");
     box.insertAdjacentHTML("beforeend", html.replace(/class="sprava/g, 'class="nova sprava'));
     znackaPrecitania();
+    doplnPrilohy(box);
+    var so = $("#chat-subory-obsah");
+    if (so && nove.some(function (m) { return m.prilohy && m.prilohy.length; })) { so.innerHTML = htmlSuboryKonverzacie(); doplnPrilohy(so); }
     if (dole || nove.some(function (m) { return m.makler_id === S.me.id; })) box.scrollTop = box.scrollHeight;
   }
   document.addEventListener("click", async function (e) {
     var b = e.target.closest("[data-zmaz-spravu]");
     if (!b) return;
-    var id = Number(b.dataset.zmazSpravu);
-    if (!confirm2("Zmazať správu? Zmizne úplne – neuvidí ju nikto z tímu.")) return;
+    var id = Number(b.dataset.zmazSpravu), sp = S.chat.find(function (x) { return x.id === id; }), pr = sp && sp.prilohy;
+    if (!confirm2("Zmazať správu? Zmizne úplne" + (pr && pr.length ? " aj s prílohami" : "") + " – neuvidí ju nikto z tímu.")) return;
     var riadok = b.closest(".sprava"); if (riadok) riadok.classList.add("mizne");
     try {
       await rpc("zmazat_spravu", { p_id: id });
+      zmazSuboryPriloh(pr);
       S.chat = S.chat.filter(function (x) { return x.id !== id; });
       setTimeout(vykresliChat, riadok ? 220 : 0);
       toast("Správa je zmazaná.");
@@ -7668,11 +8114,12 @@
   document.addEventListener("click", async function (e) {
     var b = e.target.closest("[data-zmaz-dm]");
     if (!b) return;
-    var id = Number(b.dataset.zmazDm);
-    if (!confirm2("Zmazať správu? Zmizne úplne – neuvidí ju ani " + krstneMeno(S.chatS) + ".")) return;
+    var id = Number(b.dataset.zmazDm), sp = S.dm.find(function (x) { return x.id === id; }), pr = sp && sp.prilohy;
+    if (!confirm2("Zmazať správu? Zmizne úplne" + (pr && pr.length ? " aj s prílohami" : "") + " – neuvidí ju ani " + krstneMeno(S.chatS) + ".")) return;
     var riadok = b.closest(".sprava"); if (riadok) riadok.classList.add("mizne");
     try {
       await rpc("zmazat_sukromnu_spravu", { p_id: id });
+      zmazSuboryPriloh(pr);
       S.dm = S.dm.filter(function (x) { return x.id !== id; });
       setTimeout(vykresliChat, riadok ? 220 : 0);
       toast("Správa je zmazaná.");
