@@ -57,6 +57,8 @@ jobs:
           RewriteRule ^(?!stranka\.html$)[^/]+\.html$ https://app.realitnytypek.sk/$0 [L,R=302]
           # web makléra pripravený serverom (Google, Facebook, WhatsApp); stranka.html zostáva ako záloha
           RewriteRule ^stranka\.html$ stranka.php [L,QSA]
+          # stránka ponuky pripravená serverom: pri zdieľaní na Facebooku či WhatsAppe ukáže fotku, názov a cenu
+          RewriteRule ^ponuka\.html$ ponuka.php [L,QSA]
           RewriteRule ^robots\.txt$ robots.php [L]
           RewriteRule ^sitemap\.xml$ sitemap.php [L]
           RewriteRule ^_ - [F]

@@ -45,6 +45,7 @@
     CISELNE.forEach(function (k) {
       var v = p[k[0]]; if (v === null || v === undefined || v === "") return;
       if (k[0] === "poschodie") v = Number(v) === 0 ? "prízemie" : v + (p.pocet_podlazi ? " z " + p.pocet_podlazi : "");
+      else if (k[0] === "rok_vystavby") v = String(v);   // rok bez medzery (1985, nie 1 985)
       else v = nf.format(v) + k[2];
       if (k[0] === "pocet_podlazi" && p.poschodie !== null && p.poschodie !== undefined && p.poschodie !== "") return;
       out.push([k[1], v]);
@@ -101,6 +102,50 @@
     if (v && v.logo) document.querySelectorAll('img[src^="logo.png"]').forEach(function (i) { i.src = v.logo; });
   }).observe(document.documentElement, { childList: true, subtree: true });
 
+  // ochrana formulárov proti robotom (rovnaká ako na webe makléra): prehliadač nájde číslo, pri ktorom
+  // SHA-256 z „typek1|adresa|formulár|čas|číslo“ začína štyrmi nulami; server to overí a každé riešenie prijme raz
+  var K256 = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  var SHA_W = new Array(64);
+  function sha256Zaciatok(t) {
+    var n = t.length, l = ((n + 9 + 63) >> 6) << 4, m = new Array(l), i, j;
+    for (i = 0; i < l; i++) m[i] = 0;
+    for (i = 0; i < n; i++) m[i >> 2] |= (t.charCodeAt(i) & 0xff) << (24 - (i & 3) * 8);
+    m[n >> 2] |= 0x80 << (24 - (n & 3) * 8); m[l - 1] = n * 8;
+    var h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a, h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19, w = SHA_W;
+    for (j = 0; j < l; j += 16) {
+      var a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+      for (i = 0; i < 64; i++) {
+        if (i < 16) w[i] = m[j + i] | 0;
+        else { var x = w[i - 15], y = w[i - 2]; w[i] = (((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3)) + w[i - 7] + (((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10)) + w[i - 16] | 0; }
+        var t1 = h + (((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7))) + ((e & f) ^ (~e & g)) + K256[i] + w[i] | 0;
+        var t2 = (((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10))) + ((a & b) ^ (a & c) ^ (b & c)) | 0;
+        h = g; g = f; f = e; e = d + t1 | 0; d = c; c = b; b = a; a = t1 + t2 | 0;
+      }
+      h0 = h0 + a | 0; h1 = h1 + b | 0; h2 = h2 + c | 0; h3 = h3 + d | 0; h4 = h4 + e | 0; h5 = h5 + f | 0; h6 = h6 + g | 0; h7 = h7 + h | 0;
+    }
+    return h0 >>> 0;
+  }
+  var POW = {};
+  function overenie(adresa, zdroj) {
+    var a = String(adresa || "").trim().toLowerCase().replace(/[^\x20-\x7e]/g, ""), now = Math.floor(Date.now() / 1000), c = POW[zdroj];
+    if (c && c.a === a && now - c.ts < 1500) return c.p;
+    var pred = "typek1|" + a + "|" + zdroj + "|" + now + "|", n = 0;
+    var p = new Promise(function (res) {
+      (function krok() {
+        var t0 = Date.now();
+        while (Date.now() - t0 < 25) { for (var i = 0; i < 400; i++, n++) { var k = n.toString(36); if ((sha256Zaciatok(pred + k) >>> 16) === 0) return res({ ts: String(now), n: k }); } }
+        setTimeout(krok, 0);
+      })();
+    });
+    POW[zdroj] = { a: a, ts: now, p: p };
+    return p;
+  }
+  function overeniePouzite(zdroj) { delete POW[zdroj]; }
+
   window.TYPEK = { CFG: CFG, sb: sb, nf: nf, esc: esc, eur: eur, rpc: rpc, fotkaUrl: fotkaUrl, nazov: nazov, lokalita: lokalita, cena: cena, cenaM2: cenaM2,
-    parametre: parametre, telOdkaz: telOdkaz, waOdkaz: waOdkaz, avatar: avatar, param: param, datum: datum, verejnyOdkaz: verejnyOdkaz };
+    parametre: parametre, telOdkaz: telOdkaz, waOdkaz: waOdkaz, avatar: avatar, param: param, datum: datum, verejnyOdkaz: verejnyOdkaz,
+    overenie: overenie, overeniePouzite: overeniePouzite };
 })();

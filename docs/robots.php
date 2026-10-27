@@ -10,4 +10,9 @@ if ($domena !== '') {
 }
 echo "User-agent: *\n";
 foreach (['/$', '/index.html', '/web-editor.html', '/report.html', '/sprava.html', '/letak.html', '/recenzia.html', '/ponuka.html', '/zdielaj.php', '/odhlasit.php', '/potvrdit.php', '/*nahlad=1'] as $z) echo 'Disallow: ' . $z . "\n";
-echo "Allow: /stranka.html\n\nSitemap: " . $APP . "sitemap.xml\n";
+echo "Allow: /stranka.html\n\n";
+// roboty sociálnych sietí smú otvoriť stránku ponuky, aby pri zdieľaní ukázali fotku, názov a cenu
+// (vo vyhľadávačoch ostáva ponuka skrytá – stránka má noindex)
+foreach (['facebookexternalhit', 'Facebot', 'meta-externalagent', 'WhatsApp', 'LinkedInBot', 'Twitterbot', 'TelegramBot', 'Viber', 'Slackbot', 'Discordbot', 'SkypeUriPreview'] as $b) echo 'User-agent: ' . $b . "\n";
+foreach (['/$', '/index.html', '/web-editor.html', '/report.html', '/sprava.html', '/letak.html', '/recenzia.html', '/odhlasit.php', '/potvrdit.php', '/*nahlad=1'] as $z) echo 'Disallow: ' . $z . "\n";
+echo "Allow: /ponuka.html\nAllow: /zdielaj.php\nAllow: /stranka.html\n\nSitemap: " . $APP . "sitemap.xml\n";

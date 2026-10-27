@@ -3615,6 +3615,7 @@
     }
     h += "</div>" + '<div class="pf-pata"><button class="btn ghost" type="button" data-pf="spat"' + (E.krok === 0 ? " disabled" : "") + ">← Späť</button>" +
       '<button class="btn" type="button" data-pf="koncept">Uložiť ako koncept</button>' +
+      '<button class="btn" type="button" data-pf="nahlad" title="Uloží ponuku a otvorí ju tak, ako ju uvidí klient">' + (p.stav && p.stav !== "koncept" ? "👁 Uložiť a pozrieť náhľad" : "👁 Náhľad") + "</button>" +
       (E.krok < KROKY.length - 1 ? '<button class="btn primary" type="button" data-pf="dalej">Ďalej →</button>' :
         '<button class="btn primary ulozit" type="button" data-pf="zverejnit"' + (p.stav && p.stav !== "koncept" ? " data-ulozit" : "") + ">" + (p.stav && p.stav !== "koncept" ? "✓ Uložiť zmeny" : "✓ Uložiť a zverejniť") + "</button>") + "</div></div>";
     el.innerHTML = h;
@@ -3753,6 +3754,25 @@
       if ((p.nazov || p.popis) && !confirm2("Prepísať názov, intro a popis navrhnutým textom?")) return;
       var t = navrhniText(p, E.i); p.nazov = t.nazov; p.intro = t.intro; p.popis = t.popis;
       ulozKoncept(); vykresliFormularPonuky(); toast("✨ Text je navrhnutý – upravte ho podľa seba."); return;
+    }
+    if (a === "nahlad") {
+      // uloží ponuku (nová ostane konceptom, klient ju neuvidí; zverejnená si nechá svoj stav) a otvorí ju tak, ako ju uvidí klient
+      var okno = naPloche() ? null : window.open("", "_blank");   // okno sa musí otvoriť hneď po kliknutí, inak ho prehliadač zablokuje
+      if (okno) { try { okno.document.title = "Náhľad ponuky"; okno.document.body.innerHTML = '<p style="font:16px system-ui,sans-serif;padding:24px;color:#1e2a35">Ukladám ponuku a pripravujem náhľad…</p>'; } catch (e) { /* nič */ } }
+      var stavN = E.p.stav && E.p.stav !== "koncept" ? E.p.stav : "koncept";
+      var dataN = Object.assign({}, E.p, { stav: stavN });
+      delete dataN.vytvoril; delete dataN.vytvorene; delete dataN.upravene; delete dataN.historia_cien; delete dataN.kancelaria;
+      document.querySelectorAll(".pf-pata .btn").forEach(function (x) { x.disabled = true; });
+      try {
+        var idN = await rpc("ulozit_nehnutelnost", { p: dataN, p_int: E.i });
+        E.p.id = idN; E.p.stav = stavN; ulozKoncept();
+        var urlN = "ponuka.html?id=" + idN + "&nahlad=1";
+        if (okno && !okno.closed) okno.location.href = urlN; else nahladPonuky(idN);
+        toast(stavN === "koncept" ? "👁 Uložené ako koncept – klient ponuku zatiaľ nevidí." : "👁 Zmeny sú uložené.");
+        nacitajPonuky().catch(function () { /* zoznam sa obnoví neskôr */ });
+      } catch (err) { if (okno) okno.close(); toast(chybaText(err), true); }
+      if (S.ponukaEdit === E) vykresliFormularPonuky();
+      return;
     }
     if (a === "koncept" || a === "zverejnit") {
       var stav = a === "koncept" ? (E.p.stav && E.p.stav !== "koncept" && E.uprava ? E.p.stav : "koncept") : (E.p.stav && E.p.stav !== "koncept" ? E.p.stav : "aktivne");
@@ -4100,6 +4120,25 @@
 
   // ------------------------------------------------------------ NÁSTROJE K PONUKE: zdieľanie, leták, report, obhliadky, export
   function verejnyOdkaz(id) { return new URL("ponuka.html?id=" + id, location.href).href; }
+  // náhľad ponuky tak, ako ju uvidí klient. V prehliadači sa otvorí na novej karte; v aplikácii nainštalovanej na ploche
+  // (najmä iPhone) by nová karta nemala prihlásenie, preto sa náhľad ukáže priamo v aplikácii cez celú obrazovku.
+  function nahladPonuky(id) {
+    var url = "ponuka.html?id=" + encodeURIComponent(id) + "&nahlad=1";
+    if (!naPloche()) { window.open(url, "_blank", "noopener"); return; }
+    var o = document.createElement("div"); o.className = "nahlad-okno"; o.setAttribute("role", "dialog"); o.setAttribute("aria-label", "Náhľad ponuky");
+    o.innerHTML = '<div class="nahlad-lista"><b>👁 Náhľad – takto ponuku uvidí klient</b><button class="btn" type="button" data-zavriet-nahlad>Zavrieť</button></div>' +
+      '<iframe src="' + esc(url) + '" title="Náhľad ponuky"></iframe>';
+    function zavri() { o.remove(); document.removeEventListener("keydown", kl); }
+    function kl(e) { if (e.key === "Escape") zavri(); }
+    o.querySelector("[data-zavriet-nahlad]").onclick = zavri;
+    document.addEventListener("keydown", kl);
+    document.body.appendChild(o);
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("[data-nahlad-ponuky]");
+    if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    e.preventDefault(); nahladPonuky(a.dataset.nahladPonuky);
+  });
   function kopirujStaro(text) {
     var t = document.createElement("textarea"); t.value = text; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
     document.body.appendChild(t); t.select(); try { document.execCommand("copy"); } catch (e) { /* nič */ } t.remove();
@@ -4189,6 +4228,7 @@
     var Z = (S.zobrazenia || {})[p.id] || { spolu: 0, d7: 0 };
     var nO = (S.obhliadky || []).filter(function (o) { return o.nehnutelnost_id === p.id && !o.zrusena; }).length, nD = dopytyPrePonuku(p).length;
     var h = '<div class="pd-nastroje">' +
+      '<a class="btn" href="ponuka.html?id=' + p.id + '&amp;nahlad=1" target="_blank" rel="noopener" data-nahlad-ponuky="' + p.id + '" title="Otvorí stránku ponuky tak, ako ju uvidí klient">👁 Pozrieť náhľad</a>' +
       '<button class="btn" type="button" data-pdn="zdielat" aria-pressed="' + (S.pdPanel === "zdielat") + '">🔗 Poslať klientovi</button>' +
       '<a class="btn" href="letak.html?id=' + p.id + '" target="_blank" rel="noopener">🖨 Leták (PDF)</a>' +
       (mozem ? '<button class="btn" type="button" data-pdn="report" aria-pressed="' + (S.pdPanel === "report") + '">📊 Report majiteľovi</button>' : "") +
