@@ -226,7 +226,22 @@
     try { sessionStorage.setItem("typek-odhlaseny", "Prihlásenie vypršalo alebo ste sa odhlásili na inom zariadení. Prihláste sa znova – nič sa nestratilo."); } catch (e) { /* nič */ }
     sb.auth.signOut({ scope: "local" }).catch(function () {}).then(function () { history.replaceState(null, "", location.pathname); location.reload(); });
   }
-  sb.auth.onAuthStateChange(function (udalost) { if (udalost === "SIGNED_OUT" && S.me) prihlasenieVyprsalo(); });
+  // Odhlásenie oznámené z iného okna Týpka na tomto zariadení. Môže prísť aj oneskorene – okno, ktoré bolo
+  // v mobile dlho na pozadí, ho dostane až po prebudení, keď už je maklér medzitým znova prihlásený.
+  // Preto tu nič neodhlasujeme (to by zrušilo aj nové prihlásenie): ak je uložené platné prihlásenie toho istého
+  // makléra, pokračujeme ďalej; inak len obnovíme stránku a ukáže sa prihlásenie.
+  function odhlasenyInde() {
+    if (!S.me || S.vyprsalo || S.odhlasujem) return;
+    var ul = null;
+    try { ul = JSON.parse(localStorage.getItem(sb.auth.storageKey) || "null"); } catch (e) { /* bez úložiska */ }
+    if (ul && ul.refresh_token && ul.user && ul.user.id === S.me.id) return;
+    S.vyprsalo = true;
+    if (!ul || !ul.refresh_token) {
+      try { sessionStorage.setItem("typek-odhlaseny", "Odhlásili ste sa v inom okne Týpka. Prihláste sa znova – nič sa nestratilo."); } catch (e) { /* nič */ }
+    }
+    history.replaceState(null, "", location.pathname); location.reload();
+  }
+  sb.auth.onAuthStateChange(function (udalost) { if (udalost === "SIGNED_OUT" && S.me) setTimeout(odhlasenyInde, 300); });
   async function funkcia(telo) {
     var ses = (await sb.auth.getSession()).data.session;
     var r = await fetch(CFG.supabaseUrl + "/functions/v1/makleri", {
@@ -971,6 +986,9 @@
     } else { history.replaceState({ tab: "inzeraty" }, "", "#inzeraty"); prejdi("inzeraty", decodeURIComponent(m[2])); }
   });
   window.addEventListener("popstate", function (e) {
+    // otvorená fotka: Späť ju len zatvorí; zatvorenie krížikom vráti históriu bez prekreslenia stránky
+    if (S.ignorujPop) { S.ignorujPop = false; return; }
+    if (S.prilOknoHist) { zavriFotky(true); return; }
     if (!S.me) return;
     var st = e.state || { tab: tabZAdresy() || "domov" };
     S.tab = tabPovoleny(st.tab) ? st.tab : "domov";
@@ -6958,6 +6976,7 @@
       sb.from("chat_reakcie").select("*").order("id", { ascending: false }).limit(400)
     ]);
     var t = r[0], d = r[1], rk = r[2];
+    if (!t.error && !d.error) S.chatSnap = Date.now() - 3000;
     S.reak = S.reak || [];
     if (!rk.error) pridajReakcie(rk.data.reverse());
     if (!t.error) {
@@ -7007,12 +7026,14 @@
   }
   async function chatNoveRaz() {
     if (!S.me) return;
+    var snap = Date.now();
     var r = await Promise.all([
       sb.from("spravy").select("*").gt("id", S.chatMax).order("id", { ascending: true }).limit(200),
       sb.from("sukromne_spravy").select("*").gt("id", S.dmMax).order("id", { ascending: true }).limit(200),
       sb.from("chat_reakcie").select("*").gt("id", S.reakMax || 0).order("id", { ascending: true }).limit(200)
     ]);
     var rt = r[0], rd = r[1], noveT = [], noveD = [];
+    if (!rt.error && !rd.error) S.chatSnap = snap;
     if (!r[2].error && r[2].data.length) {
       var noveR = pridajReakcie(r[2].data);
       ohlasIgnoracie(noveR);
@@ -7020,6 +7041,7 @@
       obnovZvoncek();
     }
     skontrolujOdlozene();
+    await synchPrecitane();
     if (S.tab === "chat") await synchChat();
     if (!rt.error && rt.data.length) {
       S.chatMax = rt.data[rt.data.length - 1].id;
@@ -7426,6 +7448,46 @@
     if (S.tab !== "chat") return;
     if (prekreslit) vykresliChat(); else if (znacka) znackaPrecitania();
   }
+  // prečítané na inom zariadení (počítač ↔ mobil): obálka, zvonček, čísla aj upozornenie v systéme zmiznú aj tu
+  async function synchPrecitane(hned) {
+    if (!S.me || (!hned && Date.now() - (S.precSynch || 0) < 5000)) return;
+    var ids = S.dm.filter(function (m) { return m.komu_id === S.me.id && !m.precitane; }).map(function (m) { return m.id; }).slice(-150);
+    var tim = neprecTim() > 0;
+    if (!ids.length && !tim) return;
+    S.precSynch = Date.now();
+    var zmena = false, ul = [];
+    if (ids.length) ul.push(sb.from("sukromne_spravy").select("id,precitane").in("id", ids).not("precitane", "is", null).then(function (r) {
+      if (r.error) return;
+      r.data.forEach(function (x) { var m = S.dm.find(function (y) { return y.id === x.id; }); if (m && !m.precitane) { m.precitane = x.precitane; zmena = true; } });
+    }));
+    if (tim) ul.push(sb.from("makleri").select("chat_precitane").eq("id", S.me.id).maybeSingle().then(function (r) {
+      var c = r.data && r.data.chat_precitane;
+      if (c && (!S.me.chat_precitane || new Date(c) > new Date(S.me.chat_precitane))) { S.me.chat_precitane = c; zmena = true; }
+    }));
+    try { await Promise.all(ul); } catch (e) { return; }
+    if (!zmena) return;
+    // odložené pripomenutia prečítaných konverzácií sa tu už neukážu
+    if (S.obalky) S.obalky = S.obalky.filter(function (e) { return e.ign || e === S.obalkaAkt || e.spravy.some(jeNeprecitana); });
+    var o = $("#obalka"), E = S.obalkaAkt;
+    if (o && E && !E.ign && o.dataset.stav === "zavreta" && !E.spravy.some(jeNeprecitana)) zavriObalku();
+    popisChat(); kresliKonverzacie(); obnovZvoncek();
+    if (S.tab === "domov" && !document.querySelector("#obsah input:focus, #obsah textarea:focus")) vykresliDomov();
+  }
+  // systémové upozornenia (mobil, Chrome) prečítaných konverzácií zavrieme
+  function zatvorPrecitaneUpozornenia() {
+    if (!S.me || document.hidden || !navigator.serviceWorker || !navigator.serviceWorker.getRegistration) return;
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg || !reg.getNotifications) return;
+      return reg.getNotifications().then(function (zoz) {
+        zoz.forEach(function (n) {
+          // len upozornenia na správy, ktoré už aplikácia má načítané (novšie ešte môžu byť neprečítané)
+          if ((n.timestamp || 0) > (S.chatSnap || 0) - 1500) return;
+          var t = n.tag || "", m = /^typek-dm-([0-9a-f-]{36})$/i.exec(t);
+          if ((t === "typek-chat" && neprecTim() === 0) || (m && !neprecOd(m[1]))) n.close();
+        });
+      });
+    }).catch(function () {});
+  }
   function neprecTim() {
     var od = S.me.chat_precitane ? new Date(S.me.chat_precitane).getTime() : 0;
     return S.chat.filter(function (m) { return m.makler_id !== S.me.id && new Date(m.vytvorene).getTime() > od; }).length;
@@ -7436,6 +7498,7 @@
   function pocetNeprecitanych() { return neprecTim() + neprecOd(); }
   function popisChat() {
     var n = S.me ? pocetNeprecitanych() : 0;
+    if (S.me && (n !== S.neprecPred || Date.now() - (S.upozZatv || 0) > 3000)) { S.neprecPred = n; S.upozZatv = Date.now(); zatvorPrecitaneUpozornenia(); }
     document.querySelectorAll("[data-chat-n]").forEach(function (b) { b.hidden = n === 0; b.textContent = n > 99 ? "99+" : String(n); });
     popisZvoncek();
   }
@@ -7646,34 +7709,128 @@
       o = document.createElement("div"); o.id = "pril-okno"; o.className = "pril-okno"; o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Fotka");
       document.body.appendChild(o);
     }
-    S.prilOkno = { zoz: zoz, i: i };
+    // tlačidlo Späť v mobile zatvorí fotku, nie celú aplikáciu
+    if (!S.prilOknoHist) { try { history.pushState(Object.assign({}, history.state || {}, { foto: 1 }), "", location.href); S.prilOknoHist = true; } catch (e) { /* bez histórie */ } }
+    S.prilOkno = { zoz: zoz, i: i, z: 1, tx: 0, ty: 0 };
     o.innerHTML = '<div class="po-hore"><span class="po-nazov" id="po-nazov"></span><span class="po-pocet" id="po-pocet"></span>' +
       '<a class="po-btn" id="po-stiahnut" href="#" title="Stiahnuť fotku" aria-label="Stiahnuť fotku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>' +
       '<button type="button" class="po-btn" data-po="zavriet" aria-label="Zavrieť">×</button></div>' +
-      '<div class="po-scena" data-po="pozadie"><img id="po-img" alt=""></div>' +
-      (zoz.length > 1 ? '<button type="button" class="po-sipka vlavo" data-po="vlavo" aria-label="Predošlá fotka">‹</button><button type="button" class="po-sipka vpravo" data-po="vpravo" aria-label="Ďalšia fotka">›</button>' : "");
+      '<div class="po-scena" data-po="pozadie"><img id="po-img" alt="" draggable="false"></div>' +
+      (zoz.length > 1 ? '<button type="button" class="po-sipka vlavo" data-po="vlavo" aria-label="Predošlá fotka">‹</button><button type="button" class="po-sipka vpravo" data-po="vpravo" aria-label="Ďalšia fotka">›</button>' : "") +
+      '<div class="po-tip" id="po-tip">' + (window.matchMedia("(pointer: coarse)").matches ? "Priblížite dvojitým ťuknutím alebo roztiahnutím prstov" : "Priblížite dvojklikom alebo kolieskom myši") + "</div>";
     o.onclick = function (e) {
       var a = e.target.closest("[data-po]"); if (!a) return;
       var k = a.dataset.po;
-      if (k === "zavriet" || (k === "pozadie" && e.target === a)) zavriFotky();
+      if (k === "zavriet" || (k === "pozadie" && e.target === a && S.prilOkno && S.prilOkno.z === 1 && !S.prilOkno.tahal)) zavriFotky();
       if (k === "vlavo") posunFotky(-1);
       if (k === "vpravo") posunFotky(1);
     };
-    var x0 = null;
-    o.ontouchstart = function (e) { x0 = e.touches.length === 1 ? e.touches[0].clientX : null; };
-    o.ontouchend = function (e) { if (x0 == null) return; var dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 50) posunFotky(dx < 0 ? 1 : -1); };
+    napojZoomFotky(o);
     if (!S.prilOknoKl) {
       S.prilOknoKl = function (e) {
         if (!S.prilOkno) return;
         if (e.key === "Escape") { e.stopPropagation(); zavriFotky(); }
         if (e.key === "ArrowLeft") posunFotky(-1);
         if (e.key === "ArrowRight") posunFotky(1);
+        if (e.key === "+" || e.key === "=") zoomFotky(S.prilOkno.z * 1.5);
+        if (e.key === "-") zoomFotky(S.prilOkno.z / 1.5);
       };
       document.addEventListener("keydown", S.prilOknoKl, true);
     }
     document.documentElement.classList.add("bez-posuvu");
     ukazFotku();
     setTimeout(function () { var z = o.querySelector('[data-po="zavriet"]'); if (z) z.focus({ preventScroll: true }); }, 30);
+    setTimeout(function () { var t = $("#po-tip"); if (t) t.classList.add("skry"); }, 2600);
+  }
+  // priblíženie: z = mierka (1 až 5), bod (cx, cy) na obrazovke ostane pod prstom / kurzorom
+  function aplikujZoom() {
+    var P = S.prilOkno, img = $("#po-img"), o = $("#pril-okno"); if (!P || !img) return;
+    img.style.transform = P.z > 1 ? "translate(" + P.tx.toFixed(1) + "px," + P.ty.toFixed(1) + "px) scale(" + P.z.toFixed(3) + ")" : "";
+    if (o) o.classList.toggle("zoom", P.z > 1);
+  }
+  function obmedzPosun(img) {
+    var P = S.prilOkno, sc = img.parentNode.getBoundingClientRect();
+    var w = img.offsetWidth * P.z, h = img.offsetHeight * P.z;
+    var mx = Math.max(0, (w - sc.width) / 2), my = Math.max(0, (h - sc.height) / 2);
+    P.tx = Math.max(-mx, Math.min(mx, P.tx)); P.ty = Math.max(-my, Math.min(my, P.ty));
+  }
+  function zoomFotky(z, cx, cy) {
+    var P = S.prilOkno, img = $("#po-img"); if (!P || !img || !img.offsetWidth) return;
+    z = Math.max(1, Math.min(5, z));
+    var r = img.getBoundingClientRect(), stredX = r.left + r.width / 2 - P.tx, stredY = r.top + r.height / 2 - P.ty;
+    if (cx == null) { cx = stredX + P.tx; cy = stredY + P.ty; }
+    var k = z / P.z;
+    P.tx = cx - stredX - (cx - stredX - P.tx) * k;
+    P.ty = cy - stredY - (cy - stredY - P.ty) * k;
+    P.z = z;
+    if (z <= 1.001) { P.z = 1; P.tx = 0; P.ty = 0; }
+    obmedzPosun(img); aplikujZoom();
+  }
+  function napojZoomFotky(o) {
+    var sc = o.querySelector(".po-scena"), img = o.querySelector("#po-img");
+    var tah = null, stip = null, posledneTuk = null;
+    function dist(a, b) { return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
+    // myš: dvojklik, koliesko, ťahanie priblíženej fotky
+    img.addEventListener("dblclick", function (e) { e.preventDefault(); var P = S.prilOkno; zoomFotky(P.z > 1 ? 1 : 2.5, e.clientX, e.clientY); });
+    sc.addEventListener("wheel", function (e) { var P = S.prilOkno; if (!P) return; e.preventDefault(); zoomFotky(P.z * Math.exp(-e.deltaY * 0.0018), e.clientX, e.clientY); }, { passive: false });
+    img.addEventListener("mousedown", function (e) {
+      var P = S.prilOkno; if (!P || P.z <= 1 || e.button !== 0) return;
+      e.preventDefault(); tah = { x: e.clientX, y: e.clientY, tx: P.tx, ty: P.ty }; P.tahal = false; o.classList.add("taha");
+    });
+    o.addEventListener("mousemove", function (e) {
+      var P = S.prilOkno; if (!tah || tah.dotyk || !P) return;
+      P.tx = tah.tx + e.clientX - tah.x; P.ty = tah.ty + e.clientY - tah.y;
+      if (Math.abs(e.clientX - tah.x) + Math.abs(e.clientY - tah.y) > 4) P.tahal = true;
+      obmedzPosun(img); aplikujZoom();
+    });
+    o.addEventListener("mouseup", function () { if (!tah || tah.dotyk) return; tah = null; o.classList.remove("taha"); setTimeout(function () { if (S.prilOkno) S.prilOkno.tahal = false; }, 0); });
+    // prsty: roztiahnutie, posun priblíženej fotky, dvojité ťuknutie, potiahnutie na ďalšiu fotku
+    sc.addEventListener("touchstart", function (e) {
+      var P = S.prilOkno; if (!P) return;
+      if (e.touches.length === 2) {
+        var a = e.touches[0], b = e.touches[1];
+        stip = { d: dist(a, b), z: P.z, mx: (a.clientX + b.clientX) / 2, my: (a.clientY + b.clientY) / 2 }; tah = null;
+      } else if (e.touches.length === 1) {
+        var t = e.touches[0];
+        tah = { x: t.clientX, y: t.clientY, tx: P.tx, ty: P.ty, cas: Date.now(), dotyk: true };
+      }
+      o.classList.add("taha");
+    }, { passive: true });
+    sc.addEventListener("touchmove", function (e) {
+      var P = S.prilOkno; if (!P) return;
+      if (stip && e.touches.length === 2) {
+        e.preventDefault();
+        var a = e.touches[0], b = e.touches[1], mx = (a.clientX + b.clientX) / 2, my = (a.clientY + b.clientY) / 2;
+        P.tx += mx - stip.mx; P.ty += my - stip.my; stip.mx = mx; stip.my = my;
+        zoomFotky(stip.z * dist(a, b) / stip.d, mx, my);
+      } else if (tah && e.touches.length === 1 && P.z > 1) {
+        e.preventDefault();
+        var t = e.touches[0];
+        P.tx = tah.tx + t.clientX - tah.x; P.ty = tah.ty + t.clientY - tah.y;
+        obmedzPosun(img); aplikujZoom();
+      }
+    }, { passive: false });
+    sc.addEventListener("touchend", function (e) {
+      var P = S.prilOkno; if (!P) return;
+      if (e.touches.length) { if (e.touches.length === 1) { var z = e.touches[0]; tah = { x: z.clientX, y: z.clientY, tx: P.tx, ty: P.ty, cas: 0, dotyk: true }; } stip = null; return; }
+      o.classList.remove("taha");
+      if (stip) { stip = null; return; }
+      if (!tah) return;
+      var t = e.changedTouches[0], dx = t.clientX - tah.x, dy = t.clientY - tah.y, kratko = Date.now() - tah.cas < 300;
+      tah = null;
+      if (kratko && Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+        // dvojité ťuknutie priblíži / vráti späť
+        if (posledneTuk && Date.now() - posledneTuk.cas < 320 && Math.hypot(t.clientX - posledneTuk.x, t.clientY - posledneTuk.y) < 40) {
+          posledneTuk = null; e.preventDefault(); P.tahal = true;
+          zoomFotky(P.z > 1 ? 1 : 2.5, t.clientX, t.clientY);
+          setTimeout(function () { if (S.prilOkno) S.prilOkno.tahal = false; }, 350);
+          return;
+        }
+        posledneTuk = { cas: Date.now(), x: t.clientX, y: t.clientY };
+        return;
+      }
+      if (P.z === 1 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) posunFotky(dx < 0 ? 1 : -1);
+    });
   }
   function posunFotky(k) {
     var P = S.prilOkno; if (!P || P.zoz.length < 2) return;
@@ -7682,6 +7839,7 @@
   function ukazFotku() {
     var P = S.prilOkno, f = P && P.zoz[P.i]; if (!f) return;
     var img = $("#po-img"), st = $("#po-stiahnut");
+    P.z = 1; P.tx = 0; P.ty = 0; aplikujZoom();
     $("#po-nazov").textContent = f.nazov || "";
     $("#po-pocet").textContent = P.zoz.length > 1 ? (P.i + 1) + " / " + P.zoz.length : "";
     img.classList.add("nacitava");
@@ -7698,10 +7856,14 @@
       st.href = odkazPrilohy(x, f.nazov, "", true);
     });
   }
-  function zavriFotky() {
+  function zavriFotky(zHistorie) {
     S.prilOkno = null;
     var o = $("#pril-okno"); if (o) o.remove();
     document.documentElement.classList.remove("bez-posuvu");
+    if (S.prilOknoHist) {
+      S.prilOknoHist = false;
+      if (!zHistorie) { S.ignorujPop = true; history.back(); }
+    }
   }
 
   // ---------- výber súborov pred odoslaním (každá konverzácia má svoje)
@@ -7797,8 +7959,8 @@
       if (z) { out.blob = z.blob; out.typ = "image/jpeg"; out.pripona = "jpg"; out.nazov = String(p.nazov).replace(/\.[a-z0-9]{1,5}$/i, "") + ".jpg"; out.w = z.w; out.h = z.h; }
     }
     if (!out.w) { out.w = img.naturalWidth; out.h = img.naturalHeight; }
-    if (Math.max(out.w, out.h) > 700 || out.blob.size > 300 * 1024) {
-      var n = await platnoNaJpeg(img, 640, 0.8);
+    if (Math.max(out.w, out.h) > 1000 || out.blob.size > 300 * 1024) {
+      var n = await platnoNaJpeg(img, 960, 0.78);
       if (n) out.nahlad = n.blob;
     }
     return out;

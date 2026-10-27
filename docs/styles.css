@@ -2375,6 +2375,14 @@ html.bez-posuvu #toast { z-index: 210 }
 .po-scena { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; min-height: 0; padding: 4px 8px calc(16px + env(safe-area-inset-bottom, 0px)) }
 .po-scena img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,.5); transition: filter .25s }
 .po-scena img.nacitava { filter: blur(1.5px) }
+.po-scena { overflow: hidden; touch-action: none }
+.po-scena img { transform-origin: center; transition: transform .18s ease-out, filter .25s; cursor: zoom-in; user-select: none; -webkit-user-drag: none }
+.pril-okno.zoom .po-scena img { cursor: grab; box-shadow: none; border-radius: 0 }
+.pril-okno.taha .po-scena img { transition: filter .25s; cursor: grabbing }
+.pril-okno.zoom .po-sipka { opacity: .35 }
+.po-tip { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); padding: 6px 14px; border-radius: 999px;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 13px; white-space: nowrap; pointer-events: none; transition: opacity .4s }
+.po-tip.skry, .pril-okno.zoom .po-tip { opacity: 0 }
 .po-sipka { position: absolute; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; margin-top: -24px; padding: 0 0 4px; border: 0; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 34px; line-height: 1; cursor: pointer }
 .po-sipka:hover, .po-sipka:focus-visible { background: rgba(255,255,255,.26); outline: none }
 .po-sipka.vlavo { left: 14px }
