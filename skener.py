@@ -834,12 +834,26 @@ STLPCE = ["id", "portal", "portaly", "url", "nazov", "typ", "podtyp", "izby", "c
 _POVODNE = {}  # odtlačky riadkov z databázy – posielame len zmenené
 
 
+def _docasna_chyba(r):
+    """chvíľkové zaváhanie databázy (vypršaný čas, preťaženie) – oplatí sa skúsiť znova"""
+    return r.status_code in (502, 503, 504, 520, 522, 524) or (r.status_code == 500 and '"57014"' in r.text)
+
+
 def _rpc(fn, **args):
-    r = requests.post(f"{DB_URL}/rest/v1/rpc/{fn}", json=args, timeout=120,
-                      headers={"apikey": DB_KEY, "Authorization": f"Bearer {DB_KEY}", "Content-Type": "application/json"})
-    if r.status_code >= 300:
-        raise RuntimeError(f"databáza {fn}: {r.status_code} {r.text[:300]}")
-    return r.json() if r.text else None
+    for pokus in range(3):
+        try:
+            r = requests.post(f"{DB_URL}/rest/v1/rpc/{fn}", json=args, timeout=120,
+                              headers={"apikey": DB_KEY, "Authorization": f"Bearer {DB_KEY}", "Content-Type": "application/json"})
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if pokus == 2:
+                raise RuntimeError(f"databáza {fn}: nedostupná ({str(e)[:200]})")
+        else:
+            if r.status_code < 300:
+                return r.json() if r.text else None
+            if pokus == 2 or not _docasna_chyba(r):
+                raise RuntimeError(f"databáza {fn}: {r.status_code} {r.text[:300]}")
+        log(f"  ! databáza {fn}: chvíľková chyba, skúšam znova o {5 + pokus * 10} s")
+        time.sleep(5 + pokus * 10)
 
 
 def _riadok(z):
