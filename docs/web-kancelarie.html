@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://uwxziqapghlyktwpipjd.supabase.co wss://uwxziqapghlyktwpipjd.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1e2a35">
+<title>Web kancelárie – návrh – Realitný týpek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=Young+Serif&family=Public+Sans:wght@400..800&family=Archivo:wght@400..900&family=Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@500..800&family=Montserrat:wght@900&display=swap">
+<link rel="stylesheet" href="web-kancelarie.css?v=202610272340">
+<link rel="icon" type="image/png" sizes="32x32" href="typek-favicon-32.png?v=202610251300">
+</head>
+<body>
+<header class="top">
+  <div>
+    <a class="spat" href="./#web">← Späť do aplikácie</a>
+    <div class="crumbs"><span class="logo-t">Realitný <span>týpek</span></span><span>·</span><span>Web kancelárie</span><span class="badge-n">NÁVRH · LEN ADMIN</span></div>
+    <h1>Web realitnej kancelárie</h1>
+    <p>Skladačka ako pri webe makléra. Vyber vzhľad, pridaj titulné fotky, poskladaj sekcie a doplň údaje kancelárie. Všetko sa hneď ukáže v ukážke vpravo. Ponuky, makléri a články sa na ostrom webe berú samy z Týpka.</p>
+  </div>
+  <div class="top-actions" id="topAct" hidden>
+    <button class="b b-soft b-sm" id="reset" type="button">Obnoviť pôvodný návrh</button>
+    <button class="b b-soft" id="navrhyBtn" type="button">Návrhy na úpravy <span class="cnt" id="navrhyN"></span></button>
+    <button class="b b-soft" id="fullBtn" type="button" aria-pressed="false">Náhľad na celú šírku</button>
+    <button class="b b-gold" id="pub" type="button">Zverejniť web</button>
+  </div>
+</header>
+
+<div class="gate" id="gate"><img src="typek-hlavicka.png" alt="" width="64" height="64"><h2>Overujem prístup…</h2><p>Chvíľu strpenia.</p></div>
+
+<main class="app" id="app" hidden>
+  <aside class="panel" id="panel" aria-label="Nastavenie webu kancelárie">
+    <div class="phead"><div class="tabs" role="tablist" id="tabs"></div></div>
+    <div id="pane"></div>
+  </aside>
+  <section class="frame" id="frame" aria-label="Ukážka webu kancelárie">
+    <div class="bar">
+      <div class="dots3" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="addr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>https://</span><b id="addrTx"></b></div>
+      <div class="seg" id="devSeg" role="group" aria-label="Zariadenie"></div>
+    </div>
+    <div class="stage" id="stage"><div class="site-wrap" id="siteWrap"><div class="site" id="site"></div></div></div>
+  </section>
+</main>
+
+<dialog class="lib" id="lib" aria-labelledby="libH">
+  <div class="lib-h"><h2 id="libH">Vyber fotku</h2><button type="button" class="b b-soft b-sm" data-libx>Zavrieť</button></div>
+  <div class="lib-g" id="libG"></div>
+  <div class="lib-f"><p class="note">Ilustračné fotky od AI z knižnice Týpka. Vlastné fotky nahráš z počítača alebo mobilu.</p><button type="button" class="b b-ink b-sm" data-libup>Nahrať vlastné fotky</button></div>
+</dialog>
+<dialog class="nav-d" id="navrhyD" aria-labelledby="navrhyH">
+  <div class="lib-h"><div><h2 id="navrhyH">Návrhy na úpravy</h2><p>Zaškrtni, čo chceš doplniť. Potom skopíruj výber a pošli mi ho.</p></div><button type="button" class="b b-soft b-sm" data-navx>Zavrieť</button></div>
+  <ul class="nav-l" id="navrhyL"></ul>
+  <div class="lib-f"><p class="note" id="navrhySt">Nič nie je vybraté.</p><button type="button" class="b b-gold b-sm" data-navcopy>Kopírovať vybrané</button></div>
+</dialog>
+<input type="file" id="file" accept="image/*" multiple hidden>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="config.js?v=202610201100"></script>
+<script src="supabase.min.js"></script>
+<script src="web-kancelarie.js?v=202610272340"></script>
+</body>
+</html>
