@@ -3134,6 +3134,7 @@
       (veta ? '<figure class="hero-veta"><blockquote>' + esc(veta) + "</blockquote>" +
         (autorVety && S.mById[autorVety] && autorVety !== S.me.id ? "<figcaption>— " + esc(oslovenie(S.mById[autorVety])) + "</figcaption>" : "") +
         reakcieBar("veta:" + S.me.id + ":" + hashTextu(veta)) + "</figure>" : "") +
+      (admin() ? webKancHtml() : "") +
       (!kruhy ? '<img class="hero-typek" src="typek-postava.png" alt="" width="563" height="640">' : "") +
       '<div class="hero-znak">Realitný <span>týpek</span></div></section>' +
       (cudzie.length ? '<div class="oslavy-ini">' + cudzie.map(function (x) {
@@ -3152,6 +3153,7 @@
           '<span class="dl-text"><b>' + esc(d[2]) + "</b><small>" + esc(d[3]) + "</small>" +
           (d[4] || d[5] || d[6] ? '<span class="dl-stav">' + [d[4], d[5], d[6]].filter(Boolean).map(esc).join(" · ") + "</span>" : "") + "</span></button>";
       }).join("") + "</div>" + casKartaHtml() + "</div>";
+    nacitajWebKanc();
     if (mojeO.length) {
       var kl = "typek-oslava-" + mdK + "-" + new Date().getFullYear();
       var uz = false; try { uz = localStorage.getItem(kl); localStorage.setItem(kl, "1"); } catch (e2) { /* bez úložiska */ }
@@ -6099,7 +6101,6 @@
       '<div id="web-stav" class="meta">Načítavam stav webu…</div>' +
       '<div class="pd-zdiel-btns" style="margin-top:10px"><a class="btn primary" href="web-editor.html">✏️ Upraviť môj web</a><a class="btn" href="web-editor.html#statistiky">📊 Štatistiky webu</a></div></div></div>' +
       '<div id="web-stat"></div>' +
-      (admin() ? '<div class="web-dl web-kanc" style="margin-top:12px"><span class="web-ik">🏢</span><b>Web kancelárie <span class="chip chip-admin">len admin</span></b><span class="meta">Web celej kancelárie: ponuky všetkých maklérov, tím, predané, výkup, kariéra, blog, strážca ponúk a recenzie z Google. Kontakty z formulárov prídu do zvončeka vybranému maklérovi.</span><div id="web-kanc-stav" class="meta">Načítavam stav webu kancelárie…</div><div class="pd-zdiel-btns"><a class="btn primary" href="web-kancelarie.html">✏️ Upraviť web kancelárie</a><a class="btn" href="web-kancelarie.html#statistiky">📊 Štatistiky</a></div></div>' : "") +
       (admin() ? '<div class="web-dl" style="margin-top:12px"><span class="web-ik">🧑‍💼</span><b>Web iného makléra</b><span class="meta">Ako administrátor môžete upraviť a zverejniť web ktoréhokoľvek makléra.</span><div class="pd-odkaz"><select id="web-makler" aria-label="Maklér">' +
         S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) { return '<option value="' + m.id + '">' + esc(m.meno) + "</option>"; }).join("") + '</select><button class="btn" type="button" data-web="iny">Upraviť</button></div></div>' +
         '<div class="web-dl" style="margin-top:12px"><span class="web-ik">✅</span><b>Žiadosti o adresu a doménu</b><span class="meta">Makléri žiadajú o novú adresu webu a o pripojenie vlastnej domény. Tu ich schválite.</span><div id="web-ziadosti" class="web-ziad"><span class="meta">Načítavam…</span></div></div>' : "") +
@@ -6111,7 +6112,7 @@
     el.querySelector('[data-web="kopiruj"]').onclick = function () { kopiruj(url, "Odkaz na vašu stránku je skopírovaný."); };
     el.querySelector('[data-web="kod"]').onclick = function () { kopiruj($("#kod-moj").textContent, "Kód je skopírovaný."); };
     var iny = el.querySelector('[data-web="iny"]'); if (iny) iny.onclick = function () { location.href = "web-editor.html?m=" + encodeURIComponent($("#web-makler").value); };
-    if (admin()) { vykresliZiadostiWeb(); vykresliStavKancelarie(); }
+    if (admin()) vykresliZiadostiWeb();
     rpc("moj_web", {}).then(function (w) {
       var st = $("#web-stav"); if (!st) return;
       var u = w.domena && w.domena_pripojena ? "https://" + w.domena + "/" : new URL("stranka.html?m=" + encodeURIComponent(w.adresa), location.href).href;
@@ -6123,16 +6124,19 @@
     }).catch(function () { var st = $("#web-stav"); if (st) st.textContent = "Skladačka sa práve nasadzuje. Skúste to o pár minút."; });
   }
 
-  // stav webu kancelárie na dlaždici (len admin)
-  function vykresliStavKancelarie() {
-    sb.from("weby").select("adresa, domena, domena_pripojena, zverejnene_kedy").eq("kancelaria", true).maybeSingle().then(function (r) {
-      var st = $("#web-kanc-stav"); if (!st) return;
-      var w = r.data;
-      if (r.error || !w) { st.textContent = r.error ? "" : "Web kancelárie ešte nie je založený. Otvorte skladačku a poskladajte ho."; return; }
-      var u = w.domena && w.domena_pripojena ? "https://" + w.domena + "/" : new URL("stranka.html?m=" + encodeURIComponent(w.adresa), location.href).href;
-      st.innerHTML = w.zverejnene_kedy ? '<b>Web kancelárie je zverejnený</b><div class="pd-odkaz" style="margin-top:6px"><input type="text" readonly value="' + esc(u) + '"><button class="btn" type="button" data-web="kop-kanc">Kopírovať</button><a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Otvoriť</a></div>'
-        : "Web kancelárie je rozpracovaný a zatiaľ nie je zverejnený.";
-      var k = st.querySelector('[data-web="kop-kanc"]'); if (k) k.onclick = function () { kopiruj(u, "Odkaz na web kancelárie je skopírovaný."); };
+  // web kancelárie v úvodnom banneri na Domove (len admin): stav sa načíta raz za 5 minút
+  function webKancHtml() {
+    var w = S.webKanc;
+    var stav = !w ? "Ponuky všetkých maklérov, tím, výkup, kariéra a blog" : w.zverejnene_kedy ? "Zverejnený" + (w.domena && w.domena_pripojena ? " · " + w.domena : "") : w.id ? "Rozpracovaný, zatiaľ nezverejnený" : "Ešte nie je založený";
+    return '<a class="hero-kanc" href="web-kancelarie.html"><span class="hero-kanc-ik" aria-hidden="true">🏢</span><span class="hero-kanc-t"><b>Web kancelárie</b><small id="hero-kanc-stav">' + esc(stav) + '</small></span><span class="hero-kanc-go">Upraviť →</span></a>';
+  }
+  function nacitajWebKanc() {
+    if (!admin() || (S.webKancKedy && Date.now() - S.webKancKedy < 300000)) return;
+    S.webKancKedy = Date.now();
+    sb.from("weby").select("id, adresa, domena, domena_pripojena, zverejnene_kedy").eq("kancelaria", true).maybeSingle().then(function (r) {
+      if (r.error) return;
+      S.webKanc = r.data || { id: null };
+      var el = $("#obsah .hero-kanc"); if (el) el.outerHTML = webKancHtml();
     });
   }
 
