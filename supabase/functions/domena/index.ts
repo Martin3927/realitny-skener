@@ -1,4 +1,4 @@
-// Vlastná doména pre web makléra.
+// Vlastná doména pre web makléra a web kancelárie.
 //  • akcia "dostupnost": je doména voľná? .sk/.cz/.eu sa pýta priamo registra (WHOIS), ostatné cez RDAP podľa IANA
 //  • akcia "overit": skontroluje DNS – TXT záznam s kódom (vlastníctvo) a A/CNAME na náš server (smerovanie)
 //    a výsledok zapíše do databázy; pri overenej a nasmerovanej doméne dostane admin žiadosť o pripojenie
@@ -190,9 +190,14 @@ Deno.serve(async (req) => {
     }
 
     if (akcia === "overit") {
+      // web kancelárie (len administrátor) alebo osobný web makléra
+      const kanc = telo.kancelaria === true;
+      if (kanc && ja.rola !== "admin") return json({ chyba: "Web kancelárie môže kontrolovať len administrátor." }, 403);
       const ciel = telo.makler && telo.makler !== id ? String(telo.makler) : id;
-      if (ciel !== id && ja.rola !== "admin") return json({ chyba: "Web iného makléra môže kontrolovať len administrátor." }, 403);
-      const { data: w } = await db.from("weby").select("id, domena, domena_token").eq("makler_id", ciel).maybeSingle();
+      if (!kanc && ciel !== id && ja.rola !== "admin") return json({ chyba: "Web iného makléra môže kontrolovať len administrátor." }, 403);
+      const { data: w } = kanc
+        ? await db.from("weby").select("id, domena, domena_token").eq("kancelaria", true).maybeSingle()
+        : await db.from("weby").select("id, domena, domena_token").eq("makler_id", ciel).eq("kancelaria", false).maybeSingle();
       if (!w?.domena || !w.domena_token) return json({ chyba: "Najprv ulož doménu." }, 400);
       const v = await overit(w.domena, w.domena_token);
       const { data: zapis, error } = await db.rpc("_zapis_kontrolu_domeny", { p_web: w.id, p_domena: w.domena, p_txt: v.vlastnictvo, p_smeruje: v.smeruje });
