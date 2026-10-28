@@ -11,7 +11,7 @@
 <meta property="og:image" content="https://app.realitnytypek.sk/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="verejne.css?v=202610281530">
+<link rel="stylesheet" href="verejne.css?v=202610281600">
 <link rel="stylesheet" href="media.css?v=202610201600">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 </head>
@@ -24,7 +24,7 @@
 <footer class="v-wrap v-pata">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span data-kanc-cast="region"> · <span data-kanc="region">Spišská Nová Ves a Levoča</span></span><span data-kanc-cast="web"> · <a href="https://www.alphareality.sk/" data-kanc-web data-kanc-web-text>www.alphareality.sk</a></span><span hidden data-kanc="nazov">Alpha Reality</span><span data-cookies hidden> · <a href="#">Nastavenie cookies</a></span></footer>
 <script src="config.js?v=202610182100"></script>
 <script src="supabase.min.js"></script>
-<script src="verejne.js?v=202610281530"></script>
+<script src="verejne.js?v=202610281600"></script>
 <script src="media.js?v=202610232300"></script>
 <script>
 (function () {
@@ -34,7 +34,7 @@
   var KARTA = T.normKarta(null), KARTA_EDITOR = null;
   // editor skladačky (Správa → Karta nehnuteľnosti) posiela rozpracované nastavenie do náhľadu bez uloženia
   window.TYPEK_KARTA = function (k) {
-    KARTA_EDITOR = k; KARTA = T.normKarta(k);
+    KARTA_EDITOR = k; KARTA = T.normKarta(k); T.aplikujFarbyKarty(KARTA.farby);
     if (P) { var y = window.scrollY; vykresli(); window.scrollTo(0, y); }
   };
   var Z = { zdroj: "obhliadka", v: {}, chyba: "", posiela: false, hotovo: false, obs: null, den: null, termin: null, terminTxt: "" };
@@ -446,7 +446,8 @@
     if (mapa) nacitajLeaflet().then(function () {
       var m = L.map(mapa, { scrollWheelZoom: false }).setView([P.lat, P.lon], 14);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(m);
-      L.circle([P.lat, P.lon], { radius: 180, color: "#a8862f", fillColor: "#dab967", fillOpacity: .3, weight: 2 }).addTo(m);
+      var cs = getComputedStyle(document.documentElement), fg = (cs.getPropertyValue("--gold") || "").trim() || "#a8862f", fs = (cs.getPropertyValue("--gold-strong") || "").trim() || "#dab967";
+      L.circle([P.lat, P.lon], { radius: 180, color: fg, fillColor: fs, fillOpacity: .3, weight: 2 }).addTo(m);
     }, function () { mapa.innerHTML = '<div class="v-nic">Mapa nie je dostupná.</div>'; });
   }
   function nacitajLeaflet() {
@@ -468,7 +469,7 @@
       return;
     }
     if (p.kanc) T.aplikujKancelariu(p.kanc);
-    KARTA = T.normKarta(KARTA_EDITOR || p.karta);
+    KARTA = T.normKarta(KARTA_EDITOR || p.karta); T.aplikujFarbyKarty(KARTA.farby);
     P = p; vykresli(); dalsiePonuky();
     if (!NAHLAD) T.udalost("ponuka", { id: p.id, nazov: T.nazov(p), cena: p.zobrazit_cenu === false ? 0 : (p.cena || 0) });
     if (p.makler && p.makler.id) T.rpc("verejne_recenzie", { p_makler: p.makler.id }).then(function (r) {

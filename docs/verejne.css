@@ -89,7 +89,7 @@ h1.v-nazov { font-family: var(--display); font-size: clamp(22px, 3.2vw, 30px); l
 .v-btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line);
   background: var(--surface); color: var(--ink); font-weight: 600; text-decoration: none; cursor: pointer; text-align: center }
 .v-btn:hover { border-color: var(--gold-strong) }
-.v-btn.zlate { background: var(--gold-strong); border-color: var(--gold-strong); color: #1f1b12 }
+.v-btn.zlate { background: var(--gold-strong); border-color: var(--gold-strong); color: var(--on-gold, #1f1b12) }
 .v-btn.wa { background: var(--wa); border-color: var(--wa); color: #fff }
 .v-btns.dva { grid-template-columns: 1fr 1fr }
 .v-cislo { font-size: 13px; color: var(--muted); text-align: center }
@@ -205,7 +205,7 @@ h1.v-nazov { font-family: var(--display); font-size: clamp(22px, 3.2vw, 30px); l
 .v-dni button:disabled { opacity: .4; cursor: not-allowed }
 .v-casy { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px }
 .v-casy button { padding: 8px 0; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; font-variant-numeric: tabular-nums }
-.v-casy button[aria-pressed="true"] { background: var(--gold-strong); border-color: var(--gold-strong); color: #1f1b12 }
+.v-casy button[aria-pressed="true"] { background: var(--gold-strong); border-color: var(--gold-strong); color: var(--on-gold, #1f1b12) }
 .v-casy button:disabled { text-decoration: line-through; opacity: .45; cursor: not-allowed }
 .v-termin-vyb { margin: 0; font-size: 14px; background: var(--gold-soft); color: var(--ink); padding: 8px 12px; border-radius: 8px }
 
@@ -223,7 +223,7 @@ h1.v-nazov { font-family: var(--display); font-size: clamp(22px, 3.2vw, 30px); l
 .v-cookies p { margin: 0; flex: 1 1 320px }
 .v-cookies-btn { display: flex; flex-wrap: wrap; gap: 8px; flex: 0 0 auto }
 .v-cookies .v-btn { min-height: 40px; padding: 8px 14px; background: transparent; border-color: rgba(241,239,232,.55); color: #f1efe8 }
-.v-cookies .v-btn.tmave { background: var(--gold-strong); border-color: var(--gold-strong); color: #1f1b12 }
+.v-cookies .v-btn.tmave { background: var(--gold-strong); border-color: var(--gold-strong); color: var(--on-gold, #1f1b12) }
 @media (max-width: 860px) { body.ma-cookies .v-cookies { bottom: calc(78px + env(safe-area-inset-bottom, 0px)) } }
 
 /* ---- karta podľa skladačky: bez bočného panela, časti v bočnom paneli, kontakt a formulár v hlavnom stĺpci ---- */

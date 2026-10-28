@@ -254,11 +254,36 @@
     });
     // časti, ktoré v uloženom nastavení chýbajú (napr. nové), sa pridajú na koniec svojho stĺpca
     KARTA_BLOKY.forEach(function (id) { if (!videne[id]) out.push({ id: id, stlpec: KARTA_BOK[id] ? "bok" : "hlavny", zap: true }); });
-    var m = k.moznosti || {}, u = Number(m.urok);
-    return { bloky: out, moznosti: { termin: m.termin !== false, dalsie: m.dalsie !== false, zdielat: m.zdielat !== false, urok: u >= 0.5 && u <= 10 ? Math.round(u * 10) / 10 : 3.9 } };
+    var m = k.moznosti || {}, u = Number(m.urok), f = k.farby, hex = function (x) { return /^#[0-9a-f]{6}$/i.test(String(x || "")); };
+    return { bloky: out, moznosti: { termin: m.termin !== false, dalsie: m.dalsie !== false, zdielat: m.zdielat !== false, urok: u >= 0.5 && u <= 10 ? Math.round(u * 10) / 10 : 3.9 },
+      farby: f && hex(f.a) ? { a: f.a.toLowerCase(), b: hex(f.b) ? f.b.toLowerCase() : null, bg: ["svetle", "kremove", "tmave"].indexOf(f.bg) >= 0 ? f.bg : "kremove", zdroj: f.zdroj === "web" ? "web" : "vlastne" } : null };
   }
 
-  window.TYPEK = { CFG: CFG, normKarta: normKarta, sb: sb, nf: nf, esc: esc, eur: eur, rpc: rpc, fotkaUrl: fotkaUrl, nazov: nazov, lokalita: lokalita, cena: cena, cenaM2: cenaM2,
+  // farby karty (podľa webu kancelárie alebo vlastné); bez nich platia farby zo Vzhľadu kancelárie
+  var POZADIA = {
+    svetle: { bg: "#F3F5F7", surface: "#FFFFFF", ink: "#1A2128", muted: "#5A6571", line: "#DEE3E8", dark: false },
+    kremove: { bg: "#F7F2E8", surface: "#FFFDF8", ink: "#1E2A35", muted: "#4A6074", line: "#E6DDCB", dark: false },
+    tmave: { bg: "#141A21", surface: "#1E2630", ink: "#EEF1F4", muted: "#9DAAB7", line: "#2E3945", dark: true } };
+  function jas(h) { return hexRgb(h).map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce(function (s, v, i) { return s + v * [0.2126, 0.7152, 0.0722][i]; }, 0); }
+  function kontrast(a, b) { var x = jas(a), y = jas(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  function doKontrastu(c, pozadie, smer, k) { var x = c; for (var i = 1; i <= 10 && kontrast(x, pozadie) < k; i++) x = zmiesaj(c, smer, i / 10); return x; }
+  var PREMENNE = ["--bg", "--surface", "--ink", "--muted", "--line", "--gold", "--gold-strong", "--gold-soft", "--on-gold", "--graphite"];
+  function aplikujFarbyKarty(f) {
+    var r = document.documentElement;
+    PREMENNE.forEach(function (k) { r.style.removeProperty(k); });
+    if (!f) { if (r.hasAttribute("data-theme-karta")) { r.removeAttribute("data-theme"); r.removeAttribute("data-theme-karta"); } return; }
+    var P = POZADIA[f.bg] || POZADIA.kremove, a = f.a;
+    var vypln = P.dark && kontrast(a, P.bg) < 3 ? zmiesaj(a, "#ffffff", 0.35) : a;            // tlačidlá a zvýraznenia
+    var text = doKontrastu(a, P.surface, P.dark ? "#ffffff" : "#000000", 4.5);               // cena, odkazy, štítky
+    var hlavicka = f.b && kontrast(f.b, "#ffffff") >= 4.5 ? f.b : P.dark ? "#0E1218" : "#1E2A35";
+    var hod = { "--bg": P.bg, "--surface": P.surface, "--ink": P.ink, "--muted": P.muted, "--line": P.line, "--gold": text, "--gold-strong": vypln,
+      "--gold-soft": zmiesaj(a, P.surface, P.dark ? 0.78 : 0.85), "--on-gold": kontrast(vypln, "#ffffff") >= kontrast(vypln, "#1f1b12") ? "#ffffff" : "#1f1b12", "--graphite": hlavicka };
+    Object.keys(hod).forEach(function (k) { r.style.setProperty(k, hod[k]); });
+    r.setAttribute("data-theme", P.dark ? "dark" : "light"); r.setAttribute("data-theme-karta", "1");
+    var tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = hlavicka;
+  }
+
+  window.TYPEK = { CFG: CFG, normKarta: normKarta, aplikujFarbyKarty: aplikujFarbyKarty, sb: sb, nf: nf, esc: esc, eur: eur, rpc: rpc, fotkaUrl: fotkaUrl, nazov: nazov, lokalita: lokalita, cena: cena, cenaM2: cenaM2,
     parametre: parametre, telOdkaz: telOdkaz, waOdkaz: waOdkaz, avatar: avatar, param: param, datum: datum, verejnyOdkaz: verejnyOdkaz,
     overenie: overenie, overeniePouzite: overeniePouzite, kanc: kanc, aplikujKancelariu: aplikujKancelariu, udalost: udalost };
 })();

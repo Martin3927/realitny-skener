@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Instrument+Sans:wght@400..700&display=swap">
-<link rel="stylesheet" href="karta-ponuky.css?v=202610281530">
+<link rel="stylesheet" href="karta-ponuky.css?v=202610281600">
 <link rel="icon" type="image/png" sizes="32x32" href="typek-favicon-32.png?v=202610251300">
 </head>
 <body>
@@ -32,6 +32,10 @@
 
 <main class="kp-app" id="app" hidden>
   <aside class="kp-panel" aria-label="Nastavenie karty">
+    <section class="kp-sek">
+      <div class="kp-sek-h"><h2>Farby</h2></div>
+      <div id="farby"></div>
+    </section>
     <section class="kp-sek">
       <div class="kp-sek-h"><h2>Hlavný stĺpec</h2><span>Široká časť stránky</span></div>
       <div class="kp-zoznam" id="z-hlavny" data-stlpec="hlavny"></div>
@@ -64,7 +68,7 @@
 
 <script src="config.js?v=202610201100"></script>
 <script src="supabase.min.js"></script>
-<script src="verejne.js?v=202610281530"></script>
-<script src="karta-ponuky.js?v=202610281530"></script>
+<script src="verejne.js?v=202610281600"></script>
+<script src="karta-ponuky.js?v=202610281600"></script>
 </body>
 </html>

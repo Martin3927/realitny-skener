@@ -24,7 +24,22 @@
     doHlavneho: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H6M11 6l-6 6 6 6"/></svg>',
     zamok: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
   };
-  var ULOZENE = T.normKarta(null), K = T.normKarta(null), ZAR = "pc", PONUKA = null, tahane = null;
+  var ULOZENE = T.normKarta(null), K = T.normKarta(null), ZAR = "pc", PONUKA = null, tahane = null, WEB = null;
+  // farebné sady a farby ako v editore webu (aby karta ladila s webom)
+  var SADY = [
+    { id: "alpha", n: "Alpha zlatá", a: "#DAB967", b: "#1E2A35", bg: "svetle" }, { id: "spis", n: "Spišská zlatá", a: "#DB9522", b: "#4A6074", bg: "kremove" },
+    { id: "tatry", n: "Tatranská zelená", a: "#1F6B57", b: "#C98A2B", bg: "svetle" }, { id: "noc", n: "Nočný luxus", a: "#C9A45C", b: "#8C9BA8", bg: "tmave" },
+    { id: "more", n: "More a koral", a: "#1D6F8F", b: "#D9664A", bg: "svetle" }, { id: "tehla", n: "Tehla a krém", a: "#A8482E", b: "#2F4152", bg: "kremove" },
+    { id: "slivka", n: "Slivka a med", a: "#6E3A5E", b: "#D9A441", bg: "svetle" }, { id: "cierna", n: "Čierna klasika", a: "#15191C", b: "#DB9522", bg: "svetle" },
+    { id: "salvia", n: "Šalvia a terakota", a: "#5F7A61", b: "#B4654A", bg: "kremove" }];
+  var FARBY_WEBU = { alpha: "#DAB967", zlata: "#DB9522", atrament: "#1E2A35", smaragd: "#1F6B57", tehla: "#A8482E", more: "#1D6F8F", slivka: "#6E3A5E", oliva: "#6E7B2C", sivomodra: "#4A6074" };
+  var POZADIA = [["svetle", "Svetlé"], ["kremove", "Krémové"], ["tmave", "Tmavé"]];
+  function hex(x) { return /^#[0-9a-f]{6}$/i.test(String(x || "")); }
+  function farbyWebu(w) {
+    if (!w) return null;
+    return { a: (w.color === "vlastna" && hex(w.cc) ? w.cc : FARBY_WEBU[w.color] || "#DAB967").toLowerCase(), b: (hex(w.b2) ? w.b2 : "#1E2A35").toLowerCase(),
+      bg: ["svetle", "kremove", "tmave"].indexOf(w.bg) >= 0 ? w.bg : "svetle", zdroj: "web" };
+  }
   function $(id) { return document.getElementById(id); }
   function kopia(x) { return JSON.parse(JSON.stringify(x)); }
   function zmenene() { return JSON.stringify(K) !== JSON.stringify(ULOZENE); }
@@ -72,7 +87,53 @@
       '<label class="kp-moz"><span><b>Úrok v kalkulačke</b><small>Predvolený úrok, klient si ho môže posunúť</small></span>' +
         '<span class="kp-urok"><input type="number" id="urok" min="0.5" max="10" step="0.1" inputmode="decimal" value="' + m.urok + '"><em>%</em></span></label>';
   }
-  function vsetko() { kresliZoznamy(); kresliMoznosti(); stav(); posliDoNahladu(); }
+  function rovnake(x, y) { return !!x && !!y && x.a === y.a && (x.b || "") === (y.b || "") && x.bg === y.bg; }
+  function kresliFarby() {
+    var f = K.farby, rez = !f ? "vzhlad" : f.zdroj === "web" ? "web" : "vlastne", fw = farbyWebu(WEB);
+    function vzorka(x) { return '<span class="kp-vz"><i style="background:' + esc(x.a) + '"></i><i style="background:' + esc(x.b || x.a) + '"></i><i class="bg-' + x.bg + '"></i></span>'; }
+    var h = '<div class="kp-rezim" role="radiogroup" aria-label="Odkiaľ brať farby">' +
+      '<button type="button" role="radio" data-rezim="vzhlad" aria-checked="' + (rez === "vzhlad") + '"><b>Ako Vzhľad kancelárie</b><small>Farby a logo z aplikácie</small></button>' +
+      '<button type="button" role="radio" data-rezim="web" aria-checked="' + (rez === "web") + '"' + (fw ? "" : " disabled") + "><b>Podľa webu kancelárie</b><small>" +
+        (fw ? (WEB.zverejneny ? "Rovnaké ako na webe" : "Podľa rozpracovaného webu") : "Web kancelárie ešte nemáš") + "</small></button>" +
+      '<button type="button" role="radio" data-rezim="vlastne" aria-checked="' + (rez === "vlastne") + '"><b>Vlastné</b><small>Farebná sada alebo vlastná farba</small></button></div>';
+    if (rez === "vzhlad") h += '<p class="kp-pozn">Karta má rovnaké farby ako aplikácia, leták a report – nastavíš ich vo Vzhľade kancelárie.</p>';
+    if (rez === "web") {
+      h += '<div class="kp-web-farby">' + vzorka(f) + "<span>" + (fw && !rovnake(fw, f) ? "Web kancelárie má medzitým iné farby." : "Farby z webu kancelárie.") + "</span>" +
+        (fw && !rovnake(fw, f) ? '<button type="button" class="kp-b kp-b-jemne kp-b-male" data-z-webu>Načítať nové farby z webu</button>' : "") + "</div>" +
+        '<p class="kp-pozn">Keď zmeníš farby webu kancelárie, pri zverejnení webu sa ťa Týpek spýta, či ich nastaviť aj na kartu.</p>';
+    }
+    if (rez === "vlastne") {
+      h += '<div class="kp-sady">' + SADY.map(function (x) {
+        var zvol = f && f.a === x.a.toLowerCase() && (f.b || "") === x.b.toLowerCase() && f.bg === x.bg;
+        return '<button type="button" class="kp-sada" data-sada="' + x.id + '" aria-pressed="' + zvol + '">' + vzorka({ a: x.a, b: x.b, bg: x.bg }) + "<span>" + esc(x.n) + "</span></button>";
+      }).join("") + "</div>" +
+        '<div class="kp-vlastna"><label class="kp-farba"><input type="color" id="farba-a" value="' + esc(f.a) + '" aria-label="Hlavná farba"><span><b>Hlavná farba</b><small>Tlačidlá, cena a zvýraznenia</small></span></label>' +
+        '<div class="kp-seg" role="group" aria-label="Pozadie">' + POZADIA.map(function (x) { return '<button type="button" data-pozadie="' + x[0] + '" aria-pressed="' + (f.bg === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div></div>";
+    }
+    $("farby").innerHTML = h;
+  }
+  function zmenaFarieb() { kresliFarby(); stav(); posliDoNahladu(); }
+  document.addEventListener("click", function (e) {
+    var r = e.target.closest("[data-rezim]");
+    if (r && !r.disabled) {
+      var rz = r.dataset.rezim;
+      if (rz === "vzhlad") K.farby = null;
+      else if (rz === "web") K.farby = farbyWebu(WEB);
+      else if (!K.farby || K.farby.zdroj === "web") { var z = K.farby || SADY[1]; K.farby = { a: z.a.toLowerCase(), b: (z.b || "#1E2A35").toLowerCase(), bg: z.bg, zdroj: "vlastne" }; }
+      zmenaFarieb(); return;
+    }
+    if (e.target.closest("[data-z-webu]")) { K.farby = farbyWebu(WEB); zmenaFarieb(); return; }
+    var sd = e.target.closest("[data-sada]");
+    if (sd) { var x = SADY.find(function (q) { return q.id === sd.dataset.sada; }); K.farby = { a: x.a.toLowerCase(), b: x.b.toLowerCase(), bg: x.bg, zdroj: "vlastne" }; zmenaFarieb(); return; }
+    var pz = e.target.closest("[data-pozadie]");
+    if (pz && K.farby) { K.farby.bg = pz.dataset.pozadie; zmenaFarieb(); }
+  });
+  document.addEventListener("input", function (e) {
+    if (e.target.id !== "farba-a" || !K.farby) return;
+    K.farby.a = e.target.value.toLowerCase(); stav(); posliDoNahladu();
+    document.querySelectorAll("[data-sada]").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+  });
+  function vsetko() { kresliFarby(); kresliZoznamy(); kresliMoznosti(); stav(); posliDoNahladu(); }
   function zmena() { kresliZoznamy(); stav(); posliDoNahladu(); }
 
   // posun v rámci stĺpca: vymení sa so susedom v tom istom stĺpci
@@ -221,8 +282,9 @@
       if (!q.data || q.data.rola !== "admin" || q.data.aktivny === false) { zamknute("Len pre administrátora", "Kartu nehnuteľnosti upravuje administrátor kancelárie."); return; }
       return Promise.all([
         T.rpc("karta_ponuky", {}),
+        T.rpc("farby_webu_kancelarie", {}).catch(function () { return null; }),
         sb.from("nehnutelnosti").select("id,nazov,typ,obec,stav,cislo,upravene").order("upravene", { ascending: false }).limit(100).then(function (x) { if (x.error) throw x.error; return x.data; })
-      ]).then(function (v) { start(v[0], v[1]); });
+      ]).then(function (v) { WEB = v[1] || null; start(v[0], v[2]); });
     });
   }).catch(function (e) { zamknute("Niečo sa nepodarilo", chybaText(e)); });
 })();

@@ -647,9 +647,39 @@ function zverejnit(ajTak) {
   ulozTeraz().then(function () { return rpc("zverejnit_web_kancelarie", { p_koncept: cisty(true) }); }).then(nacitajWeb).then(function () {
     ZMENY = false; updPub(); if (UI.tab === "web" || UI.tab === "blog") renderPanel(true);
     toast("Web kancelárie je zverejnený. Klienti vidia aktuálnu verziu.");
+    ponukniFarbyKarty();
   }).catch(function (e) { toast("Zverejnenie sa nepodarilo: " + chybaText(e), true); updPub(); }).then(function () { b.disabled = false; });
 }
 $("zverejnit").addEventListener("click", function () { zverejnit(); });
+
+/* farby karty nehnuteľnosti (stránka ponuky): po zverejnení webu sa opýta, či rovnaké farby nastaviť aj na kartu */
+function farbyPreKartu() {
+  var S = K.S, col = KC.COLORS.find(function (c) { return c.id === S.color; });
+  return { a: String(S.color === "vlastna" && KC.isHex(S.cc) ? S.cc : (col ? col.c : "#DAB967")).toLowerCase(), b: String(KC.isHex(S.b2) ? S.b2 : "#1E2A35").toLowerCase(),
+    bg: ["svetle", "kremove", "tmave"].indexOf(S.bg) >= 0 ? S.bg : "svetle", zdroj: "web" };
+}
+function ponukniFarbyKarty() {
+  var f = farbyPreKartu(), sig = f.a + f.b + f.bg;
+  rpc("karta_ponuky").then(function (k) {
+    var t = k && k.farby;
+    if (t && t.a === f.a && (t.b || "") === f.b && t.bg === f.bg) return;
+    try { if (localStorage.getItem("typek-karta-farby-nie") === sig) return; } catch (x) { /* bez úložiska */ }
+    var d = document.createElement("dialog"); d.className = "dlg"; d.setAttribute("aria-labelledby", "kfH");
+    d.innerHTML = '<h2 id="kfH">Rovnaké farby aj na karte nehnuteľnosti?</h2>' +
+      '<p class="sub">Web kancelárie má iné farby ako stránka ponuky, ktorú posielate klientom. Chceš na ňu nastaviť farby webu, aby všetko ladilo? Neskôr ich zmeníš v Správe → Karta nehnuteľnosti.</p>' +
+      '<div class="dlg-btns"><button type="button" class="b b-soft b-sm" data-kf-nie>Nie, nechať</button><button type="button" class="b b-gold b-sm" data-kf-ano>Áno, nastaviť</button></div>';
+    document.body.appendChild(d);
+    d.addEventListener("close", function () { d.remove(); });
+    d.addEventListener("click", function (e) {
+      if (e.target.closest("[data-kf-nie]")) { try { localStorage.setItem("typek-karta-farby-nie", sig); } catch (x) { /* nič */ } d.close(); }
+      else if (e.target.closest("[data-kf-ano]")) {
+        d.close();
+        rpc("nastavit_farby_karty", { p_farby: f }).then(function () { toast("Karta nehnuteľnosti má teraz rovnaké farby ako web."); }, function (x) { toast(chybaText(x), true); });
+      } else if (e.target === d) d.close();
+    });
+    d.showModal();
+  }).catch(function () { /* karta sa nedá načítať – nič sa nepýta */ });
+}
 $("pubD").addEventListener("click", function (e) {
   var d = $("pubD"), b = e.target.closest("button");
   if (e.target === d || (b && b.dataset.dlgx !== undefined)) { d.close(); return; }
