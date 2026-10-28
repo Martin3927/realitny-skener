@@ -1295,7 +1295,9 @@
         var t = podla[k];
         return '<button type="button" class="dl-menu" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : "") + '><span class="dl-menu-ik">' + ikona(t[2]) + "</span>" +
           "<span>" + esc(t[1]) + "</span>" + (t[0] === "chat" ? '<span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
-      }).join("") + "</div></div>";
+      }).join("") +
+        // web kancelárie (skladačka na samostatnej stránke) – len administrátor
+        (g[0] === "Správa" && admin() ? '<a class="dl-menu" href="web-kancelarie.html"><span class="dl-menu-ik">' + ikona("web") + "</span><span>Web kancelárie</span></a>" : "") + "</div></div>";
     }).join("") + '<div class="menu-skup menu-farby"><span class="menu-skup-n">Vzhľad</span><div class="menu-dl">' +
       '<button type="button" class="dl-menu dl-farby" data-pomoc="farby"><span class="dl-menu-ik dl-farby-ik" aria-hidden="true"><i></i><i></i><i></i></span><span>Farebný režim</span></button></div></div>' +
       '<div class="menu-skup menu-pomoc"><span class="menu-skup-n">Pomoc</span><div class="menu-dl">' +
@@ -3134,7 +3136,6 @@
       (veta ? '<figure class="hero-veta"><blockquote>' + esc(veta) + "</blockquote>" +
         (autorVety && S.mById[autorVety] && autorVety !== S.me.id ? "<figcaption>— " + esc(oslovenie(S.mById[autorVety])) + "</figcaption>" : "") +
         reakcieBar("veta:" + S.me.id + ":" + hashTextu(veta)) + "</figure>" : "") +
-      (admin() ? webKancHtml() : "") +
       (!kruhy ? '<img class="hero-typek" src="typek-postava.png" alt="" width="563" height="640">' : "") +
       '<div class="hero-znak">Realitný <span>týpek</span></div></section>' +
       (cudzie.length ? '<div class="oslavy-ini">' + cudzie.map(function (x) {
@@ -3153,7 +3154,6 @@
           '<span class="dl-text"><b>' + esc(d[2]) + "</b><small>" + esc(d[3]) + "</small>" +
           (d[4] || d[5] || d[6] ? '<span class="dl-stav">' + [d[4], d[5], d[6]].filter(Boolean).map(esc).join(" · ") + "</span>" : "") + "</span></button>";
       }).join("") + "</div>" + casKartaHtml() + "</div>";
-    nacitajWebKanc();
     if (mojeO.length) {
       var kl = "typek-oslava-" + mdK + "-" + new Date().getFullYear();
       var uz = false; try { uz = localStorage.getItem(kl); localStorage.setItem(kl, "1"); } catch (e2) { /* bez úložiska */ }
@@ -6124,22 +6124,6 @@
     }).catch(function () { var st = $("#web-stav"); if (st) st.textContent = "Skladačka sa práve nasadzuje. Skúste to o pár minút."; });
   }
 
-  // web kancelárie v úvodnom banneri na Domove (len admin): stav sa načíta raz za 5 minút
-  function webKancHtml() {
-    var w = S.webKanc;
-    var stav = !w ? "Ponuky všetkých maklérov, tím, výkup, kariéra a blog" : w.zverejnene_kedy ? "Zverejnený" + (w.domena && w.domena_pripojena ? " · " + w.domena : "") : w.id ? "Rozpracovaný, zatiaľ nezverejnený" : "Ešte nie je založený";
-    return '<a class="hero-kanc" href="web-kancelarie.html"><span class="hero-kanc-ik" aria-hidden="true">🏢</span><span class="hero-kanc-t"><b>Web kancelárie</b><small id="hero-kanc-stav">' + esc(stav) + '</small></span><span class="hero-kanc-go">Upraviť →</span></a>';
-  }
-  function nacitajWebKanc() {
-    if (!admin() || (S.webKancKedy && Date.now() - S.webKancKedy < 300000)) return;
-    S.webKancKedy = Date.now();
-    sb.from("weby").select("id, adresa, domena, domena_pripojena, zverejnene_kedy").eq("kancelaria", true).maybeSingle().then(function (r) {
-      if (r.error) return;
-      S.webKanc = r.data || { id: null };
-      var el = $("#obsah .hero-kanc"); if (el) el.outerHTML = webKancHtml();
-    });
-  }
-
   // žiadosti maklérov o adresu webu a o pripojenie vlastnej domény (len admin)
   function vykresliZiadostiWeb() {
     var box = $("#web-ziadosti"); if (!box) return;
@@ -6911,7 +6895,7 @@
     if (maSekciu("provizie")) K.push({ t: "Moje provízie", x: "Prehľad vašich obchodov a toho, čo vám kancelária ešte vyplatí.", c: ciel("provizie") });
     K.push({ t: "Zmena hesla", x: "Zlaté tlačidlo s kľúčom hore otvorí zmenu hesla – kedykoľvek si heslo zmeníte jedným klikom.", c: ".heslo-btn" });
     K.push({ t: "Môj profil", x: "Doplňte si telefón, fotku a text SMS. Telefón uvidia klienti na ponukách a letákoch.", c: ".me-btn" });
-    if (admin()) K.push({ t: "Správa kancelárie", x: "Ako administrátor máte navyše Výkon, Maklérov, Vzhľad (farby a logo) a Históriu zmien. Export do Realsoftu nájdete v Nehnuteľnostiach → Web a export.", c: mob ? ".menu-btn" : '.bocne [data-tab="makleri"]' });
+    if (admin()) K.push({ t: "Správa kancelárie", x: "Ako administrátor máte navyše Výkon, Maklérov, Vzhľad (farby a logo), Históriu zmien a Web kancelárie. Export do Realsoftu nájdete v Nehnuteľnostiach → Web a export.", c: mob ? ".menu-btn" : '.bocne [data-tab="makleri"]' });
     K.push({ t: "Pomoc", x: "Sprievodcu, novinky a zmenu hesla nájdete v menu v časti Pomoc. Keď pribudne nová funkcia, ukážem vám ju hneď po prihlásení.", c: mob ? ".menu-btn" : ".bocne .menu-pomoc" });
     K.push({ t: "Hotovo! 🎉", x: "Sprievodcu spustíte znova v menu → Pomoc. Veľa úspešných obchodov!" });
     return K;
