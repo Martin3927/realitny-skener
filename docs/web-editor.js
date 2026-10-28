@@ -208,14 +208,22 @@ function bodyOf(k) {
     default: return '<p class="note">Táto sekcia nemá ďalšie nastavenia.</p>';
   }
 }
+// krátky popis pod názvom sekcie v zozname
+var SEC_D = { ponuky: "tvoje ponuky z Týpka, filtre", strazca: "dopyt do Klientov, e-maily s ponukami", omne: "text a fotka o tebe", preco: "dôvody s ikonami", tim: "kolegovia s kontaktmi",
+  postup: "kroky predaja", sluzby: "zoznam služieb s ikonami", vykup: "výkup, výhody a postup", cennik: "ceny a čo je v cene", predane: "predané ponuky z Týpka", lokality: "obce a štvrte, ktoré poznáš",
+  video: "video z YouTube alebo Vimeo", recenzie: "hodnotenia klientov a Google", obhliadka: "výber termínu obhliadky", ocenenie: "formulár na odhad ceny", callback: "číslo a čas, kedy zavolať",
+  stiahnut: "e-book za e-mail", faq: "otázky a odpovede", dotaznik: "tri otázky a kontakt", fotka: "veľká fotka s popisom", hypoteka: "výpočet splátky", clanok: "úvod článku s odkazom", kontakt: "telefón, e-mail a formulár" };
+function prepinac(attrs, on, lab) { return '<span class="sw-t"><input type="checkbox" ' + attrs + (on ? " checked" : "") + ' aria-label="' + esc(lab) + '"><span></span></span>'; }
 function renderSecs() {
   var s = S();
-  $("secs").innerHTML = '<li class="sec"><div class="row"><span class="grip lockd">' + ICP.grip + '</span><label><input type="checkbox" checked disabled><span>Úvod a navigácia</span></label><span class="note" style="padding-right:8px;grid-column:auto">vždy</span></div></li>' +
-    s.order.map(function (k, i) { var o = open.has(k); return '<li class="sec' + (s.on[k] ? "" : " off") + '" data-k="' + k + '"><div class="row"><span class="grip" data-grip title="Potiahni a presuň">' + ICP.grip + "</span>" +
-      '<label><input type="checkbox" id="sec-' + k + '" data-sec="' + k + '"' + (s.on[k] ? " checked" : "") + '><span data-title="' + k + '">' + esc(T.secName(k)) + "</span></label>" + (s.custom[k] ? '<span class="badge">vlastná</span>' : "") +
-      '<button type="button" class="mv" data-edit="' + k + '" aria-expanded="' + o + '" aria-label="Upraviť sekciu ' + esc(T.secName(k)) + '">' + ICP.edit + "</button>" +
-      '<button type="button" class="mv" data-up="' + i + '"' + (i === 0 ? " disabled" : "") + ' aria-label="Posunúť vyššie">' + ICP.up + '</button><button type="button" class="mv" data-dn="' + i + '"' + (i === s.order.length - 1 ? " disabled" : "") + ' aria-label="Posunúť nižšie">' + ICP.dn + "</button></div>" +
-      (o ? '<div class="body"><div class="fields">' + bodyOf(k) + "</div></div>" : "") + "</li>"; }).join("");
+  $("secs").innerHTML = '<li class="sec"><div class="row"><span class="grip lockd">' + ICP.grip + "</span>" + prepinac("disabled", true, "Úvod a navigácia sa zobrazujú vždy") + '<span class="snm"><b>Úvod a navigácia</b><small>zobrazujú sa vždy</small></span></div></li>' +
+    s.order.map(function (k, i) { var o = open.has(k), nm = T.secName(k);
+      return '<li class="sec' + (s.on[k] ? "" : " off") + '" data-k="' + k + '"><div class="row"><span class="grip" data-grip title="Potiahni a presuň">' + ICP.grip + "</span>" +
+        prepinac('id="sec-' + k + '" data-sec="' + k + '"', s.on[k], "Zobraziť sekciu " + nm) +
+        '<label class="snm" for="sec-' + k + '"><b data-title="' + k + '">' + esc(nm) + "</b><small>" + esc(s.custom[k] ? "vlastná sekcia" : SEC_D[k] || "") + "</small></label>" +
+        '<button type="button" class="mv" data-up="' + i + '"' + (i === 0 ? " disabled" : "") + ' aria-label="Posunúť vyššie">' + ICP.up + '</button><button type="button" class="mv" data-dn="' + i + '"' + (i === s.order.length - 1 ? " disabled" : "") + ' aria-label="Posunúť nižšie">' + ICP.dn + "</button>" +
+        '<button type="button" class="mv" data-edit="' + k + '" aria-expanded="' + o + '" aria-label="Upraviť sekciu ' + esc(nm) + '" title="Upraviť sekciu">' + ICP.edit + "</button></div>" +
+        (o ? '<div class="body"><div class="fields">' + bodyOf(k) + "</div></div>" : "") + "</li>"; }).join("");
 }
 function thumb(id) {
   var a = "var(--c-gold)", i = "var(--c-slate)", p = "var(--c-paper)";
