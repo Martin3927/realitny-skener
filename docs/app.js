@@ -763,6 +763,7 @@
     S.odhlMobil = n.odhlasenie_mobil_min == null ? S.odhlPc : Number(n.odhlasenie_mobil_min) || 0;
     S.odhlMin = vMobile() ? S.odhlMobil : S.odhlPc;
     S.odkaz = { text: n.odkaz_text || "", zapnuty: !!n.odkaz_zapnuty, autor: n.odkaz_autor || null };
+    S.novinkyOkno = n.novinky_okno !== false;
   }
   function poslednaAktivita() {
     var ls = 0;
@@ -2741,6 +2742,28 @@
     var poc = {}; r.forEach(function (x) { poc[x.emoji] = (poc[x.emoji] || 0) + 1; });
     return '<small class="meta mk-reakcie">Reakcie na vaše vety: ' + Object.keys(poc).map(function (e) { return e + " " + poc[e]; }).join(" · ") + "</small>";
   }
+  // okno s novinkami pri každom maklérovi (detail makléra aj Nastavenia tímu)
+  function textNovinkyMaklera(m) {
+    var z = rodMaklera(m) === "zena";
+    if (!chceUpoz("novinky", m)) return "Vypnuté – okno " + (z ? "jej" : "mu") + " nevyskakuje. Novinky si pozrie v Pomoc → Čo je nové.";
+    if (S.novinkyOkno === false) return "Teraz je okno vypnuté pre celý tím (Nastavenia tímu → Novinky v aplikácii). Po zapnutí " + (z ? "jej" : "mu") + " začne znova vyskakovať.";
+    return "Po prihlásení " + (z ? "jej" : "mu") + " vyskočí okno, keď pribudne nová funkcia.";
+  }
+  function cipyNovinkyMaklerov() {
+    return S.makleri.filter(function (m) { return m.aktivny; })
+      .sort(function (a, b) { return String(a.meno).localeCompare(String(b.meno), "sk"); })
+      .map(function (m) { return '<button type="button" class="cip" data-nov-cip="' + m.id + '" aria-pressed="' + chceUpoz("novinky", m) + '">' + esc(m.meno || m.email) + "</button>"; }).join("");
+  }
+  async function prepniNovinkyMaklera(id, zap) {
+    var m = S.mById[id]; if (!m) return false;
+    try {
+      await rpc("nastavit_upozornenie_maklera", { p_id: id, p_druh: "novinky", p_zapnute: zap });
+      m.upozornenia = Object.assign({}, m.upozornenia || {}); m.upozornenia.novinky = zap;
+      if (S.me && S.me.id === id) { S.me.upozornenia = m.upozornenia; popisNovinky(); }
+      toast((m.meno || "Maklér") + ": okno s novinkami " + (zap ? "zapnuté." : "vypnuté."));
+      return true;
+    } catch (err) { toast(chybaText(err), true); return false; }
+  }
   function otvorMaklera(id) {
     S.mkPohlad = id || null; S.hesloEdit = null; S.pochvalaEdit = null; S.hmData = null; S.hmViac = 0; S.pushZar = undefined;
     if (!id) S.newUser = null;
@@ -2801,6 +2824,10 @@
       '<div class="box mk-spr-vsetci"><div><h3>🧭 Prehliadka aplikácie pre všetkých</h3><p class="meta">Každému maklérovi sa pri najbližšom otvorení aplikácie znova spustí sprievodca. Jednotlivo ju zapnete v detaile makléra.</p></div>' +
         '<button class="btn primary" type="button" id="spr-vsetkym">Zapnúť prehliadku všetkým</button></div>' +
       '<div class="box"><h3>✨ Novinky v aplikácii</h3><p class="meta">Keď pribudne nová funkcia, napíšte ju sem. Každému maklérovi pri ďalšom otvorení vyskočí okno „Ahoj, máš nové funkcie“ s tlačidlom, ktoré ho na funkciu rovno zavedie.</p>' +
+      '<div class="nov-okno-nast"><label class="toggle nov-okno-zap"><input type="checkbox" id="novinky-okno-zap"' + (S.novinkyOkno !== false ? " checked" : "") + "> <b>Ukazovať okno s novinkami</b></label>" +
+        '<p class="meta">' + (S.novinkyOkno !== false ? "Okno vyskočí po prihlásení, keď pribudne niečo nové, a v menu pri Čo je nové svieti počet." :
+          "Teraz je vypnuté pre celý tím – okno nevyskočí nikomu a v menu nesvieti počet. Novinky si každý pozrie v Pomoc → Čo je nové. Po zapnutí každý uvidí, čo medzitým pribudlo.") + "</p>" +
+        '<span class="meta">Komu sa ukazuje (ťuknutím zapnete alebo vypnete):</span><div class="cipy" id="nov-okno-makleri">' + cipyNovinkyMaklerov() + "</div></div>" +
       '<div id="novinky-adm"></div></div></details>';
     var hTim = h; h = "";
     h += '<form class="box" id="f-novy"><h3>Pridať makléra</h3><div class="form-grid">' +
@@ -2844,6 +2871,8 @@
           '<div class="mk-spr"><img src="typek-hlava.png" alt="" width="40" height="40"><div><b>🧭 Prehliadka aplikácie</b><small class="meta">' +
             (m.sprievodca_videny ? "Videl" + (rodMaklera(m) === "zena" ? "a" : "") + " ju " + datum(m.sprievodca_videny) : "Spustí sa pri najbližšom otvorení aplikácie.") + "</small></div>" +
             (m.sprievodca_videny ? '<button class="btn primary" type="button" data-m-act="sprievodca">Zapnúť prehliadku znova</button>' : '<span class="chip">✓ Zapnutá</span>') + "</div>" +
+          '<div class="mk-spr mk-nov" data-nestrazit><img src="typek-hlava.png" alt="" width="40" height="40"><div><b>✨ Okno s novinkami</b><small class="meta" id="mk-nov-' + m.id + '">' + textNovinkyMaklera(m) + "</small></div>" +
+            '<label class="toggle"><input type="checkbox" data-nov-makl' + (chceUpoz("novinky", m) ? " checked" : "") + "> Zapnuté</label></div>" +
           '<div class="mk-osobne"><label class="field"><span>Oslovenie na hlavnej obrazovke</span><input type="text" data-f="oslovenie" maxlength="40" value="' + esc(m.oslovenie || "") + '" placeholder="' + esc(String(m.meno || "").trim().split(/\s+/)[0] || "napr. Tina") + '"></label>' +
           '<label class="field"><span>Motivačné vety – každá na nový riadok, najviac 5 (každý deň sa ukáže iná)</span><textarea data-f="motivacia" rows="3" placeholder="napr. Každé „nie“ ťa posúva bližšie k „áno“.">' +
           esc(((S.osobne || {})[m.id] || {}).motivacia || "") + "</textarea>" + reakcieNaVety(m.id) + "</label></div>" +
@@ -2903,6 +2932,34 @@
         b.disabled = false;
       };
     });
+    el.querySelectorAll("[data-nov-makl]").forEach(function (ch) {
+      ch.onchange = async function () {
+        var id = ch.closest("[data-m]").dataset.m, zap = ch.checked;
+        ch.disabled = true;
+        if (!(await prepniNovinkyMaklera(id, zap))) ch.checked = !zap;
+        ch.disabled = false;
+        var t = $("#mk-nov-" + id); if (t && S.mById[id]) t.textContent = textNovinkyMaklera(S.mById[id]);
+      };
+    });
+    el.querySelectorAll("[data-nov-cip]").forEach(function (b) {
+      b.onclick = async function () {
+        var id = b.dataset.novCip, m = S.mById[id]; if (!m) return;
+        var zap = !chceUpoz("novinky", m);
+        b.disabled = true;
+        if (await prepniNovinkyMaklera(id, zap)) b.setAttribute("aria-pressed", String(zap));
+        b.disabled = false;
+      };
+    });
+    var novZap = $("#novinky-okno-zap");
+    if (novZap) novZap.onchange = async function () {
+      var zap = novZap.checked; novZap.disabled = true;
+      try {
+        await rpc("nastavit_novinky_okno", { p_zapnute: zap });
+        S.novinkyOkno = zap; popisNovinky();
+        toast(zap ? "✨ Okno s novinkami je zapnuté – makléri ho uvidia pri ďalšom otvorení." : "Okno s novinkami je vypnuté pre celý tím. Novinky ostávajú v Pomoc → Čo je nové.");
+        vykresliMaklerov();
+      } catch (err) { toast(chybaText(err), true); novZap.checked = !zap; novZap.disabled = false; }
+    };
     el.querySelectorAll("[data-pristup]").forEach(function (b) {
       b.onclick = async function () {
         var id = b.closest("[data-m]").dataset.m, m = S.mById[id]; if (!m) return;
@@ -6889,12 +6946,14 @@
     if (!S.me || !S.me.novinky_videne) return [];
     return (S.novinky || []).filter(function (n) { return n.vytvorene > S.me.novinky_videne; });
   }
+  // okno „máš nové funkcie“ a počet v menu: vypínač pre celý tím (Nastavenia tímu) a pre každého makléra (detail makléra)
+  function novinkyPreMakl(m) { return S.novinkyOkno !== false && chceUpoz("novinky", m); }
   function popisNovinky() {
-    var n = noveNovinky().length;
+    var n = novinkyPreMakl() ? noveNovinky().length : 0;
     document.querySelectorAll("[data-novinky-n]").forEach(function (b) { b.hidden = !n; b.textContent = n || ""; });
   }
   function zacniNovinkyAkTreba() {
-    if (!S.me || S.spr || !S.me.sprievodca_videny || $("#novinky-okno")) return;
+    if (!S.me || S.spr || !S.me.sprievodca_videny || $("#novinky-okno") || !novinkyPreMakl()) return;
     if (document.querySelector(".pochvala-var")) return setTimeout(zacniNovinkyAkTreba, 2500);
     var nove = noveNovinky();
     if (nove.length) ukazNovinky(nove, true);
@@ -6983,7 +7042,7 @@
       e.preventDefault();
       var d = {}; new FormData(f).forEach(function (v, k) { d[k] = v; });
       var btn = f.querySelector('[type="submit"]'); btn.disabled = true;
-      try { await rpc("ulozit_novinku", { p: d }); S.novinkyAdm = null; await nacitajNovinky().catch(function () {}); toast("✨ Novinka je pridaná – makléri ju uvidia pri ďalšom otvorení."); vykresliNovinkyAdm(); }
+      try { await rpc("ulozit_novinku", { p: d }); S.novinkyAdm = null; await nacitajNovinky().catch(function () {}); toast(S.novinkyOkno !== false ? "✨ Novinka je pridaná – makléri ju uvidia pri ďalšom otvorení." : "✨ Novinka je pridaná. Okno s novinkami je teraz vypnuté, takže je zatiaľ len v Pomoc → Čo je nové."); vykresliNovinkyAdm(); }
       catch (err) { toast(chybaText(err), true); btn.disabled = false; }
     };
     box.querySelector('[data-nov-adm="nahlad"]').onclick = function () {

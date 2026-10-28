@@ -1744,6 +1744,12 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .mk-spr > div { display: grid; flex: 1 1 200px; min-width: 0 }
 .mk-spr-vsetci { grid-template-columns: minmax(0, 1fr) auto; align-items: center }
 @media (max-width: 640px) { .mk-spr-vsetci { grid-template-columns: minmax(0, 1fr) } .mk-spr .btn { flex: 1 1 auto } }
+/* ---------- okno s novinkami: vypínač pre tím a pri maklérovi (admin) */
+.mk-nov { background: var(--surface-2) }
+.mk-nov .toggle { font-weight: 600 }
+.nov-okno-nast { display: grid; gap: 6px; padding: 10px 12px; margin: 4px 0 14px; border-radius: 12px; background: var(--surface-2) }
+.nov-okno-nast > .meta { margin: 0 }
+.nov-okno-zap { font-size: 14px }
 /* ---------- predávajúci zo skenera */
 .kl-pohlad { margin-bottom: 14px }
 .pred-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; margin: 4px 0 2px; padding: 6px 10px; border-radius: 8px; background: var(--gold-soft); font-size: 13px; line-height: 1.45 }
