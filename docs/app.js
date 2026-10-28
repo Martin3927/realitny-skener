@@ -6899,7 +6899,7 @@
     var nove = noveNovinky();
     if (nove.length) ukazNovinky(nove, true);
   }
-  var CIELE_NOVINIEK = { heslo: "Zmena hesla", pomoc: "Menu → Pomoc", predavajuci: "Klienti → Predávajúci", upozornenia: "Upozornenia do mobilu" };
+  var CIELE_NOVINIEK = { heslo: "Zmena hesla", pomoc: "Menu → Pomoc", predavajuci: "Klienti → Predávajúci", upozornenia: "Upozornenia do mobilu", profil: "Môj profil" };
   function nazovCiela(c) {
     if (!c) return "";
     if (CIELE_NOVINIEK[c]) return CIELE_NOVINIEK[c];
@@ -6938,6 +6938,7 @@
   }
   function ukazCiel(c) {
     if (c === "heslo") return otvorHeslo();
+    if (c === "profil") { zavriMenu(); S.zvonOpen = false; vykresliZvoncek(); S.pwdOpen = true; vykresliHeslo(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     if (c === "upozornenia") {
       zavriMenu(); S.zvonOpen = false; vykresliZvoncek(); S.pwdOpen = true; vykresliHeslo();
       var bx = $("#box-push"); if (bx) { bx.scrollIntoView({ behavior: "smooth", block: "center" }); bx.classList.add("zvyrazni"); setTimeout(function () { bx.classList.remove("zvyrazni"); }, 2600); }
