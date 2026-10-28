@@ -18,7 +18,13 @@ html, body { margin: 0; background: #d9d6ce; color: var(--ink); font-family: var
 .lista { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; padding: 12px 16px; background: var(--graphite); color: #f1efe8; font-size: 14px }
 .lista button { font: inherit; font-weight: 700; border: 0; border-radius: 8px; padding: 10px 18px; background: var(--gold-strong); color: #1f1b12; cursor: pointer }
 .lista label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer }
-.lista input { accent-color: var(--gold-strong); width: 18px; height: 18px }
+.lista label { gap: 9px }
+/* prepínač – rovnaký ako v celom Týpkovi */
+.lista input[type="checkbox"] { -webkit-appearance: none; appearance: none; position: relative; flex: none; margin: 0; border: 0; cursor: pointer; width: 40px; height: 23px; border-radius: 999px; background: rgba(255,255,255,.24); transition: background-color .2s }
+.lista input[type="checkbox"]::before { content: ""; position: absolute; top: 3px; left: 3px; width: 17px; height: 17px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s }
+.lista input[type="checkbox"]:checked { background: #3f9d70 }
+.lista input[type="checkbox"]:checked::before { transform: translateX(17px) }
+.lista input[type="checkbox"]:focus-visible { outline: 2px solid var(--gold-strong); outline-offset: 2px }
 .lista small { color: #bdb9b0; width: 100%; text-align: center }
 .strana-obal { padding: 24px 12px 48px; overflow-x: auto }
 .strana { width: 210mm; height: 297mm; margin: 0 auto; background: #fff; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.18) }

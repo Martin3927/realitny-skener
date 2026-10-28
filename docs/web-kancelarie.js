@@ -330,7 +330,7 @@ function paneStranky() {
   var adr = WEB && WEB.domena && WEB.domena_pripojena ? WEB.domena + "/ponuky" : "…/stranka.html?m=" + (WEB ? WEB.adresa : "") + "&s=ponuky";
   return grp("Ako sa web prechádza", seg("podstranky", [["on", "Samostatné podstránky"], ["off", "Jedna dlhá stránka"]]) +
       '<p class="note">' + (s.podstranky === "on" ? "Menu otvára samostatné stránky s vlastnou adresou, napríklad <b>" + esc(adr) + "</b>. Google ich nájde lepšie a dajú sa posielať odkazom." : "Menu posúva na sekcie na úvodnej stránke. Výkup, kariéra a články majú aj tak vlastné stránky.") + "</p>") +
-    grp("Stránky webu", '<p class="note">Vypnutá stránka sa na webe nezobrazí. Zaškrtnutím <b>menu</b> ju dáš do hlavného menu. Obsah stránok sa skladá zo sekcií, ktoré upravuješ v záložke Sekcie.</p><ul class="secs">' + rows + "</ul>");
+    grp("Stránky webu", '<p class="note">Vypnutá stránka sa na webe nezobrazí. Prepínačom <b>menu</b> ju dáš do hlavného menu. Obsah stránok sa skladá zo sekcií, ktoré upravuješ v záložke Sekcie.</p><ul class="secs">' + rows + "</ul>");
 }
 
 function paneBlog() {
