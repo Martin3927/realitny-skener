@@ -6099,7 +6099,7 @@
       '<div id="web-stav" class="meta">Načítavam stav webu…</div>' +
       '<div class="pd-zdiel-btns" style="margin-top:10px"><a class="btn primary" href="web-editor.html">✏️ Upraviť môj web</a><a class="btn" href="web-editor.html#statistiky">📊 Štatistiky webu</a></div></div></div>' +
       '<div id="web-stat"></div>' +
-      (admin() ? '<div class="web-dl web-kanc" style="margin-top:12px"><span class="web-ik">🏢</span><b>Web kancelárie <span class="chip chip-admin">Návrh · len admin</span></b><span class="meta">Skladačka webu pre celú kanceláriu: titulné fotky s tlačidlom, ponuky všetkých maklérov, tím, číselník, ocenenia, recenzie z Google, GDPR, Google Analytics a Meta Pixel. Zatiaľ ho vidíš len ty.</span><div class="pd-zdiel-btns"><a class="btn primary" href="web-kancelarie.html">Otvoriť návrh</a><a class="btn" href="web-kancelarie.html#navrhy">Návrhy na úpravy</a></div></div>' : "") +
+      (admin() ? '<div class="web-dl web-kanc" style="margin-top:12px"><span class="web-ik">🏢</span><b>Web kancelárie <span class="chip chip-admin">len admin</span></b><span class="meta">Web celej kancelárie: ponuky všetkých maklérov, tím, predané, výkup, kariéra, blog, strážca ponúk a recenzie z Google. Kontakty z formulárov prídu do zvončeka vybranému maklérovi.</span><div id="web-kanc-stav" class="meta">Načítavam stav webu kancelárie…</div><div class="pd-zdiel-btns"><a class="btn primary" href="web-kancelarie.html">✏️ Upraviť web kancelárie</a><a class="btn" href="web-kancelarie.html#statistiky">📊 Štatistiky</a></div></div>' : "") +
       (admin() ? '<div class="web-dl" style="margin-top:12px"><span class="web-ik">🧑‍💼</span><b>Web iného makléra</b><span class="meta">Ako administrátor môžete upraviť a zverejniť web ktoréhokoľvek makléra.</span><div class="pd-odkaz"><select id="web-makler" aria-label="Maklér">' +
         S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) { return '<option value="' + m.id + '">' + esc(m.meno) + "</option>"; }).join("") + '</select><button class="btn" type="button" data-web="iny">Upraviť</button></div></div>' +
         '<div class="web-dl" style="margin-top:12px"><span class="web-ik">✅</span><b>Žiadosti o adresu a doménu</b><span class="meta">Makléri žiadajú o novú adresu webu a o pripojenie vlastnej domény. Tu ich schválite.</span><div id="web-ziadosti" class="web-ziad"><span class="meta">Načítavam…</span></div></div>' : "") +
@@ -6111,7 +6111,7 @@
     el.querySelector('[data-web="kopiruj"]').onclick = function () { kopiruj(url, "Odkaz na vašu stránku je skopírovaný."); };
     el.querySelector('[data-web="kod"]').onclick = function () { kopiruj($("#kod-moj").textContent, "Kód je skopírovaný."); };
     var iny = el.querySelector('[data-web="iny"]'); if (iny) iny.onclick = function () { location.href = "web-editor.html?m=" + encodeURIComponent($("#web-makler").value); };
-    if (admin()) vykresliZiadostiWeb();
+    if (admin()) { vykresliZiadostiWeb(); vykresliStavKancelarie(); }
     rpc("moj_web", {}).then(function (w) {
       var st = $("#web-stav"); if (!st) return;
       var u = w.domena && w.domena_pripojena ? "https://" + w.domena + "/" : new URL("stranka.html?m=" + encodeURIComponent(w.adresa), location.href).href;
@@ -6121,6 +6121,19 @@
       var k = st.querySelector('[data-web="kop-novy"]'); if (k) k.onclick = function () { kopiruj(u, "Odkaz na váš web je skopírovaný."); };
       if (w.zverejnene_kedy && w.id) vykresliStatWebu(w.id);
     }).catch(function () { var st = $("#web-stav"); if (st) st.textContent = "Skladačka sa práve nasadzuje. Skúste to o pár minút."; });
+  }
+
+  // stav webu kancelárie na dlaždici (len admin)
+  function vykresliStavKancelarie() {
+    sb.from("weby").select("adresa, domena, domena_pripojena, zverejnene_kedy").eq("kancelaria", true).maybeSingle().then(function (r) {
+      var st = $("#web-kanc-stav"); if (!st) return;
+      var w = r.data;
+      if (r.error || !w) { st.textContent = r.error ? "" : "Web kancelárie ešte nie je založený. Otvorte skladačku a poskladajte ho."; return; }
+      var u = w.domena && w.domena_pripojena ? "https://" + w.domena + "/" : new URL("stranka.html?m=" + encodeURIComponent(w.adresa), location.href).href;
+      st.innerHTML = w.zverejnene_kedy ? '<b>Web kancelárie je zverejnený</b><div class="pd-odkaz" style="margin-top:6px"><input type="text" readonly value="' + esc(u) + '"><button class="btn" type="button" data-web="kop-kanc">Kopírovať</button><a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Otvoriť</a></div>'
+        : "Web kancelárie je rozpracovaný a zatiaľ nie je zverejnený.";
+      var k = st.querySelector('[data-web="kop-kanc"]'); if (k) k.onclick = function () { kopiruj(u, "Odkaz na web kancelárie je skopírovaný."); };
+    });
   }
 
   // žiadosti maklérov o adresu webu a o pripojenie vlastnej domény (len admin)
@@ -6139,8 +6152,8 @@
           '<span class="meta">Vlastníctvo: ' + (z.domena_overena ? "✓ overené" : "✗ neoverené") + " · Smerovanie na náš server: " + (z.domena_smeruje ? "✓" : "✗") + (z.domena_kontrola ? " · kontrola " + datum(z.domena_kontrola, true) : "") + "</span>" +
           '<ol><li>V administrácii Websupportu pridaj k webhostingu doménu <code>' + esc(z.domena) + '</code> aj <code>www.' + esc(z.domena) + '</code> a nastav im ten istý priečinok, v ktorom je aplikácia (<code>/realitnytypek.sk/sub/app</code>).</li>' +
           "<li>Zapni pre ne bezplatný SSL certifikát (Let’s Encrypt), aby web bežal na https.</li>" +
-          '<li>Otvor <a href="https://' + esc(z.domena) + '/" target="_blank" rel="noopener">https://' + esc(z.domena) + "/</a> – musí sa ukázať web makléra. Potom klikni na Doména je pripojená.</li></ol>" +
-          '<div class="web-ziad-btns"><button class="btn primary" type="button" data-wz="dom-ok" data-id="' + z.web_id + '">✓ Doména je pripojená</button><button class="btn ghost" type="button" data-wz="dom-kontrola" data-makler="' + esc(z.makler_id) + '">Skontrolovať DNS znova</button><button class="btn ghost danger" type="button" data-wz="dom-nie" data-id="' + z.web_id + '">Zamietnuť</button></div></div>');
+          '<li>Otvor <a href="https://' + esc(z.domena) + '/" target="_blank" rel="noopener">https://' + esc(z.domena) + "/</a> – musí sa ukázať " + (z.kancelaria ? "web kancelárie" : "web makléra") + ". Potom klikni na Doména je pripojená.</li></ol>" +
+          '<div class="web-ziad-btns"><button class="btn primary" type="button" data-wz="dom-ok" data-id="' + z.web_id + '">✓ Doména je pripojená</button><button class="btn ghost" type="button" data-wz="dom-kontrola" data-makler="' + esc(z.makler_id) + '"' + (z.kancelaria ? ' data-kanc="1"' : "") + '>Skontrolovať DNS znova</button><button class="btn ghost danger" type="button" data-wz="dom-nie" data-id="' + z.web_id + '">Zamietnuť</button></div></div>');
       });
       box.innerHTML = karty.length ? karty.join("") : '<span class="meta">Žiadne čakajúce žiadosti.</span>';
     }).catch(function (e) { box = $("#web-ziadosti"); if (box) box.innerHTML = '<span class="meta">Žiadosti sa nepodarilo načítať: ' + esc(chybaText(e)) + "</span>"; });
@@ -6159,7 +6172,7 @@
         if (dovod === null) { b.disabled = false; return; }
         await rpc("pripojit_domenu_webu", { p_web: id, p_ok: false, p_dovod: dovod || null }); toast(a === "dom-odpoj" ? "Doména je odpojená." : "Žiadosť je zamietnutá.");
       } else if (a === "dom-kontrola") {
-        var r = await sb.functions.invoke("domena", { body: { akcia: "overit", makler: b.dataset.makler } });
+        var r = await sb.functions.invoke("domena", { body: b.dataset.kanc ? { akcia: "overit", kancelaria: true } : { akcia: "overit", makler: b.dataset.makler } });
         var d = r.data || {};
         if (r.error || d.chyba) throw new Error(d.chyba || "Kontrola domény teraz nefunguje.");
         toast("Vlastníctvo " + (d.overena ? "✓" : "✗") + ", smerovanie " + (d.smeruje ? "✓" : "✗") + (d.www ? ", www ✓" : ", www ✗"));

@@ -1,5 +1,5 @@
 -- =====================================================================
--- 065: Web realitnej kancelárie (skladačka webu kancelárie, upravuje ho administrátor)
+-- 066: Web realitnej kancelárie (skladačka webu kancelárie, upravuje ho administrátor)
 --  * web kancelárie je riadok v tabuľke weby s kancelaria = true (najviac jeden);
 --    zdieľa adresu, doménu, verzie, štatistiky, strážcu ponúk a formuláre s webmi maklérov
 --  * na webe sú aktívne ponuky všetkých maklérov, predané ponuky, tím a recenzie z Týpka aj z Google

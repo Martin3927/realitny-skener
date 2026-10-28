@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://www.googletagmanager.com https://connect.facebook.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://uwxziqapghlyktwpipjd.supabase.co wss://uwxziqapghlyktwpipjd.supabase.co https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://www.facebook.com https://connect.facebook.net; frame-src https:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Realitná kancelária</title>
+<meta name="description" content="Realitná kancelária – predaj, kúpa, prenájom a výkup nehnuteľností.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=Young+Serif&family=Public+Sans:wght@400..800&family=Archivo:wght@400..900&family=Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@500..800&display=swap">
+<link rel="stylesheet" href="web-kancelarie-sablona.css?v=202610281300">
+<link rel="icon" id="ikona" href="favicon-32.png">
+<style>
+html,body{margin:0;background:#FFFFFF}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.nacitavam{min-height:70vh;display:grid;place-items:center;color:#5A6470;font-size:15px;padding:24px;text-align:center}
+.nahlad-pas{position:sticky;top:0;z-index:60;background:#DB9522;color:#1E2A35;font:600 14px/1.4 system-ui,sans-serif;padding:8px 16px;text-align:center}
+</style>
+</head>
+<body>
+<div id="nahladPas" class="nahlad-pas" hidden>Náhľad rozpracovaného webu kancelárie. Klienti vidia poslednú zverejnenú verziu.</div>
+<div class="site" id="site"><div class="nacitavam">Načítavam…</div></div>
+<script src="config.js?v=202610201100"></script>
+<script src="supabase.min.js"></script>
+<script src="web-sablony.js?v=202610271200"></script>
+<script src="web-kancelarie-sablona.js?v=202610281300"></script>
+<script src="kancelaria.js?v=202610281300"></script>
+</body>
+</html>

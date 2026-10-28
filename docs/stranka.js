@@ -55,6 +55,13 @@
     if (r.error) throw r.error;
     var d = r.data;
     if (!d) return chyba(nahlad ? "Náhľad uvidíš, keď si v rovnakom prehliadači prihlásený v Realitnom týpkovi." : "Táto stránka zatiaľ nie je zverejnená.");
+    // web realitnej kancelárie má vlastnú šablónu (na vlastnej doméne aj s podstránkou z cesty, napr. /ponuky)
+    if (d.druh === "kancelaria") {
+      var kq = new URLSearchParams(location.search), kc = location.pathname.match(/^\/([a-z-]+)(?:\/([^\/]+))?\/?$/);
+      if (vlastna && kc && kc[1] !== "stranka.html") { kq.set("s", kc[1]); if (kc[2]) kq.set("c", decodeURIComponent(kc[2])); }
+      location.replace((vlastna ? "/" : "") + "kancelaria.html" + (kq.toString() ? "?" + kq.toString() : ""));
+      return;
+    }
     var m = d.makler || {}, s = T.merge(d.web || {});
     if (!s.name) s.name = m.meno_cele || m.meno || "";
     if (!s.phone) s.phone = m.telefon || "";
