@@ -242,7 +242,23 @@
   }
   function overeniePouzite(zdroj) { delete POW[zdroj]; }
 
-  window.TYPEK = { CFG: CFG, sb: sb, nf: nf, esc: esc, eur: eur, rpc: rpc, fotkaUrl: fotkaUrl, nazov: nazov, lokalita: lokalita, cena: cena, cenaM2: cenaM2,
+  // ---------------------------------------------------------------- skladačka karty nehnuteľnosti (poradie, stĺpec, zapnuté)
+  var KARTA_BLOKY = ["galeria", "zaklad", "media", "popis", "parametre", "vybavenie", "mapa", "hypoteka", "makler", "zaujem"];
+  var KARTA_BOK = { makler: 1, zaujem: 1 };
+  function normKarta(k) {
+    k = k && typeof k === "object" ? k : {};
+    var out = [], videne = {};
+    (Array.isArray(k.bloky) ? k.bloky : []).forEach(function (b) {
+      if (!b || KARTA_BLOKY.indexOf(b.id) < 0 || videne[b.id]) return; videne[b.id] = 1;
+      out.push({ id: b.id, stlpec: b.stlpec === "bok" ? "bok" : "hlavny", zap: b.id === "zaklad" ? true : b.zap !== false });
+    });
+    // časti, ktoré v uloženom nastavení chýbajú (napr. nové), sa pridajú na koniec svojho stĺpca
+    KARTA_BLOKY.forEach(function (id) { if (!videne[id]) out.push({ id: id, stlpec: KARTA_BOK[id] ? "bok" : "hlavny", zap: true }); });
+    var m = k.moznosti || {}, u = Number(m.urok);
+    return { bloky: out, moznosti: { termin: m.termin !== false, dalsie: m.dalsie !== false, zdielat: m.zdielat !== false, urok: u >= 0.5 && u <= 10 ? Math.round(u * 10) / 10 : 3.9 } };
+  }
+
+  window.TYPEK = { CFG: CFG, normKarta: normKarta, sb: sb, nf: nf, esc: esc, eur: eur, rpc: rpc, fotkaUrl: fotkaUrl, nazov: nazov, lokalita: lokalita, cena: cena, cenaM2: cenaM2,
     parametre: parametre, telOdkaz: telOdkaz, waOdkaz: waOdkaz, avatar: avatar, param: param, datum: datum, verejnyOdkaz: verejnyOdkaz,
     overenie: overenie, overeniePouzite: overeniePouzite, kanc: kanc, aplikujKancelariu: aplikujKancelariu, udalost: udalost };
 })();

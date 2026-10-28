@@ -11,7 +11,7 @@
 <meta property="og:image" content="https://app.realitnytypek.sk/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="verejne.css?v=202610281040">
+<link rel="stylesheet" href="verejne.css?v=202610281530">
 <link rel="stylesheet" href="media.css?v=202610201600">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 </head>
@@ -24,13 +24,19 @@
 <footer class="v-wrap v-pata">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span data-kanc-cast="region"> · <span data-kanc="region">Spišská Nová Ves a Levoča</span></span><span data-kanc-cast="web"> · <a href="https://www.alphareality.sk/" data-kanc-web data-kanc-web-text>www.alphareality.sk</a></span><span hidden data-kanc="nazov">Alpha Reality</span><span data-cookies hidden> · <a href="#">Nastavenie cookies</a></span></footer>
 <script src="config.js?v=202610182100"></script>
 <script src="supabase.min.js"></script>
-<script src="verejne.js?v=202610281040"></script>
+<script src="verejne.js?v=202610281530"></script>
 <script src="media.js?v=202610232300"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, nf = T.nf, id = Number(T.param("id")), NAHLAD = T.param("nahlad") === "1", P = null, g = 0;
   var KAT = { byty: "🏢", domy: "🏠", chaty: "🏡", pozemky: "🌳", priestory: "🏬", objekty: "🏭", garaze: "🚗" };
   var ZDROJE = [["obhliadka", "Obhliadka"], ["kontakt", "Otázka"], ["callback", "Zavolajte mi"]];
+  var KARTA = T.normKarta(null), KARTA_EDITOR = null;
+  // editor skladačky (Správa → Karta nehnuteľnosti) posiela rozpracované nastavenie do náhľadu bez uloženia
+  window.TYPEK_KARTA = function (k) {
+    KARTA_EDITOR = k; KARTA = T.normKarta(k);
+    if (P) { var y = window.scrollY; vykresli(); window.scrollTo(0, y); }
+  };
   var Z = { zdroj: "obhliadka", v: {}, chyba: "", posiela: false, hotovo: false, obs: null, den: null, termin: null, terminTxt: "" };
   // ---------------------------------------------------------------- termín obhliadky (časy v slovenskom čase, nech je klient kdekoľvek)
   var TZ = "Europe/Bratislava", DNI = ["ne", "po", "ut", "st", "št", "pi", "so"], DNI_DLHE = ["nedeľa", "pondelok", "utorok", "streda", "štvrtok", "piatok", "sobota"];
@@ -173,7 +179,7 @@
       return '<label><span>' + nazov + ' <b data-hy-o="' + k + '"></b></span><input type="range" data-hy="' + k + '" min="' + min + '" max="' + max + '" step="' + krok + '" value="' + hod + '"></label>';
     }
     return '<section class="v-box" aria-labelledby="hy-h"><h2 id="hy-h">Koľko by ste splácali</h2><div class="v-hypo"><div class="v-hypo-sl">' +
-      sl("d", "Vlastné zdroje", 10, 50, 5, 20) + sl("y", "Doba splácania", 5, 30, 1, 30) + sl("u", "Úrok", 2, 6, 0.1, 3.9) + "</div>" +
+      sl("d", "Vlastné zdroje", 10, 50, 5, 20) + sl("y", "Doba splácania", 5, 30, 1, 30) + sl("u", "Úrok", 1, Math.max(8, Math.ceil(KARTA.moznosti.urok + 1)), 0.1, KARTA.moznosti.urok) + "</div>" +
       '<div class="v-hypo-vys"><span>Mesačná splátka približne</span><strong data-hy-o="m"></strong><span data-hy-o="l"></span></div></div>' +
       '<p class="v-mini">Orientačný výpočet. Presnú ponuku vám pripraví hypotekárny špecialista – radi vám ho odporučíme.</p>' +
       '<div class="v-hypo-ziadost" id="hypo-ziadost">' + hypoZiadost() + "</div></section>";
@@ -243,7 +249,7 @@
       (tel ? '<div class="v-btns dva"><a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(m.telefon)) + "?text=" + encodeURIComponent(text) + '" target="_blank" rel="noopener">WhatsApp</a>' +
         '<a class="v-btn" href="sms:' + esc(tel) + "?&body=" + encodeURIComponent(text) + '">💬 SMS</a></div>' : "") +
       (m.email ? '<a class="v-btn" href="mailto:' + esc(m.email) + "?subject=" + encodeURIComponent("Záujem o ponuku " + (P.cislo || T.nazov(P))) + "&body=" + encodeURIComponent(text) + '">✉️ Napísať e-mail</a>' : "") +
-      '<div class="v-btns dva"><button class="v-btn" type="button" data-zdielat>🔗 Zdieľať</button><a class="v-btn" href="letak.html?id=' + P.id + '" target="_blank" rel="noopener">🖨 Leták</a></div></div>' +
+      (KARTA.moznosti.zdielat ? '<div class="v-btns dva"><button class="v-btn" type="button" data-zdielat>🔗 Zdieľať</button><a class="v-btn" href="letak.html?id=' + P.id + '" target="_blank" rel="noopener">🖨 Leták</a></div>' : "") + "</div>" +
       (P.cislo ? '<div class="v-cislo">Číslo ponuky: <b>' + esc(P.cislo) + "</b></div>" : "") + "</div>";
   }
 
@@ -268,7 +274,7 @@
     var plac = { obhliadka: Z.termin ? "Poznámka (nepovinné)" : "Kedy sa vám obhliadka hodí? (nepovinné)", kontakt: "Na čo sa chcete opýtať?", callback: "Kedy vám môžeme zavolať? (nepovinné)", podobna: "Čo presne hľadáte? (nepovinné)" }[zdroj];
     var tlac = { obhliadka: "Chcem obhliadku", kontakt: "Odoslať otázku", callback: "Zavolajte mi", podobna: "Ozvite sa mi" }[zdroj];
     return h + '<form class="v-form" novalidate data-zaujem-form>' +
-      (zdroj === "obhliadka" && P.stav === "aktivne" ? vyberTerminu() : "") +
+      (zdroj === "obhliadka" && P.stav === "aktivne" && KARTA.moznosti.termin ? vyberTerminu() : "") +
       '<label><span>Meno</span><input name="meno" autocomplete="name" maxlength="80" value="' + esc(v.meno || "") + '"></label>' +
       "<label><span>" + (cb ? "Telefón" : "Telefón alebo e-mail") + '</span><input name="kontakt" maxlength="120" required ' +
         (cb ? 'type="tel" inputmode="tel" autocomplete="tel"' : 'type="text" autocomplete="tel"') + ' value="' + esc(v.kontakt || "") + '"></label>' +
@@ -327,24 +333,33 @@
 
   // ---------------------------------------------------------------- spodná lišta na mobile
   function lista() {
-    var mk = P.makler || {}, tel = T.telOdkaz(mk.telefon), pod = podobna(), b = [];
+    var mk = P.makler || {}, tel = zapnute("makler") ? T.telOdkaz(mk.telefon) : "", pod = podobna(), b = [];
+    if (!zapnute("zaujem")) {   // bez formulára: len kontakt na makléra
+      if (zapnute("makler") && tel) b.push('<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Volať</a>', '<a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(mk.telefon)) + "?text=" + encodeURIComponent(sprava()) + '" target="_blank" rel="noopener">WhatsApp</a>');
+      return b.length ? '<div class="v-mob-lista" style="grid-template-columns:repeat(' + b.length + ',minmax(0,1fr))">' + b.join("") + "</div>" : "";
+    }
     var zaujem = '<a class="v-btn tmave" href="#zaujem" data-k-zaujmu>' + (pod ? "Hľadám podobnú" : "Mám záujem") + "</a>";
     var volat = tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Volať</a>' : "";
     if (pod) { b.push(zaujem); if (volat) b.push(volat); }
     else if (tel) b.push(volat, '<a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(mk.telefon)) + "?text=" + encodeURIComponent(sprava()) + '" target="_blank" rel="noopener">WhatsApp</a>', zaujem);
-    else { b.push(zaujem); if (mk.email) b.push('<a class="v-btn" href="mailto:' + esc(mk.email) + "?subject=" + encodeURIComponent("Záujem o ponuku " + (P.cislo || T.nazov(P))) + "&body=" + encodeURIComponent(sprava()) + '">✉️ E-mail</a>'); }
+    else { b.push(zaujem); if (zapnute("makler") && mk.email) b.push('<a class="v-btn" href="mailto:' + esc(mk.email) + "?subject=" + encodeURIComponent("Záujem o ponuku " + (P.cislo || T.nazov(P))) + "&body=" + encodeURIComponent(sprava()) + '">✉️ E-mail</a>'); }
     return '<div class="v-mob-lista" style="grid-template-columns:repeat(' + b.length + ',minmax(0,1fr))">' + b.join("") + "</div>";
   }
 
   // ---------------------------------------------------------------- ďalšie ponuky
+  var DALSIE = null;
   function dalsiePonuky() {
-    T.rpc("verejne_ponuky", { p_kancelaria: P.kancelaria || "alpha", p_makler: null }).then(function (L) {
+    T.rpc("verejne_ponuky", { p_kancelaria: P.kancelaria || "alpha", p_makler: null }).then(function (L) { DALSIE = L || []; kresliDalsie(); }).catch(function () {});
+  }
+  function kresliDalsie() {
+    var el = document.getElementById("dalsie"); if (!el) return;
+    if (!DALSIE || !KARTA.moznosti.dalsie) { el.hidden = true; return; }
+    (function (L) {
       var mid = P.makler && P.makler.id, jeho = function (x) { return x.makler && x.makler.id === mid ? 1 : 0; };
       L = (L || []).filter(function (x) { return x.id !== P.id; });
       if (!L.length) return;
       L = L.map(function (x, i) { return [x, i]; }).sort(function (a, b) { return jeho(b[0]) - jeho(a[0]) || a[1] - b[1]; }).map(function (x) { return x[0]; }).slice(0, 6);
       var mk = P.makler || {}, len = L.every(function (x) { return jeho(x); });
-      var el = document.getElementById("dalsie"); if (!el) return;
       el.innerHTML = '<h2>Ďalšie ponuky</h2><p class="v-dalsie-pod">' + (len && (mk.meno_cele || mk.meno) ? esc(mk.meno_cele || mk.meno) : '<span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span>") + "</p>" +
         '<div class="v-dalsie">' + L.map(function (x) {
           var f = (x.fotky || [])[0], poz = x.kategoria === "pozemky", pl = poz ? x.plocha_pozemku : (x.plocha_uzitkova || x.plocha_pozemku);
@@ -353,7 +368,7 @@
             (x.stav === "rezervovane" ? '<em>Rezervované</em>' : "") + '</span><span class="v-karta-t"><b>' + esc(T.cena(x)) + "</b><span>" + esc(T.nazov(x)) + "</span><small>" + esc(meta) + "</small></span></a>";
         }).join("") + "</div>";
       el.hidden = false;
-    }).catch(function () {});
+    })(DALSIE);
   }
 
   // bočný panel na počítači: ostáva viditeľný pri posúvaní; keď je vyšší ako okno, prilepí sa spodkom
@@ -362,33 +377,52 @@
     a.style.top = Math.min(16, window.innerHeight - a.offsetHeight - 16) + "px";
   }
 
+  // ---------------------------------------------------------------- karta podľa skladačky kancelárie (Správa → Karta nehnuteľnosti)
+  function blok(id) {
+    if (id === "galeria") return galeria();
+    if (id === "zaklad") {
+      var m2 = T.cenaM2(P), kl = dlazdice();
+      return '<section class="v-box"><div class="v-tr-riadok"><div class="v-tr">' + (P.transakcia === "prenajom" ? "Prenájom" : "Predaj") + (P.typ ? " · " + esc(P.typ) : "") + "</div>" +
+          (KARTA.moznosti.zdielat ? '<button class="v-zdiel" type="button" data-zdielat aria-label="Zdieľať ponuku">' + IK_ZDIEL + "<span>Zdieľať</span></button>" : "") + "</div>" +
+        '<h1 class="v-nazov">' + esc(T.nazov(P)) + '</h1><div class="v-lok">📍 ' + esc(T.lokalita(P)) + "</div>" +
+        '<div class="v-cena">' + esc(T.cena(P)) + (m2 || P.text_k_cene ? "<small>" + esc([m2, P.text_k_cene].filter(Boolean).join(" · ")) + "</small>" : "") + "</div>" +
+        cipy() +
+        (kl.length ? '<div class="v-kluc">' + kl.map(function (k) { return "<div><b>" + esc(k[0]) + "</b><span>" + esc(k[1]) + "</span></div>"; }).join("") + "</div>" : "") + "</section>";
+    }
+    if (id === "media") return P.virtualna_prehliadka || P.video ? '<section class="v-media" aria-label="Video a virtuálna prehliadka">' + window.TYPEK_MEDIA.htmlVsetko(P) + "</section>" : "";
+    if (id === "popis") return P.intro || P.popis ? '<section class="v-box"><h2>Popis</h2>' + (P.intro ? '<p class="v-intro">' + esc(P.intro) + "</p>" : "") + (P.popis ? '<div class="v-popis">' + esc(P.popis) + "</div>" : "") + "</section>" : "";
+    if (id === "parametre") {
+      var par = T.parametre(P);
+      return par.length ? '<section class="v-box"><h2>Parametre</h2><dl class="v-par">' + par.map(function (x) {
+        return "<div><dt>" + esc(x[0]) + "</dt><dd>" + (x[0] === "Energetický certifikát" ? energ(x[1]) : esc(x[1])) + "</dd></div>";
+      }).join("") + "</dl></section>" : "";
+    }
+    if (id === "vybavenie") return (P.vybavenie || []).length ? '<section class="v-box"><h2>Vybavenie a siete</h2><div class="v-vyb">' + P.vybavenie.map(function (v) { return "<span>" + esc(v) + "</span>"; }).join("") + "</div></section>" : "";
+    if (id === "mapa") {
+      if (!(P.lat && P.lon)) return "";
+      var adresa = [P.ulica, P.cast_obce, P.obec].filter(Boolean).join(", ") + (P.okres && P.okres !== P.obec ? ", okres " + P.okres : "");
+      return '<section class="v-box"><h2>Poloha</h2><div class="v-mapa" id="mapa"></div><p class="v-mapa-pata"><span>Poloha je orientačná.</span>' +
+        '<a href="https://www.google.com/maps/search/?api=1&amp;query=' + encodeURIComponent(adresa) + '" target="_blank" rel="noopener">Otvoriť v Google Mapách →</a></p></section>';
+    }
+    if (id === "hypoteka") return hypoteka();
+    if (id === "makler") return makler();
+    if (id === "zaujem") return formular();
+    return "";
+  }
+  function zapnute(id) { return KARTA.bloky.some(function (b) { return b.id === id && b.zap; }); }
   function vykresli() {
-    var par = T.parametre(P), m2 = T.cenaM2(P), kl = dlazdice();
     var stav = P.stav === "rezervovane" ? '<div class="v-stav rez">Rezervované</div>' : P.stav === "predane" ? '<div class="v-stav pred">' + (P.transakcia === "prenajom" ? "Prenajaté" : "Predané") + "</div>" :
       P.stav !== "aktivne" ? '<div class="v-stav nahlad">Náhľad – ponuka zatiaľ nie je zverejnená, klient ju neuvidí</div>' :
       NAHLAD ? '<div class="v-stav nahlad">Náhľad – takto ponuku uvidí klient</div>' : "";
-    var adresa = [P.ulica, P.cast_obce, P.obec].filter(Boolean).join(", ") + (P.okres && P.okres !== P.obec ? ", okres " + P.okres : "");
     document.title = T.nazov(P) + " · " + T.kanc().nazov;
     var d = document.querySelector('meta[name="description"]'); if (d) d.content = (P.intro || T.nazov(P) + " – " + T.cena(P)).slice(0, 160);
-    document.getElementById("obsah").innerHTML = stav + '<div class="v-grid"><div class="v-main">' + galeria() +
-      '<section class="v-box"><div class="v-tr-riadok"><div class="v-tr">' + (P.transakcia === "prenajom" ? "Prenájom" : "Predaj") + (P.typ ? " · " + esc(P.typ) : "") + "</div>" +
-        '<button class="v-zdiel" type="button" data-zdielat aria-label="Zdieľať ponuku">' + IK_ZDIEL + "<span>Zdieľať</span></button></div>" +
-      '<h1 class="v-nazov">' + esc(T.nazov(P)) + '</h1><div class="v-lok">📍 ' + esc(T.lokalita(P)) + "</div>" +
-      '<div class="v-cena">' + esc(T.cena(P)) + (m2 || P.text_k_cene ? "<small>" + esc([m2, P.text_k_cene].filter(Boolean).join(" · ")) + "</small>" : "") + "</div>" +
-      cipy() +
-      (kl.length ? '<div class="v-kluc">' + kl.map(function (k) { return "<div><b>" + esc(k[0]) + "</b><span>" + esc(k[1]) + "</span></div>"; }).join("") + "</div>" : "") + "</section>" +
-      (P.virtualna_prehliadka || P.video ? '<section class="v-media" aria-label="Video a virtuálna prehliadka">' + window.TYPEK_MEDIA.htmlVsetko(P) + "</section>" : "") +
-      (P.intro || P.popis ? '<section class="v-box"><h2>Popis</h2>' + (P.intro ? '<p class="v-intro">' + esc(P.intro) + "</p>" : "") + (P.popis ? '<div class="v-popis">' + esc(P.popis) + "</div>" : "") + "</section>" : "") +
-      (par.length ? '<section class="v-box"><h2>Parametre</h2><dl class="v-par">' + par.map(function (x) {
-        return "<div><dt>" + esc(x[0]) + "</dt><dd>" + (x[0] === "Energetický certifikát" ? energ(x[1]) : esc(x[1])) + "</dd></div>";
-      }).join("") + "</dl></section>" : "") +
-      ((P.vybavenie || []).length ? '<section class="v-box"><h2>Vybavenie a siete</h2><div class="v-vyb">' + P.vybavenie.map(function (v) { return "<span>" + esc(v) + "</span>"; }).join("") + "</div></section>" : "") +
-      (P.lat && P.lon ? '<section class="v-box"><h2>Poloha</h2><div class="v-mapa" id="mapa"></div><p class="v-mapa-pata"><span>Poloha je orientačná.</span>' +
-        '<a href="https://www.google.com/maps/search/?api=1&amp;query=' + encodeURIComponent(adresa) + '" target="_blank" rel="noopener">Otvoriť v Google Mapách →</a></p></section>' : "") +
-      hypoteka() +
-      '</div><aside class="v-side">' + makler() + formular() + "</aside></div>" +
+    var hl = [], bk = [];
+    KARTA.bloky.forEach(function (b) { if (!b.zap) return; var h = blok(b.id); if (h) (b.stlpec === "bok" ? bk : hl).push(h); });
+    document.getElementById("obsah").innerHTML = stav + '<div class="v-grid' + (bk.length ? "" : " bez-boku") + '"><div class="v-main">' + hl.join("") + "</div>" +
+      (bk.length ? '<aside class="v-side">' + bk.join("") + "</aside>" : "") + "</div>" +
       '<section class="v-dalsie-sek" id="dalsie" hidden></section>' + lista();
     napoj();
+    kresliDalsie();
   }
   function napoj() {
     document.querySelectorAll("[data-zdielat]").forEach(function (b) { b.onclick = zdielat; });
@@ -407,8 +441,7 @@
     kresliHypoZiadost();
     window.TYPEK_MEDIA.napoj(document.getElementById("obsah"));
     zarovnajBok();
-    window.addEventListener("resize", zarovnajBok);
-    window.addEventListener("load", zarovnajBok);
+    if (!napoj.raz) { napoj.raz = true; window.addEventListener("resize", zarovnajBok); window.addEventListener("load", zarovnajBok); }
     var mapa = document.getElementById("mapa");
     if (mapa) nacitajLeaflet().then(function () {
       var m = L.map(mapa, { scrollWheelZoom: false }).setView([P.lat, P.lon], 14);
@@ -435,6 +468,7 @@
       return;
     }
     if (p.kanc) T.aplikujKancelariu(p.kanc);
+    KARTA = T.normKarta(KARTA_EDITOR || p.karta);
     P = p; vykresli(); dalsiePonuky();
     if (!NAHLAD) T.udalost("ponuka", { id: p.id, nazov: T.nazov(p), cena: p.zobrazit_cenu === false ? 0 : (p.cena || 0) });
     if (p.makler && p.makler.id) T.rpc("verejne_recenzie", { p_makler: p.makler.id }).then(function (r) {

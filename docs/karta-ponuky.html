@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://uwxziqapghlyktwpipjd.supabase.co wss://uwxziqapghlyktwpipjd.supabase.co; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1e2a35">
+<title>Karta nehnuteľnosti – Realitný týpek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="karta-ponuky.css?v=202610281530">
+<link rel="icon" type="image/png" sizes="32x32" href="typek-favicon-32.png?v=202610251300">
+</head>
+<body>
+<header class="kp-top">
+  <div class="kp-top-l">
+    <a class="kp-spat" href="./#nehnutelnosti">← Späť do aplikácie</a>
+    <div class="kp-crumbs"><span class="kp-logo">Realitný <span>týpek</span></span><span>·</span><span>Karta nehnuteľnosti</span><span class="kp-odznak">LEN ADMIN</span></div>
+    <h1>Karta nehnuteľnosti</h1>
+    <p class="kp-perex">Poukladaj si, čo klient uvidí na stránke každej ponuky – poradie, stĺpec a čo má byť zapnuté. Platí pre celú kanceláriu.</p>
+  </div>
+  <div class="kp-top-r" id="akcie" hidden>
+    <span class="kp-stav" id="stav"><i></i><span>Uložené</span></span>
+    <button class="kp-b kp-b-jemne" id="predvolene" type="button">Obnoviť predvolené</button>
+    <button class="kp-b kp-b-zlate" id="ulozit" type="button" disabled>Uložiť pre celú kanceláriu</button>
+  </div>
+</header>
+
+<div class="kp-brana" id="brana"><img src="typek-hlavicka.png" alt="" width="64" height="64"><h2>Overujem prístup…</h2><p>Chvíľu strpenia.</p></div>
+
+<main class="kp-app" id="app" hidden>
+  <aside class="kp-panel" aria-label="Nastavenie karty">
+    <section class="kp-sek">
+      <div class="kp-sek-h"><h2>Hlavný stĺpec</h2><span>Široká časť stránky</span></div>
+      <div class="kp-zoznam" id="z-hlavny" data-stlpec="hlavny"></div>
+    </section>
+    <section class="kp-sek">
+      <div class="kp-sek-h"><h2>Bočný panel</h2><span>Na počítači vpravo, na mobile pod hlavným stĺpcom</span></div>
+      <div class="kp-zoznam" id="z-bok" data-stlpec="bok"></div>
+    </section>
+    <section class="kp-sek">
+      <div class="kp-sek-h"><h2>Možnosti</h2></div>
+      <div class="kp-moznosti" id="moznosti"></div>
+    </section>
+    <p class="kp-tip">Časti chyť myšou a presuň, alebo použi šípky. Časť, ktorú ponuka nemá (napríklad video alebo mapu), sa klientovi neukáže, aj keď je zapnutá.</p>
+  </aside>
+  <section class="kp-nahlad" aria-label="Náhľad karty">
+    <div class="kp-lista">
+      <label class="kp-vyber"><span>Ponuka v náhľade</span><select id="ponuka"></select></label>
+      <div class="kp-seg" role="group" aria-label="Zariadenie">
+        <button type="button" data-zar="pc" aria-pressed="true">Počítač</button>
+        <button type="button" data-zar="mobil" aria-pressed="false">Mobil</button>
+      </div>
+      <a class="kp-b kp-b-jemne kp-b-male" id="otvorit" href="#" target="_blank" rel="noopener">Otvoriť na novej karte</a>
+    </div>
+    <div class="kp-scena" id="scena"><div class="kp-ramik" id="ramik"><iframe id="ifr" title="Náhľad karty nehnuteľnosti"></iframe></div>
+      <div class="kp-prazdne" id="prazdne" hidden><img src="typek-postava.png" alt="" width="90" height="101"><b>Zatiaľ tu nemáš žiadnu ponuku</b><span>Pridaj ju v Nehnuteľnostiach a tu uvidíš, ako bude karta vyzerať.</span></div>
+    </div>
+  </section>
+</main>
+<div class="kp-toast" id="toast" role="status" hidden></div>
+
+<script src="config.js?v=202610201100"></script>
+<script src="supabase.min.js"></script>
+<script src="verejne.js?v=202610281530"></script>
+<script src="karta-ponuky.js?v=202610281530"></script>
+</body>
+</html>

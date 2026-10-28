@@ -1306,7 +1306,8 @@
           "<span>" + esc(t[1]) + "</span>" + (t[0] === "chat" ? '<span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
       }).join("") +
         // web kancelárie (skladačka na samostatnej stránke) – len administrátor
-        (g[0] === "Správa" && admin() ? '<a class="dl-menu" href="web-kancelarie.html"><span class="dl-menu-ik">' + ikona("web") + "</span><span>Web kancelárie</span></a>" : "") + "</div></div>";
+        (g[0] === "Správa" && admin() ? '<a class="dl-menu" href="web-kancelarie.html"><span class="dl-menu-ik">' + ikona("web") + "</span><span>Web kancelárie</span></a>" +
+          '<a class="dl-menu" href="karta-ponuky.html"><span class="dl-menu-ik">' + ikona("nehn") + "</span><span>Karta nehnuteľnosti</span></a>" : "") + "</div></div>";
     }).join("") + '<div class="menu-skup menu-farby"><span class="menu-skup-n">Vzhľad</span><div class="menu-dl">' +
       '<button type="button" class="dl-menu dl-farby" data-pomoc="farby"><span class="dl-menu-ik dl-farby-ik" aria-hidden="true"><i></i><i></i><i></i></span><span>Farebný režim</span></button></div></div>' +
       '<div class="menu-skup menu-pomoc"><span class="menu-skup-n">Pomoc</span><div class="menu-dl">' +
