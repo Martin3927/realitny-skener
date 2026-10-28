@@ -8,7 +8,7 @@
 <title>Napíšte recenziu · Alpha Reality</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="verejne.css?v=202610272200">
+<link rel="stylesheet" href="verejne.css?v=202610280900">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <style>
 .r-wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 16px }
@@ -30,7 +30,7 @@ input:focus, textarea:focus { outline: 2px solid var(--gold-strong); border-colo
 </style>
 </head>
 <body>
-<header class="v-top"><div class="v-wrap"><a href="https://www.alphareality.sk/"><img src="logo.png" alt="Alpha Reality"></a><div class="v-top-t">Ďakujeme za vašu dôveru</div></div></header>
+<header class="v-top"><div class="v-wrap"><a href="https://www.alphareality.sk/" data-kanc-web><img src="logo.png" alt="Alpha Reality"></a><div class="v-top-t">Ďakujeme za vašu dôveru</div></div></header>
 <main class="r-wrap" id="obsah">
   <div class="v-box r-hl" id="mk"></div>
   <form class="v-box" id="f">
@@ -39,14 +39,14 @@ input:focus, textarea:focus { outline: 2px solid var(--gold-strong); border-colo
     <div class="hv-txt" id="hv-txt"></div>
     <label>Vaša skúsenosť<textarea name="text" rows="5" maxlength="2000" placeholder="Čo sa vám páčilo? Ako prebiehal predaj / kúpa?"></textarea></label>
     <label>Vaše meno<input name="meno" required maxlength="80" autocomplete="name" placeholder="napr. Jana K."></label>
-    <p class="suhlas">Odoslaním súhlasíte so zverejnením recenzie s vaším menom na webe Alpha Reality. Recenziu pred zverejnením skontrolujeme.</p>
+    <p class="suhlas">Odoslaním súhlasíte so zverejnením recenzie s vaším menom na webe <span data-kanc="nazov">Alpha Reality</span>. Recenziu pred zverejnením skontrolujeme.</p>
     <div class="chyba" id="chyba" hidden></div>
     <button class="v-btn zlate" type="submit">Odoslať recenziu</button>
   </form>
 </main>
-<footer class="v-wrap v-pata">© Alpha Reality s.r.o. · <a href="https://www.alphareality.sk/">www.alphareality.sk</a></footer>
+<footer class="v-wrap v-pata">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span data-kanc-cast="web"> · <a href="https://www.alphareality.sk/" data-kanc-web data-kanc-web-text>www.alphareality.sk</a></span></footer>
 <script src="config.js?v=202610182100"></script>
-<script src="verejne.js?v=202610272200"></script>
+<script src="verejne.js?v=202610280900"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, m = T.param("m"), n = 0;
@@ -60,16 +60,16 @@ input:focus, textarea:focus { outline: 2px solid var(--gold-strong); border-colo
   kresli();
   // meno a fotka makléra z jeho verejných ponúk / profilu
   T.rpc("verejny_makler", { p_id: m }).then(function (x) {
-    if (!x) { document.getElementById("mk").innerHTML = "<div><h1>Alpha Reality</h1><span class=\"v-lok\">Realitná kancelária</span></div>"; return; }
-    document.getElementById("mk").innerHTML = T.avatar(x, 58) + "<div><h1>" + esc(x.meno_cele || x.meno) + '</h1><span class="v-lok">' + (x.pohlavie === "zena" ? "maklérka" : "maklér") + " · Alpha Reality</span></div>";
-  }).catch(function () { document.getElementById("mk").innerHTML = "<div><h1>Alpha Reality</h1></div>"; });
+    if (!x) { document.getElementById("mk").innerHTML = '<div><h1 data-kanc="nazov">' + esc(T.kanc().nazov) + '</h1><span class="v-lok">Realitná kancelária</span></div>'; return; }
+    document.getElementById("mk").innerHTML = T.avatar(x, 58) + "<div><h1>" + esc(x.meno_cele || x.meno) + '</h1><span class="v-lok">' + (x.pohlavie === "zena" ? "maklérka" : "maklér") + ' · <span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span></span></div>";
+  }).catch(function () { document.getElementById("mk").innerHTML = '<div><h1 data-kanc="nazov">' + esc(T.kanc().nazov) + "</h1></div>"; });
   document.getElementById("f").onsubmit = function (e) {
     e.preventDefault();
     var f = e.target, ch = document.getElementById("chyba"); ch.hidden = true;
     if (!n) { ch.textContent = "Vyberte počet hviezdičiek."; ch.hidden = false; return; }
     var b = f.querySelector("button[type=submit]"); b.disabled = true;
     T.rpc("poslat_recenziu", { p_makler: m || null, p_meno: f.meno.value, p_hodnotenie: n, p_text: f.text.value }).then(function () {
-      document.getElementById("obsah").innerHTML = '<div class="v-box dakujem"><div>🙏</div><h1 style="font-family:var(--display)">Ďakujeme!</h1><p>Vaša recenzia nám veľmi pomôže. Po krátkej kontrole ju zverejníme.</p><a class="v-btn" href="https://www.alphareality.sk/">Prejsť na web Alpha Reality</a></div>';
+      document.getElementById("obsah").innerHTML = '<div class="v-box dakujem"><div>🙏</div><h1 style="font-family:var(--display)">Ďakujeme!</h1><p>Vaša recenzia nám veľmi pomôže. Po krátkej kontrole ju zverejníme.</p>' + (T.kanc().web ? '<a class="v-btn" href="' + esc(T.kanc().web) + '">Prejsť na web ' + esc(T.kanc().nazov) + "</a>" : "") + '</div>';
     }, function (err) { ch.textContent = (err && err.message) || "Recenziu sa nepodarilo odoslať."; ch.hidden = false; b.disabled = false; });
   };
 })();

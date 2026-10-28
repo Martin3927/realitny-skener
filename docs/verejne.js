@@ -87,6 +87,41 @@
       document.head.appendChild(st);
     }
     if (v.logo) document.querySelectorAll('img[src^="logo.png"]').forEach(function (i) { i.src = v.logo; if (v.nazov) i.alt = v.nazov; });
+    aplikujKancelariu(v);
+  }
+
+  // údaje kancelárie z nastavení (Vzhľad a značka kancelárie): názov, obchodné meno, web a kde pôsobí.
+  // Stránky majú v HTML predvolený text; prvky s data-kanc sa podľa nastavení prepíšu, takže každá kancelária vidí seba.
+  var KANC = {}, KANC_NACITANE = false;
+  function webAdresa(u) {
+    u = String(u || "").trim(); if (!u) return "";
+    if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+    return /^https?:\/\/[^\s"'<>]+$/i.test(u) ? u : "";
+  }
+  function webText(u) { return String(u || "").replace(/^https?:\/\//i, "").replace(/\/$/, ""); }
+  function aplikujKancelariu(k) {
+    if (k && (k.nazov || k.web || k.firma || k.region)) {
+      KANC_NACITANE = true;
+      ["nazov", "firma", "web", "region"].forEach(function (x) { KANC[x] = k[x] ? String(k[x]).trim() : ""; });
+    }
+    if (!KANC_NACITANE) return;
+    var hod = { nazov: KANC.nazov, firma: KANC.firma || KANC.nazov, region: KANC.region }, w = webAdresa(KANC.web);
+    document.querySelectorAll("[data-kanc]").forEach(function (el) { var v = hod[el.getAttribute("data-kanc")]; if (v && el.textContent !== v) el.textContent = v; });
+    document.querySelectorAll("[data-kanc-cast]").forEach(function (el) {
+      var x = el.getAttribute("data-kanc-cast"), ukaz = !!(x === "web" ? w : hod[x]);
+      if (el.hidden === ukaz) el.hidden = !ukaz;
+    });
+    if (w) document.querySelectorAll("[data-kanc-web]").forEach(function (a) {
+      if (a.getAttribute("href") !== w) a.setAttribute("href", w);
+      if (a.hasAttribute("data-kanc-web-text") && a.textContent !== webText(w)) a.textContent = webText(w);
+    });
+    if (KANC.nazov) document.querySelectorAll('img[src^="logo.png"], img[data-kanc-logo]').forEach(function (i) { if (i.alt !== KANC.nazov) i.alt = KANC.nazov; });
+  }
+  // aktuálne údaje kancelárie pre texty skladané v JavaScripte (titulok, „Váš maklér · …“)
+  function kanc() {
+    var el = document.querySelector('[data-kanc="nazov"]');
+    return { nazov: KANC.nazov || (el && el.textContent.trim()) || "Realitná kancelária", firma: KANC.firma || KANC.nazov || "",
+      web: webAdresa(KANC.web), webText: webText(webAdresa(KANC.web)), region: KANC.region || "" };
   }
   try { aplikujVzhlad(JSON.parse(localStorage.getItem("typek-vzhlad") || "null")); } catch (e) { /* bez úložiska */ }
   function vzhladZoServera() {
@@ -100,6 +135,7 @@
   new MutationObserver(function () {
     var v = null; try { v = JSON.parse(localStorage.getItem("typek-vzhlad") || "null"); } catch (e) { /* nič */ }
     if (v && v.logo) document.querySelectorAll('img[src^="logo.png"]').forEach(function (i) { i.src = v.logo; });
+    aplikujKancelariu(null);   // texty s údajmi kancelárie vložené neskôr
   }).observe(document.documentElement, { childList: true, subtree: true });
 
   // ochrana formulárov proti robotom (rovnaká ako na webe makléra): prehliadač nájde číslo, pri ktorom
@@ -147,5 +183,5 @@
 
   window.TYPEK = { CFG: CFG, sb: sb, nf: nf, esc: esc, eur: eur, rpc: rpc, fotkaUrl: fotkaUrl, nazov: nazov, lokalita: lokalita, cena: cena, cenaM2: cenaM2,
     parametre: parametre, telOdkaz: telOdkaz, waOdkaz: waOdkaz, avatar: avatar, param: param, datum: datum, verejnyOdkaz: verejnyOdkaz,
-    overenie: overenie, overeniePouzite: overeniePouzite };
+    overenie: overenie, overeniePouzite: overeniePouzite, kanc: kanc, aplikujKancelariu: aplikujKancelariu };
 })();

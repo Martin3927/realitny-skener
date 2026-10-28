@@ -9,7 +9,7 @@
 <title>Report pre majiteľa · Alpha Reality</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="verejne.css?v=202610272200">
+<link rel="stylesheet" href="verejne.css?v=202610280900">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <style>
 .r-wrap { max-width: 860px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-left, 0px)) 48px; display: grid; gap: 18px }
@@ -35,13 +35,13 @@
 </head>
 <body>
 <header class="v-top"><div class="v-wrap">
-  <a href="https://www.alphareality.sk/" title="Alpha Reality"><img src="logo.png" alt="Alpha Reality"></a>
+  <a href="https://www.alphareality.sk/" data-kanc-web><img src="logo.png" alt="Alpha Reality"></a>
   <div class="v-top-t">Report pre majiteľa</div>
 </div></header>
 <main class="r-wrap" id="obsah"><div class="v-nic">Načítavam report…</div></main>
-<footer class="v-wrap v-pata">© Alpha Reality s.r.o. · Tento odkaz je určený len pre majiteľa nehnuteľnosti – nezdieľajte ho, prosím.</footer>
+<footer class="v-wrap v-pata">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span hidden data-kanc="nazov">Alpha Reality</span> · Tento odkaz je určený len pre majiteľa nehnuteľnosti – nezdieľajte ho, prosím.</footer>
 <script src="config.js?v=202610182100"></script>
-<script src="verejne.js?v=202610272200"></script>
+<script src="verejne.js?v=202610280900"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, tok = T.param("t");
@@ -74,9 +74,9 @@
           (o.spatna_vazba ? esc(o.spatna_vazba) : '<span class="r-pozn">Bez spätnej väzby.</span>') + "</span></li>";
       }).join("") + "</ul>" : '<p class="r-pozn">Zatiaľ neprebehla žiadna obhliadka. Ponuku aktívne ponúkame klientom a na portáloch.</p>') + "</section>" +
       (hc.length > 1 ? '<section class="v-box"><h2>Vývoj ceny</h2><p class="r-cena">' + hc.map(function (x) { return esc(T.datum(x[0])) + " – <b>" + esc(T.eur(x[1])) + "</b>"; }).join(" → ") + "</p></section>" : "") +
-      '<section class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno_cele || m.meno || "Alpha Reality") + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · Alpha Reality</small></div></div>" +
+      '<section class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno_cele || m.meno || T.kanc().nazov) + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + ' · <span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span></small></div></div>" +
       '<div class="v-btns dva">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Zavolať</a>' : "") + (m.email ? '<a class="v-btn" href="mailto:' + esc(m.email) + '">✉️ Napísať</a>' : "") + "</div></section>" +
-      '<p class="r-pozn">Report sa aktualizuje priebežne · stav k ' + esc(T.datum(R.vygenerovane, true)) + ". Zobrazenia sa počítajú na stránke ponuky Alpha Reality (nie na portáloch).</p>";
+      '<p class="r-pozn">Report sa aktualizuje priebežne · stav k ' + esc(T.datum(R.vygenerovane, true)) + ". Zobrazenia sa počítajú na stránke ponuky " + '<span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span> (nie na portáloch).</p>";
   }
   if (!tok) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Neplatný odkaz</b>Odkaz na report nie je úplný.</div>'; return; }
   T.rpc("report_majitela", { p_token: tok }).then(function (R) {

@@ -14,6 +14,14 @@
     if (/^0/.test(t)) return "421" + t.slice(1);
     return t;
   }
+  // termín obhliadky, ktorý si klient vybral na stránke ponuky: „v štvrtok 29. 10. o 10:00“
+  function terminText(iso) {
+    var d = new Date(iso); if (isNaN(d)) return "";
+    var o = {}; new Intl.DateTimeFormat("sk-SK", { timeZone: "Europe/Bratislava", weekday: "long", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(d).forEach(function (x) { o[x.type] = x.value; });
+    var den = { pondelok: "v pondelok", utorok: "v utorok", streda: "v stredu", "štvrtok": "vo štvrtok", piatok: "v piatok", sobota: "v sobotu", "nedeľa": "v nedeľu" }[o.weekday] || o.weekday;
+    return den + " " + o.day + ". " + o.month + ". o " + Number(o.hour) + ":" + o.minute;
+  }
   // m = maklér { meno, telefon, pohlavie }, ponuka = názov ponuky (nepovinné), kratko = pre SMS a WhatsApp
   function text(k, m, ponuka, kratko) {
     m = m || {};
@@ -21,7 +29,7 @@
     var o = ponuka ? " o ponuku „" + ponuka + "“" : "";
     var telo = {
       odhad: "ďakujem za žiadosť o odhad ceny cez môj web. " + g("Rád", "Rada") + " vám pomôžem. Kedy sa vám môžem ozvať, prípadne kedy by sme sa mohli stretnúť pri nehnuteľnosti?",
-      obhliadka: "ďakujem za záujem" + o + ". Kedy by vám vyhovovala obhliadka?",
+      obhliadka: k.termin ? "ďakujem za záujem" + o + ". Obhliadku " + terminText(k.termin) + " vám potvrdzujem. Ak by sa vám čas nehodil, dajte mi vedieť." : "ďakujem za záujem" + o + ". Kedy by vám vyhovovala obhliadka?",
       callback: "ďakujem za správu cez môj web. Kedy sa vám môžem ozvať?",
       strazca: "ďakujem, že ste si na mojom webe zapli strážcu ponúk. Keď sa objaví vhodná ponuka, ozvem sa vám. Ak mi poviete viac o tom, čo hľadáte, viem vám pomôcť aj s ponukami, ktoré ešte nie sú zverejnené.",
       dotaznik: "ďakujem za vyplnený dotazník na mojom webe. " + g("Pozrel", "Pozrela") + " som si ho a " + g("rád by som sa vám ozval", "rada by som sa vám ozvala") + ". Kedy sa vám to hodí?",

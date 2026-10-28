@@ -2398,3 +2398,7 @@ html.bez-posuvu #toast { z-index: 210 }
   .chat-subory { padding-inline: 10px }
   .cs-hl { padding: 10px 12px }
 }
+.vz-h5 { margin: 14px 0 6px; font-size: 14px }
+/* návrh obhliadky od klienta zo stránky ponuky – čaká na potvrdenie */
+.kal-den .kal-prvy.navrh, .kal-pol.navrh { border-left-style: dashed; background: var(--surface) }
+.kal-navrh { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 2px }

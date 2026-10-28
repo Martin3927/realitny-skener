@@ -65,6 +65,7 @@ h1 { font-family: var(--display); font-size: 21pt; line-height: 1.15; margin: 0;
 </style>
 </head>
 <body>
+<span hidden data-kanc="nazov">Alpha Reality</span>
 <div class="lista" id="lista" hidden>
   <button type="button" id="tlac">🖨 Tlačiť / Uložiť ako PDF</button>
   <label><input type="checkbox" id="o-cena" checked> Cena</label>
@@ -75,7 +76,7 @@ h1 { font-family: var(--display); font-size: 21pt; line-height: 1.15; margin: 0;
 <div class="strana-obal"><div class="strana" id="strana"><div class="nic">Pripravujem leták…</div></div></div>
 <script src="config.js?v=202610182100"></script>
 <script src="supabase.min.js"></script>
-<script src="verejne.js?v=202610272200"></script>
+<script src="verejne.js?v=202610280900"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 (function () {
@@ -108,7 +109,7 @@ h1 { font-family: var(--display); font-size: 21pt; line-height: 1.15; margin: 0;
     var ini = String(m.meno || "AR").split(",")[0].split(/\s+/).filter(function (x) { return x && !/\.$/.test(x); }).map(function (x) { return x.charAt(0); }).slice(0, 2).join("").toUpperCase();
     var stitok = p.stav === "rezervovane" ? "Rezervované" : p.exkluzivne ? "Exkluzívne" : (p.specialne || [])[0] || "";
     var url = T.verejnyOdkaz(p.id);
-    document.title = "Leták – " + T.nazov(p) + " · Alpha Reality";
+    document.title = "Leták – " + T.nazov(p) + " · " + T.kanc().nazov;
     document.getElementById("strana").innerHTML =
       '<div class="hl"><img src="logo.png" alt="Alpha Reality"><span class="tr">' + (p.transakcia === "prenajom" ? "Na prenájom" : "Na predaj") + "</span></div>" +
       '<div class="foto"' + bg(F[0]) + ">" + (stitok ? '<span class="stitok">' + esc(stitok) + "</span>" : "") + "</div>" +
@@ -119,7 +120,7 @@ h1 { font-family: var(--display); font-size: 21pt; line-height: 1.15; margin: 0;
       '<div class="text">' + esc(text(p)) + "</div>" +
       ((p.vybavenie || []).length ? '<div class="vyb">' + p.vybavenie.slice(0, 10).map(function (v) { return "<span>" + esc(v) + "</span>"; }).join("") + "</div>" : "") + "</div>" +
       '<div class="pata"><div class="mk">' + (m.foto ? '<img src="' + esc(m.foto) + '" alt="">' : '<span class="ini">' + esc(ini) + "</span>") +
-      '<div class="kont"><b>' + esc(m.meno_cele || m.meno || "Alpha Reality") + "</b>" + (m.telefon ? "<strong>" + esc(m.telefon) + "</strong><br>" : "") + (m.email ? esc(m.email) : "") +
+      '<div class="kont"><b>' + esc(m.meno_cele || m.meno || T.kanc().nazov) + "</b>" + (m.telefon ? "<strong>" + esc(m.telefon) + "</strong><br>" : "") + (m.email ? esc(m.email) : "") +
       (p.cislo ? '<div class="cislo">Číslo ponuky: ' + esc(p.cislo) + "</div>" : "") + "</div></div>" +
       (o.qr ? '<div class="qr">' + qrSvg(url) + "Viac fotiek a detaily</div>" : "") + "</div>" +
       '<div class="web">ALPHA REALITY · REALITNÁ KANCELÁRIA · WWW.ALPHAREALITY.SK</div>';

@@ -192,3 +192,19 @@ h1.v-nazov { font-family: var(--display); font-size: clamp(22px, 3.2vw, 30px); l
   .v-zdiel { padding: 8px }
   .v-dalsie-sek { padding-bottom: 24px }
 }
+
+/* ---- výber termínu obhliadky ---- */
+.v-termin { display: grid; gap: 8px }
+.v-termin-h { font-size: 13px; font-weight: 600; color: var(--muted) }
+.v-termin-h small { font-weight: 500 }
+.v-dni { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin }
+.v-dni button { flex: 0 0 auto; display: grid; justify-items: center; min-width: 54px; padding: 6px 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  border-radius: 10px; cursor: pointer; font-size: 12px; line-height: 1.3 }
+.v-dni button b { font-size: 14px; font-variant-numeric: tabular-nums }
+.v-dni button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface) }
+.v-dni button:disabled { opacity: .4; cursor: not-allowed }
+.v-casy { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px }
+.v-casy button { padding: 8px 0; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; font-variant-numeric: tabular-nums }
+.v-casy button[aria-pressed="true"] { background: var(--gold-strong); border-color: var(--gold-strong); color: #1f1b12 }
+.v-casy button:disabled { text-decoration: line-through; opacity: .45; cursor: not-allowed }
+.v-termin-vyb { margin: 0; font-size: 14px; background: var(--gold-soft); color: var(--ink); padding: 8px 12px; border-radius: 8px }

@@ -8,7 +8,7 @@
 <meta name="description" content="Realitný maklér Alpha Reality – Spišská Nová Ves a Levoča. Aktuálne ponuky, kontakt a recenzie klientov.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="verejne.css?v=202610272200">
+<link rel="stylesheet" href="verejne.css?v=202610280900">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <style>
 .m-hero { background: linear-gradient(160deg, #24282e 0%, #2f343c 100%); color: #f1efe8; padding: 36px 0 30px }
@@ -30,26 +30,26 @@
 </style>
 </head>
 <body>
-<header class="v-top"><div class="v-wrap"><a href="https://www.alphareality.sk/"><img src="logo.png" alt="Alpha Reality"></a><div class="v-top-t">Realitná kancelária<br><a href="https://www.alphareality.sk/">www.alphareality.sk</a></div></div></header>
+<header class="v-top"><div class="v-wrap"><a href="https://www.alphareality.sk/" data-kanc-web><img src="logo.png" alt="Alpha Reality"></a><div class="v-top-t">Realitná kancelária<span data-kanc-cast="web"><br><a href="https://www.alphareality.sk/" data-kanc-web data-kanc-web-text>www.alphareality.sk</a></span></div></div></header>
 <section class="m-hero"><div class="v-wrap" id="hero"><div class="v-nic" style="padding:20px;color:#c9c5bb">Načítavam…</div></div></section>
 <main class="v-wrap">
   <section class="m-sek"><h2>Moje aktuálne ponuky</h2><div id="ponuky"></div></section>
   <section class="m-sek" id="rec-sek" hidden><h2>Čo hovoria klienti</h2><div class="m-rec" id="recenzie"></div></section>
   <section class="m-sek"><div class="v-box" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between"><div><b>Spolupracovali sme?</b><div class="v-lok">Budem rád/a za vašu recenziu – pomôže ďalším klientom.</div></div><a class="v-btn zlate" id="napisat" href="#">⭐ Napísať recenziu</a></div></section>
 </main>
-<footer class="v-wrap v-pata" style="margin-top:32px">© Alpha Reality s.r.o. · Spišská Nová Ves a Levoča · <a href="https://www.alphareality.sk/">www.alphareality.sk</a></footer>
+<footer class="v-wrap v-pata" style="margin-top:32px">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span data-kanc-cast="region"> · <span data-kanc="region">Spišská Nová Ves a Levoča</span></span><span data-kanc-cast="web"> · <a href="https://www.alphareality.sk/" data-kanc-web data-kanc-web-text>www.alphareality.sk</a></span><span hidden data-kanc="nazov">Alpha Reality</span></footer>
 <script src="config.js?v=202610182100"></script>
-<script src="verejne.js?v=202610272200"></script>
+<script src="verejne.js?v=202610280900"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, id = T.param("id");
   document.getElementById("napisat").href = "recenzia.html?m=" + encodeURIComponent(id || "");
   T.rpc("verejny_makler", { p_id: id }).then(function (m) {
     if (!m) { document.getElementById("hero").innerHTML = '<div><h1>Stránka nie je dostupná</h1></div>'; return; }
-    document.title = (m.meno_cele || m.meno) + " · Alpha Reality";
+    document.title = (m.meno_cele || m.meno) + " · " + T.kanc().nazov;
     var tel = T.telOdkaz(m.telefon), zena = m.pohlavie === "zena";
     document.getElementById("napisat").parentNode.querySelector(".v-lok").textContent = "Budem " + (zena ? "rada" : "rád") + " za vašu recenziu – pomôže ďalším klientom.";
-    document.getElementById("hero").innerHTML = T.avatar(m, 110) + '<div><div class="m-rola">' + (zena ? "Realitná maklérka" : "Realitný maklér") + "</div><h1>" + esc(m.meno_cele || m.meno) + '</h1><div class="v-lok" style="color:#c9c5bb">Alpha Reality · Spišská Nová Ves a Levoča</div><div class="m-hodn" id="hodn"></div></div>' +
+    document.getElementById("hero").innerHTML = T.avatar(m, 110) + '<div><div class="m-rola">' + (zena ? "Realitná maklérka" : "Realitný maklér") + "</div><h1>" + esc(m.meno_cele || m.meno) + '</h1><div class="v-lok" style="color:#c9c5bb"><span data-kanc="nazov">' + esc(T.kanc().nazov) + '</span>' + (T.kanc().region ? ' · <span data-kanc="region">' + esc(T.kanc().region) + "</span>" : "") + '</div><div class="m-hodn" id="hodn"></div></div>' +
       '<div class="m-kont">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 ' + esc(m.telefon) + '</a><a class="v-btn wa" href="https://wa.me/' + esc(T.waOdkaz(m.telefon)) + '" target="_blank" rel="noopener">WhatsApp</a>' : "") +
       (m.email ? '<a class="v-btn" style="background:transparent;color:#f1efe8;border-color:rgba(255,255,255,.25)" href="mailto:' + esc(m.email) + '">✉️ ' + esc(m.email) + "</a>" : "") + "</div>";
     var w = document.createElement("div"); w.setAttribute("data-typek-ponuky", ""); w.setAttribute("data-makler", m.id); w.setAttribute("data-filtre", "1");

@@ -55,10 +55,12 @@ try {
   $p = json_decode($odpoved, true);
   if (!is_array($p) || (int)($p['id'] ?? 0) !== $id) {
     // ponuka neexistuje alebo už nie je zverejnená – prehliadač ukáže vlastnú správu
-    vypis(str_replace('<title>Ponuka nehnuteľnosti · Alpha Reality</title>', '<title>Ponuka už nie je dostupná · Alpha Reality</title>', $sablona), 404, 'public, max-age=30');
+    vypis(str_replace('<title>Ponuka nehnuteľnosti · Alpha Reality</title>', '<title>Ponuka už nie je dostupná</title>', $sablona), 404, 'public, max-age=30');
   }
 
   // ---------------------------------------------------------------- texty pre náhľad pri zdieľaní
+  $kanc = is_array($p['kanc'] ?? null) ? $p['kanc'] : [];
+  $kn = trim((string)($kanc['nazov'] ?? '')) ?: 'Realitná kancelária';
   $nazov = trim((string)($p['nazov'] ?? '')) ?: trim(($p['typ'] ?? 'Nehnuteľnosť') . ', ' . ($p['obec'] ?? ''), ', ');
   $stav = (string)($p['stav'] ?? '');
   $rent = ($p['transakcia'] ?? '') === 'prenajom';
@@ -76,7 +78,7 @@ try {
 
   $titul = $nazov . ' – ' . $cena;
   $popis = implode(' · ', $param) . ($text ? ($param ? '. ' : '') . skrat($text, 170) : '');
-  if ($popis === '') $popis = 'Nehnuteľnosť v ponuke realitnej kancelárie Alpha Reality.';
+  if ($popis === '') $popis = 'Nehnuteľnosť v ponuke – ' . $kn . '.';
   $url = $APP . 'ponuka.html?id=' . $id;
 
   $fotka = '';
@@ -93,12 +95,12 @@ try {
     '<meta property="og:image:alt" content="' . e($nazov) . '">' . "\n" .
     '<meta property="og:url" content="' . e($url) . '">' . "\n" .
     '<meta property="og:type" content="website">' . "\n" . '<meta property="og:locale" content="sk_SK">' . "\n" .
-    '<meta property="og:site_name" content="Alpha Reality">' . "\n" .
+    '<meta property="og:site_name" content="' . e($kn) . '">' . "\n" .
     '<meta name="twitter:card" content="summary_large_image">' . "\n" .
     '<script type="application/json" id="ponuka-data">' . json_encode($p, $jf) . '</script>';
 
   $html = $sablona;
-  $html = str_replace('<title>Ponuka nehnuteľnosti · Alpha Reality</title>', '<title>' . e($nazov) . ' · Alpha Reality</title>', $html);
+  $html = str_replace('<title>Ponuka nehnuteľnosti · Alpha Reality</title>', '<title>' . e($nazov) . ' · ' . e($kn) . '</title>', $html);
   $html = preg_replace('/<meta property="og:(title|image)" content="[^"]*">\n?/', '', $html);
   $html = preg_replace_callback('/<meta name="description" content="[^"]*">/', function () use ($popis, $hlava) {
     return '<meta name="description" content="' . e($popis) . '">' . "\n" . $hlava;
