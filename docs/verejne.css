@@ -216,3 +216,12 @@ h1.v-nazov { font-family: var(--display); font-size: clamp(22px, 3.2vw, 30px); l
 .v-hypo-polia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
 @media (max-width: 560px) { .v-hypo-polia { grid-template-columns: minmax(0, 1fr) } }
 .v-hypo-form input { background: var(--surface) }
+
+/* ---- súhlas s cookies (len ak kancelária nastavila meranie) ---- */
+.v-cookies { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 120; max-width: 760px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+  background: var(--graphite); color: #f1efe8; border-radius: 14px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); font-size: 14px; line-height: 1.45 }
+.v-cookies p { margin: 0; flex: 1 1 320px }
+.v-cookies-btn { display: flex; flex-wrap: wrap; gap: 8px; flex: 0 0 auto }
+.v-cookies .v-btn { min-height: 40px; padding: 8px 14px; background: transparent; border-color: rgba(241,239,232,.55); color: #f1efe8 }
+.v-cookies .v-btn.tmave { background: var(--gold-strong); border-color: var(--gold-strong); color: #1f1b12 }
+@media (max-width: 860px) { body.ma-cookies .v-cookies { bottom: calc(78px + env(safe-area-inset-bottom, 0px)) } }

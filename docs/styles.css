@@ -2402,3 +2402,8 @@ html.bez-posuvu #toast { z-index: 210 }
 /* návrh obhliadky od klienta zo stránky ponuky – čaká na potvrdenie */
 .kal-den .kal-prvy.navrh, .kal-pol.navrh { border-left-style: dashed; background: var(--surface) }
 .kal-navrh { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 2px }
+/* výzva na doplnenie telefónu a fotky na Domove */
+.profil-vyzva { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 14px; padding: 12px 14px;
+  border-radius: 12px; background: var(--gold-soft, #F2E4C6); color: var(--ink); line-height: 1.45 }
+.profil-vyzva > span:first-child { flex: 1 1 320px }
+.profil-vyzva-btn { display: flex; gap: 8px; flex: 0 0 auto }

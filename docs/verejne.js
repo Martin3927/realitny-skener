@@ -88,7 +88,68 @@
     }
     if (v.logo) document.querySelectorAll('img[src^="logo.png"]').forEach(function (i) { i.src = v.logo; if (v.nazov) i.alt = v.nazov; });
     aplikujKancelariu(v);
+    nastavMeranie(v.meranie);
   }
+
+  // ---------------------------------------------------------------- meranie návštevnosti (Google Analytics, Meta Pixel)
+  // ID nastaví administrátor vo Vzhľade kancelárie. Zapne sa len na stránkach s <body data-meranie>
+  // a až po súhlase návštevníka s cookies; bez súhlasu sa nič nenačíta a nič sa neposiela.
+  var MER = { ga: "", fb: "", zapnute: false };
+  function suhlas() { try { return localStorage.getItem("typek-cookies") || ""; } catch (e) { return ""; } }
+  function ulozSuhlas(v) { try { localStorage.setItem("typek-cookies", v); } catch (e) { /* bez úložiska */ } }
+  function skript(src) { var x = document.createElement("script"); x.async = true; x.src = src; document.head.appendChild(x); }
+  function nastavMeranie(m) {
+    m = m || {};
+    var ga = /^G-[A-Z0-9]{4,14}$/.test(String(m.ga || "")) ? m.ga : "", fb = /^\d{8,20}$/.test(String(m.fb || "")) ? m.fb : "";
+    MER.ga = ga; MER.fb = fb;
+    if (!document.body || !document.body.hasAttribute("data-meranie") || (!ga && !fb)) return;
+    if (/[?&]nahlad=1(&|$)/.test(location.search)) return;   // náhľad makléra sa nemeria
+    var odkaz = document.querySelector("[data-cookies]"); if (odkaz) odkaz.hidden = false;
+    if (suhlas() === "vsetky") zapniMeranie(); else if (!suhlas()) listaCookies();
+  }
+  function zapniMeranie() {
+    if (MER.zapnute) return; MER.zapnute = true;
+    if (MER.ga) { window.dataLayer = window.dataLayer || []; window.gtag = function () { window.dataLayer.push(arguments); }; window.gtag("js", new Date()); window.gtag("config", MER.ga); skript("https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(MER.ga)); }
+    if (MER.fb && !window.fbq) {
+      var f = window.fbq = function () { if (f.callMethod) f.callMethod.apply(f, arguments); else f.queue.push(arguments); };
+      if (!window._fbq) window._fbq = f; f.push = f; f.loaded = true; f.version = "2.0"; f.queue = [];
+      window.fbq("init", MER.fb); window.fbq("track", "PageView"); skript("https://connect.facebook.net/en_US/fbevents.js");
+    }
+    (MER.cakajuce || []).forEach(function (u) { udalost(u[0], u[1]); }); MER.cakajuce = [];
+  }
+  // druh: „ponuka“ (pozretie ponuky) alebo „zaujem“ (odoslaný formulár)
+  function udalost(druh, par) {
+    par = par || {};
+    if (!MER.zapnute) { (MER.cakajuce = MER.cakajuce || []).push([druh, par]); return; }
+    try {
+      if (druh === "ponuka") {
+        if (MER.ga && window.gtag) window.gtag("event", "view_item", { currency: "EUR", value: par.cena || 0, items: [{ item_id: String(par.id), item_name: par.nazov || "" }] });
+        if (MER.fb && window.fbq) window.fbq("track", "ViewContent", { content_ids: [String(par.id)], content_type: "product", content_name: par.nazov || "", value: par.cena || 0, currency: "EUR" });
+      } else if (druh === "zaujem") {
+        if (MER.ga && window.gtag) window.gtag("event", "generate_lead", { form: par.formular || "", item_id: String(par.id || "") });
+        if (MER.fb && window.fbq) window.fbq("track", "Lead", { content_name: par.formular || "", content_ids: [String(par.id || "")] });
+      }
+    } catch (e) { /* meranie nesmie nič pokaziť */ }
+  }
+  function listaCookies() {
+    if (document.getElementById("v-cookies")) return;
+    var d = document.createElement("div"); d.className = "v-cookies"; d.id = "v-cookies"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Nastavenie cookies");
+    d.innerHTML = "<p><b>Používame cookies.</b> Nevyhnutné zabezpečujú fungovanie stránky. S vaším súhlasom použijeme aj analytické a marketingové " +
+      "(Google Analytics, Meta Pixel), aby sme vedeli, čo vás zaujíma, a mohli vám ukázať ďalšie vhodné ponuky.</p>" +
+      '<div class="v-cookies-btn"><button type="button" class="v-btn" data-ck="nevyhnutne">Len nevyhnutné</button><button type="button" class="v-btn tmave" data-ck="vsetky">Prijať všetky</button></div>';
+    d.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-ck]"); if (!b) return;
+      ulozSuhlas(b.dataset.ck); d.remove(); document.body.classList.remove("ma-cookies");
+      if (b.dataset.ck === "vsetky") zapniMeranie();
+    });
+    document.body.appendChild(d); document.body.classList.add("ma-cookies");
+  }
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest("[data-cookies]")) return;
+    e.preventDefault(); try { localStorage.removeItem("typek-cookies"); } catch (x) { /* nič */ }
+    if (MER.zapnute) { location.reload(); return; }   // už načítané skripty sa dajú vypnúť len znovunačítaním
+    listaCookies();
+  });
 
   // údaje kancelárie z nastavení (Vzhľad a značka kancelárie): názov, obchodné meno, web a kde pôsobí.
   // Stránky majú v HTML predvolený text; prvky s data-kanc sa podľa nastavení prepíšu, takže každá kancelária vidí seba.
@@ -183,5 +244,5 @@
 
   window.TYPEK = { CFG: CFG, sb: sb, nf: nf, esc: esc, eur: eur, rpc: rpc, fotkaUrl: fotkaUrl, nazov: nazov, lokalita: lokalita, cena: cena, cenaM2: cenaM2,
     parametre: parametre, telOdkaz: telOdkaz, waOdkaz: waOdkaz, avatar: avatar, param: param, datum: datum, verejnyOdkaz: verejnyOdkaz,
-    overenie: overenie, overeniePouzite: overeniePouzite, kanc: kanc, aplikujKancelariu: aplikujKancelariu };
+    overenie: overenie, overeniePouzite: overeniePouzite, kanc: kanc, aplikujKancelariu: aplikujKancelariu, udalost: udalost };
 })();

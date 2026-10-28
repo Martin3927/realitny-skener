@@ -2994,6 +2994,23 @@
     };
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + I[nazov] + "</svg>";
   }
+  // výzva na doplnenie telefónu a fotky: klienti ich vidia na stránke ponuky, letáku aj webe makléra
+  function vyzvaProfil() {
+    var m = (S.me && S.mById && S.mById[S.me.id]) || S.me || {}, bezTel = !String(m.telefon || "").trim(), bezFoto = !(m.foto && m.foto.indexOf("data:image/") === 0);
+    if (!bezTel && !bezFoto) return "";
+    try { if (Number(localStorage.getItem("typek-profil-neskor-" + m.id) || 0) > Date.now()) return ""; } catch (e) { /* bez úložiska */ }
+    var co = bezTel && bezFoto ? "telefón a fotku" : bezTel ? "telefón" : "fotku";
+    return '<div class="profil-vyzva"><span>' + (bezTel ? "📞" : "📸") + " <b>Doplň si " + co + "</b> – klienti ich uvidia pri tvojich ponukách, na letáku aj na tvojom webe. " +
+      (bezTel ? "Bez telefónu ti nemôžu zavolať ani napísať na WhatsApp." : "S fotkou ti klienti viac dôverujú.") + "</span>" +
+      '<span class="profil-vyzva-btn"><button class="btn primary" type="button" data-profil-doplnit>Doplniť</button><button class="btn ghost" type="button" data-profil-neskor>Neskôr</button></span></div>';
+  }
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-profil-doplnit]")) { S.pwdOpen = true; vykresliHeslo(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (e.target.closest("[data-profil-neskor]")) {
+      try { localStorage.setItem("typek-profil-neskor-" + S.me.id, String(Date.now() + 3 * 864e5)); } catch (x) { /* nič */ }
+      var v = e.target.closest(".profil-vyzva"); if (v) v.remove();
+    }
+  });
   function vykresliDomov() {
     var el = $("#obsah"); if (!el) return;
     var akt = S.inz.filter(function (z) { return z.aktivny; });
@@ -3050,7 +3067,7 @@
       dlazdice.push(["makleri", "makleri", "Makléri", "Účty, práva, heslá a texty SMS", S.makleri.filter(function (m) { return m.aktivny; }).length + " aktívnych", "", ""]);
     }
     el.innerHTML = '<div class="domov">' + (admin() && skenerStoji() ? '<div class="sk-stav zle"><span>⚠️ <b>Skener ' + vekText(skenerStoji()) + " nekontroloval portály</b> – nové inzeráty sa neobjavujú.</span>" +
-      '<a class="btn" href="#inzeraty">Pozrieť a opraviť</a></div>' : "") +
+      '<a class="btn" href="#inzeraty">Pozrieť a opraviť</a></div>' : "") + vyzvaProfil() +
       '<section class="hero' + (mojeO.length ? " oslava" : "") + '"><div class="hero-hlava"><span class="hero-foto">' + avatar(S.me.id, 76) + "</span>" +
       '<div class="hero-text"><div class="hero-dnes">' + esc(dnes.charAt(0).toUpperCase() + dnes.slice(1)) + (meninyDnes.length ? ' · meniny má <b>' + esc(meninyDnes.join(", ")) + "</b>" : "") + "</div>" +
       "<h2>Ahoj" + (krstne ? ", " + esc(krstne) : "") + ' <span class="mava" aria-hidden="true">👋</span></h2>' +
