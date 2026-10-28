@@ -8883,7 +8883,13 @@
       return;
     }
     if (e.target.closest("[data-prip-web]")) { e.preventDefault(); S.zvonOpen = false; vykresliZvoncek(); prejdi("web"); return; }
-    if (e.target.closest("[data-odpoved]")) return;
+    var odp = e.target.closest("[data-odpoved]");
+    if (odp) {
+      // maklér odpovedá klientovi – kontakt sa potom už nepripomína (odkaz sa otvorí normálne)
+      var pr = odp.closest("[data-prip]"), pp = pr && (S.prip || []).find(function (x) { return String(x.id) === pr.dataset.prip; });
+      if (pp && pp.web_kontakt_id) rpc("oznacit_odpoved_kontaktu", { p_id: pp.web_kontakt_id }).catch(function () { /* nevadí */ });
+      return;
+    }
     var ln = e.target.closest("[data-prip-nehn]");
     if (ln) {
       e.preventDefault(); S.zvonOpen = false; S.tab = "nehnutelnosti"; S.ponukaEdit = null; S.ponukaExport = false; S.pdPanel = null; S.obhForm = null;

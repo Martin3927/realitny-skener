@@ -3,7 +3,7 @@
 // Používa aplikácia (zvonček) aj editor webu (Prehľad).
 (function () {
   "use strict";
-  var ZDROJ = { odhad: "Odhad ceny", strazca: "Strážca ponúk", obhliadka: "Obhliadka", callback: "Zavolať späť", dotaznik: "Dotazník", ebook: "E-book", kontakt: "Správa", podobna: "Hľadá podobnú" };
+  var ZDROJ = { odhad: "Odhad ceny", strazca: "Strážca ponúk", obhliadka: "Obhliadka", callback: "Zavolať späť", dotaznik: "Dotazník", ebook: "E-book", kontakt: "Správa", podobna: "Hľadá podobnú", hypoteka: "Ponuka hypotéky" };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function jeEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim()); }
   function cisloTel(v) { return String(v || "").replace(/[^\d+]/g, ""); }
@@ -35,6 +35,7 @@
       dotaznik: "ďakujem za vyplnený dotazník na mojom webe. " + g("Pozrel", "Pozrela") + " som si ho a " + g("rád by som sa vám ozval", "rada by som sa vám ozvala") + ". Kedy sa vám to hodí?",
       ebook: "ďakujem za záujem o môj e-book. Ak budete mať k predaju či kúpe nehnuteľnosti akúkoľvek otázku, pokojne sa ozvite.",
       kontakt: "ďakujem za vašu správu z môjho webu" + o + ". " + g("Rád", "Rada") + " vám pomôžem.",
+      hypoteka: "ďakujem za záujem o ponuku hypotéky" + (ponuka ? " k nehnuteľnosti „" + ponuka + "“" : "") + ". " + g("Rád", "Rada") + " vám pomôžem s financovaním a pripravím porovnanie podľa vašich čísel. Kedy sa vám môžem ozvať?",
       podobna: "ďakujem za záujem" + (ponuka ? " o „" + ponuka + "“" : "") + ". Táto nehnuteľnosť už nie je voľná, ale " + g("rád", "rada") + " vám pomôžem nájsť podobnú. Čo je pre vás pri hľadaní najdôležitejšie?"
     }[k.zdroj] || "ďakujem za vašu správu z môjho webu.";
     var oslovenie = "Dobrý deň" + (k.meno ? ", " + String(k.meno).trim() : "") + ",";

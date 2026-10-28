@@ -9,7 +9,7 @@
 <title>Report pre majiteľa · Alpha Reality</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="verejne.css?v=202610280900">
+<link rel="stylesheet" href="verejne.css?v=202610281000">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <style>
 .r-wrap { max-width: 860px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-left, 0px)) 48px; display: grid; gap: 18px }
@@ -17,7 +17,7 @@
 .r-hl img.r-f { width: 132px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; flex: 0 0 auto }
 .r-hl h1 { font-family: var(--display); font-size: clamp(20px, 3vw, 26px); margin: 2px 0; line-height: 1.2 }
 .r-pozdrav { font-size: 17px; margin: 0 }
-.r-staty { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px }
+.r-staty { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px }
 .r-stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px }
 .r-stat b { display: block; font-family: var(--display); font-size: 28px; color: var(--gold); font-variant-numeric: tabular-nums }
 .r-stat span { font-size: 13px; color: var(--muted) }
@@ -41,7 +41,7 @@
 <main class="r-wrap" id="obsah"><div class="v-nic">Načítavam report…</div></main>
 <footer class="v-wrap v-pata">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span hidden data-kanc="nazov">Alpha Reality</span> · Tento odkaz je určený len pre majiteľa nehnuteľnosti – nezdieľajte ho, prosím.</footer>
 <script src="config.js?v=202610182100"></script>
-<script src="verejne.js?v=202610280900"></script>
+<script src="verejne.js?v=202610281000"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, tok = T.param("t");
@@ -65,7 +65,8 @@
       '<div class="r-stat"><b>' + tyzden + "</b><span>" + tvar(tyzden, "obhliadka", "obhliadky", "obhliadok") + " za posledný týždeň</span></div>" +
       '<div class="r-stat"><b>' + minule.length + "</b><span>" + tvar(minule.length, "obhliadka", "obhliadky", "obhliadok") + " spolu</span></div>" +
       '<div class="r-stat"><b>' + T.nf.format(R.zobrazenia_7 || 0) + "</b><span>" + tvar(R.zobrazenia_7 || 0, "zobrazenie", "zobrazenia", "zobrazení") + " ponuky za týždeň" + (R.zobrazenia ? " (spolu " + T.nf.format(R.zobrazenia) + ")" : "") + "</span></div>" +
-      '<div class="r-stat"><b>' + (R.zaujemcovia || 0) + "</b><span>" + tvar(R.zaujemcovia || 0, "klient v našej databáze hľadá", "klienti v našej databáze hľadajú", "klientov v našej databáze hľadá") + " podobnú nehnuteľnosť</span></div></div>" +
+      '<div class="r-stat"><b>' + (R.zaujemcovia || 0) + "</b><span>" + tvar(R.zaujemcovia || 0, "klient v našej databáze hľadá", "klienti v našej databáze hľadajú", "klientov v našej databáze hľadá") + " podobnú nehnuteľnosť</span></div>" +
+      '<div class="r-stat"><b>' + (R.kontakty || 0) + "</b><span>" + tvar(R.kontakty || 0, "záujemca napísal", "záujemcovia napísali", "záujemcov napísalo") + " cez stránku ponuky" + (R.kontakty_7 ? " (" + R.kontakty_7 + " za týždeň)" : "") + "</span></div></div>" +
       (buduce.length ? '<section class="v-box"><h2>Naplánované obhliadky</h2><ul class="r-obh">' + buduce.map(function (o) {
         return '<li><span class="r-d">' + esc(T.datum(o.cas, true)) + "</span><span>Záujemca " + esc(o.klient || "") + "</span></li>";
       }).join("") + "</ul></section>" : "") +
@@ -81,6 +82,7 @@
   if (!tok) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Neplatný odkaz</b>Odkaz na report nie je úplný.</div>'; return; }
   T.rpc("report_majitela", { p_token: tok }).then(function (R) {
     if (!R) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Report nie je dostupný</b>Odkaz je neplatný alebo už neaktívny. Kontaktujte svojho makléra.</div>'; return; }
+    if (R.kanc) T.aplikujKancelariu(R.kanc);
     vykresli(R);
   }).catch(function (e) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Report sa nepodarilo načítať</b>' + esc(e.message || e) + "</div>"; });
 })();

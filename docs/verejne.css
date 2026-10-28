@@ -208,3 +208,11 @@ h1.v-nazov { font-family: var(--display); font-size: clamp(22px, 3.2vw, 30px); l
 .v-casy button[aria-pressed="true"] { background: var(--gold-strong); border-color: var(--gold-strong); color: #1f1b12 }
 .v-casy button:disabled { text-decoration: line-through; opacity: .45; cursor: not-allowed }
 .v-termin-vyb { margin: 0; font-size: 14px; background: var(--gold-soft); color: var(--ink); padding: 8px 12px; border-radius: 8px }
+
+/* ---- žiadosť o ponuku hypotéky ---- */
+.v-hypo-ziadost { margin-top: 14px }
+.v-hypo-ziadost > .v-btn { width: 100% }
+.v-hypo-form { padding: 14px; border-radius: 12px; background: var(--bg) }
+.v-hypo-polia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+@media (max-width: 560px) { .v-hypo-polia { grid-template-columns: minmax(0, 1fr) } }
+.v-hypo-form input { background: var(--surface) }
