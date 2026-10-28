@@ -18,7 +18,7 @@
     "Záujem – stretnutie dohodnuté": "won", "Získaný do ponuky": "won",
     "Nemá záujem o RK": "lost", "Predáva cez inú RK": "lost", "Už predané": "lost",
   };
-  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️", udalost: "📅", web: "🌐" };
+  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️", udalost: "📅", web: "🌐", volat: "📞" };
   // výsledky hovoru, pri ktorých sa inzerát automaticky neuvoľní
   var CHRANENE_VYSLEDKY = ["Záujem – stretnutie dohodnuté", "Získaný do ponuky"];
   var SMS_ZAKLAD = "Dobrý deň, volám sa {makler} z realitnej kancelárie Alpha Reality. {Všimol|Všimla} som si Váš inzerát – {nehnutelnost}, {lokalita}. " +
@@ -517,7 +517,7 @@
     for (var i = 0; i < r.length; i++) o[i] = r.charCodeAt(i);
     return o;
   }
-  var DRUHY_UPOZ = [["spravy", "✉️ Správy v chate"], ["inzeraty", "🔎 Nové inzeráty v skeneri"], ["kontakty", "💬 Nové kontakty z webu"]];
+  var DRUHY_UPOZ = [["spravy", "✉️ Správy v chate"], ["inzeraty", "🔎 Nové inzeráty v skeneri"], ["kontakty", "💬 Nové kontakty z webu"], ["pripomienky", "📞 Znova zavolať (predajca nedvíhal)"]];
   // chce maklér tento druh upozornení? (admin ich zapína a vypína každému zvlášť; predvolene zapnuté)
   function chceUpoz(druh, m) { var u = (m || S.me || {}).upozornenia; return !u || u[druh] !== false; }
   function textZariadeni(m) {
@@ -535,11 +535,12 @@
   }
   function boxUpozornenia() {
     var obce = S.me.obce || [], zap = [], vyp = [];
-    var dostupne = DRUHY_UPOZ.filter(function (x) { return x[0] === "spravy" ? maSekciu("chat") : x[0] === "inzeraty" ? maSekciu("inzeraty") : true; });
+    var dostupne = DRUHY_UPOZ.filter(function (x) { return x[0] === "spravy" ? maSekciu("chat") : x[0] === "inzeraty" || x[0] === "pripomienky" ? maSekciu("inzeraty") : true; });
     dostupne.forEach(function (x) { (chceUpoz(x[0]) ? zap : vyp).push(x); });
     var co = zap.map(function (x) {
       if (x[0] === "spravy") return "<li>✉️ nová správa v chate</li>";
       if (x[0] === "kontakty") return "<li>💬 nový kontakt z vášho webu</li>";
+      if (x[0] === "pripomienky") return "<li>📞 je čas znova zavolať predajcovi, ktorý nedvíhal</li>";
       return "<li>🔎 nový súkromný inzerát – " + (obce.length ? "z Vašich obcí (" + obce.length + ": " + esc(obce.slice(0, 4).join(", ")) + (obce.length > 4 ? "…" : "") + ")" : "z oboch okresov, obmedzíte ich nižšie v Mojich obciach") + "</li>";
     }).join("");
     return '<div class="box" id="box-push"><h3>🔔 Upozornenia do mobilu</h3>' +
@@ -1163,6 +1164,14 @@
   }
   function mojeAktivne() {
     return S.prip.filter(function (p) { return p.makler_id === S.me.id && !p.hotovo; });
+  }
+  // „O 2 hodiny (o 15:40) ti pripomeniem…“ / „Zajtra o 8:00 ti pripomeniem…“
+  function textVolatZnova(iso) {
+    var d = new Date(iso), dnes = new Date(), zajtra = new Date(); zajtra.setDate(zajtra.getDate() + 1);
+    var hm = d.toLocaleTimeString("sk-SK", { hour: "numeric", minute: "2-digit" });
+    var kedy = d.toDateString() === dnes.toDateString() ? "O " + hm : d.toDateString() === zajtra.toDateString() ? "Zajtra o " + hm : datum(iso, true);
+    var mobil = chceUpoz("pripomienky") && "Notification" in window && Notification.permission === "granted";
+    return kedy + " ti v zvončeku pripomeniem zavolať znova" + (mobil ? " (príde aj upozornenie do mobilu)." : ".");
   }
   function splatne() {
     var t = Date.now();
@@ -2295,10 +2304,12 @@
     f.querySelector('button[type="submit"]').disabled = true;
     akcia(id, async function () {
       if (tel) { await rpc("ulozit_telefon", { p_inzerat: id, p_telefon: tel }); await nacitajTelefony(); }
-      await rpc("zapisat_hovor", { p_inzerat: id, p_vysledok: vys, p_poznamka: pozn });
+      var vysl = await rpc("zapisat_hovor", { p_inzerat: id, p_vysledok: vys, p_poznamka: pozn });
       S.open[id] = null;
       if (vys === "Získaný do ponuky") { konfety({ pocet: 240 }); toast("🎉 Gratulujeme! Tím sa to dozvie v chate."); chatNove(); nacitajOslavy(); }
+      else if (vysl && vysl.volat_znova) toast("Hovor je zapísaný. 📞 " + textVolatZnova(vysl.volat_znova));
       else toast("Hovor je zapísaný.");
+      nacitajPripomienky().then(popisZvoncek).catch(function () {});
     });
   });
 
@@ -8868,8 +8879,9 @@
         '<div class="prip-text">' + (cudzia ? avatar(p.makler_id, 20) + " <b>" + esc(meno(p.makler_id)) + "</b> · " : "") + (p.druh && p.druh !== "pripomienka" ? DRUH_IKONA[p.druh] + " " : "") + esc(p.poznamka || "Pripomienka") +
         (ciel ? '<div class="meta">' + ciel + "</div>" : "") + odp +
         (p.vytvoril && p.vytvoril !== p.makler_id ? '<div class="meta">Nastavil: ' + esc(meno(p.vytvoril)) + "</div>" : "") +
-        (p.email_chyba ? '<div class="error">Email sa nepodarilo odoslať: ' + esc(p.email_chyba) + "</div>" : p.email_odoslany ? '<div class="meta">✓ Email odoslaný</div>' : "") + "</div>" +
-        '<div class="prip-akcie"><button class="btn" type="button" data-prip-act="hotovo">✓ Hotovo</button>' +
+        (p.email_chyba ? '<div class="error">Email sa nepodarilo odoslať: ' + esc(p.email_chyba) + "</div>" : p.email_odoslany && p.druh !== "volat" ? '<div class="meta">✓ Email odoslaný</div>' : "") + "</div>" +
+        '<div class="prip-akcie">' + (p.druh === "volat" && !cudzia && S.tel[p.inzerat_id] ? '<a class="btn primary" href="tel:' + esc(String(S.tel[p.inzerat_id].telefon).replace(/[^\d+]/g, "")) + '">📞 Zavolať</a>' : "") +
+        '<button class="btn" type="button" data-prip-act="hotovo">✓ Hotovo</button>' +
         (!p.druh || p.druh === "pripomienka" ? '<button class="btn ghost" type="button" data-prip-act="upravit">Upraviť</button>' : "") +
         '<button class="btn ghost danger" type="button" data-prip-act="zrusit">Zrušiť</button></div></div>';
     }
