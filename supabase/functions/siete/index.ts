@@ -28,8 +28,10 @@ Deno.serve(async (req) => {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: u } = await db.auth.getUser(token);
   if (!u?.user) return json({ chyba: "Prihláste sa znova." }, 401);
-  const { data: m } = await db.from("makleri").select("id, aktivny, rola").eq("id", u.user.id).maybeSingle();
+  const { data: m } = await db.from("makleri").select("id, aktivny, rola, pristup").eq("id", u.user.id).maybeSingle();
   if (!m?.aktivny) return json({ chyba: "Účet nie je aktívny." }, 403);
+  // na FB a IG kancelárie zverejňuje administrátor alebo maklér, ktorému to administrátor povolil (Makléri → Môže)
+  if (m.rola !== "admin" && !(m.pristup || []).includes("siete")) return json({ chyba: "Na Facebook a Instagram kancelárie zverejňuje administrátor alebo maklér, ktorému to povolí." }, 403);
 
   const siete: string[] = (Array.isArray(telo.siete) ? telo.siete : []).filter((s: string) => s === "fb" || s === "ig");
   if (!siete.length) return json({ chyba: "Vyberte Facebook alebo Instagram." }, 400);

@@ -967,6 +967,8 @@
     ["kalendar", "Kalendár", "kal"], ["chat", "Chat", "chat"], ["matterport", "Matterport", "matterport"], ["mapa", "Realitná mapa", "mapa"], ["kataster", "Kataster", "kataster"], ["asistent", "AI asistent", "ai"], ["web", "Osobný web", "web"], ["recenzie", "Recenzie", "hviezda"], ["provizie", "Provízie", "euro"]];
   var HLAVNE_SEKCIE = ["inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat"];
   function maSekciu(t) { return admin() || (S.me && (S.me.pristup || SEKCIE.map(function (x) { return x[0]; })).indexOf(t) >= 0); }
+  // právo zverejňovať na FB a IG kancelárie – admin vždy, ostatní len ak im ho admin zapne (nikdy predvolene)
+  function smieSiete() { return admin() || !!(S.me && (S.me.pristup || []).indexOf("siete") >= 0); }
   function tabPovoleny(t) {
     if (TABY.indexOf(t) < 0) return false;
     if (t === "domov") return true;
@@ -2907,6 +2909,8 @@
           '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label></div>" +
           '<div class="mk-pristup"><span class="meta">Vidí sekcie</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor vidí všetko vrátane Výkonu a Maklérov.</span>' :
             SEKCIE.map(function (x) { return '<button type="button" class="cip" data-pristup="' + x[0] + '" aria-pressed="' + ((m.pristup || []).indexOf(x[0]) >= 0) + '">' + x[1] + "</button>"; }).join("")) + "</div></div>" +
+          '<div class="mk-pristup"><span class="meta">Môže</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor môže zverejňovať na Facebook a Instagram kancelárie.</span>' :
+            '<button type="button" class="cip" data-pristup="siete" aria-pressed="' + ((m.pristup || []).indexOf("siete") >= 0) + '">Zverejňovať na Facebook a Instagram kancelárie</button>') + "</div></div>" +
           '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
           '<div class="mk-upoz"><div><b>🔔 Upozornenia do mobilu</b><small class="meta" id="mk-zar-' + m.id + '">' + textZariadeni(m) + "</small></div>" +
             '<div class="cipy">' + DRUHY_UPOZ.map(function (x) {
@@ -3011,7 +3015,8 @@
         if (ix >= 0) nove.splice(ix, 1); else nove.push(b.dataset.pristup);
         b.disabled = true;
         try { await rpc("nastavit_pristup_maklera", { p_id: id, p_pristup: nove }); m.pristup = nove; b.setAttribute("aria-pressed", String(ix < 0));
-          toast((m.meno || "Maklér") + (ix < 0 ? " teraz vidí: " : " už nevidí: ") + b.textContent); }
+          if (b.dataset.pristup === "siete") toast((m.meno || "Maklér") + (ix < 0 ? " teraz môže zverejňovať svoje ponuky na Facebook a Instagram kancelárie." : " už nemôže zverejňovať na Facebook a Instagram kancelárie."));
+          else toast((m.meno || "Maklér") + (ix < 0 ? " teraz vidí: " : " už nevidí: ") + b.textContent); }
         catch (err) { toast(chybaText(err), true); }
         b.disabled = false;
       };
@@ -6531,6 +6536,7 @@
   function igSedi(f) { return !f || !f.w || !f.h || (f.w / f.h >= 0.8 && f.w / f.h <= 1.91); }
   function blokPriamo(p) {
     if (!(admin() || p.makler_id === S.me.id)) return "";
+    if (!smieSiete()) return '<div class="siete-priamo"><h5>🚀 Zverejniť na Facebook a Instagram kancelárie</h5><p class="meta">Na Facebook a Instagram kancelárie zverejňuje administrátor alebo maklér, ktorému to povolí. Banner a text vyššie sa dajú stiahnuť a zdieľať aj na vlastnom profile.</p></div>';
     if (!(p.stav === "aktivne" || p.stav === "rezervovane")) return '<div class="siete-priamo"><h5>🚀 Zverejniť na Facebook a Instagram kancelárie</h5><p class="meta">Zverejniť sa dá len aktívna alebo rezervovaná ponuka.</p></div>';
     var F = p.fotky || [];
     if (!S.sieteFotky || S.sieteFotky.id !== p.id) S.sieteFotky = { id: p.id, v: F.slice(0, 10).map(function (_, i) { return i; }) };
