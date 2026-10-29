@@ -29,11 +29,18 @@ foreach ($weby as $w) {
       $la = den($a['dt'] ?? '');
       echo '<url><loc>' . x($str('blog', $a['slug'])) . '</loc>' . ($la ? '<lastmod>' . $la . '</lastmod>' : '') . '<priority>0.6</priority></url>' . "\n";
     }
+    // stránky maklérov (/tim/meno) – len keď je stránka Tím zapnutá
+    if (in_array('tim', (array)($w['stranky'] ?? []), true)) foreach ((array)($w['makleri'] ?? []) as $sm) {
+      if (!is_string($sm) || !preg_match('/^[a-z0-9-]{1,80}$/', $sm)) continue;
+      echo '<url><loc>' . x($str('tim', $sm)) . '</loc>' . ($lm ? '<lastmod>' . $lm . '</lastmod>' : '') . '<priority>0.5</priority></url>' . "\n";
+    }
   }
   foreach ((array)($w['ponuky'] ?? []) as $p) {
     if (!is_array($p) || empty($p['id'])) continue;
     $lp = den($p['upravene'] ?? '');
-    echo '<url><loc>' . x($zaklad . $spoj . (int)$p['id']) . '</loc>' . ($lp ? '<lastmod>' . $lp . '</lastmod>' : '') . '<priority>0.8</priority></url>' . "\n";
+    // na webe kancelárie má ponuka vlastnú podstránku /ponuka/123-nazov
+    $loc = !empty($w['kancelaria']) && preg_match('/^[a-z0-9-]{1,80}$/', (string)($p['slug'] ?? '')) ? $str('ponuka', (int)$p['id'] . '-' . $p['slug']) : $zaklad . $spoj . (int)$p['id'];
+    echo '<url><loc>' . x($loc) . '</loc>' . ($lp ? '<lastmod>' . $lp . '</lastmod>' : '') . '<priority>0.8</priority></url>' . "\n";
   }
 }
 echo '</urlset>' . "\n";

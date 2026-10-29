@@ -9,11 +9,14 @@
   var adresa = vlastna ? location.hostname.replace(/^www\./, "") : q.get("m") || "";
   var nahlad = q.get("nahlad") === "1";
   var site = document.getElementById("site");
-  var STR = KC.STRANKY.map(function (x) { return x[0]; });
+  var STR = KC.STRANKY.map(function (x) { return x[0]; }).concat(["ponuka"]);
   function chyba(t) { site.innerHTML = '<div class="nacitavam">' + t + "</div>"; }
 
   // ktorá podstránka: na vlastnej doméne z cesty (/ponuky, /blog/nazov-clanku), inak z ?s= a ?c=
   function zAdresy() {
+    // starší odkaz na ponuku (napr. z e-mailu strážcu): ?p=123
+    var pid = String(q.get("p") || "").replace(/\D/g, "");
+    if (pid) return { page: "ponuka", sub: pid };
     if (vlastna && subor !== "kancelaria.html") {
       var m = location.pathname.match(/^\/([a-z-]+)(?:\/([^\/]+))?\/?$/);
       if (m && STR.indexOf(m[1]) >= 0) return { page: m[1], sub: m[2] ? decodeURIComponent(m[2]) : "" };
@@ -61,6 +64,8 @@
 
   function titul(page, sub) {
     var S = K.S, meno = S.k.name || "Realitná kancelária";
+    if (page === "ponuka") { var x = KC.najdiPonuku(sub); if (x) return x.t + (x.bezCeny || x.stav === "predane" ? "" : " – " + KC.fmt(x.p) + " €" + (x.rent ? " / mes." : "")) + " | " + meno; }
+    if (page === "tim" && sub) { var m = KC.makleriWeb().find(function (y) { return KC.slugM(y) === sub; }); if (m) return KC.menoM(m) + " – " + KC.rolaM(m) + " | " + meno; }
     if (page === "blog" && sub) { var a = KC.clanky().find(function (x) { return KC.slugC(x) === sub; }); if (a) return a.t + " | " + meno; }
     var st = KC.STRANKY.find(function (x) { return x[0] === page; });
     if (st && page !== "domov") return st[1] + " | " + meno;
@@ -81,6 +86,7 @@
       try { q.set("m", d.adresa); history.replaceState(null, "", location.pathname + "?" + q.toString() + location.hash); } catch (e) { /* nič */ }
     }
     try { if (localStorage.getItem("typek-web-cookies")) K.UI.ck = false; } catch (e) { /* nič */ }
+    if (poz.page === "ponuka" && q.get("p")) { var px = KC.najdiPonuku(poz.sub); if (px) { K.sub = KC.subPonuky(px); try { history.replaceState(null, "", KC.href("ponuka", K.sub)); } catch (e) { /* nič */ } } }
     document.getElementById("nahladPas").hidden = !d.nahlad;
 
     K.hooks.odoslat = function (o) {
@@ -90,6 +96,7 @@
           p_dopyt: o.dopyt || null, p_overenie: { ts: ov.ts, n: ov.n, med: o.med || "" }, p_komu: /^[0-9a-f-]{36}$/.test(o.komu || "") ? o.komu : null });
       }).then(function (x) { if (x.error) throw new Error(x.error.message || "Správu sa nepodarilo odoslať."); return x.data; });
     };
+    K.hooks.nacitajPonuku = function (id) { return sb.rpc("verejna_ponuka", { p_id: id }).then(function (x) { if (x.error) throw x.error; return x.data; }); };
     K.hooks.poOdoslani = function (f) { if (!d.nahlad) udalost("generate_lead", "Lead", { content_name: f }); };
     K.hooks.klik = function (typ) {
       if (d.nahlad) return;

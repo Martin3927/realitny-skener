@@ -35,9 +35,13 @@ function kancelaria_stranka($d, $m, $vlastna, $SB, $APP) {
   $meno = trim((string)($k['name'] ?? '')) ?: (trim((string)($kanc['nazov'] ?? '')) ?: 'Realitná kancelária');
   $str = is_array($web['stranky'] ?? null) ? $web['stranky'] : [];
   $s = (string)($_GET['s'] ?? '');
-  if (!isset($STR[$s]) || (is_array($str[$s] ?? null) && ($str[$s]['on'] ?? true) === false)) $s = '';
+  $c = substr(preg_replace('/[^a-z0-9-]/', '', strtolower((string)($_GET['c'] ?? ''))), 0, 80);
+  // starší odkaz na ponuku (?p=123, napr. z e-mailu strážcu) = detail ponuky na webe kancelárie
+  $pid = (int)preg_replace('/\D/', '', (string)($_GET['p'] ?? ''));
+  if ($pid) { $s = 'ponuka'; $c = (string)$pid; }
+  if ($s !== 'ponuka' && (!isset($STR[$s]) || (is_array($str[$s] ?? null) && ($str[$s]['on'] ?? true) === false))) $s = '';
   if ($s === 'predane' && empty($d['predane'])) $s = '';
-  $c = $s === 'blog' ? substr(preg_replace('/[^a-z0-9-]/', '', strtolower((string)($_GET['c'] ?? ''))), 0, 80) : '';
+  if (!in_array($s, ['blog', 'ponuka', 'tim'], true)) $c = '';
   $domena = (string)($d['domena'] ?? '');
   $adresa = (string)($d['adresa'] ?? $m);
   $kanon = $domena !== '' ? 'https://' . $domena . '/' : $APP . 'stranka.html?m=' . rawurlencode($adresa);
@@ -90,14 +94,64 @@ function kancelaria_stranka($d, $m, $vlastna, $SB, $APP) {
   // obsah pre vyhľadávače (prehliadač ho po načítaní nahradí)
   $ponuky = array_values(array_filter((array)($d['ponuky'] ?? []), 'is_array'));
   $zoznam = '';
-  foreach (array_slice($ponuky, 0, 40) as $x) $zoznam .= '<li><a href="' . e($APP . 'ponuka.html?id=' . (int)($x['id'] ?? 0)) . '">' . e($nazovP($x)) . '</a> – ' . e($cenaP($x)) . (!empty($x['obec']) ? ' · ' . e($x['obec']) : '') . '</li>';
+  foreach (array_slice($ponuky, 0, 40) as $x) $zoznam .= '<li><a href="' . e($odkaz('ponuka', (int)($x['id'] ?? 0) . '-' . (string)($x['slug'] ?? 'ponuka'))) . '">' . e($nazovP($x)) . '</a> – ' . e($cenaP($x)) . (!empty($x['obec']) ? ' · ' . e($x['obec']) : '') . '</li>';
   $menu = '';
   foreach ($STR as $kl => $n) if ((!is_array($str[$kl] ?? null) || ($str[$kl]['on'] ?? true) !== false) && ($kl !== 'predane' || !empty($d['predane']))) $menu .= '<a href="' . e($odkaz($kl)) . '">' . e($n) . '</a> · ';
   $kontakt = ($tel ? '<a href="tel:' . e(preg_replace('/[^\d+]/', '', $tel)) . '">' . e($tel) . '</a>' : '') . ($tel && $mail ? ' · ' : '') . ($mail ? '<a href="mailto:' . e($mail) . '">' . e($mail) . '</a>' : '') . (!empty($k['addr']) ? '<br>' . e($k['addr']) : '');
   $telo = '';
   $clanok = null;
+  $kodS = 200;
+  // detail ponuky a stránka makléra
+  if ($s === 'ponuka') {
+    $x = null;
+    foreach (array_merge((array)($d['ponuky'] ?? []), (array)($d['predane'] ?? [])) as $y) if (is_array($y) && (int)($y['id'] ?? 0) === (int)$c) { $x = $y; break; }
+    if ($x) {
+      $c = (int)$x['id'] . '-' . (string)($x['slug'] ?? 'ponuka');
+      $url = $odkaz('ponuka', $c);
+      $foto = '';
+      foreach ((array)($x['fotky'] ?? []) as $f) {
+        if (is_string($f) && strpos($f, 'https://') === 0) { $foto = $f; break; }
+        if (is_array($f) && !empty($f['url'])) { $foto = (string)$f['url']; break; }
+        if (is_array($f) && !empty($f['cesta']) && $SB) { $foto = $SB . '/storage/v1/object/public/ponuky/' . $f['cesta']; break; }
+      }
+      $predana = ($x['stav'] ?? '') === 'predane';
+      $titul = $nazovP($x) . ($predana ? '' : ' – ' . $cenaP($x)) . ' | ' . $meno;
+      $prm = array_values(array_filter([(string)($x['obec'] ?? ''), !empty($x['plocha_uzitkova']) ? $cislo($x['plocha_uzitkova']) . ' m²' : (!empty($x['plocha_pozemku']) ? $cislo($x['plocha_pozemku']) . ' m²' : ''),
+        !empty($x['izby']) && ($x['kategoria'] ?? '') !== 'pozemky' ? (int)$x['izby'] . ((int)$x['izby'] === 1 ? ' izba' : ((int)$x['izby'] < 5 ? ' izby' : ' izieb')) : '']));
+      $popis = skrat(implode(' · ', $prm) . (trim((string)($x['intro'] ?? '')) !== '' ? '. ' . (string)$x['intro'] : ''), 200);
+      if ($foto) $obrazok = $foto;
+      $ld = ['@context' => 'https://schema.org', '@type' => 'RealEstateListing', 'name' => $nazovP($x), 'url' => $url, 'description' => $popis,
+        'provider' => ['@type' => 'RealEstateAgent', 'name' => $meno, 'url' => $kanon]];
+      if ($foto) $ld['image'] = $foto;
+      if (!$predana && ($x['zobrazit_cenu'] ?? true) !== false && isset($x['cena'])) $ld['offers'] = ['@type' => 'Offer', 'price' => (float)$x['cena'], 'priceCurrency' => 'EUR'];
+      $telo = '<h1>' . e($nazovP($x)) . '</h1><p><b>' . e($predana ? 'Predané' : $cenaP($x)) . '</b>' . ($prm ? ' · ' . e(implode(' · ', $prm)) : '') . '</p>' .
+        ($foto ? '<img src="' . e($foto) . '" alt="' . e($nazovP($x)) . '" width="760" style="max-width:100%;height:auto;border-radius:12px">' : '') .
+        (trim((string)($x['intro'] ?? '')) !== '' ? '<p>' . e($x['intro']) . '</p>' : '');
+    } else { $s = 'ponuky'; $c = ''; $url = $odkaz('ponuky'); $kodS = 404; } // ponuka už nie je na webe: vyhľadávač ju vyradí, návštevník vidí ostatné ponuky
+  }
+  if ($s === 'tim' && $c !== '') {
+    $mk = null;
+    foreach ((array)($d['makleri'] ?? []) as $y) if (is_array($y) && (string)($y['slug'] ?? '') === $c) { $mk = $y; break; }
+    $tm = $mk && is_array($web['team'] ?? null) && is_array($web['team'][(string)($mk['id'] ?? '')] ?? null) ? $web['team'][(string)$mk['id']] : [];
+    if ($mk && ($tm['on'] ?? true) !== false) {
+      $mm = (string)($mk['meno_cele'] ?? $mk['meno'] ?? '');
+      $rola = trim((string)($tm['rola'] ?? '')) ?: (($mk['pohlavie'] ?? '') === 'zena' ? 'Realitná maklérka' : 'Realitný maklér');
+      $titul = $mm . ' – ' . $rola . ' | ' . $meno;
+      $popis = trim((string)($tm['bio'] ?? '')) ?: $rola . ' v kancelárii ' . $meno . '.';
+      $popis = skrat($popis, 200);
+      $url = $odkaz('tim', $c);
+      $ld = ['@context' => 'https://schema.org', '@type' => 'Person', 'name' => $mm, 'jobTitle' => $rola, 'url' => $url, 'worksFor' => ['@type' => 'RealEstateAgent', 'name' => $meno, 'url' => $kanon]];
+      if (!empty($mk['telefon'])) $ld['telephone'] = (string)$mk['telefon'];
+      if (!empty($mk['email'])) $ld['email'] = (string)$mk['email'];
+      $telo = '<h1>' . e($mm) . '</h1><p>' . e($rola) . '</p><p>' . e($popis) . '</p>' .
+        (!empty($mk['telefon']) ? '<p><a href="tel:' . e(preg_replace('/[^\d+]/', '', (string)$mk['telefon'])) . '">' . e($mk['telefon']) . '</a></p>' : '');
+      $s = 'tim-makler';
+    } else { $c = ''; $url = $odkaz('tim'); }
+  }
   if ($s === 'blog' && $c !== '') foreach ($clanky as $a) if ($slugC($a) === $c) { $clanok = $a; break; }
-  if ($clanok) {
+  if ($s === 'ponuka' || $s === 'tim-makler') {
+    // obsah, titulok a údaje sú pripravené vyššie
+  } elseif ($clanok) {
     $titul = (string)$clanok['t'] . ' | ' . $meno;
     $popis = skrat((string)($clanok['d'] ?? '') ?: (string)($clanok['text'] ?? ''), 200);
     $obrazok = $obr($clanok['img'] ?? '') ?: $obrazok;
@@ -147,7 +201,7 @@ function kancelaria_stranka($d, $m, $vlastna, $SB, $APP) {
     return '<meta name="description" content="' . e($popis) . '">' . "\n" . $hlava;
   }, $html, 1);
   $html = str_replace('<div class="nacitavam">Načítavam…</div>', $obsah, $html);
-  vypis($html, 200, 'public, max-age=30');
+  vypis($html, $kodS, 'public, max-age=30');
 }
 
 require __DIR__ . '/_cache.php';

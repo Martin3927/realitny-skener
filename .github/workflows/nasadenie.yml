@@ -55,7 +55,7 @@ jobs:
           RewriteRule ^(index\.html)?$ stranka.php [L,QSA]
           # web kancelárie na vlastnej doméne: podstránky /ponuky, /o-nas, /blog/nazov-clanku …
           RewriteCond %{HTTP_HOST} !(^|\.)realitnytypek\.sk$ [NC]
-          RewriteRule ^(ponuky|predane|o-nas|sluzby|vykup|tim|kariera|blog|kontakt)(?:/([a-z0-9-]{1,80}))?/?$ stranka.php?s=$1&c=$2 [L,QSA]
+          RewriteRule ^(ponuky|ponuka|predane|o-nas|sluzby|vykup|tim|kariera|blog|kontakt)(?:/([a-z0-9-]{1,80}))?/?$ stranka.php?s=$1&c=$2 [L,QSA]
           RewriteCond %{HTTP_HOST} !(^|\.)realitnytypek\.sk$ [NC]
           RewriteRule ^(?!stranka\.html$|kancelaria\.html$)[^/]+\.html$ https://app.realitnytypek.sk/$0 [L,R=302]
           # web makléra pripravený serverom (Google, Facebook, WhatsApp); stranka.html zostáva ako záloha

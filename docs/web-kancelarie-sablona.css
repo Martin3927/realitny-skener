@@ -529,3 +529,92 @@
 .site .card.cta-card .si{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:color-mix(in srgb,var(--on-b) 12%,transparent);color:var(--a-on-b)}
 .site .card.cta-card .si svg{width:24px;height:24px}
 .site .pgrid.posuvnik .card.cta-card{min-height:100%}
+
+/* ---------------------------------------------------------------- detail ponuky na webe kancelárie */
+.site .dhd{padding:28px 0 8px;background:var(--bg)}
+.site.h-priehladna .dhd{padding-top:104px;background:var(--surf)}
+.site .dhd .crumb{color:var(--muted);margin-bottom:18px}
+.site .dtit{display:flex;justify-content:space-between;align-items:flex-end;gap:16px 32px;flex-wrap:wrap;margin-bottom:22px}
+.site .dtit h1{font-size:clamp(28px,3.6cqi,44px);color:var(--hc);margin:8px 0 6px}
+.site .dstit{display:flex;gap:6px;flex-wrap:wrap}
+.site .dstit span{font-size:12.5px;font-weight:700;border-radius:999px;padding:4px 11px;background:var(--a-soft);color:var(--at)}
+.site .dstit span:first-child{background:var(--b);color:var(--on-b)}
+.site .dloc{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:16px}
+.site .dloc svg{width:17px;height:17px}
+.site .dcena{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.site .dcena b{font-family:var(--fh);font-weight:var(--fhw);font-size:clamp(28px,3.4cqi,40px);letter-spacing:var(--fhls);line-height:1.1}
+.site .dcena small{color:var(--muted);font-size:14.5px}
+.site .dcena .lnk{margin-top:6px;font-size:14px}
+.site .dgal{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:repeat(2,minmax(0,1fr));gap:8px;height:clamp(300px,42cqi,540px);border-radius:calc(var(--r) + 6px);overflow:clip}
+.site .dgal button{border:0;padding:0;margin:0;cursor:zoom-in;position:relative;background:var(--surf);overflow:hidden}
+.site .dgal button:first-child{grid-row:1 / span 2}
+.site .dgal img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
+.site .dgal button:hover img{transform:scale(1.03)}
+.site .dgal span{position:absolute;inset:0;display:grid;place-items:center;background:rgba(10,14,18,.55);color:#fff;font-weight:700;font-size:17px}
+.site .dgal.jedna{grid-template-columns:1fr;grid-template-rows:1fr}
+.site .dgal:has(> button:nth-child(2):last-child){grid-template-columns:2fr 1fr;grid-template-rows:1fr}
+.site .dgal:has(> button:nth-child(2):last-child) button:first-child{grid-row:auto}
+.site .dgal:has(> button:nth-child(3):last-child){grid-template-columns:2fr 1fr}
+.site .dgal:has(> button:nth-child(4):last-child) button:nth-child(4){grid-column:2 / span 2}
+.site .det{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:48px;align-items:start}
+.site .dmain{display:flex;flex-direction:column;gap:16px;min-width:0}
+.site .dmain .h3{font-family:var(--fh);font-weight:var(--fhw);font-size:24px;color:var(--hc);letter-spacing:var(--fhls);margin:14px 0 0}
+.site .dmain .h3:first-child{margin-top:0}
+.site .dpar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px;margin:0}
+.site .dpar>div{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15.5px}
+.site .dpar dt{color:var(--muted)}
+.site .dpar dd{margin:0;font-weight:650;text-align:right}
+.site .dpopis{display:flex;flex-direction:column;gap:12px;font-size:16.5px;line-height:1.7}
+.site .dvyb{display:flex;flex-wrap:wrap;gap:8px}
+.site .dvyb span{display:inline-flex;align-items:center;gap:6px;background:var(--surf);box-shadow:inset 0 0 0 1px var(--line);border-radius:999px;padding:6px 13px;font-size:14px;font-weight:600}
+.site .dvyb svg{width:14px;height:14px;color:var(--at)}
+.site .dmapa{height:340px;border-radius:calc(var(--r) + 6px);overflow:clip;position:relative;box-shadow:0 0 0 1px var(--line)}
+.site .dmapa .lmap{position:absolute;inset:0}
+.site .dside{position:sticky;top:96px;display:flex;flex-direction:column;gap:14px}
+.site .dbox{background:var(--surf);border-radius:calc(var(--r) + 8px);padding:22px;box-shadow:0 20px 50px -30px rgba(0,0,0,.45),0 0 0 1px var(--line);display:flex;flex-direction:column;gap:16px}
+.site .dbox form{display:flex;flex-direction:column;gap:12px}
+.site .dbox h3{font-size:20px}
+.site .dmk{display:flex;align-items:center;gap:14px}
+.site .dmk small{display:block;color:var(--muted);font-size:13px}
+.site .dmk b{font-size:17px}
+.site .dmk b a{text-decoration:none}
+.site .dmk b a:hover{text-decoration:underline}
+.site .dkont{display:flex;flex-wrap:wrap;gap:8px}
+.site .dkont .btn{flex:1 1 auto;min-height:44px;font-size:14.5px;padding:0 16px}
+.site .dhyp{background:var(--b-soft);border-radius:calc(var(--r) + 8px);padding:18px 20px;display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.site .dhyp small{color:var(--bt);font-weight:700;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase}
+.site .dhyp b{font-size:20px}
+.site .dhyp span{color:var(--muted);font-size:13.5px;margin-bottom:8px}
+/* stránka makléra */
+.site .tm h3 a.tmlink{text-decoration:none}
+.site .tm h3 a.tmlink:hover{text-decoration:underline;text-underline-offset:3px}
+.site .mkp{display:grid;grid-template-columns:240px minmax(0,1fr) 380px;gap:40px;align-items:start}
+.site .mkp-f{display:flex;flex-direction:column;gap:16px;align-items:center}
+.site .mkp-f .av{font-size:54px;box-shadow:0 20px 50px -24px rgba(0,0,0,.45)}
+.site .mkp-f .dkont{flex-direction:column;width:100%}
+.site .mkp-f .lnk{justify-content:center}
+.site .mkp-t{display:flex;flex-direction:column;gap:14px}
+.site .mkp-t .paras{display:flex;flex-direction:column;gap:10px;color:var(--muted);font-size:16.5px}
+.site .mkp-c{display:flex;gap:28px;flex-wrap:wrap;margin-top:6px}
+.site .mkp-c div{display:flex;flex-direction:column}
+.site .mkp-c b{font-family:var(--fh);font-weight:var(--fhw);font-size:34px;line-height:1;color:var(--at)}
+.site .mkp-c span{color:var(--muted);font-size:14px}
+@container site (max-width:1040px){
+  .site .mkp{grid-template-columns:200px minmax(0,1fr)}
+  .site .mkp .vform{grid-column:1 / -1}
+}
+@container site (max-width:860px){
+  .site .det{grid-template-columns:1fr;gap:32px}
+  .site .dside{position:static}
+  .site .dgal{grid-template-columns:1fr 1fr;grid-template-rows:2fr 1fr;height:auto;aspect-ratio:4/3.4}
+  .site .dgal button:first-child{grid-row:auto;grid-column:1 / span 2}
+  .site .dgal button:nth-child(n+4){display:none}
+  .site .dgal button:nth-child(3) span{display:grid}
+  .site .dpar{grid-template-columns:1fr}
+  .site .dtit{align-items:flex-start;flex-direction:column}
+  .site .dcena{align-items:flex-start;text-align:left}
+  .site .mkp{grid-template-columns:1fr}
+  .site .mkp-f{flex-direction:row;align-items:center;flex-wrap:wrap}
+  .site .mkp-f .av{width:120px!important;height:120px!important;font-size:36px}
+  .site .mkp-f .dkont{width:auto;flex:1 1 200px}
+}

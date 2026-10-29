@@ -283,11 +283,11 @@ function secEd(k) {
         return '<div class="item"><div class="item-h"><b>' + esc(x.t || "Služba") + "</b>" + icb("ls-up:sluzby.items:" + i, "up", "Vyššie", i === 0 ? " disabled" : "") + icb("ls-del:sluzby.items:" + i, "trash", "Odstrániť") + '</div><div class="fields">' + sel("Ikona", "sluzby.items." + i + ".ic", KC.SVC_IC, { half: 1 }) + fld("Názov", "sluzby.items." + i + ".t", { half: 1 }) + fld("Popis", "sluzby.items." + i + ".d", { ta: 2 }) + "</div></div>"; }).join("") +
         '</div><button type="button" class="addb" data-act="ls-add:sluzby.items">+ Pridať službu</button>';
     case "odhad":
-      return head + '<div class="fields">' + fld("Text", p + "text", { ta: 3 }) + fld("Kroky vľavo (každý na nový riadok)", p + "kroky", { ta: 3 }) + '</div><p class="note">Formulár má tri kroky: druh, údaje o nehnuteľnosti a kontakt. Komu príde, nastavíš v záložke <b>Kancelária</b>. Predávajúci s telefónom sa zapíše v Klientoch medzi predávajúcich.</p>';
+      return head + '<div class="fields">' + fld("Text", p + "text", { ta: 3 }) + fld("Kroky vľavo (každý na nový riadok)", p + "kroky", { ta: 3 }) + '</div><p class="note">Formulár má tri kroky: druh, údaje o nehnuteľnosti a kontakt. Komu príde, nastavíš v záložke <b>Kancelária</b>. Predávajúci s telefónom sa zapíše v Klientoch medzi predávajúcich.</p><p class="note">Klient na webe nevidí žiadnu cenu, ozve sa mu maklér. Maklér dostane pri kontakte <b>orientačný odhad</b> vypočítaný z inzerátov v tej obci za posledný rok, aby mal pri telefonáte od čoho sa odraziť.</p>';
     case "strazca":
       return head + '<div class="fields">' + fld("Text pod nadpisom", p + "l", { ta: 2 }) + '</div><p class="note">Návštevník vyberie druh, obce a cenu. Dopyt sa uloží v Klientoch a keď ktorýkoľvek maklér pridá zhodnú ponuku, klientovi príde e-mail (najviac raz za 12 hodín). E-mail najprv potvrdí odkazom.</p>';
     case "tim":
-      return '<p class="note">Makléri sa berú z Týpka. Kto sa ukáže na webe, poradie, fotku a titul nastavíš v záložke <b>Kancelária</b>.</p>' + head + '<div class="fields">' + fld("Text pod nadpisom", p + "l", { ta: 2 }) + "</div>" + onoff(p + "web", "Odkaz na osobný web makléra") + onoff(p + "kont", "Tlačidlo Napísať maklérovi");
+      return '<p class="note">Makléri sa berú z Týpka. Kto sa ukáže na webe, poradie, fotku a titul nastavíš v záložke <b>Kancelária</b>.</p>' + head + '<div class="fields">' + fld("Text pod nadpisom", p + "l", { ta: 2 }) + "</div>" + onoff(p + "web", "Odkaz na osobný web makléra") + onoff(p + "kont", "Tlačidlo Napísať maklérovi") + '<p class="note">Klik na makléra otvorí jeho stránku na webe kancelárie s ponukami, recenziami a kontaktom. Text o maklérovi doplníš v záložke <b>Kancelária</b>.</p>';
     case "ocenenia":
       return head + '<div class="items">' + s.ocenenia.items.map(function (a, i) {
         return '<div class="item"><div class="item-h"><b>' + esc(a.t || "Ocenenie") + "</b>" + icb("ls-up:ocenenia.items:" + i, "up", "Vyššie", i === 0 ? " disabled" : "") + icb("ls-del:ocenenia.items:" + i, "trash", "Odstrániť") + '</div><div class="fields">' + fld("Názov", "ocenenia.items." + i + ".t") + fld("Rok alebo skratka", "ocenenia.items." + i + ".y", { half: 1 }) + fld("Kto ho udelil", "ocenenia.items." + i + ".d", { half: 1 }) + "</div></div>"; }).join("") +
@@ -355,12 +355,13 @@ function paneKancelaria() {
   return grp("Logo", '<div class="logo-prev"><img src="' + esc(/^(https?:|data:)/.test(k.logo) ? k.logo : k.logo || "logo.png") + '" alt="Logo kancelárie"><div class="row-btns"><button type="button" class="b b-gold b-sm" data-act="logo-up">Nahrať logo</button>' + (k.logo !== KC.DEF.k.logo ? '<button type="button" class="b b-soft b-sm" data-act="logo-reset">Pôvodné</button>' : "") + '</div></div><p class="sub">Najlepšie PNG s priehľadným pozadím. Ikona v záložke prehliadača sa vytvorí z loga.</p>') +
     grp("Údaje kancelárie", '<div class="fields">' + fld("Názov kancelárie", "k.name") + fld("Adresa kancelárie", "k.addr") + fld("Telefón", "k.tel", { half: 1, type: "tel" }) + fld("E-mail", "k.mail", { half: 1, type: "email" }) + fld("Otváracie hodiny", "k.hours", { half: 1 }) + fld("IČO", "k.ico", { half: 1 }) + "</div>") +
     grp("Poloha na mape", '<div class="kmapa" id="kmapa"></div><p class="note">Posuň značku na miesto kancelárie. Mapa sa ukáže v kontakte a návštevník si otvorí trasu v Google Mapách.</p>') +
-    grp("Makléri na webe", '<p class="note">Makléri a ich ponuky sa berú z Týpka. Vypnutý maklér sa na webe neukáže ani so svojimi ponukami a kontakty mu nechodia. Fotku a titul tu môžeš zmeniť len pre web kancelárie.</p>' +
+    grp("Makléri na webe", '<p class="note">Makléri a ich ponuky sa berú z Týpka. Vypnutý maklér sa na webe neukáže ani so svojimi ponukami a kontakty mu nechodia. Fotku, titul a text o maklérovi tu môžeš zmeniť len pre web kancelárie.</p>' +
       (M.length ? M.map(function (m, i) {
         var t = s.team[m.id] || {}, on = t.on !== false, f = t.foto || m.foto;
         return '<div class="agent-r' + (on ? "" : " off") + '"><span class="av">' + (f ? '<img src="' + esc(f) + '" alt="">' : esc(KC.initials(menoM(m)))) + "</span><div><b>" + esc(menoM(m)) + "</b><small>" + esc(pon(cnt(m.id))) + (m.admin ? " · admin" : "") + "</small></div>" +
           icb("tm-up:" + m.id, "up", "Vyššie", i === 0 ? " disabled" : "") + icb("tm-down:" + m.id, "down", "Nižšie", i === M.length - 1 ? " disabled" : "") + prepinac('data-agent="' + m.id + '"', on, "Zobraziť makléra " + menoM(m) + " na webe") +
-          '<div class="rola"><input data-k="team.' + m.id + '.rola" value="' + esc(t.rola || "") + '" placeholder="' + esc(m.pohlavie === "zena" ? "Realitná maklérka" : "Realitný maklér") + '" aria-label="Titul makléra ' + esc(menoM(m)) + '"><button type="button" class="lbtn" data-act="tm-foto:' + m.id + '">Fotka</button>' + (t.foto ? '<button type="button" class="lbtn" data-act="tm-fotox:' + m.id + '">Pôvodná</button>' : "") + "</div></div>";
+          '<div class="rola"><input data-k="team.' + m.id + '.rola" value="' + esc(t.rola || "") + '" placeholder="' + esc(m.pohlavie === "zena" ? "Realitná maklérka" : "Realitný maklér") + '" aria-label="Titul makléra ' + esc(menoM(m)) + '"><button type="button" class="lbtn" data-act="tm-foto:' + m.id + '">Fotka</button>' + (t.foto ? '<button type="button" class="lbtn" data-act="tm-fotox:' + m.id + '">Pôvodná</button>' : "") + "</div>" +
+          '<textarea class="bio" data-k="team.' + m.id + '.bio" rows="2" maxlength="700" placeholder="Pár viet o maklérovi pre jeho stránku na webe (nepovinné)" aria-label="Text o maklérovi ' + esc(menoM(m)) + '">' + esc(t.bio || "") + "</textarea></div>";
       }).join("") : '<p class="note">V Týpku zatiaľ nie sú aktívni makléri.</p>')) +
     grp("Komu chodia kontakty z webu", '<div class="fields">' + sel("Kontaktný formulár a ostatné", "smerovanie.predvolene", MOZ) + sel("Odhad hodnoty", "smerovanie.odhad", [["", "Ako ostatné"]].concat(MOZ), { half: 1 }) + sel("Výkup", "smerovanie.vykup", [["", "Ako ostatné"]].concat(MOZ), { half: 1 }) + sel("Strážca ponúk", "smerovanie.strazca", [["", "Ako ostatné"]].concat(MOZ)) + "</div>" +
       '<p class="note">Kontakt príde do zvončeka a do mobilu. Ak si návštevník vo formulári vyberie makléra, príde rovno jemu. <b>Maklérom po rade</b> znamená, že kontakt dostane maklér, ktorý ho dostal najdlhšie dávno. Záujem o prácu z Kariéry príde vždy kancelárii.</p>') +
@@ -442,7 +443,7 @@ function domenaHtml() {
   var kop = function (h) { return '<button type="button" class="b b-soft b-sm" data-act="kop:' + esc(h) + '">Kopírovať</button>'; };
   if (!d) return '<div class="fields"><label class="f"><span>Doména</span><input id="dom" value="" placeholder="napr. alphareality.sk" autocomplete="off" spellcheck="false"></label></div>' +
     '<div class="row-btns"><button type="button" class="b b-soft b-sm" data-act="domcheck">Overiť, či je voľná</button><button type="button" class="b b-ink b-sm" data-act="domsave">Použiť túto doménu</button></div>' +
-    '<p class="dom-stav" id="domStav" role="status"></p><p class="note">Ak už doménu máte (napríklad alphareality.sk so starým webom), web na ňu prepneme až keď nastavíte záznamy v DNS. Dovtedy beží starý web aj tento na adrese vyššie.</p>';
+    '<p class="dom-stav" id="domStav" role="status"></p><p class="note">Ak už doménu máte (napríklad alphareality.sk so starým webom), web na ňu prepneme až keď nastavíte záznamy v DNS. Dovtedy beží starý web aj tento na adrese vyššie.</p>' + PRESMEROVANIE;
   if (WEB.domena_pripojena) return '<div class="dom-krok hot"><b>Web beží na <a href="https://' + esc(d) + '/" target="_blank" rel="noopener">' + esc(d) + "</a></b><span class=\"sub\">Pripojené " + esc(cas(WEB.domena_pripojena)) + ". Odkazy teraz vedú na túto doménu, stará adresa funguje ďalej. Podstránky majú adresy ako " + esc(d) + "/ponuky.</span></div>" +
     '<div><button type="button" class="b b-soft b-sm" data-act="domdel">Odstrániť doménu</button></div>';
   var ok1 = !!WEB.domena_overena, ok2 = !!WEB.domena_smeruje;
@@ -454,8 +455,9 @@ function domenaHtml() {
     krok(!!WEB.domena_ziadost && ok1 && ok2, 3, "Pripojenie", '<span class="sub">' + (ok1 && ok2 ? "Všetko je nastavené. Doména sa pripojí na hostingu a zapne sa zabezpečenie (https), zvyčajne do 1 pracovného dňa. Žiadosť nájdeš v aplikácii v časti Osobný web." : "Keď sú prvé dva kroky hotové, príde žiadosť o pripojenie do zvončeka.") + "</span>") +
     '<div class="row-btns" style="align-items:center"><button type="button" class="b b-ink b-sm" data-act="domover">Skontrolovať nastavenie</button><span class="dom-stav" id="domStav" role="status">' +
     (k.konflikt ? '<span class="zle">Túto doménu už overil iný web.</span>' : WEB.domena_kontrola ? "Naposledy skontrolované " + esc(cas(WEB.domena_kontrola)) : "") + "</span></div>" +
-    '<p class="note">Zmena v DNS sa zvyčajne prejaví do hodiny, niekedy až do 24 hodín.</p>';
+    '<p class="note">Zmena v DNS sa zvyčajne prejaví do hodiny, niekedy až do 24 hodín.</p>' + PRESMEROVANIE;
 }
+var PRESMEROVANIE = '<p class="note dom-pozor"><b>Pred prepnutím domény:</b> staré adresy webu (napríklad podstránky a ponuky na alphareality.sk, na ktoré vedú odkazy z Googlu a inzerátov) treba presmerovať na nové, aby web nestratil pozície vo vyhľadávaní. Presmerovanie treba pripraviť ešte pred zmenou záznamov v DNS.</p>';
 
 /* ================================================================ panel – udalosti */
 var panel = $("panel");
@@ -849,6 +851,7 @@ function renderStat() {
         : '<div class="prazdny">V tomto období žiadne návštevy. Počítajú sa len návštevy zverejneného webu, nie tvoje vlastné.</div>') + "</div>" +
       '<div class="card2"><h3>Odkiaľ ľudia prišli</h3>' + (zd.length ? zd.map(function (z) { return hbar(z[1], ZD[z[0]], zmx); }).join("") : '<div class="prazdny">Zatiaľ bez údajov.</div>') +
       "<h3 style=\"margin-top:8px\">Formuláre</h3>" + (fk.length ? fk.map(function (k) { return hbar(NAZ[k] || k, KK[k], fmx); }).join("") : '<div class="prazdny">Zatiaľ žiadne.</div>') + "</div></div>" +
+      '<p class="sub st-prehlad">Prvý deň v mesiaci príde administrátorom prehľad za minulý mesiac do zvončeka, e-mailom aj do mobilu.</p>' +
       '<div class="card2"><h3>Kontakty z webu</h3><p class="sub">Každý kontakt prišiel do zvončeka maklérovi v stĺpci Komu. Kupujúci sú v Klientoch medzi dopytmi, predávajúci s telefónom medzi predávajúcimi.</p>' +
       (kont.length ? '<div class="tbl"><table><thead><tr><th>Kedy</th><th>Meno</th><th>Kontakt</th><th>Formulár</th><th>Komu</th><th>Čo chce</th><th></th></tr></thead><tbody>' + kont.map(function (k) {
         return "<tr><td>" + esc(cas(k.vytvorene)) + "</td><td>" + esc(k.meno || "–") + "</td><td>" + esc(k.kontakt) + '</td><td><span class="src' + (k.vybavene ? "" : " new") + '">' + esc(NAZ[k.zdroj] || k.zdroj) + "</span></td><td>" + esc(menoM(makler(k.makler_id)) || "–") + "</td><td>" + esc(k.co || "") +
@@ -895,6 +898,7 @@ function start(vz) {
     K.hooks.poRender = function () { updAddr(); };
     K.hooks.odoslat = function () { return new Promise(function (ok) { setTimeout(function () { toast("V náhľade sa formulár neodosiela. Na zverejnenom webe príde kontakt do zvončeka."); ok("ok"); }, 300); }); };
     K.hooks.oznam = function (t) { toast(t); };
+    K.hooks.nacitajPonuku = function (id) { return sb.rpc("verejna_ponuka", { p_id: id }).then(function (x) { if (x.error) throw x.error; return x.data; }); };
     K.hooks.suhlas = function (v) { var t = KC.trk(); toast(v === "vsetky" ? (t.any ? "Na webe by sa teraz zaplo meranie: " + [t.ga && "Google Analytics", t.fb && "Meta Pixel"].filter(Boolean).join(" a ") + "." : "Súhlas uložený. Meranie nie je nastavené.") : "Len nevyhnutné cookies. Meranie sa nespustí."); };
     $("gate").hidden = true; $("app").hidden = false; $("topAct").hidden = false;
     $("frame").className = "frame dev-pc";
