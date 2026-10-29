@@ -2481,3 +2481,47 @@ html.bez-posuvu #toast { z-index: 210 }
 :root:not([data-theme="dark"]) .hero .reakcia[aria-pressed="true"] { background: rgb(var(--accent-rgb) / .25); border-color: var(--gold-strong) }
 :root:not([data-theme="dark"]) .hero-typek { filter: drop-shadow(0 10px 18px rgba(30,42,53,.25)) }
 }
+
+/* ---------- chat v telefóne: na celú obrazovku, viac miesta na správy (29. 10. 2026) */
+.chat-form textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+@media (hover: none) {
+  .sprava-x { display: none }
+  .sprava.ukaz-x .sprava-x { display: grid; opacity: 1; color: var(--bad); background: var(--bad-soft) }
+  .sprava.ukaz-x .bublina { box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / .45) }
+}
+@media (max-width: 640px) {
+  main .wrap:has(#chat-spravy) { padding-block: 0 }
+  body:has(#chat-spravy) footer { display: none }
+  .box.chat:has(#chat-spravy) { margin: 0; border-top: 0; box-shadow: none }
+  /* s otvorenou klávesnicou: chat prekryje viditeľnú časť obrazovky nad klávesnicou */
+  .box.chat.pise { position: fixed; left: 0; right: 0; z-index: 45; padding-top: env(safe-area-inset-top, 0px); background: var(--surface) }
+  .box.chat.pise .chat-kto, .box.chat.pise .chat-nast { display: none }
+  /* rad kolegov nižší */
+  .chat-kto-zoz { padding: 5px 6px 3px }
+  .kto-pol { width: 60px; padding: 5px 2px 6px; gap: 3px }
+  .chat-kto-zoz .av, .chat-kto-zoz .kto-tim { width: 36px !important; height: 36px !important; font-size: 14px !important }
+  .chat-kto-zoz .kto-tim svg { width: 18px; height: 18px }
+  .kto-meno { font-size: 11px }
+  /* hlavička konverzácie v jednom riadku */
+  .chat-hlava { padding: 7px 10px 7px 12px; gap: 6px }
+  .chat-titul { gap: 9px; flex: 1 1 auto; min-width: 0 }
+  .chat-titul > div { min-width: 0 }
+  .chat-titul h3 { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .chat-titul .meta { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .chat-len-vy { display: none }
+  .chat-ik { width: 34px; height: 34px; border-radius: 10px }
+  .chat-ik svg { width: 19px; height: 19px }
+  .chat-titul .kto-av .av { width: 34px !important; height: 34px !important; font-size: 13px !important }
+  .chat-nast-btn { width: 36px; height: 36px; margin-left: 4px; font-size: 15px }
+  .chat-hlava .chat-sub-btn { margin-left: auto }
+  /* dátum medzi správami sa neprekrýva cez text */
+  .chat-den { position: static; margin: 12px 0 6px }
+  .chat-spravy { padding: 6px 10px 12px }
+  .sprava-telo { max-width: 86% }
+  .bublina { font-size: 15px }
+  /* pole na písanie */
+  .chat-form { gap: 4px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)) }
+  .chat-emoji-btn { width: 38px; height: 42px }
+  .chat-form textarea { min-height: 42px; padding: 9px 14px; font-size: 16px }
+  .chat-poslat { width: 42px; height: 42px; margin-left: 2px }
+}

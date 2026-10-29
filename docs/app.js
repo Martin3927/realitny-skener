@@ -8233,7 +8233,7 @@
       var stav = jeOnline(s) ? '<span class="chat-online">online</span>' :
         s.naposledy_aktivny ? (zena ? "aktívna " : "aktívny ") + esc(ago(s.naposledy_aktivny)) : "";
       hlava = '<div class="chat-titul"><span class="kto-av' + (jeOnline(s) ? " on" : "") + '">' + avatar(s.id, 38) + "</span><div><h3>" + esc(s.meno || s.email) + "</h3>" +
-        '<span class="meta">🔒 Súkromne, len vy dvaja' + (stav ? " · " + stav : "") + "</span></div></div>";
+        '<span class="meta">🔒 Súkromne<span class="chat-len-vy">, len vy dvaja</span>' + (stav ? " · " + stav : "") + "</span></div></div>";
     } else {
       hlava = '<div class="chat-titul"><span class="chat-ik">' + ikona("chat") + "</span><div><h3>Chat tímu</h3>" +
         '<span class="meta">' + clenovia.length + " " + (clenovia.length >= 2 && clenovia.length <= 4 ? "členovia" : "členov") + ' · <span class="chat-online">' + online + " online</span></span></div></div>" +
@@ -8267,7 +8267,7 @@
       '<form class="chat-form" id="f-chat"><button type="button" class="chat-emoji-btn" id="chat-emoji-btn" aria-label="Smajlíky" aria-expanded="false">😊</button>' +
       '<button type="button" class="chat-emoji-btn chat-pril-btn" id="chat-pril-btn" aria-label="Priložiť fotku alebo súbor" title="Priložiť fotku alebo súbor">' + IKONA_SPINKA + "</button>" +
       '<input type="file" id="chat-pril-inp" multiple accept="' + PRIL_PRIJAT + '" data-pril-vyber hidden>' +
-      '<textarea id="chat-text" rows="1" maxlength="2000" data-konv="' + esc(S.chatS || "") + '" placeholder="' + esc(s ? "Napíšte súkromnú správu…" : "Správa pre celý tím…") + '" aria-label="Správa"></textarea>' +
+      '<textarea id="chat-text" rows="1" maxlength="2000" data-konv="' + esc(S.chatS || "") + '" placeholder="' + esc(s ? "Súkromná správa…" : "Správa pre celý tím…") + '" aria-label="Správa"></textarea>' +
       '<button class="chat-poslat" type="submit" aria-label="Odoslať"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z" fill="currentColor"/></svg></button></form></div></div></div>';
     el.innerHTML = h;
     kresliKonverzacie();
@@ -8312,6 +8312,18 @@
       b.onclick = function () { var z = t.selectionStart != null ? t.selectionStart : t.value.length, k = t.selectionEnd != null ? t.selectionEnd : z; t.value = t.value.slice(0, z) + b.dataset.emoji + t.value.slice(k); t.focus(); t.selectionStart = t.selectionEnd = z + b.dataset.emoji.length; };
     });
     if (koncept) t.value = koncept;
+    // mobil: pri otvorení a zatvorení klávesnice sa chat prispôsobí (vyskaChatu)
+    t.addEventListener("focus", function () { setTimeout(vyskaChatu, 60); setTimeout(vyskaChatu, 400); });
+    t.addEventListener("blur", function () { setTimeout(vyskaChatu, 60); });
+    // ťuknutie na Odoslať alebo smajlík nezavrie klávesnicu (pole na písanie ostane aktívne)
+    el.querySelectorAll(".chat-poslat, [data-emoji]").forEach(function (b) { b.addEventListener("mousedown", function (e) { if (document.activeElement === t) e.preventDefault(); }); });
+    // dotykové zariadenia: kôš pri správe sa ukáže až po ťuknutí na správu
+    box.addEventListener("click", function (e) {
+      if (!window.matchMedia("(hover: none)").matches || e.target.closest("a, button, input, .pril-foto, .pril-subor")) return;
+      var sp = e.target.closest(".sprava"), bola = sp && sp.classList.contains("ukaz-x");
+      box.querySelectorAll(".sprava.ukaz-x").forEach(function (x) { x.classList.remove("ukaz-x"); });
+      if (sp && !bola && sp.querySelector(".sprava-x")) sp.classList.add("ukaz-x");
+    });
     t.addEventListener("input", function () { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 160) + "px"; });
     t.addEventListener("keydown", function (e) {
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing && window.matchMedia("(pointer: fine)").matches) { e.preventDefault(); $("#f-chat").requestSubmit(); }
@@ -8343,18 +8355,41 @@
     oznacPrecitane();
   }
   // chat vyplní obrazovku – pole na písanie je vždy vidno (aj na mobile s klávesnicou)
+  var chatRO = window.ResizeObserver ? new ResizeObserver(function () { if (S.tab === "chat" && $("#chat-spravy")) vyskaChatu(); }) : null;
+  if (chatRO) chatRO.sled = [];
+  // mobil: bez klávesnice siaha chat od hlavičky po spodok obrazovky a stránka sa neposúva;
+  // keď je otvorená klávesnica, chat sa prilepí na viditeľnú časť nad ňou (hlavička a rad kolegov sa schovajú)
   function vyskaChatu() {
     var c = $(".box.chat"), box = $("#chat-spravy"); if (!c || !box) return;
-    var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    var hore = c.getBoundingClientRect().top + window.scrollY;
-    var dole = window.matchMedia("(max-width: 640px)").matches ? 8 : 24;
-    var vyska = Math.max(360, vh - Math.min(hore, vh * 0.45) - dole);
-    c.style.height = vyska + "px";
+    var vv = window.visualViewport, vh = vv ? vv.height : window.innerHeight;
     var bolDole = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    if (window.matchMedia("(max-width: 640px)").matches) {
+      // keď sa zmení výška hlavičky (načítané logo) alebo panelov nad chatom, výška chatu sa dorovná
+      if (chatRO) {
+        var nad = [$("header.top"), $("#pwd"), $("#zvon")].filter(Boolean);
+        if (nad.some(function (x) { return chatRO.sled.indexOf(x) < 0; })) { chatRO.disconnect(); nad.forEach(function (x) { chatRO.observe(x); }); chatRO.sled = nad; }
+      }
+      var t = $("#chat-text");
+      var pise = !!(vv && t && document.activeElement === t && vh < document.documentElement.clientHeight - 120);
+      c.classList.toggle("pise", pise);
+      if (pise) { c.style.top = vv.offsetTop + "px"; c.style.height = vh + "px"; }
+      else {
+        c.style.top = "";
+        if (window.scrollY) window.scrollTo(0, 0);
+        // poloha podľa #obsah – samotný chat sa pri prvom otvorení chvíľu posúva (úvodná animácia)
+        var ob = $("#obsah"), hore0 = (ob && ob.firstElementChild === c ? ob : c).getBoundingClientRect().top;
+        c.style.height = Math.max(300, vh - hore0) + "px";
+      }
+    } else {
+      c.classList.remove("pise"); c.style.top = "";
+      var hore = c.getBoundingClientRect().top + window.scrollY;
+      c.style.height = Math.max(360, vh - Math.min(hore, vh * 0.45) - 24) + "px";
+    }
     if (bolDole) box.scrollTop = box.scrollHeight;
   }
   window.addEventListener("resize", function () { if (S.tab === "chat") vyskaChatu(); if (S.tab === "asistent") vyskaAi(); });
   if (window.visualViewport) window.visualViewport.addEventListener("resize", function () { if (S.tab === "chat") { vyskaChatu(); var b = $("#chat-spravy"); if (b && document.activeElement && document.activeElement.id === "chat-text") b.scrollTop = b.scrollHeight; } });
+  if (window.visualViewport) window.visualViewport.addEventListener("scroll", function () { var c = $(".box.chat.pise"); if (c && S.tab === "chat") c.style.top = window.visualViewport.offsetTop + "px"; });
   function pridajSpravy(nove) {
     var box = $("#chat-spravy"); if (!box || !nove.length) return;
     if (box.querySelector(".prazdne")) return vykresliChat();
