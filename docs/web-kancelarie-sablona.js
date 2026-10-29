@@ -274,13 +274,13 @@ function hodnotenie() {
   var r = K.S.rev || {}, v = parseFloat(String(r.rating || "").replace(",", ".")), n = parseInt(String(r.count || "").replace(/\D/g, ""), 10);
   if (v >= 1 && v <= 5) return { v: (Math.round(v * 10) / 10).toFixed(1).replace(".", ","), n: n > 0 ? n : 0, zdroj: "google", url: url(r.url) };
   var t = (K.D && K.D.recenzie) || {};
-  if (t.pocet) return { v: String(t.priemer).replace(".", ","), n: t.pocet, zdroj: "typek", url: "" };
+  if (t.pocet) return { v: Number(t.priemer).toFixed(1).replace(".", ","), n: t.pocet, zdroj: "typek", url: "" };
   return null;
 }
 function zoznamRecenzii() {
   var z = K.S.recenzie.zdroj, out = [], g = google();
   if (z !== "typek" && g && g.recenzie) g.recenzie.forEach(function (r) { out.push({ meno: r.meno, foto: r.foto, hodnotenie: r.hodnotenie, text: r.text, pred: r.pred, zdroj: "Google" }); });
-  if (z !== "google") (((K.D && K.D.recenzie) || {}).zoznam || []).forEach(function (r) { out.push({ meno: r.meno, hodnotenie: r.hodnotenie, text: r.text, pred: r.datum ? datum(r.datum) : "", zdroj: r.makler ? "maklér " + r.makler : "Realitný týpek" }); });
+  if (z !== "google") (((K.D && K.D.recenzie) || {}).zoznam || []).forEach(function (r) { out.push({ meno: r.meno, hodnotenie: r.hodnotenie, text: r.text, pred: r.datum ? datum(r.datum) : "", zdroj: [r.zdroj === "google" ? "Google" : "", r.makler ? "maklér " + r.makler : ""].filter(Boolean).join(" · ") || "Realitný týpek" }); });
   return out.filter(function (r) { return String(r.text || "").trim(); });
 }
 function datum(d) { var x = new Date(d); return isNaN(x) ? String(d || "") : x.getDate() + ". " + (x.getMonth() + 1) + ". " + x.getFullYear(); }
@@ -288,7 +288,11 @@ function clanky() { return (K.S.clanky.items || []).filter(function (a) { return
 function slugC(a) { return a.slug || slug(a.t) || a.id; }
 
 /* ================================================================ odkazy a podstránky */
-function stranka(k) { return (K.S.stranky || {})[k] || { on: false, menu: false }; }
+function stranka(k) {
+  // Predané sa na verejnom webe ukážu až keď je čo ukázať
+  if (k === "predane" && !K.editor && !predane().length) return { on: false, menu: false };
+  return (K.S.stranky || {})[k] || { on: false, menu: false };
+}
 function href(page, sub) {
   if (K.editor) return "#" + page + (sub ? "/" + sub : "");
   if (K.vlastna) return "/" + (page === "domov" ? "" : page + (sub ? "/" + encodeURIComponent(sub) : ""));
@@ -389,7 +393,11 @@ function cislaVal(r) {
   return String(r.n || "").trim();
 }
 function num(v) { var m = v.match(/^(\d{1,6})(\D{0,6})$/); return m ? '<b class="num" data-count="' + m[1] + '" data-suf="' + esc(m[2]) + '">' + esc(K.UI.counted || K.S.anim !== "on" ? v : "0" + m[2]) + "</b>" : '<b class="num">' + esc(v) + "</b>"; }
-function cislaRows() { return K.S.cisla.rows.map(function (r) { return { v: cislaVal(r), t: r.t, g: r.typ === "google" }; }).filter(function (r) { return r.v && String(r.t || "").trim(); }); }
+// popis počtu z Týpka sa skloňuje (1 aktuálna ponuka, 3 aktuálne ponuky, 7 aktuálnych ponúk), ak ho admin neprepísal vlastným textom
+var TVARY = { ponuky: ["aktuálna ponuka", "aktuálne ponuky", "aktuálnych ponúk"], makleri: ["maklér v tíme", "makléri v tíme", "maklérov v tíme"],
+  predane: ["predaná nehnuteľnosť", "predané nehnuteľnosti", "predaných nehnuteľností"], recenzie: ["spokojný klient", "spokojní klienti", "spokojných klientov"] };
+function tvar(r, v) { var t = TVARY[r.typ], n = parseInt(v, 10); if (!t || t.indexOf(String(r.t || "").trim()) < 0 || !(n >= 0)) return r.t; return n === 1 ? t[0] : n >= 2 && n <= 4 ? t[1] : t[2]; }
+function cislaRows() { return K.S.cisla.rows.map(function (r) { var v = cislaVal(r); return { v: v, t: tvar(r, v), g: r.typ === "google" }; }).filter(function (r) { return r.v && String(r.t || "").trim(); }); }
 function secCisla() {
   var rows = cislaRows();
   if (!rows.length) return K.editor ? '<section class="cisla jedno" data-sec="cisla">' + edBtn("cisla") + '<div class="w"><p class="muted">Sem patria čísla kancelárie, napríklad roky na trhu a počet predajov.</p></div></section>' : "";
@@ -417,7 +425,7 @@ function secPonuky(alt, full) {
   var P = K.S.ponuky, uk = ukazka(), all = uk ? UKAZKA_P : ponukyNaWebe(), f = K.UI.pf;
   var L = filtrPonuky(all.slice()), cnt = full || P.cnt === "vse" || K.UI.allP ? L.length : +P.cnt, shown = L.slice(0, cnt);
   var mk = makleriWeb().filter(function (m) { return all.some(function (x) { return x.mk === m.id; }); });
-  var filt = P.filt === "on" && all.length ? '<div class="pf" role="group" aria-label="Filtrovať ponuky">' + KINDS.map(function (k) { return '<button type="button" class="chip" data-pk="' + k[0] + '" aria-pressed="' + (f.k === k[0]) + '">' + k[1] + "</button>"; }).join("") + '<span class="sep" aria-hidden="true"></span>' +
+  var filt = P.filt === "on" && all.length >= 4 ? '<div class="pf" role="group" aria-label="Filtrovať ponuky">' + KINDS.map(function (k) { return '<button type="button" class="chip" data-pk="' + k[0] + '" aria-pressed="' + (f.k === k[0]) + '">' + k[1] + "</button>"; }).join("") + '<span class="sep" aria-hidden="true"></span>' +
     [["vse", "Predaj aj prenájom"], ["predaj", "Predaj"], ["prenajom", "Prenájom"]].map(function (k) { return '<button type="button" class="chip" data-ptr="' + k[0] + '" aria-pressed="' + (f.tr === k[0]) + '">' + k[1] + "</button>"; }).join("") +
     (mk.length > 1 ? '<select data-pm aria-label="Maklér"><option value="vse">Všetci makléri</option>' + mk.map(function (m) { return '<option value="' + esc(m.id) + '"' + (f.m === m.id ? " selected" : "") + ">" + esc(menoM(m)) + "</option>"; }).join("") + "</select>" : "") +
     (f.loc !== "vse" ? '<button type="button" class="chip" data-ploc aria-pressed="true">' + esc(f.loc) + " ✕</button>" : "") + "</div>" : "";
@@ -425,8 +433,10 @@ function secPonuky(alt, full) {
     : '<div class="pempty"><h3>Takú ponuku práve nemáme</h3><p class="muted">Zapnite si strážcu ponúk a pošleme vám ju, keď sa objaví.</p>' + btnTo("Strážca ponúk", "strazca", "") + "</div>";
   var vsetky = !full && L.length > shown.length ? '<div class="pmore">' + (stranka("ponuky").on && K.S.podstranky === "on" ? link("ponuky", "Všetky ponuky (" + L.length + ")", "btn gh") : '<button type="button" class="btn gh" data-allp>Zobraziť všetky ponuky (' + L.length + ")</button>") + "</div>" : "";
   var head = full ? "" : '<div class="sh-row">' + sh(P) + (stranka("ponuky").on && K.S.podstranky === "on" ? link("ponuky", "Všetky ponuky " + SV(IC.sipka, 2.2), "lnk") : btnTo("Hľadáte niečo iné?", "strazca", "", "gh sm")) + "</div>";
+  // pri malom počte ponúk dopĺňa mriežku výzva na strážcu ponúk
+  var cta = shown.length && shown.length < 3 && P.lay !== "zoznam" && (secOn("strazca") || stranka("ponuky").on) ? '<div class="card cta-card"><div class="cbody"><span class="si">' + SV(IC.zvon, 1.8) + "</span><h3>Hľadáte niečo iné?</h3><p>Napíšte, čo hľadáte. Novú ponuku vám pošleme e-mailom skôr, než bude na portáloch.</p>" + btnTo("Strážca ponúk", "strazca", "", "sm") + "</div></div>" : "";
   return sekcia("ponuky", alt, head + (uk ? '<p style="margin:-14px 0 20px"><span class="uk">Ukážka: v Týpku zatiaľ nie sú aktívne ponuky, na webe sa ukážu samy</span></p>' : "") + filt +
-    (shown.length ? '<div class="pgrid ' + P.lay + '">' + shown.map(function (x) { return card(x); }).join("") + "</div>" + vsetky : nic));
+    (shown.length ? '<div class="pgrid ' + P.lay + '">' + shown.map(function (x) { return card(x); }).join("") + cta + "</div>" + vsetky : nic));
 }
 function secPredane(alt, full) {
   var P = K.S.predane, L = predane(), cnt = full ? L.length : +P.cnt;

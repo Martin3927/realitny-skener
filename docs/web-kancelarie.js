@@ -45,7 +45,7 @@ function cisty(pub) {
     });
   }
   var c = KC.clone(K.S);
-  c._stranky = KC.STRANKY.filter(function (x) { return (c.stranky[x[0]] || {}).on; }).map(function (x) { return x[0]; });
+  c._stranky = KC.STRANKY.filter(function (x) { return (c.stranky[x[0]] || {}).on && (x[0] !== "predane" || ((D && D.predane) || []).length); }).map(function (x) { return x[0]; });
   c._clanky = c.clanky.items.filter(function (a) { return a.on !== false && a.slug && String(a.t || "").trim(); }).map(function (a) { return { slug: a.slug, dt: a.dt || "" }; });
   return c;
 }
@@ -320,9 +320,9 @@ var STR_POPIS = { ponuky: "všetky ponuky s filtrami, mapa a strážca", predane
 function paneStranky() {
   var s = S();
   var rows = KC.STRANKY.map(function (x) {
-    var k = x[0], st = s.stranky[k] || {}, op = UI.open === "p-" + k;
+    var k = x[0], st = s.stranky[k] || {}, op = UI.open === "p-" + k, pop = STR_POPIS[k] + (k === "predane" && !((D && D.predane) || []).length ? " · na webe sa ukáže po prvom predaji" : "");
     return '<li class="srow' + (st.on ? "" : " off") + '"><div class="shd" style="padding-left:8px">' + prepinac('data-pg="' + k + '"', st.on, "Stránka " + x[1]) +
-      '<button type="button" class="snm" data-act="pg-go:' + k + '"><b>' + esc(x[1]) + "</b><small>" + esc(STR_POPIS[k]) + "</small></button>" +
+      '<button type="button" class="snm" data-act="pg-go:' + k + '"><b>' + esc(x[1]) + "</b><small>" + esc(pop) + "</small></button>" +
       '<label class="mini" title="V hlavnom menu"><input type="checkbox" data-pgm="' + k + '"' + (st.menu ? " checked" : "") + (st.on ? "" : " disabled") + ">menu</label>" +
       (k === "vykup" || k === "kariera" ? '<button type="button" class="ic" data-act="pg-open:' + k + '" aria-expanded="' + op + '" aria-label="Upraviť stránku" title="Upraviť stránku">' + SV(IC.edit, 2.2) + "</button>" : icb("pg-go:" + k, "oko", "Ukázať v ukážke")) +
       "</div>" + (op ? '<div class="sed">' + pageEd(k) + "</div>" : "") + "</li>";

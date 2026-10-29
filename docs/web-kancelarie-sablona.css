@@ -519,3 +519,13 @@
   .site .pmapa{height:360px}
   .site .oznam{padding:8px 44px 8px 14px;text-align:left;font-size:13.5px}
 }
+
+/* výzva na strážcu ponúk v mriežke ponúk (keď je ponúk málo) */
+.site .card.cta-card{background:var(--b);color:var(--on-b);cursor:default;justify-content:center;box-shadow:none}
+.site .card.cta-card:hover{transform:none}
+.site .card.cta-card .cbody{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:30px 26px}
+.site .card.cta-card h3{color:var(--on-b);font-size:22px}
+.site .card.cta-card p{opacity:.88;font-size:15px}
+.site .card.cta-card .si{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:color-mix(in srgb,var(--on-b) 12%,transparent);color:var(--a-on-b)}
+.site .card.cta-card .si svg{width:24px;height:24px}
+.site .pgrid.posuvnik .card.cta-card{min-height:100%}

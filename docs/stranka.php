@@ -36,6 +36,7 @@ function kancelaria_stranka($d, $m, $vlastna, $SB, $APP) {
   $str = is_array($web['stranky'] ?? null) ? $web['stranky'] : [];
   $s = (string)($_GET['s'] ?? '');
   if (!isset($STR[$s]) || (is_array($str[$s] ?? null) && ($str[$s]['on'] ?? true) === false)) $s = '';
+  if ($s === 'predane' && empty($d['predane'])) $s = '';
   $c = $s === 'blog' ? substr(preg_replace('/[^a-z0-9-]/', '', strtolower((string)($_GET['c'] ?? ''))), 0, 80) : '';
   $domena = (string)($d['domena'] ?? '');
   $adresa = (string)($d['adresa'] ?? $m);
@@ -91,7 +92,7 @@ function kancelaria_stranka($d, $m, $vlastna, $SB, $APP) {
   $zoznam = '';
   foreach (array_slice($ponuky, 0, 40) as $x) $zoznam .= '<li><a href="' . e($APP . 'ponuka.html?id=' . (int)($x['id'] ?? 0)) . '">' . e($nazovP($x)) . '</a> – ' . e($cenaP($x)) . (!empty($x['obec']) ? ' · ' . e($x['obec']) : '') . '</li>';
   $menu = '';
-  foreach ($STR as $kl => $n) if (!is_array($str[$kl] ?? null) || ($str[$kl]['on'] ?? true) !== false) $menu .= '<a href="' . e($odkaz($kl)) . '">' . e($n) . '</a> · ';
+  foreach ($STR as $kl => $n) if ((!is_array($str[$kl] ?? null) || ($str[$kl]['on'] ?? true) !== false) && ($kl !== 'predane' || !empty($d['predane']))) $menu .= '<a href="' . e($odkaz($kl)) . '">' . e($n) . '</a> · ';
   $kontakt = ($tel ? '<a href="tel:' . e(preg_replace('/[^\d+]/', '', $tel)) . '">' . e($tel) . '</a>' : '') . ($tel && $mail ? ' · ' : '') . ($mail ? '<a href="mailto:' . e($mail) . '">' . e($mail) . '</a>' : '') . (!empty($k['addr']) ? '<br>' . e($k['addr']) : '');
   $telo = '';
   $clanok = null;
