@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#1e2a35">
 <title>Realitný týpek – softvér od makléra pre maklérov</title>
-<meta name="description" content="Realitný skener: nové inzeráty súkromníkov z Bazoša, Nehnuteľností.sk, Reality.sk a TopReality do pár minút. K tomu kataster, kalendár a osobný web. Od 19 € mesačne, 30 dní zadarmo.">
+<meta name="description" content="Realitný skener: nové inzeráty súkromníkov z Bazoša, Nehnuteľností.sk, Reality.sk a TopReality, cez deň každých 10 minút. K tomu kataster, kalendár a osobný web. Od 19 € mesačne, 30 dní zadarmo.">
 <link rel="icon" type="image/png" href="typek-head.png?v=202610251300">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Realitný týpek">
@@ -89,22 +89,11 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
 .pop{animation:pop .45s cubic-bezier(.2,.7,.2,1) both}
 .pop2{animation-delay:.12s}.pop3{animation-delay:.24s}.pop4{animation-delay:.36s}.pop5{animation-delay:.48s}
-.aitab{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 18px;border-radius:999px;border:0;background:rgba(247,242,232,.1);color:#F7F2E8;font:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s,color .2s,transform .2s}
-.aitab:hover{background:rgba(247,242,232,.18);transform:translateY(-1px)}
-.aitab-on,.aitab-on:hover{background:var(--acc);color:#1E2A35}
 .sw{width:38px;height:38px;border-radius:999px;border:3px solid #4A6074;box-shadow:0 0 0 2px rgba(247,242,232,.35);cursor:pointer;transition:transform .2s,box-shadow .2s}
 .sw:hover{transform:scale(1.08)}
 .sw-on{box-shadow:0 0 0 3px #F7F2E8;transform:scale(1.08)}
-.caret{display:inline-block;width:2px;height:1.05em;margin-left:2px;background:#1E2A35;vertical-align:-2px;animation:live 1s steps(1) infinite}
-@keyframes shim{0%,100%{opacity:.35}50%{opacity:.9}}
-.shim{display:block;animation:shim 1.6s ease-in-out infinite}
 @keyframes twinkle{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.25) rotate(18deg)}}
 .twinkle{animation:twinkle 2.4s ease-in-out infinite;transform-origin:center}
-@keyframes wipe{0%,100%{clip-path:inset(0 78% 0 0)}50%{clip-path:inset(0 22% 0 0)}}
-.wipe{animation:wipe 6s ease-in-out infinite}
-.before{filter:saturate(.3) brightness(.68) contrast(.9)}
-@keyframes wipeline{0%,100%{left:22%}50%{left:78%}}
-.wipe-line{animation:wipeline 6s ease-in-out infinite}
 @keyframes fly{0%{transform:translate(0,30px) rotate(-10deg);opacity:0}15%{opacity:1}75%{opacity:1}100%{transform:translate(120px,-160px) rotate(12deg);opacity:0}}
 .fly{animation:fly 4.5s ease-in infinite}
 .opt{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:0;background:rgba(247,242,232,.12);color:#F7F2E8;font:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s,color .2s,transform .2s}
@@ -126,37 +115,9 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .wfeat strong{display:block;font-size:15px}
 .wfeat span span{color:#DCE3E9}
 .wfeat-ic{flex:none;width:40px;height:40px;border-radius:12px;background:#DB9522;color:#1E2A35;display:grid;place-items:center}
-.hub{position:relative;height:560px}
-.hub-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.hub-lines line{stroke:#C9D4DD;stroke-width:2;stroke-dasharray:6 8;animation:hubdash 1.4s linear infinite}
-@keyframes hubdash{to{stroke-dashoffset:-28}}
-.hub-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:220px;height:220px;border-radius:999px;background:#1E2A35;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 40px 70px -30px rgba(30,42,53,.7);z-index:2}
-.hub-ring{position:absolute;inset:-14px;border-radius:999px;border:2px solid #DB9522;animation:hubring 3s ease-out infinite}
-@keyframes hubring{0%{transform:scale(.92);opacity:.7}100%{transform:scale(1.22);opacity:0}}
-.hub-node{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;border-radius:999px;background:#FFFDF8;box-shadow:0 1px 0 rgba(30,42,53,.05),0 20px 40px -26px rgba(30,42,53,.55);font-size:15px;font-weight:700;white-space:nowrap;z-index:1;animation:hubbob 6s ease-in-out infinite}
-.hub-node .ic{flex:none;width:38px;height:38px;border-radius:999px;background:#EEE6D6;color:#4A6074;display:grid;place-items:center}
-.hub-node--gold .ic{background:#DB9522;color:#1E2A35}
-@keyframes hubbob{0%,100%{margin-top:0}50%{margin-top:-6px}}
-.hn0{left:50.00%;top:8.00%;animation-delay:-0.0s}
-.hn1{left:73.51%;top:16.02%;animation-delay:-0.6s}
-.hn2{left:88.04%;top:37.02%;animation-delay:-1.2s}
-.hn3{left:88.04%;top:62.98%;animation-delay:-1.8s}
-.hn4{left:73.51%;top:83.98%;animation-delay:-2.4s}
-.hn5{left:50.00%;top:92.00%;animation-delay:-3.0s}
-.hn6{left:26.49%;top:83.98%;animation-delay:-3.6s}
-.hn7{left:11.96%;top:62.98%;animation-delay:-4.2s}
-.hn8{left:11.96%;top:37.02%;animation-delay:-4.8s}
-.hn9{left:26.49%;top:16.02%;animation-delay:-5.4s}
-@media (max-width: 1000px){.hub{height:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.hub-lines{display:none}.hub-core{position:relative;left:auto;top:auto;transform:none;grid-column:1/-1;margin:10px auto 24px;width:190px;height:190px}.hub-node{position:static;transform:none;white-space:normal;animation:none}}
 .tool{display:flex;align-items:center;gap:8px;padding:11px 12px;border-radius:12px;background:#FFFDF8;font-size:15px;font-weight:600}
 .tool-n{flex:1;min-width:0}
 .tool-t{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:#EEE6D6;color:#4A6074;font-size:12px;font-weight:700}
-.ba-before{clip-path:inset(0 calc(100% - var(--cut,50%)) 0 0);filter:saturate(.15) brightness(.62) contrast(.9) sepia(.2)}
-.ba-line{left:var(--cut,50%)}
-.ba-auto.ba-before{animation:wipe 6s ease-in-out infinite}
-.ba-auto.ba-line{animation:wipeline 6s ease-in-out infinite}
-.ba-range{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize;z-index:3}
-.ba:focus-within .ba-knob{outline:3px solid #DB9522;outline-offset:2px}
 .qa{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 14px;padding:14px 18px;border-radius:18px;background:#FFFDF8;box-shadow:0 1px 0 rgba(30,42,53,.05),0 18px 34px -30px rgba(30,42,53,.5)}
 .qa-q{font-size:15px;color:#3A4B5A}
 .qa-a{display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:800;color:#1E2A35}
@@ -177,15 +138,6 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .sum-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:rgba(247,242,232,.1);color:#F7F2E8;font-size:13px;font-weight:700}
 .sum-chip svg{color:#DB9522}
 .team-av{position:absolute;width:58px;height:58px;border-radius:999px;display:grid;place-items:center;font-weight:800;font-size:16px;box-shadow:0 0 0 4px #1E2A35,0 16px 30px -14px rgba(0,0,0,.6)}
-.step{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;background:#FFFDF8;font-size:14px;line-height:1.4;color:#3A4B5A}
-.step strong{display:block;font-size:16px;color:#1E2A35}
-.step-n{flex:none;width:40px;height:40px;border-radius:99px;background:#1E2A35;color:#DB9522;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px}
-.fcard{display:flex;flex-direction:column;gap:10px;padding:26px;border-radius:26px;background:#FFFDF8;font-size:15px;line-height:1.55;color:#3A4B5A;box-shadow:0 1px 0 rgba(30,42,53,.05),0 24px 44px -34px rgba(30,42,53,.45)}
-.fcard strong{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;line-height:1.2;color:#1E2A35}
-.fcard-ic{width:52px;height:52px;border-radius:16px;background:#EEE6D6;color:#4A6074;display:grid;place-items:center}
-.fcard--gold{background:#1E2A35;color:#C9D4DD}
-.fcard--gold strong{color:#F7F2E8}
-.fcard--gold .fcard-ic{background:#DB9522;color:#1E2A35}
 @keyframes frspin{to{transform:rotate(360deg)}}
 .mod-tag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.02em;vertical-align:2px}
 .mod-tag--free{background:#E3E9DF;color:#3D5A42}
@@ -230,23 +182,6 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .mlink:hover{background:#F7F2E8}
 .mlink::after{content:'\2192';color:#DB9522;font-weight:800}
 .mnav-p .pro,.mnav-p .btn{width:100%;box-sizing:border-box;justify-content:center;margin-top:6px}
-.radar{position:relative;width:min(260px,72vw);aspect-ratio:1/1;border-radius:999px;background:repeating-radial-gradient(circle,transparent 0 31px,rgba(201,212,221,.16) 31px 32px),#253443;box-shadow:inset 0 0 0 1px rgba(201,212,221,.2);overflow:hidden}
-.radar-sweep{position:absolute;inset:0;border-radius:999px;background:conic-gradient(from 0deg,rgba(219,149,34,.5),rgba(219,149,34,0) 26%,transparent);animation:frspin 4s linear infinite}
-.radar-dot{position:absolute;width:12px;height:12px;margin:-6px;border-radius:99px;background:#DB9522;animation:rping 2.2s ease-out infinite}
-@keyframes rping{0%{box-shadow:0 0 0 0 rgba(219,149,34,.65)}100%{box-shadow:0 0 0 16px rgba(219,149,34,0)}}
-.radar-core{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border-radius:99px;background:#F7F2E8}
-.lead{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:#FFFDF8;color:#1E2A35;box-shadow:0 24px 40px -22px rgba(0,0,0,.75);font-size:12.5px;color:#4A6074}
-.lead strong{display:block;font-size:14px;color:#1E2A35}
-.lead-src{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:11px;font-weight:800}
-.lead-go{margin-left:auto;flex:none;padding:7px 11px;border-radius:999px;background:#1E2A35;color:#DB9522;font-size:12px;font-weight:800}
-.apt{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:16px;background:#F7F2E8;font-size:12px;line-height:1.35;color:#4A6074;transition:transform .2s}
-.apt:hover{transform:translateY(-3px)}
-.apt strong{font-size:14px;color:#1E2A35}
-.apt-ic{width:36px;height:36px;border-radius:10px;background:#EEE6D6;color:#4A6074;display:grid;place-items:center}
-.apt--gold .apt-ic{background:#DB9522;color:#1E2A35}
-.pidx{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 6px;border-radius:999px;background:#FFFDF8;color:#1E2A35;text-decoration:none;font-size:14px;font-weight:700;box-shadow:0 1px 0 rgba(30,42,53,.05),0 14px 26px -22px rgba(30,42,53,.6);transition:transform .2s}
-.pidx:hover{transform:translateY(-2px)}
-.pidx b{width:28px;height:28px;border-radius:99px;background:#1E2A35;color:#DB9522;display:grid;place-items:center;font-size:12px}
 .ice{position:relative;width:100%;max-width:320px;aspect-ratio:1/1.04;display:grid;place-items:center}
 .ice-cube{position:relative;width:84%;aspect-ratio:1/1.1;border-radius:34px;background:linear-gradient(155deg,#F6F9FB 0%,#DCE3E9 48%,#B7C6D3 100%);box-shadow:inset 0 2px 0 rgba(255,255,255,.95),inset 0 -20px 34px rgba(74,96,116,.2),0 44px 70px -34px rgba(30,42,53,.7);transform:rotate(-4deg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#1E2A35;overflow:hidden;text-align:center}
 .ice-cube::before{content:'';position:absolute;inset:10px;border-radius:26px;border:1.5px solid rgba(255,255,255,.8);pointer-events:none}
@@ -294,7 +229,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .rt header nav .wm{font-size:20px !important}
 .rt header nav img{width:42px !important;height:42px !important}
 .rt section{padding-left:16px !important;padding-right:16px !important}
-#pribeh,#nahlad,#funkcie,#vsetko,#vyskladaj,#pristup,#od-zaciatku{padding-top:64px !important}
+#pribeh,#nahlad,#funkcie,#vyskladaj,#pristup,#od-zaciatku,#pripravujeme{padding-top:64px !important}
 #pribeh,#nahlad,#funkcie,#pristup{padding-bottom:64px !important}
 .pcard{border-radius:28px !important;gap:32px !important}
 .shot{aspect-ratio:auto !important;overflow-x:auto !important;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
@@ -307,13 +242,13 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .wb-min{min-height:0 !important}
 .wb-ctl{gap:16px !important}
 .ice-big{font-size:72px}
-.apt-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
 .sum{padding:20px !important;border-radius:24px !important}
 .ptot-v b{font-size:34px}
 }
 @media (max-width: 400px){.mnav-t{display:none}.mnav summary{padding:0 14px}}
 .noanim *,.noanim *::before,.noanim *::after{animation:none !important}
-@media (prefers-reduced-motion: reduce){html:not(.pohyb-vzdy) .rt *{animation:none !important}}
+@media (prefers-reduced-motion: reduce){html:not(.pohyb-vzdy) .rt *{animation:none !important}html:not(.pohyb-vzdy) .rt [data-group="view"][data-panel] > .pop{animation:prelin .6s ease both !important}}
+@keyframes prelin{from{opacity:0}to{opacity:1}}
 @media (max-width: 640px){.hide-sm{display:none !important}.mwrap{left:12% !important;right:12% !important}}
 .ck{position:fixed;left:16px;bottom:16px;z-index:60;width:min(560px, calc(100% - 32px));max-height:calc(100vh - 32px);overflow-y:auto;box-sizing:border-box;background:#FFFDF8;border-radius:26px;padding:22px;box-shadow:0 1px 0 rgba(30,42,53,.06),0 30px 60px -24px rgba(30,42,53,.55);animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
 .ck a{color:#1E2A35;font-weight:600}
@@ -377,15 +312,14 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .pcard{position:relative;isolation:isolate}
 .js-mys .pcard::after,.js-mys .svetlo::after{content:'';position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;background:radial-gradient(680px circle at var(--sx,50%) var(--sy,50%),var(--glow,rgba(219,149,34,.14)),transparent 55%);opacity:0;transition:opacity .6s}
 .js-mys .pcard:hover::after,.js-mys .svetlo:hover::after{opacity:1}
-#p-soft,#p-emailing{--glow:rgba(255,255,255,.55)}
+
 #p-web{--glow:rgba(242,196,107,.16)}
 .svetlo{position:relative;isolation:isolate}
 /* karty funkcií sa natáčajú za myšou s odleskom */
-.js-mys :is(.feat,.fcard){position:relative;transform-style:preserve-3d}
-.js-mys :is(.feat,.fcard):hover{transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-6px);transition:transform .14s linear,box-shadow .3s ease}
-.js-mys :is(.feat,.fcard)::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(420px circle at var(--gx,50%) var(--gy,0%),rgba(255,255,255,.75),transparent 50%);mix-blend-mode:soft-light;opacity:0;transition:opacity .4s}
-.js-mys :is(.feat,.fcard):hover::after{opacity:1}
-.js-mys .fcard--gold::after{background:radial-gradient(420px circle at var(--gx,50%) var(--gy,0%),rgba(219,149,34,.35),transparent 55%);mix-blend-mode:normal}
+.js-mys .feat{position:relative;transform-style:preserve-3d}
+.js-mys .feat:hover{transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-6px);transition:transform .14s linear,box-shadow .3s ease}
+.js-mys .feat::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(420px circle at var(--gx,50%) var(--gy,0%),rgba(255,255,255,.75),transparent 50%);mix-blend-mode:soft-light;opacity:0;transition:opacity .4s}
+.js-mys .feat:hover::after{opacity:1}
 /* náhľad softvéru sa natočí k myši ako skutočná obrazovka */
 .okno-3d{transition:transform .8s cubic-bezier(.2,.7,.2,1)}
 .js-mys .okno-3d:hover{transform:perspective(1600px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .2s linear}
@@ -402,6 +336,91 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .pas-r2 .pas-t{color:transparent;-webkit-text-stroke:1.6px #4A6074}
 .pas-t i{width:.28em;height:.28em;border-radius:99px;background:#DB9522;flex:none}
 @media (prefers-reduced-motion: reduce){html:not(.pohyb-vzdy) .pas-r1,html:not(.pohyb-vzdy) .pas-r2{transform:none}html:not(.pohyb-vzdy) .hdr,html:not(.pohyb-vzdy) .hdr nav{transition:none}}
+
+/* ===== úvod: zlatá čiara pod „prvý.“ a striedanie nových inzerátov v bubline */
+.prvy{position:relative;display:inline-block;color:#4A6074}
+.prvy-ciara{position:absolute;left:-2%;bottom:-.14em;width:104%;height:.26em;overflow:visible}
+.prvy-ciara path{fill:none;stroke:#DB9522;stroke-width:5;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:0;animation:ciara 1.1s cubic-bezier(.6,0,.2,1) 1s backwards}
+@keyframes ciara{from{stroke-dashoffset:100}}
+.cyk{transition:opacity .35s ease,transform .35s ease}
+.cyk.cyk-von{opacity:0;transform:translateY(-8px)}
+/* ===== skener: kroky a mobil so skutočným skenerom */
+.kst{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.kst-i{display:flex;align-items:flex-start;gap:14px;padding:12px 14px;border-radius:16px;background:rgba(247,242,232,.06);font-size:14.5px;line-height:1.45;color:#C9D4DD;transition:background .5s ease}
+.kst-i strong{display:block;font-size:16px;color:#F7F2E8}
+.kst-n{flex:none;width:32px;height:32px;border-radius:99px;background:#2F4152;color:#DB9522;display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:16px;transition:background .5s ease,color .5s ease}
+.kst-i.on{background:rgba(219,149,34,.16)}
+.kst-i.on .kst-n{background:#DB9522;color:#1E2A35}
+.tel-wrap{position:relative;width:min(318px,80vw);margin:6px auto 0}
+.tel-vlna{position:absolute;left:50%;top:50%;width:150%;aspect-ratio:1/1;border-radius:999px;border:1.5px solid rgba(219,149,34,.45);transform:translate(-50%,-50%) scale(.45);opacity:0;animation:vlna 6s ease-out infinite;pointer-events:none}
+.tel-v2{animation-delay:-2s}.tel-v3{animation-delay:-4s}
+@keyframes vlna{0%{transform:translate(-50%,-50%) scale(.45);opacity:0}15%{opacity:.7}100%{transform:translate(-50%,-50%) scale(1.15);opacity:0}}
+.tel{position:relative;z-index:1;aspect-ratio:292/600;border-radius:44px;background:#0B1117;padding:9px;box-sizing:border-box;box-shadow:inset 0 0 0 1.5px #3A4B5A,0 50px 90px -36px rgba(0,0,0,.85)}
+.tel::before{content:'';position:absolute;top:19px;left:50%;width:76px;height:22px;margin-left:-38px;border-radius:99px;background:#0B1117;z-index:7}
+.tel-scr{position:relative;height:100%;border-radius:36px;overflow:hidden;background:#F7F2E8;display:flex;flex-direction:column}
+.tel-stav{flex:none;height:46px;padding:2px 22px 0 28px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;background:#1E2A35;color:#F7F2E8;font-size:13px}
+.tel-stav span{display:flex;gap:6px;align-items:center}
+.tel-hl{flex:none;display:block;width:100%;height:auto;margin-top:-1px}
+.tel-zoz{flex:1;min-height:0;overflow:hidden}
+.tel-pan{display:block;width:100%;height:auto;transition:transform 1.5s cubic-bezier(.6,0,.25,1)}
+.tel[data-krok="3"] .tel-pan{transform:translateY(-27.8%)}
+.tel-push{position:absolute;z-index:6;left:16px;right:16px;top:50px;display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:20px;background:rgba(255,253,248,.97);color:#1E2A35;box-shadow:0 20px 40px -14px rgba(0,0,0,.6);font-size:11.5px;line-height:1.35;opacity:0;transform:translateY(-140%);transition:opacity .4s ease,transform .6s cubic-bezier(.2,.9,.25,1.12);pointer-events:none}
+.tel[data-push] .tel-push{opacity:1;transform:none}
+.tel-push-ic{flex:none;width:34px;height:34px;border-radius:10px;background:#1E2A35;display:grid;place-items:center}
+.tel-push-ic img{display:block;width:28px;height:28px}
+.tel-push-tx{min-width:0;display:flex;flex-direction:column;gap:1px}
+.tel-push-tx small{font-size:10.5px;font-weight:600;color:#4A6074}
+.tel-push-tx strong{font-size:12px;line-height:1.3}
+.tel-push-tx > span{color:#3A4B5A}
+/* ===== náhľad: obrazovky sa striedajú samé, čiara v tlačidle ukazuje čas do ďalšej */
+.opt{position:relative;overflow:hidden}
+.tprog{position:absolute;left:16px;right:16px;bottom:6px;height:2px;border-radius:2px;background:currentColor;opacity:0;transform:scaleX(0);transform-origin:0 50%;pointer-events:none}
+.nahlad-ide .opt-on .tprog{opacity:.5;animation:tprog var(--td,6s) linear forwards}
+@keyframes tprog{to{transform:scaleX(1)}}
+/* ===== funkcie */
+@media (min-width: 700px){.feat-grid.fg2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kal-r{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:#F2E4C6;border-left:4px solid #DB9522;color:#1E2A35;font-weight:600}
+.kal-r b{flex:none;width:42px;font-weight:800}
+.kal-r em{margin-left:auto;font-style:normal;font-size:11px;font-weight:800;color:#8A5A2B;white-space:nowrap}
+.kal-r--p{background:#F7F2E8;border-left-color:#C47A2C}
+.ch-b{align-self:flex-start;max-width:88%;padding:9px 12px;border-radius:14px 14px 14px 4px;background:#F7F2E8;color:#1E2A35;line-height:1.4}
+.ch-b b{display:block;font-size:11px;color:#8A5A2B}
+.ch-b--ja{align-self:flex-end;border-radius:14px 14px 4px 14px;background:#DB9522;font-weight:600}
+.ch-pise{display:inline-flex;gap:4px;padding:12px 14px}
+.ch-pise .tdot{width:6px;height:6px;border-radius:9px;background:#8EA2B3}
+.pon-k{display:flex;flex-direction:column;gap:2px;padding-bottom:8px;border-radius:12px;background:#F7F2E8;overflow:hidden;line-height:1.3;color:#4A6074}
+.pon-k img{display:block;width:100%;height:58px;object-fit:cover;margin-bottom:4px}
+.pon-k b,.pon-k span{padding:0 8px}
+.pon-k b{color:#1E2A35;font-size:13px}
+/* ===== pripravujeme */
+.sk-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+@media (min-width: 700px){.sk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sk-em{grid-column:1/-1}}
+@media (min-width: 1020px){.sk-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.sk-em{grid-column:span 2}}
+.feat.sk-em{background:#F2E4C6}
+.em-nahlad{position:relative;flex:1 1 230px;min-width:0;display:flex;justify-content:center;padding:6px 0}
+.em-list{width:100%;max-width:290px;border-radius:18px;background:#FFFDF8;box-shadow:0 30px 50px -30px rgba(30,42,53,.55);overflow:hidden;display:flex;flex-direction:column;font-size:13px;font-weight:700}
+.em-hl{display:flex;gap:10px;align-items:center;padding:12px 14px;background:#1E2A35;color:#F7F2E8}
+.em-hl img{flex:none;display:block;width:34px;height:34px}
+.em-hl b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:15px}
+.em-hl > span{font-size:11px;font-weight:500;color:#C9D4DD;line-height:1.3}
+.em-r{display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid #EEE6D6;color:#1E2A35;line-height:1.3}
+.em-r i{flex:none;width:34px;height:34px;border-radius:9px}
+.em-nahlad .fly{position:absolute;right:0;top:34%}
+.ai-post{margin-top:auto;border-radius:16px;background:#F7F2E8;overflow:hidden;font-size:13px;line-height:1.45;color:#3A4B5A}
+.ai-post img{display:block;width:100%;height:96px;object-fit:cover}
+.ai-post-t{display:block;padding:10px 12px 4px}
+.ai-post-t b{display:block;color:#1E2A35;font-size:14px}
+.ai-post-f{display:flex;justify-content:space-between;gap:8px;padding:6px 12px 10px;font-size:11px;font-weight:800;color:#4A6074}
+.ai-pise{display:inline-flex;align-items:center;gap:3px;color:#8A5A2B}
+.ai-pise .tdot{width:4px;height:4px;border-radius:9px;background:currentColor}
+/* ===== jemný režim: počítač s obmedzeným pohybom – len prelínanie, nič sa neposúva */
+.js-pohyb.jemne [data-rv]{translate:none !important;scale:none !important;clip-path:none !important}
+.js-pohyb.jemne [data-rv]:not(.rv-in){opacity:0}
+.jemne .sli{translate:none !important;rotate:none !important}
+.jemne [data-rv="pruh"] > span:last-child{transform:none !important}
+.jemne .cyk.cyk-von,.jemne .tel-push{transform:none}
+.jemne .tel[data-krok="3"] .tel-pan{transform:none}
+.js-pohyb :is(section,.pcard):not(.vid) .tel-vlna{animation-play-state:paused}
 </style>
 </head>
 <body>
@@ -447,7 +466,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 <span style="display: inline-flex; padding: 4px 10px; border-radius: 999px; background: #1E2A35; color: #F7F2E8; font-size: 12px; letter-spacing: 0.06em">PRELOM V REALITÁCH</span>
 softvér od makléra pre maklérov
 </div>
-<h1 class="rise d2" style="margin: 26px 0 0; font-size: clamp(46px, 6.4vw, 92px); line-height: 0.96; letter-spacing: -0.035em; font-weight: 800">Súkromník inzeruje.<br>Ty voláš <span style="color: #4A6074">prvý.</span></h1>
+<h1 class="rise d2" style="margin: 26px 0 0; font-size: clamp(46px, 6.4vw, 92px); line-height: 0.96; letter-spacing: -0.035em; font-weight: 800">Súkromník inzeruje.<br>Ty voláš <span class="prvy">prvý.<svg class="prvy-ciara" viewBox="0 0 200 22" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M4 15 C 52 5, 128 4, 196 11"></path></svg></span></h1>
 <p class="rise d3" style="margin: 26px 0 0; font-size: 20px; line-height: 1.55; color: #3A4B5A; max-width: 540px">Kým ostatní preklikávajú portály, ty už voláš majiteľovi. Nové inzeráty súkromníkov z tvojho okresu ti stráži Týpek.</p>
 <div class="rise d4" style="margin-top: 34px; display: flex; flex-wrap: wrap; gap: 14px">
 <a class="btn btn-acc" href="#pristup">Vyskúšať skener zadarmo <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
@@ -474,10 +493,10 @@ softvér od makléra pre maklérov
 
 <div class="bob1 hide-sm" style="position: absolute; top: 22%; right: -8%; width: 212px; padding: 14px; border-radius: 18px; background: #FFFDF8; box-shadow: 0 22px 44px -24px rgba(30,42,53,.6); display: flex; gap: 12px; align-items: flex-start">
 <span style="flex: none; width: 38px; height: 38px; border-radius: 11px; background: #EEE6D6; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg></span>
-<span style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
-<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #4A6074">SKENER · NOVÁ PONUKA</span>
-<span style="font-size: 14px; font-weight: 700">3-izbový byt, Spišská N. Ves</span>
-<span style="font-size: 12px; color: #4A6074">pred 2 min · súkromná osoba</span>
+<span class="cyk" data-cyklus style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #4A6074">SKENER · NOVÝ INZERÁT</span>
+<span style="font-size: 14px; font-weight: 700" data-cyk-n>3-izbový byt, Spišská N. Ves</span>
+<span style="font-size: 12px; color: #4A6074" data-cyk-m>pred 2 min · súkromná osoba</span>
 </span>
 </div>
 
@@ -492,7 +511,7 @@ softvér od makléra pre maklérov
 
 <div class="bob3" style="position: absolute; top: 3%; left: -4%; padding: 12px 16px 12px 12px; border-radius: 999px; background: #FFFDF8; box-shadow: 0 22px 44px -24px rgba(30,42,53,.6); display: flex; gap: 10px; align-items: center; font-size: 14px; font-weight: 700">
 <span style="width: 30px; height: 30px; border-radius: 999px; background: #4A6074; display: grid; place-items: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F7F2E8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
-List vlastníctva na 1 klik
+Kataster pri každom inzeráte
 </div>
 </div>
 </div>
@@ -500,26 +519,31 @@ List vlastníctva na 1 klik
 
 <!-- SKENER -->
 <section id="skener" style="max-width: 1200px; margin: 0 auto; padding: 0 24px 110px">
-<div id="p-skener" class="pcard" style="border-radius: 36px; background: #1E2A35; color: #F7F2E8; padding: clamp(24px, 4.5vw, 56px); display: flex; flex-wrap: wrap; align-items: center; gap: 48px; overflow: hidden">
-<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<div id="p-skener" class="pcard" style="border-radius: 36px; background: #1E2A35; color: #F7F2E8; padding: clamp(24px, 4.5vw, 56px); display: flex; flex-wrap: wrap; align-items: center; gap: 40px 56px; overflow: hidden">
+<div style="flex: 1 1 400px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
 <span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(247,242,232,.1); color: #DB9522; font-size: 12px; font-weight: 700; letter-spacing: 0.1em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg>REALITNÝ SKENER</span>
 <h2 style="margin: 0; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.04; letter-spacing: -0.03em; font-weight: 800">Nové inzeráty súkromníkov skôr ako konkurencia</h2>
-<p style="margin: 0; font-size: 18px; line-height: 1.6; color: #C9D4DD">Skener stráži Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality. Keď súkromník pridá inzerát v tvojom okrese, máš ho v Týpkovi do pár minút. Prevezmeš, zapíšeš hovor, pošleš SMS a otvoríš kataster.</p>
-<div style="display: flex; flex-direction: column; gap: 10px">
-<span style="display: flex; align-items: flex-start; gap: 10px; font-size: 16px; font-weight: 600; color: #C9D4DD"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Len okresy, ktoré si vyberieš</span>
-<span style="display: flex; align-items: flex-start; gap: 10px; font-size: 16px; font-weight: 600; color: #C9D4DD"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Vidíš, či už majiteľovi niekto z kancelárie volal</span>
-<span style="display: flex; align-items: flex-start; gap: 10px; font-size: 16px; font-weight: 600; color: #C9D4DD"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>List vlastníctva a katastrálna mapa na jeden klik</span>
-</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.6; color: #C9D4DD">Cez deň Týpek každých 10 minút prejde Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality v okresoch, ktoré si vyberieš. Keď súkromník pridá inzerát, máš ho navrchu skenera aj ako upozornenie v mobile.</p>
+<ol class="kst" aria-label="Ako skener funguje">
+<li class="kst-i kst-1"><span class="kst-n">1</span><span><strong>Súkromník pridá inzerát</strong>na Bazoši, Nehnuteľnostiach.sk, Reality.sk alebo TopReality</span></li>
+<li class="kst-i kst-2"><span class="kst-n">2</span><span><strong>Týpek ti dá vedieť</strong>upozornenie do mobilu, inzerát je navrchu skenera</span></li>
+<li class="kst-i kst-3"><span class="kst-n">3</span><span><strong>Prevezmeš a voláš</strong>kolegovia vidia, že je tvoj. Zapíšeš hovor, pošleš SMS, otvoríš kataster.</span></li>
+</ol>
 <a href="#vyskladaj" style="align-self: flex-start; display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 0; padding: 10px 18px; border-radius: 999px; background: #DB9522; color: #1E2A35; font-size: 15px; font-weight: 800; text-decoration: none"><span style="white-space: nowrap">od 19 € mesačne s DPH</span><span style="font-weight: 600; white-space: nowrap">vypočítaj si cenu →</span></a>
 </div>
-<div style="flex: 1 1 400px; min-width: 0; display: flex; flex-direction: column; align-items: center">
-<div class="radar" aria-hidden="true"><span class="radar-sweep"></span><span class="radar-dot" style="top: 30%; left: 64%"></span><span class="radar-dot" style="top: 62%; left: 28%; animation-delay: -.8s"></span><span class="radar-dot" style="top: 74%; left: 70%; animation-delay: -1.5s"></span><span class="radar-core"></span></div>
-<div style="position: relative; width: 100%; max-width: 420px; margin-top: -54px; display: flex; flex-direction: column; gap: 10px">
-<div class="lead pop "><span class="lead-src" style="background: #F2E4C6; color: #8A5A2B">BZ</span><span style="min-width: 0"><strong>3-izb. byt, Spišská Nová Ves</strong>súkromník · pred 2 min</span><span class="lead-go">Prevziať</span></div>
-<div class="lead pop pop2"><span class="lead-src" style="background: #DCE3E9; color: #2F4152">NE</span><span style="min-width: 0"><strong>Rodinný dom, Levoča</strong>súkromník · pred 9 min</span><span class="lead-go">Prevziať</span></div>
-<div class="lead pop pop3"><span class="lead-src" style="background: #E3E9DF; color: #3D5A42">TR</span><span style="min-width: 0"><strong>Pozemok, Markušovce</strong>súkromník · pred 21 min</span><span class="lead-go">Prevziať</span></div>
+<div style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; align-items: center">
+<div class="tel-wrap">
+<span class="tel-vlna" aria-hidden="true"></span><span class="tel-vlna tel-v2" aria-hidden="true"></span><span class="tel-vlna tel-v3" aria-hidden="true"></span>
+<div class="tel" role="img" aria-label="Realitný skener v mobile: nové inzeráty súkromníkov s tlačidlami Prevziať, Zapísať hovor a SMS poslaná. Navrchu príde upozornenie na nový súkromný inzerát.">
+<div class="tel-scr">
+<div class="tel-stav" aria-hidden="true"><b>9:41</b><span><svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"></rect><rect x="4.3" y="5" width="3" height="6" rx="1"></rect><rect x="8.6" y="2.5" width="3" height="8.5" rx="1"></rect><rect x="12.9" y="0" width="3" height="11" rx="1"></rect></svg><svg width="22" height="11" viewBox="0 0 22 11" fill="none" stroke="currentColor"><rect x=".5" y=".5" width="18" height="10" rx="3"></rect><rect x="2.5" y="2.5" width="12" height="6" rx="1.5" fill="currentColor" stroke="none"></rect><path d="M20.5 4v3" stroke-linecap="round"></path></svg></span></div>
+<img class="tel-hl" src="typek-mobil-hlavicka.webp" alt="" width="600" height="154">
+<div class="tel-zoz"><img class="tel-pan" src="typek-mobil-skener.webp" alt="" width="600" height="3000"></div>
 </div>
-<p style="margin: 14px 0 0; font-size: 13px; color: #8EA2B3">Ukážkové inzeráty</p>
+<div class="tel-push" aria-hidden="true"><span class="tel-push-ic"><img src="typek-head.png?v=202610251300" alt="" width="40" height="40"></span><span class="tel-push-tx"><small>Realitný týpek · teraz</small><strong>Nový súkromný inzerát – 3-izbový byt, Spišská Nová Ves</strong><span>Predám 3-izbový byt po rekonštrukcii, Mier<br>129 000 € · Bazoš</span></span></div>
+</div>
+</div>
+<p style="margin: 22px 0 0; font-size: 13px; color: #8EA2B3; text-align: center">Skutočný skener v mobile. Inzeráty na ukážke sú vymyslené.</p>
 </div>
 </div>
 </section>
@@ -563,23 +587,22 @@ List vlastníctva na 1 klik
 <div style="max-width: 760px">
 <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #4A6074">AKO TO BOLO DOTERAZ</div>
 <h2 style="margin: 14px 0 0; font-size: clamp(34px, 4.4vw, 56px); line-height: 1.02; letter-spacing: -0.03em; font-weight: 800">Neplať všetko zvlášť. A neprihlasuj sa do piatich webov.</h2>
-<p style="margin: 18px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A; max-width: 620px">Realitný softvér, vlastný web, skener, AI aplikácie, kalendár, chat s kolegami. Každé zvlášť, každé s vlastným heslom a vlastnou faktúrou.</p>
+<p style="margin: 18px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A; max-width: 620px">Realitný softvér, vlastný web, skener, kalendár, chat s kolegami. Každé zvlášť, každé s vlastným heslom a vlastnou faktúrou.</p>
 </div>
 <div style="margin-top: 44px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px">
 <div style="border-radius: 30px; background: #EEE6D6; padding: 34px; display: flex; flex-direction: column; gap: 22px">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
 <h3 style="margin: 0; font-size: 26px; font-weight: 700">Doteraz</h3>
-<span style="font-size: 13px; font-weight: 700; color: #8A5A2B; background: #F7F2E8; padding: 6px 12px; border-radius: 999px">6 aplikácií</span>
+<span style="font-size: 13px; font-weight: 700; color: #8A5A2B; background: #F7F2E8; padding: 6px 12px; border-radius: 999px">5 aplikácií</span>
 </div>
 <div style="display: flex; flex-direction: column; gap: 8px">
 <div class="tool pop" style="animation-delay: 0.00s"><span class="tool-n">Realitný softvér</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>heslo</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M3 10.5h18M7 15h3"></path></svg>platba</span></div>
 <div class="tool pop" style="animation-delay: 0.08s"><span class="tool-n">Vlastný web</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>heslo</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M3 10.5h18M7 15h3"></path></svg>platba</span></div>
 <div class="tool pop" style="animation-delay: 0.16s"><span class="tool-n">Realitný skener</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>heslo</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M3 10.5h18M7 15h3"></path></svg>platba</span></div>
-<div class="tool pop" style="animation-delay: 0.24s"><span class="tool-n">AI aplikácie</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>heslo</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M3 10.5h18M7 15h3"></path></svg>platba</span></div>
-<div class="tool pop" style="animation-delay: 0.32s"><span class="tool-n">Kalendár</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>heslo</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M3 10.5h18M7 15h3"></path></svg>platba</span></div>
-<div class="tool pop" style="animation-delay: 0.40s"><span class="tool-n">Chat s kolegami</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>heslo</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M3 10.5h18M7 15h3"></path></svg>platba</span></div>
+<div class="tool pop" style="animation-delay: 0.24s"><span class="tool-n">Kalendár</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>heslo</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M3 10.5h18M7 15h3"></path></svg>platba</span></div>
+<div class="tool pop" style="animation-delay: 0.32s"><span class="tool-n">Chat s kolegami</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>heslo</span><span class="tool-t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M3 10.5h18M7 15h3"></path></svg>platba</span></div>
 </div>
-<p style="margin: auto 0 0; font-size: 18px; line-height: 1.5; color: #3A4B5A"><strong>6× prihlásenie. 6× platba.</strong> A káva medzitým vychladla.</p>
+<p style="margin: auto 0 0; font-size: 18px; line-height: 1.5; color: #3A4B5A"><strong>5× prihlásenie. 5× platba.</strong> A káva medzitým vychladla.</p>
 </div>
 
 <div style="border-radius: 30px; background: #1E2A35; color: #F7F2E8; padding: 34px; display: flex; flex-direction: column; gap: 26px">
@@ -593,13 +616,13 @@ List vlastníctva na 1 klik
 </div>
 <div style="padding: 18px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
 <div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Skener"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg></div>
-<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Mapa"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg></div>
+<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Ponuky"><path d="M3.5 11L12 4l8.5 7"></path><path d="M6 9.5V20h12V9.5"></path><path d="M10 20v-5h4v5"></path></svg></div>
+<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Klienti"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.2 2.4 3.6 5.2"></path></svg></div>
 <div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Kalendár"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></div>
 <div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Kataster"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg></div>
-<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Klienti"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.2 2.4 3.6 5.2"></path></svg></div>
-<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Dokumenty"><path d="M14 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"></path><path d="M14 3.5V8h4.5"></path><rect x="9" y="13.5" width="6" height="4.5" rx="1"></rect><path d="M10.5 13.5v-1.2a1.5 1.5 0 0 1 3 0v1.2"></path></svg></div>
-<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Správy"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg></div>
-<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="AML overenie"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.1-7.5 9.5-4.3-1.4-7.5-4.9-7.5-9.5V6z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg></div>
+<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Mapa"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg></div>
+<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Chat"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg></div>
+<div style="aspect-ratio: 1; border-radius: 14px; background: #FFFDF8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Osobný web"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"></path></svg></div>
 </div>
 </div>
 <p style="margin: auto 0 0; font-size: 18px; line-height: 1.5; color: #C9D4DD"><strong style="color: #F7F2E8">1× prihlásenie. 1× platba.</strong> Všetko pokope a káva je ešte horúca.</p>
@@ -621,9 +644,9 @@ List vlastníctva na 1 klik
 <div class="tabs-x" role="group" aria-label="Obrazovky softvéru" style="margin-top: 40px; display: flex; flex-wrap: wrap; gap: 8px">
 <button type="button" class="opt opt-on" aria-pressed="true" data-group="view" data-key="skener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg>Realitný skener</button>
 <button type="button" class="opt" aria-pressed="false" data-group="view" data-key="domov"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"></path><path d="M6 9.5V20h12V9.5"></path></svg>Prehľad</button>
-<button type="button" class="opt" aria-pressed="false" data-group="view" data-key="kalendar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Kalendár</button>
 <button type="button" class="opt" aria-pressed="false" data-group="view" data-key="ponuky"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"></path><path d="M6 9.5V20h12V9.5"></path><path d="M10 20v-5h4v5"></path></svg>Nehnuteľnosti</button>
-<button type="button" class="opt" aria-pressed="false" data-group="view" data-key="asistent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path></svg>AI asistent</button>
+<button type="button" class="opt" aria-pressed="false" data-group="view" data-key="kalendar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Kalendár</button>
+<button type="button" class="opt" aria-pressed="false" data-group="view" data-key="chat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg>Chat</button>
 </div>
 <div style="margin-top: 18px; border-radius: 24px; background: #1E2A35; padding: 10px; box-shadow: 0 60px 100px -50px rgba(0,0,0,.6)">
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 4px 8px 12px">
@@ -633,187 +656,121 @@ List vlastníctva na 1 klik
 </div>
 <div data-group="view" data-panel="skener">
 <div class="pop">
-<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-inzeraty.jpg" alt="Realitný skener v aplikácii: súkromné inzeráty z portálov s tlačidlami Prevziať, Zapísať hovor a SMS poslaná" width="1440" height="900" style="display: block; width: 100%; height: auto"></div>
-<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>Realitný skener.</strong> Nové inzeráty súkromníkov z Bazoša, Nehnuteľností.sk, Reality.sk a TopReality. Prevezmeš, zapíšeš hovor, pošleš SMS a otvoríš kataster.</p>
+<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-skener.webp" alt="Realitný skener v aplikácii: súkromné inzeráty z portálov s tlačidlami Prevziať, Zapísať hovor a SMS poslaná" width="1800" height="1125" style="display: block; width: 100%; height: auto"></div>
+<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>Realitný skener.</strong> Nové inzeráty súkromníkov z Bazoša, Nehnuteľností.sk, Reality.sk a TopReality. Prevezmeš, zapíšeš hovor, pošleš SMS a otvoríš kataster. Kolegovia hneď vidia, kto inzerát rieši.</p>
 </div>
 </div>
 <div data-group="view" data-panel="domov" hidden>
 <div class="pop">
-<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-domov.jpg" alt="Úvodný prehľad aplikácie s pozdravom, meninami, dnešnými udalosťami a sekciami" width="1440" height="900" style="display: block; width: 100%; height: auto"></div>
-<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>Prehľad.</strong> Ráno ťa privíta Týpek, ukáže meniny, dnešné udalosti, pripomienky a rýchly vstup do každej sekcie.</p>
-</div>
-</div>
-<div data-group="view" data-panel="kalendar" hidden>
-<div class="pop">
-<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-kalendar.jpg" alt="Kalendár s obhliadkami, stretnutiami a pripomienkami na daný deň" width="1440" height="900" style="display: block; width: 100%; height: auto"></div>
-<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>Kalendár.</strong> Obhliadky, stretnutia a pripomienky na jednom mieste, prepojené s Google a Apple kalendárom.</p>
+<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-prehlad.webp" alt="Úvodný prehľad aplikácie s pozdravom, meninami, dnešnými obhliadkami a pripomienkami" width="1800" height="1125" loading="lazy" style="display: block; width: 100%; height: auto"></div>
+<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>Prehľad.</strong> Ráno ťa privíta Týpek: dnešné obhliadky a stretnutia, komu máš zavolať a koľko nových súkromných inzerátov pribudlo v tvojich obciach.</p>
 </div>
 </div>
 <div data-group="view" data-panel="ponuky" hidden>
 <div class="pop">
-<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-nehnutelnosti.jpg" alt="Zoznam nehnuteľností kancelárie s fotkami, cenou, stavom a maklérom" width="1440" height="900" style="display: block; width: 100%; height: auto"></div>
-<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>Nehnuteľnosti.</strong> Ponuky kancelárie s fotkami, stavom, cenou a maklérom. Pridávanie cez jednoduchého sprievodcu.</p>
+<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-nehnutelnosti.webp" alt="Ponuky kancelárie s fotkami, cenou, stavom a maklérom" width="1800" height="1125" loading="lazy" style="display: block; width: 100%; height: auto"></div>
+<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>Nehnuteľnosti.</strong> Ponuky celej kancelárie s fotkami, cenou, stavom a maklérom. Exkluzívne, rezervované aj predané máš pekne pokope.</p>
 </div>
 </div>
-<div data-group="view" data-panel="asistent" hidden>
+<div data-group="view" data-panel="kalendar" hidden>
 <div class="pop">
-<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-asistent.jpg" alt="AI asistent Týpek s návrhmi: popis nehnuteľnosti, príspevok na Facebook, SMS majiteľovi" width="1440" height="900" style="display: block; width: 100%; height: auto"></div>
-<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>AI asistent Týpek.</strong> Popis nehnuteľnosti, príspevok na Facebook, SMS majiteľovi či email po obhliadke na pár klikov.</p>
+<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-kalendar.webp" alt="Kalendár s obhliadkami, stretnutiami a pripomienkami na daný deň" width="1800" height="1125" loading="lazy" style="display: block; width: 100%; height: auto"></div>
+<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>Kalendár.</strong> Obhliadky, stretnutia a pripomienky na jednom mieste. Prepojíš ho s Google alebo Apple kalendárom v mobile.</p>
+</div>
+</div>
+<div data-group="view" data-panel="chat" hidden>
+<div class="pop">
+<div class="shot" style="border-radius: 14px; overflow: hidden; background: #F5F4F0; aspect-ratio: 1440 / 900; max-width: 100%"><img src="soft-chat.webp" alt="Chat tímu so správami kolegov a fotkou v prílohe" width="1800" height="1125" loading="lazy" style="display: block; width: 100%; height: auto"></div>
+<p style="margin: 14px 6px 4px; font-size: 15px; line-height: 1.5; color: #C9D4DD"><strong>Chat s kolegami.</strong> Správy celému tímu alebo jednému kolegovi, aj s fotkami a dokumentmi. Vidíš, kto je práve online.</p>
 </div>
 </div>
 </div>
 <p class="only-sm" style="display: none; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 14px; font-weight: 700; color: #F7F2E8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8l-4 4 4 4M17 8l4 4-4 4M3 12h18"></path></svg>Potiahni obrázok prstom do strany a uvidíš celú obrazovku.</p>
-<p style="margin: 16px 0 0; font-size: 14px; color: #DCE3E9">Zábery z Realitného týpka, ktorý používame v Alpha Reality. Mená, ponuky a údaje na obrázkoch sú ukážkové.</p>
+<p style="margin: 16px 0 0; font-size: 14px; color: #DCE3E9">Zábery z Realitného týpka, ktorý používame v Alpha Reality (október 2026). Mená, ponuky a údaje na obrázkoch sú ukážkové.</p>
 </div>
 </section>
 
 <!-- PÁS TEXTU – ide do strán podľa skrolovania -->
 <div class="pas" aria-hidden="true">
-<div class="pas-r pas-r1"><div class="pas-t"><span>Realitný skener</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Kataster a mapa</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Kalendár</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Správa ponúk</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Osobný web</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Chat s kolegami</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Dokumenty kancelárie</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"></div><div class="pas-t"><span>Realitný skener</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Kataster a mapa</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Kalendár</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Správa ponúk</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Osobný web</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Chat s kolegami</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Dokumenty kancelárie</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"></div></div>
-<div class="pas-r pas-r2"><div class="pas-t"><span>Dokumenty kancelárie</span><i></i><span>Chat s kolegami</span><i></i><span>Osobný web</span><i></i><span>Správa ponúk</span><i></i><span>Kalendár</span><i></i><span>Kataster a mapa</span><i></i><span>Realitný skener</span><i></i></div><div class="pas-t"><span>Dokumenty kancelárie</span><i></i><span>Chat s kolegami</span><i></i><span>Osobný web</span><i></i><span>Správa ponúk</span><i></i><span>Kalendár</span><i></i><span>Kataster a mapa</span><i></i><span>Realitný skener</span><i></i></div></div>
+<div class="pas-r pas-r1"><div class="pas-t"><span>Realitný skener</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Kataster a mapa</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Kalendár</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Správa ponúk</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Osobný web</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Chat s kolegami</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Realitná mapa</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"></div><div class="pas-t"><span>Realitný skener</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Kataster a mapa</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Kalendár</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Správa ponúk</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Osobný web</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Chat s kolegami</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"><span>Realitná mapa</span><img src="typek-head.png?v=202610251300" alt="" width="80" height="80"></div></div>
+<div class="pas-r pas-r2"><div class="pas-t"><span>Realitná mapa</span><i></i><span>Chat s kolegami</span><i></i><span>Osobný web</span><i></i><span>Správa ponúk</span><i></i><span>Kalendár</span><i></i><span>Kataster a mapa</span><i></i><span>Realitný skener</span><i></i></div><div class="pas-t"><span>Realitná mapa</span><i></i><span>Chat s kolegami</span><i></i><span>Osobný web</span><i></i><span>Správa ponúk</span><i></i><span>Kalendár</span><i></i><span>Kataster a mapa</span><i></i><span>Realitný skener</span><i></i></div></div>
 </div>
 
 <!-- FUNKCIE -->
 <section id="funkcie" style="max-width: 1200px; margin: 0 auto; padding: 110px 24px 100px">
 <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px">
 <div style="max-width: 680px">
-<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #4A6074">VŠETKO NA JEDNOM MIESTE</div>
-<h2 style="margin: 14px 0 0; font-size: clamp(34px, 4.4vw, 56px); line-height: 1.02; letter-spacing: -0.03em; font-weight: 800">Čo všetko Týpek zvládne</h2>
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #4A6074">K SKENERU ZADARMO</div>
+<h2 style="margin: 14px 0 0; font-size: clamp(34px, 4.4vw, 56px); line-height: 1.02; letter-spacing: -0.03em; font-weight: 800">Čo ešte Týpek zvládne</h2>
 </div>
-<p style="margin: 0; max-width: 380px; font-size: 18px; line-height: 1.5; color: #3A4B5A">Nič si nezapínaš zvlášť. Skener, kataster, kalendár aj klienti sú prepojení a hovoria spolu.</p>
-</div>
-
-<div class="feat-grid" style="margin-top: 48px">
-
-<div class="feat feat-w2" style="background: #1E2A35; color: #F7F2E8; display: flex; flex-wrap: wrap; gap: 22px 36px">
-<div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
-<span style="width: 52px; height: 52px; border-radius: 16px; background: #DB9522; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E2A35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg></span>
-<h3 style="margin: 0; font-size: 24px; font-weight: 700">Realitný skener</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #C9D4DD">Nové ponuky súkromníkov z inzertných portálov v tvojom okrese hneď, ako sa objavia. Bez preklikávania stránok jednu po druhej.</p>
-<a href="#skener" style="margin-top: auto; align-self: flex-start; color: #DB9522; font-size: 15px; font-weight: 700; text-decoration: none">Ako skener funguje →</a>
-</div>
-<div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px">
-<div style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(247,242,232,.08); font-size: 13px"><span>3-izb. byt · SNV</span><span style="color: #DB9522; font-weight: 700">pred 2 min</span></div>
-<div style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(247,242,232,.08); font-size: 13px"><span>Dom · Levoča</span><span style="color: #C9D4DD">pred 14 min</span></div>
-<div style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(247,242,232,.08); font-size: 13px"><span>Pozemok · Markušovce</span><span style="color: #C9D4DD">pred 21 min</span></div>
-<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 700; color: #C9D4DD"><span style="padding: 5px 10px; border-radius: 999px; background: #2F4152">Bazoš</span><span style="padding: 5px 10px; border-radius: 999px; background: #2F4152">Nehnuteľnosti.sk</span><span style="padding: 5px 10px; border-radius: 999px; background: #2F4152">Reality.sk</span><span style="padding: 5px 10px; border-radius: 999px; background: #2F4152">TopReality</span></div>
-</div>
+<p style="margin: 0; max-width: 400px; font-size: 18px; line-height: 1.5; color: #3A4B5A">Kataster a mapu, kalendár aj chat s kolegami máš k skeneru zadarmo. Všetko je prepojené, takže nič neprepisuješ dvakrát.</p>
 </div>
 
-<div class="feat" style="display: flex; flex-direction: column; gap: 18px">
+<div class="feat-grid fg2" style="margin-top: 48px">
+<div class="feat fx" style="display: flex; flex-direction: column; gap: 16px">
 <span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg></span>
-<h3 style="margin: 0; font-size: 24px; font-weight: 700">Kataster jedným klikom</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Rýchle prekliky na kataster aj katastrálnu mapu priamo z ponuky. List vlastníctva a parcelu máš hneď pred sebou.</p>
-<div style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px">
-<span style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 12px; background: #4A6074; color: #F7F2E8; font-size: 14px; font-weight: 600">List vlastníctva <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg></span>
-<span style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 12px; background: #EEE6D6; font-size: 14px; font-weight: 600">Katastrálna mapa <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg></span>
-</div>
-</div>
-
-<div class="feat" style="display: flex; flex-direction: column; gap: 18px">
-<span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg></span>
-<h3 style="margin: 0; font-size: 24px; font-weight: 700">Interaktívna mapa</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Všetky nehnuteľnosti v tvojom regióne na jednej mape. Hneď vidíš, čo je v okolí a za koľko.</p>
-<div style="margin-top: auto; height: 96px; border-radius: 14px; background: #EAE3D4; position: relative; overflow: hidden">
-<svg viewBox="0 0 300 96" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path d="M0 40 L300 54M90 0 L110 96M220 0 C210 40 240 70 228 96" stroke="#FFFDF8" stroke-width="7" fill="none"></path><circle class="ping" cx="70" cy="34" r="7" fill="#DB9522"></circle><circle cx="70" cy="34" r="6" fill="#DB9522" stroke="#FFFDF8" stroke-width="2.5"></circle><circle cx="150" cy="66" r="6" fill="#4A6074" stroke="#FFFDF8" stroke-width="2.5"></circle><circle cx="250" cy="30" r="6" fill="#1E2A35" stroke="#FFFDF8" stroke-width="2.5"></circle><circle class="ping ping2" cx="200" cy="76" r="7" fill="#DB9522"></circle><circle cx="200" cy="76" r="6" fill="#DB9522" stroke="#FFFDF8" stroke-width="2.5"></circle></svg>
-</div>
-</div>
-
-<div class="feat" style="display: flex; flex-direction: column; gap: 18px">
-<span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></span>
-<h3 style="margin: 0; font-size: 24px; font-weight: 700">Stretnutia a obhliadky</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Naplánuj si obhliadky aj stretnutia. Všetko sa prepíše do tvojho kalendára v mobile.</p>
-</div>
-
-<div class="feat" style="background: #4A6074; color: #F7F2E8; display: flex; flex-direction: column; gap: 18px">
-<span style="width: 52px; height: 52px; border-radius: 16px; background: #F7F2E8; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"></path></svg></span>
-<h3 style="margin: 0; font-size: 24px; font-weight: 700">Vlastný web makléra</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #E3E9EE">Cez Týpka si jednoducho vytvoríš vlastný realitný web. Bez programátora a bez ďalšieho systému.</p>
-<div style="margin-top: auto; border-radius: 12px; background: #F7F2E8; color: #1E2A35; overflow: hidden">
-<div style="display: flex; gap: 5px; padding: 8px 10px; background: #EEE6D6"><span style="width: 7px; height: 7px; border-radius: 9px; background: #C9D4DD"></span><span style="width: 7px; height: 7px; border-radius: 9px; background: #C9D4DD"></span><span style="width: 7px; height: 7px; border-radius: 9px; background: #C9D4DD"></span></div>
-<div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 6px"><span class="disp" style="font-weight: 800; font-size: 15px">[Tvoje meno] · maklér</span><span style="display: flex; gap: 6px"><span style="flex: 1; height: 34px; border-radius: 6px; background: #C9D4DD"></span><span style="flex: 1; height: 34px; border-radius: 6px; background: #DCE3E9"></span><span style="flex: 1; height: 34px; border-radius: 6px; background: #C9D4DD"></span></span></div>
-</div>
-</div>
-
-<div class="feat feat-w3" style="display: flex; flex-wrap: wrap; gap: 22px 36px">
-<div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
-<span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"></path><path d="M14 3.5V8h4.5"></path><rect x="9" y="13.5" width="6" height="4.5" rx="1"></rect><path d="M10.5 13.5v-1.2a1.5 1.5 0 0 1 3 0v1.2"></path></svg></span>
 <span class="free">ZADARMO</span>
-<h3 style="margin: -8px 0 0; font-size: 24px; font-weight: 700">Dokumenty kancelárie</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Vzory zmlúv a dokumentov celej kancelárie máš v Týpkovi. Žiadne posielanie vzorov e-mailom ani externý cloud – všetko postráži Týpek.</p>
-</div>
-<div style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; font-size: 14px; font-weight: 600">
-<span style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #F7F2E8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Vzory na jednom mieste pre celý tím</span>
-<span style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #F7F2E8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Bez posielania e-mailom</span>
-<span style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #F7F2E8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Bez externého cloudu</span>
-<span style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #F7F2E8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Pripravené na tlač</span>
+<h3 style="margin: -6px 0 0; font-size: 24px; font-weight: 700">Kataster a realitná mapa</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Ťukneš do mapy a otvorí sa kataster presne na tom mieste: parcela, list vlastníctva, výmera. V teréne aj podľa GPS mobilu. Na mape máš ponuky kancelárie aj súkromníkov zo skenera.</p>
+<div style="margin-top: auto; height: 104px; border-radius: 14px; background: #EAE3D4; position: relative; overflow: hidden">
+<svg viewBox="0 0 600 110" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path d="M0 50 L600 66M180 0 L206 110M440 0 C424 46 470 80 456 110" stroke="#FFFDF8" stroke-width="8" fill="none"></path><path d="M290 16 h78 v36 h-78z" fill="rgba(196,122,44,.08)" stroke="#C47A2C" stroke-width="2" stroke-dasharray="6 5"></path><circle class="ping" cx="120" cy="34" r="7" fill="#DB9522"></circle><circle cx="120" cy="34" r="6" fill="#DB9522" stroke="#FFFDF8" stroke-width="2.5"></circle><circle cx="300" cy="86" r="6" fill="#2E7D5B" stroke="#FFFDF8" stroke-width="2.5"></circle><circle cx="528" cy="30" r="6" fill="#2E7D5B" stroke="#FFFDF8" stroke-width="2.5"></circle><circle cx="60" cy="84" r="6" fill="#2E7D5B" stroke="#FFFDF8" stroke-width="2.5"></circle><circle class="ping ping2" cx="392" cy="90" r="7" fill="#DB9522"></circle><circle cx="392" cy="90" r="6" fill="#DB9522" stroke="#FFFDF8" stroke-width="2.5"></circle></svg>
+<span style="position: absolute; left: 10px; bottom: 8px; display: flex; gap: 10px; font-size: 11px; font-weight: 700; color: #3A4B5A"><span style="display: inline-flex; align-items: center; gap: 4px"><i style="width: 8px; height: 8px; border-radius: 9px; background: #DB9522"></i>naše ponuky</span><span style="display: inline-flex; align-items: center; gap: 4px"><i style="width: 8px; height: 8px; border-radius: 9px; background: #2E7D5B"></i>súkromníci</span></span>
 </div>
 </div>
-
-<div class="feat" style="display: flex; flex-direction: column; gap: 18px">
+<div class="feat fx" style="display: flex; flex-direction: column; gap: 16px">
+<span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></span>
+<span class="free">ZADARMO</span>
+<h3 style="margin: -6px 0 0; font-size: 24px; font-weight: 700">Kalendár</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Obhliadky, stretnutia a pripomienky na jednom mieste. Prepojíš ho s Google alebo Apple kalendárom a všetko máš aj v mobile.</p>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; font-size: 13px">
+<span class="kal-r"><b>10:30</b>Obhliadka – 3-izbový byt, Mier<em class="live">o 48 min</em></span>
+<span class="kal-r"><b>13:00</b>Podpis zmluvy – rodinný dom</span>
+<span class="kal-r kal-r--p"><b>16:15</b>Zavolať majiteľke domu v Levoči</span>
+</div>
+</div>
+<div class="feat fx" style="display: flex; flex-direction: column; gap: 16px">
 <span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg></span>
-<h3 style="margin: 0; font-size: 24px; font-weight: 700">Interaktívny chat s kolegami</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Dohodni obhliadku, pošli kolegovi ponuku alebo klienta priamo v Týpkovi. Celá komunikácia s tímom je na jednom mieste.</p>
+<span class="free">ZADARMO</span>
+<h3 style="margin: -6px 0 0; font-size: 24px; font-weight: 700">Chat s kolegami</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Správy celému tímu alebo jednému kolegovi, aj s fotkami a dokumentmi. Je len pre tvoj tím, klienti doň nevidia.</p>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; font-size: 13px">
+<span class="ch-b"><b>Jana</b>Kto ide dnes okolo Levoče? Treba odfotiť dom.</span>
+<span class="ch-b ch-b--ja">Idem tam o 14:00, vybavím to.</span>
+<span class="ch-b ch-pise" aria-label="Kolega píše"><span class="tdot"></span><span class="tdot tdot2"></span><span class="tdot tdot3"></span></span>
 </div>
-
+</div>
+<div class="feat fx" style="display: flex; flex-direction: column; gap: 16px">
+<span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"></path><path d="M6 9.5V20h12V9.5"></path><path d="M10 20v-5h4v5"></path></svg></span>
+<span class="free">K WEBU ZADARMO</span>
+<h3 style="margin: -6px 0 0; font-size: 24px; font-weight: 700">Správa ponúk</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Ponuky s fotkami, cenou, stavom a maklérom. Keď máš osobný web, ponuky sa na ňom ukážu samé.</p>
+<div style="margin-top: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; font-size: 12px">
+<span class="pon-k"><img src="ph-byt.webp" alt="" width="320" height="238" loading="lazy"><b>129 000 €</b><span>3-izb. byt</span></span>
+<span class="pon-k"><img src="ph-dom.webp" alt="" width="320" height="238" loading="lazy"><b>189 000 €</b><span>Rodinný dom</span></span>
+<span class="pon-k"><img src="ph-pozemok.webp" alt="" width="320" height="238" loading="lazy"><b>42 000 €</b><span>Pozemok</span></span>
+</div>
+</div>
 </div>
 
 <div style="margin-top: 20px; border-radius: 26px; background: #EEE6D6; padding: 28px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px">
 <div style="display: flex; align-items: center; gap: 16px">
-<span style="width: 52px; height: 52px; border-radius: 16px; background: #1E2A35; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F7F2E8" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>
+<span style="flex: none; width: 52px; height: 52px; border-radius: 16px; background: #1E2A35; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F7F2E8" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>
 <span><span class="disp" style="display: block; font-size: 24px; font-weight: 800">A mnoho ďalšieho</span><span style="font-size: 16px; color: #3A4B5A">Týpek rastie ďalej. Nové veci pridávame podľa toho, čo makléri naozaj potrebujú.</span></span>
 </div>
 <a class="btn btn-ink" href="#pripravujeme">Pozri, čo pripravujeme</a>
 </div>
 </section>
 
-<!-- PECKY -->
-<section id="pecky" style="max-width: 1200px; margin: 0 auto; padding: 30px 24px 110px">
-<div style="max-width: 760px">
-<div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: #1E2A35; color: #DB9522; font-size: 13px; font-weight: 700; letter-spacing: 0.12em"><svg class="twinkle" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path></svg>NAJVÄČŠIE PECKY</div>
-<h2 style="margin: 16px 0 0; font-size: clamp(36px, 4.8vw, 64px); line-height: 1; letter-spacing: -0.035em; font-weight: 800">K skeneru máš aj celý softvér a vlastný web</h2>
-<p style="margin: 18px 0 0; font-size: 19px; line-height: 1.55; color: #3A4B5A; max-width: 620px">Realitný softvér pre teba aj celú kanceláriu a osobný web s tvojimi ponukami. Všetko zapnuté priamo v Týpkovi, bez ďalších predplatných a prihlasovaní.</p>
-</div>
-<!-- REALITNY SOFT -->
-<div id="p-soft" class="pcard" style="margin-top: 40px; scroll-margin-top: 20px; border-radius: 36px; background: #EEE6D6; padding: clamp(24px, 4.5vw, 56px); display: flex; flex-wrap: wrap-reverse; align-items: center; gap: 48px; overflow: hidden">
-<div style="flex: 1 1 440px; min-width: 0; position: relative">
-<div style="border-radius: 22px; background: #FFFDF8; overflow: hidden; box-shadow: 0 50px 80px -40px rgba(30,42,53,.55)">
-<div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #1E2A35; color: #F7F2E8">
-<img src="typek-head.png?v=202610251300" alt="" width="34" height="34" style="display: block; width: 34px; height: 34px">
-<span class="wm" style="flex: 1; min-width: 0; font-size: 16px"><span style="color: #F7F2E8">Realitný</span> <span style="color: #DB9522">týpek</span></span>
-<span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: #DB9522; color: #1E2A35; font-size: 12px; font-weight: 800"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="12" r="4"></circle><path d="M11.5 12H21M18 12v3.5M21 12v2.5"></path></svg>1 prihlásenie</span>
-</div>
-<div class="apt-grid" style="padding: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
-<div class="apt apt--gold"><span class="apt-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"></path><path d="M6 9.5V20h12V9.5"></path><path d="M10 20v-5h4v5"></path></svg></span><strong>Ponuky</strong><span>fotky, ceny, stav</span></div>
-<div class="apt"><span class="apt-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.2 2.4 3.6 5.2"></path></svg></span><strong>Klienti</strong><span>karty klientov</span></div>
-<div class="apt"><span class="apt-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></span><strong>Kalendár</strong><span>obhliadky a stretnutia</span></div>
-<div class="apt"><span class="apt-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"></path><path d="M14 3.5V8h4.5"></path><rect x="9" y="13.5" width="6" height="4.5" rx="1"></rect><path d="M10.5 13.5v-1.2a1.5 1.5 0 0 1 3 0v1.2"></path></svg></span><strong>Dokumenty</strong><span>vzory kancelárie</span></div>
-<div class="apt"><span class="apt-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg></span><strong>Kataster</strong><span>LV a mapa KN</span></div>
-<div class="apt"><span class="apt-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg></span><strong>Chat</strong><span>s kolegami v tíme</span></div>
-</div>
-</div>
-<div class="bob2" style="position: absolute; right: -6px; bottom: -14px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; background: #1E2A35; color: #F7F2E8; font-size: 13px; font-weight: 700; box-shadow: 0 20px 40px -20px rgba(30,42,53,.7)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Čo zadáš raz, vidíš všade</div>
-</div>
-<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
-<span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #1E2A35; color: #DB9522; font-size: 12px; font-weight: 700; letter-spacing: 0.1em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"></rect></svg>REALITNÝ SOFTVÉR</span>
-<h3 style="margin: 0; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.04; letter-spacing: -0.03em; font-weight: 800">Celý realitný softvér. Jedno prihlásenie.</h3>
-<p style="margin: 0; font-size: 18px; line-height: 1.6; color: #3A4B5A">Ponuky, klienti, obhliadky v kalendári, dokumenty kancelárie, kataster aj chat s kolegami. Všetko je navzájom prepojené, takže nič neprepisuješ dvakrát.</p>
-<div style="display: flex; flex-direction: column; gap: 10px">
-<span style="display: flex; align-items: flex-start; gap: 10px; font-size: 16px; font-weight: 600; color: #1E2A35"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Žiadnych päť hesiel a päť platieb</span>
-<span style="display: flex; align-items: flex-start; gap: 10px; font-size: 16px; font-weight: 600; color: #1E2A35"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Funguje na počítači aj v mobile</span>
-<span style="display: flex; align-items: flex-start; gap: 10px; font-size: 16px; font-weight: 600; color: #1E2A35"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Ponuky a klientov ti prenesieme zo starého softvéru</span>
-</div>
-<a class="btn btn-ink" href="#nahlad" style="align-self: flex-start">Pozri, ako vyzerá naozaj</a>
-</div>
-</div>
-
 <!-- OSOBNY WEB -->
-<div id="p-web" class="pcard" style="margin-top: 24px; scroll-margin-top: 20px; border-radius: 36px; background: #4A6074; color: #F7F2E8; padding: clamp(24px, 4.5vw, 56px); display: flex; flex-direction: column; gap: 40px; overflow: hidden; overflow: clip">
+<section id="osobny-web" style="max-width: 1200px; margin: 0 auto; padding: 0 24px 110px">
+
+<div id="p-web" class="pcard" style="scroll-margin-top: 20px; border-radius: 36px; background: #4A6074; color: #F7F2E8; padding: clamp(24px, 4.5vw, 56px); display: flex; flex-direction: column; gap: 40px; overflow: hidden; overflow: clip">
 <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 48px">
 <div class="wb-ctl" style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 22px">
 <span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #1E2A35; color: #DB9522; font-size: 12px; font-weight: 700; letter-spacing: 0.1em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"></path></svg>OSOBNÝ WEB MAKLÉRA</span>
-<h3 style="margin: 0; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.04; letter-spacing: -0.03em; font-weight: 800">Tvoj vlastný realitný web. Bez programátora.</h3>
+<h2 style="margin: 0; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.04; letter-spacing: -0.03em; font-weight: 800">Tvoj vlastný realitný web. Bez programátora.</h2>
 <p style="margin: 0; font-size: 18px; line-height: 1.6; color: #E3E9EE">Vyber si farbu, rozloženie a písmo. Ponuky, recenzie aj kontakt sa naplnia samé z Týpka a web vyzerá profesionálne na počítači aj v mobile.</p>
+<p style="margin: -6px 0 0; align-self: flex-start; padding: 8px 14px; border-radius: 999px; background: #1E2A35; font-size: 15px; font-weight: 700; color: #F7F2E8"><span style="color: #DB9522">69 € mesačne</span> s DPH · doména a hosting v cene</p>
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #E3E9EE">FARBA</div>
@@ -901,9 +858,9 @@ List vlastníctva na 1 klik
 </span>
 </div>
 <div style="padding: 0 20px 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
-<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 64px; background: #C9D4DD; border-bottom: 4px solid var(--wa)"></span><span style="display: block; padding: 8px"><strong style="display: block">3-izb. byt</strong>129 000 €</span></span>
-<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 64px; background: #DCE3E9; border-bottom: 4px solid var(--wa)"></span><span style="display: block; padding: 8px"><strong style="display: block">Rodinný dom</strong>189 000 €</span></span>
-<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 64px; background: #E3DCCB; border-bottom: 4px solid var(--wa)"></span><span style="display: block; padding: 8px"><strong style="display: block">Pozemok</strong>42 000 €</span></span>
+<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 64px; background: #C9D4DD url(ph-byt.webp) center / cover; border-bottom: 4px solid var(--wa)"></span><span style="display: block; padding: 8px"><strong style="display: block">3-izb. byt</strong>129 000 €</span></span>
+<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 64px; background: #C9D4DD url(ph-dom.webp) center / cover; border-bottom: 4px solid var(--wa)"></span><span style="display: block; padding: 8px"><strong style="display: block">Rodinný dom</strong>189 000 €</span></span>
+<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 64px; background: #C9D4DD url(ph-pozemok.webp) center / cover; border-bottom: 4px solid var(--wa)"></span><span style="display: block; padding: 8px"><strong style="display: block">Pozemok</strong>42 000 €</span></span>
 </div>
 <div class="hide-sm" style="margin: 0 20px 20px; padding: 14px; border-radius: 12px; background: var(--wcard); display: flex; align-items: center; gap: 12px; font-size: 13px">
 <span class="tint" style="display: flex; gap: 2px; color: var(--wa)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"></path></svg><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"></path></svg><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"></path></svg><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"></path></svg><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"></path></svg></span>
@@ -921,9 +878,9 @@ List vlastníctva na 1 klik
 <span style="padding: 9px 18px; border-radius: 999px; background: #FFFDF8; color: #1E2A35; font-size: 13px; font-weight: 700">Pozrieť moje ponuky</span>
 </div>
 <div style="padding: 16px 20px 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
-<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 58px; background: #C9D4DD"></span><span style="display: block; padding: 8px"><strong style="display: block">3-izb. byt</strong>129 000 €</span></span>
-<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 58px; background: #DCE3E9"></span><span style="display: block; padding: 8px"><strong style="display: block">Rodinný dom</strong>189 000 €</span></span>
-<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 58px; background: #E3DCCB"></span><span style="display: block; padding: 8px"><strong style="display: block">Pozemok</strong>42 000 €</span></span>
+<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 58px; background: #C9D4DD url(ph-byt.webp) center / cover"></span><span style="display: block; padding: 8px"><strong style="display: block">3-izb. byt</strong>129 000 €</span></span>
+<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 58px; background: #DCE3E9 url(ph-dom.webp) center / cover"></span><span style="display: block; padding: 8px"><strong style="display: block">Rodinný dom</strong>189 000 €</span></span>
+<span style="border-radius: 12px; background: var(--wcard); overflow: hidden; font-size: 12px"><span style="display: block; height: 58px; background: #E3DCCB url(ph-pozemok.webp) center / cover"></span><span style="display: block; padding: 8px"><strong style="display: block">Pozemok</strong>42 000 €</span></span>
 </div>
 </div>
 </div>
@@ -935,10 +892,10 @@ List vlastníctva na 1 klik
 <span style="display: flex; gap: 6px; font-size: 12px; font-weight: 700"><span class="tint" style="padding: 6px 12px; border-radius: 999px; background: var(--wa); color: var(--wt)">Všetky</span><span style="padding: 6px 12px; border-radius: 999px; background: var(--wchip)">Byty</span><span style="padding: 6px 12px; border-radius: 999px; background: var(--wchip)">Domy</span></span>
 </div>
 <div style="padding: 14px 20px 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
-<span style="border-radius: 14px; background: var(--wcard); overflow: hidden; font-size: 13px"><span style="display: block; height: 92px; background: #C9D4DD"></span><span style="display: flex; justify-content: space-between; gap: 8px; padding: 10px"><strong>3-izbový byt, Mier</strong><span class="tint" style="font-weight: 800; color: var(--wa); filter: brightness(.8)">129 000 €</span></span></span>
-<span style="border-radius: 14px; background: var(--wcard); overflow: hidden; font-size: 13px"><span style="display: block; height: 92px; background: #DCE3E9"></span><span style="display: flex; justify-content: space-between; gap: 8px; padding: 10px"><strong>Rodinný dom, Levoča</strong><span class="tint" style="font-weight: 800; color: var(--wa); filter: brightness(.8)">189 000 €</span></span></span>
-<span style="border-radius: 14px; background: var(--wcard); overflow: hidden; font-size: 13px"><span style="display: block; height: 92px; background: #E3DCCB"></span><span style="display: flex; justify-content: space-between; gap: 8px; padding: 10px"><strong>Pozemok, Markušovce</strong><span class="tint" style="font-weight: 800; color: var(--wa); filter: brightness(.8)">42 000 €</span></span></span>
-<span style="border-radius: 14px; background: var(--wcard); overflow: hidden; font-size: 13px"><span style="display: block; height: 92px; background: #C9D4DD"></span><span style="display: flex; justify-content: space-between; gap: 8px; padding: 10px"><strong>2-izbový byt, Tarča</strong><span class="tint" style="font-weight: 800; color: var(--wa); filter: brightness(.8)">98 500 €</span></span></span>
+<span style="border-radius: 14px; background: var(--wcard); overflow: hidden; font-size: 13px"><span style="display: block; height: 92px; background: #C9D4DD url(ph-byt.webp) center / cover"></span><span style="display: flex; justify-content: space-between; gap: 8px; padding: 10px"><strong>3-izbový byt, Mier</strong><span class="tint" style="font-weight: 800; color: var(--wa); filter: brightness(.8)">129 000 €</span></span></span>
+<span style="border-radius: 14px; background: var(--wcard); overflow: hidden; font-size: 13px"><span style="display: block; height: 92px; background: #DCE3E9 url(ph-dom.webp) center / cover"></span><span style="display: flex; justify-content: space-between; gap: 8px; padding: 10px"><strong>Rodinný dom, Levoča</strong><span class="tint" style="font-weight: 800; color: var(--wa); filter: brightness(.8)">189 000 €</span></span></span>
+<span style="border-radius: 14px; background: var(--wcard); overflow: hidden; font-size: 13px"><span style="display: block; height: 92px; background: #E3DCCB url(ph-pozemok.webp) center / cover"></span><span style="display: flex; justify-content: space-between; gap: 8px; padding: 10px"><strong>Pozemok, Markušovce</strong><span class="tint" style="font-weight: 800; color: var(--wa); filter: brightness(.8)">42 000 €</span></span></span>
+<span style="border-radius: 14px; background: var(--wcard); overflow: hidden; font-size: 13px"><span style="display: block; height: 92px; background: #C9D4DD url(ph-byt2.webp) center / cover"></span><span style="display: flex; justify-content: space-between; gap: 8px; padding: 10px"><strong>2-izbový byt, Tarča</strong><span class="tint" style="font-weight: 800; color: var(--wa); filter: brightness(.8)">98 500 €</span></span></span>
 </div>
 </div>
 </div>
@@ -970,9 +927,9 @@ List vlastníctva na 1 klik
 </div>
 <div style="flex: 2 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px">
 <span class="wfont" style="font-size: 18px; font-weight: 800">Moje ponuky</span>
-<span class="tint" style="display: flex; align-items: center; gap: 10px; border-radius: 12px; background: var(--wcard); padding: 8px"><span style="flex: none; width: 54px; height: 42px; border-radius: 8px; background: #C9D4DD"></span><span style="flex: 1; min-width: 0"><strong style="display: block">3-izbový byt, Mier</strong><span style="color: var(--wmut)">129 000 €</span></span></span>
-<span class="tint" style="display: flex; align-items: center; gap: 10px; border-radius: 12px; background: var(--wcard); padding: 8px"><span style="flex: none; width: 54px; height: 42px; border-radius: 8px; background: #DCE3E9"></span><span style="flex: 1; min-width: 0"><strong style="display: block">Rodinný dom, Levoča</strong><span style="color: var(--wmut)">189 000 €</span></span></span>
-<span class="tint" style="display: flex; align-items: center; gap: 10px; border-radius: 12px; background: var(--wcard); padding: 8px"><span style="flex: none; width: 54px; height: 42px; border-radius: 8px; background: #E3DCCB"></span><span style="flex: 1; min-width: 0"><strong style="display: block">Pozemok, Markušovce</strong><span style="color: var(--wmut)">42 000 €</span></span></span>
+<span class="tint" style="display: flex; align-items: center; gap: 10px; border-radius: 12px; background: var(--wcard); padding: 8px"><span style="flex: none; width: 54px; height: 42px; border-radius: 8px; background: #C9D4DD url(ph-byt.webp) center / cover"></span><span style="flex: 1; min-width: 0"><strong style="display: block">3-izbový byt, Mier</strong><span style="color: var(--wmut)">129 000 €</span></span></span>
+<span class="tint" style="display: flex; align-items: center; gap: 10px; border-radius: 12px; background: var(--wcard); padding: 8px"><span style="flex: none; width: 54px; height: 42px; border-radius: 8px; background: #DCE3E9 url(ph-dom.webp) center / cover"></span><span style="flex: 1; min-width: 0"><strong style="display: block">Rodinný dom, Levoča</strong><span style="color: var(--wmut)">189 000 €</span></span></span>
+<span class="tint" style="display: flex; align-items: center; gap: 10px; border-radius: 12px; background: var(--wcard); padding: 8px"><span style="flex: none; width: 54px; height: 42px; border-radius: 8px; background: #E3DCCB url(ph-pozemok.webp) center / cover"></span><span style="flex: 1; min-width: 0"><strong style="display: block">Pozemok, Markušovce</strong><span style="color: var(--wmut)">42 000 €</span></span></span>
 </div>
 </div>
 </div>
@@ -987,8 +944,8 @@ List vlastníctva na 1 klik
 <span class="tint" style="width: 44px; height: 44px; border-radius: 999px; background: var(--wa); display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="#FFFDF8" aria-hidden="true"><circle cx="12" cy="8.5" r="4"></circle><path d="M4 21c.9-4.4 4-6.5 8-6.5s7.1 2.1 8 6.5z"></path></svg></span>
 <strong class="wfont" style="font-size: 12px">[Tvoje meno]</strong>
 <span class="tint" style="width: 100%; padding: 6px 0; border-radius: 999px; background: var(--wa); color: var(--wt); font-size: 10px; font-weight: 700">Moje ponuky</span>
-<span style="width: 100%; height: 40px; border-radius: 8px; background: #C9D4DD"></span>
-<span style="width: 100%; height: 40px; border-radius: 8px; background: #DCE3E9"></span>
+<span style="width: 100%; height: 40px; border-radius: 8px; background: #C9D4DD url(ph-byt.webp) center / cover"></span>
+<span style="width: 100%; height: 40px; border-radius: 8px; background: #DCE3E9 url(ph-dom.webp) center / cover"></span>
 </div>
 </div>
 </div>
@@ -1006,56 +963,18 @@ List vlastníctva na 1 klik
 </div>
 </section>
 
-<!-- VSETKO V JEDNOM -->
-<section id="vsetko" style="max-width: 1200px; margin: 0 auto; padding: 100px 24px 30px">
-<div style="max-width: 720px; margin: 0 auto; text-align: center">
-<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #4A6074">JEDNO PRIHLÁSENIE</div>
-<h2 style="margin: 14px 0 0; font-size: clamp(34px, 4.4vw, 56px); line-height: 1.02; letter-spacing: -0.03em; font-weight: 800">Všetko sa točí okolo Týpka</h2>
-<p style="margin: 18px auto 0; font-size: 18px; line-height: 1.55; color: #3A4B5A; max-width: 560px">Skener, kataster, kalendár, klienti aj marketing sú navzájom prepojené. Čo zadáš raz, vidíš všade.</p>
-</div>
-<div class="hub" style="margin-top: 36px">
-<svg class="hub-lines" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="true">
-<line x1="500" y1="280" x2="500.0" y2="44.8" vector-effect="non-scaling-stroke"></line>
-<line x1="500" y1="280" x2="735.1" y2="89.7" vector-effect="non-scaling-stroke"></line>
-<line x1="500" y1="280" x2="880.4" y2="207.3" vector-effect="non-scaling-stroke"></line>
-<line x1="500" y1="280" x2="880.4" y2="352.7" vector-effect="non-scaling-stroke"></line>
-<line x1="500" y1="280" x2="735.1" y2="470.3" vector-effect="non-scaling-stroke"></line>
-<line x1="500" y1="280" x2="500.0" y2="515.2" vector-effect="non-scaling-stroke"></line>
-<line x1="500" y1="280" x2="264.9" y2="470.3" vector-effect="non-scaling-stroke"></line>
-<line x1="500" y1="280" x2="119.6" y2="352.7" vector-effect="non-scaling-stroke"></line>
-<line x1="500" y1="280" x2="119.6" y2="207.3" vector-effect="non-scaling-stroke"></line>
-<line x1="500" y1="280" x2="264.9" y2="89.7" vector-effect="non-scaling-stroke"></line>
-</svg>
-<div class="hub-core">
-<span class="hub-ring" aria-hidden="true"></span>
-<img src="typek-head.png?v=202610251300" alt="" width="96" height="96" style="display: block; width: 96px; height: 96px; position: relative">
-<span class="wm" style="position: relative; font-size: 17px"><span style="color: #F7F2E8">Realitný</span> <span style="color: #DB9522">týpek</span></span>
-</div>
-<div class="hub-node hn0 hub-node--gold"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg></span>Realitný skener</div>
-<div class="hub-node hn1"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg></span>Kataster a LV</div>
-<div class="hub-node hn2"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg></span>Mapa regiónu</div>
-<div class="hub-node hn3"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></span>Kalendár obhliadok</div>
-<div class="hub-node hn4"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.2 2.4 3.6 5.2"></path></svg></span>Klienti a AML</div>
-<div class="hub-node hn5"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"></path><path d="M14 3.5V8h4.5"></path><rect x="9" y="13.5" width="6" height="4.5" rx="1"></rect><path d="M10.5 13.5v-1.2a1.5 1.5 0 0 1 3 0v1.2"></path></svg></span>Dokumenty kancelárie</div>
-<div class="hub-node hn6"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg></span>Chat s kolegami</div>
-<div class="hub-node hn7"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"></path></svg></span>Môj web</div>
-<div class="hub-node hn8"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"></rect><path d="M4 7.5l8 6 8-6"></path></svg></span>Emailing</div>
-<div class="hub-node hn9 hub-node--gold"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path></svg></span>AI a sociálne siete</div>
-</div>
-</section>
-
 <!-- VYSKLADAJ SI -->
 <section id="vyskladaj" style="max-width: 1200px; margin: 0 auto; padding: 100px 24px 30px">
 <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 28px">
 <div style="flex: 1 1 460px; min-width: 0; max-width: 640px">
 <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #4A6074">CENNÍK · VYSKLADAJ SI TÝPKA</div>
 <h2 style="margin: 14px 0 0; font-size: clamp(34px, 4.4vw, 56px); line-height: 1.02; letter-spacing: -0.03em; font-weight: 800">Plať len za to, čo naozaj používaš</h2>
-<p style="margin: 16px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A">Kataster a mapa, kalendár, chat aj dokumenty kancelárie máš <strong style="color: #1E2A35">zadarmo</strong>. Ostatné si vyskladáš podľa seba a cenu s DPH vidíš hneď. Pri ročnej platbe ušetríš.</p>
+<p style="margin: 16px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A"><strong style="color: #1E2A35">Platíš mesačne</strong>, ceny sú s DPH. Kataster a mapa, kalendár aj chat máš <strong style="color: #1E2A35">zadarmo</strong>. Ostatné si vyskladáš podľa seba. Keď zaplatíš na rok dopredu, máš mesiac zdarma.</p>
 </div>
 <div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
-<div class="qa"><span class="qa-q">Nepotrebuješ správu ponúk, sociálne siete alebo AI?</span><span class="qa-a"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Nevadí. Vyskladaj si, čo potrebuješ.</span></div>
-<div class="qa"><span class="qa-q">Chceš len osobný web a skener inzercie?</span><span class="qa-a"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Jasné, ideme do toho.</span></div>
-<div class="qa"><span class="qa-q">Časom chceš pridať niečo navyše?</span><span class="qa-a"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Žiaden problém. Pridáš to jedným klikom.</span></div>
+<div class="qa"><span class="qa-q">Chceš len skener?</span><span class="qa-a"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Stačí 19 € mesačne.</span></div>
+<div class="qa"><span class="qa-q">Chceš k nemu aj osobný web?</span><span class="qa-a"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Jasné, ideme do toho.</span></div>
+<div class="qa"><span class="qa-q">Časom chceš niečo pridať?</span><span class="qa-a"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Zapneme ti to kedykoľvek.</span></div>
 </div>
 </div>
 
@@ -1069,16 +988,16 @@ List vlastníctva na 1 klik
 <button type="button" class="pre" data-preset="all">Kancelária komplet</button>
 </div>
 <div role="group" aria-label="Moduly Realitného týpka" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px">
-<button type="button" class="mod mod-on" aria-pressed="true" data-mod="skener"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg></span><span class="mod-tx"><strong>Realitný skener<span class="mod-tag mod-tag--fee">od 19 €</span></strong><span>Nové ponuky z portálov hneď, ako sa objavia</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
-<button type="button" class="mod" aria-pressed="false" data-mod="web"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"></path></svg></span><span class="mod-tx"><strong>Osobný web<span class="mod-tag mod-tag--fee">69 €</span></strong><span>Web s ponukami a recenziami, doména a hosting v cene. 1 realitný článok mesačne.</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
+<button type="button" class="mod mod-on" aria-pressed="true" data-mod="skener"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg></span><span class="mod-tx"><strong>Realitný skener<span class="mod-tag mod-tag--fee">od 19 € mesačne</span></strong><span>Nové ponuky z portálov hneď, ako sa objavia</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
+<button type="button" class="mod" aria-pressed="false" data-mod="web"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"></path></svg></span><span class="mod-tx"><strong>Osobný web<span class="mod-tag mod-tag--fee">69 € mesačne</span></strong><span>Web s ponukami a recenziami, doména a hosting v cene. 1 realitný článok mesačne.</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
 <button type="button" class="mod" aria-pressed="false" data-mod="ponuky"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"></path><path d="M6 9.5V20h12V9.5"></path><path d="M10 20v-5h4v5"></path></svg></span><span class="mod-tx"><strong>Správa ponúk<span class="mod-tag mod-tag--free">S webom zadarmo</span></strong><span>Pridávanie a správa tvojich ponúk. K osobnému webu zadarmo.</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
 <button type="button" class="mod" aria-pressed="false" data-mod="klienti"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.2 2.4 3.6 5.2"></path></svg></span><span class="mod-tx"><strong>Klienti a AML<span class="mod-tag mod-tag--soon">AML pripravujeme</span></strong><span>Karty klientov, overenie cez AML čoskoro</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
 <button type="button" class="mod" aria-pressed="false" data-mod="domena"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="2"></rect><rect x="4" y="13" width="16" height="7" rx="2"></rect><path d="M8 7.5h.01M8 16.5h.01M12 7.5h5M12 16.5h5"></path></svg></span><span class="mod-tx"><strong>Doména + hosting<span class="mod-tag mod-tag--free">S webom v cene</span></strong><span>Vlastná adresa a hosting pre tvoj web</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
 <button type="button" class="mod" aria-pressed="false" data-mod="email"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.8"></circle><path d="M15.8 12v1.6a2.6 2.6 0 0 0 5.2 0V12a9 9 0 1 0-3.6 7.2"></path></svg></span><span class="mod-tx"><strong>Pracovný e-mail</strong><span>meno@tvojadomena.sk. Chceš predsa vyzerať profesionálne.</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
-<button type="button" class="mod" aria-pressed="false" data-mod="dokumenty"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"></path><path d="M14 3.5V8h4.5"></path><rect x="9" y="13.5" width="6" height="4.5" rx="1"></rect><path d="M10.5 13.5v-1.2a1.5 1.5 0 0 1 3 0v1.2"></path></svg></span><span class="mod-tx"><strong>Dokumenty kancelárie<span class="mod-tag mod-tag--free">Zadarmo</span></strong><span>Vzory zmlúv na jednom mieste, bez externého cloudu</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
 <button type="button" class="mod" aria-pressed="false" data-mod="kataster"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg></span><span class="mod-tx"><strong>Kataster a mapa<span class="mod-tag mod-tag--free">Zadarmo</span></strong><span>List vlastníctva, mapa KN a mapa regiónu</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
 <button type="button" class="mod" aria-pressed="false" data-mod="kalendar"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></span><span class="mod-tx"><strong>Kalendár<span class="mod-tag mod-tag--free">Zadarmo</span></strong><span>Obhliadky a stretnutia aj v mobile</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
 <button type="button" class="mod" aria-pressed="false" data-mod="chat"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg></span><span class="mod-tx"><strong>Chat<span class="mod-tag mod-tag--free">Zadarmo</span></strong><span>Interaktívny chat s kolegami v tíme</span></span><span class="mod-ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></button>
+<button type="button" class="mod mod-soon" disabled aria-disabled="true" title="Pripravujeme – zatiaľ sa nedá vybrať" data-mod="dokumenty"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"></path><path d="M14 3.5V8h4.5"></path><rect x="9" y="13.5" width="6" height="4.5" rx="1"></rect><path d="M10.5 13.5v-1.2a1.5 1.5 0 0 1 3 0v1.2"></path></svg></span><span class="mod-tx"><strong>Dokumenty kancelárie<span class="mod-tag mod-tag--soon">Pripravujeme</span></strong><span>Vzory zmlúv na jednom mieste. Budú zadarmo.</span></span><span class="mod-ck mod-lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></span></button>
 <button type="button" class="mod mod-soon" disabled aria-disabled="true" title="Pripravujeme – zatiaľ sa nedá vybrať" data-mod="newsletter"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"></rect><path d="M4 7.5l8 6 8-6"></path></svg></span><span class="mod-tx"><strong>Emailing<span class="mod-tag mod-tag--soon">Pripravujeme</span></strong><span>Novinky klientom ako kancelária alebo cez osobný web</span></span><span class="mod-ck mod-lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></span></button>
 <button type="button" class="mod mod-soon" disabled aria-disabled="true" title="Pripravujeme – zatiaľ sa nedá vybrať" data-mod="ai"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path></svg></span><span class="mod-tx"><strong>AI a sociálne siete<span class="mod-tag mod-tag--soon">Pripravujeme</span></strong><span>Príspevky, články a úprava fotiek</span></span><span class="mod-ck mod-lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></span></button>
 <button type="button" class="mod mod-soon" disabled aria-disabled="true" title="Pripravujeme – zatiaľ sa nedá vybrať" data-mod="socsken"><span class="mod-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5L20 20"></path><path d="M8 10.5h5M10.5 8v5"></path></svg></span><span class="mod-tx"><strong>Skener sociálnych sietí<span class="mod-tag mod-tag--soon">Pripravujeme</span></strong><span>Inzeráty súkromníkov z facebookových skupín a Marketplace</span></span><span class="mod-ck mod-lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></span></button>
@@ -1089,7 +1008,7 @@ List vlastníctva na 1 klik
 <aside id="suhrn" class="sum" style="scroll-margin-top: 16px">
 <div style="display: flex; align-items: center; gap: 12px">
 <img src="typek-head.png?v=202610251300" alt="" width="56" height="56" style="display: block; width: 56px; height: 56px">
-<span><span class="wm" style="display: block; font-size: 20px"><span style="color: #F7F2E8">Tvoj</span> <span style="color: #DB9522">Týpek</span></span><span style="font-size: 14px; color: #C9D4DD">Vybraté moduly: <strong style="color: #F7F2E8" data-mod-count="1">1</strong> z 10</span></span>
+<span><span class="wm" style="display: block; font-size: 20px"><span style="color: #F7F2E8">Tvoj</span> <span style="color: #DB9522">Týpek</span></span><span style="font-size: 14px; color: #C9D4DD">Vybraté moduly: <strong style="color: #F7F2E8" data-mod-count="1">1</strong> z 9</span></span>
 </div>
 <div style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px">
 <div data-modpanel="skener" style="display: contents"><span class="sum-chip pop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg>Realitný skener</span></div>
@@ -1098,7 +1017,6 @@ List vlastníctva na 1 klik
 <div data-modpanel="klienti" style="display: contents" hidden><span class="sum-chip pop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.2 2.4 3.6 5.2"></path></svg>Klienti a AML</span></div>
 <div data-modpanel="domena" style="display: contents" hidden><span class="sum-chip pop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="2"></rect><rect x="4" y="13" width="16" height="7" rx="2"></rect><path d="M8 7.5h.01M8 16.5h.01M12 7.5h5M12 16.5h5"></path></svg>Doména + hosting</span></div>
 <div data-modpanel="email" style="display: contents" hidden><span class="sum-chip pop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.8"></circle><path d="M15.8 12v1.6a2.6 2.6 0 0 0 5.2 0V12a9 9 0 1 0-3.6 7.2"></path></svg>Pracovný e-mail</span></div>
-<div data-modpanel="dokumenty" style="display: contents" hidden><span class="sum-chip pop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"></path><path d="M14 3.5V8h4.5"></path><rect x="9" y="13.5" width="6" height="4.5" rx="1"></rect><path d="M10.5 13.5v-1.2a1.5 1.5 0 0 1 3 0v1.2"></path></svg>Dokumenty kancelárie<em>zadarmo</em></span></div>
 <div data-modpanel="kataster" style="display: contents" hidden><span class="sum-chip pop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg>Kataster a mapa<em>zadarmo</em></span></div>
 <div data-modpanel="kalendar" style="display: contents" hidden><span class="sum-chip pop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Kalendár<em>zadarmo</em></span></div>
 <div data-modpanel="chat" style="display: contents" hidden><span class="sum-chip pop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg>Chat<em>zadarmo</em></span></div>
@@ -1108,7 +1026,7 @@ List vlastníctva na 1 klik
 <div data-modpanel="none" style="display: contents" hidden><span style="font-size: 14px; color: #8EA2B3">Vyber aspoň jeden modul.</span></div>
 </div>
 <div class="seg-wrap" role="group" aria-label="Spôsob platby"><button type="button" class="seg" aria-pressed="false" data-calc="pay" data-key="m">Mesačne</button><button type="button" class="seg" aria-pressed="false" data-calc="pay" data-key="y">Ročne <small>zľava</small></button></div>
-<div data-show="CSk" style="display: contents" hidden><div class="okr"><span class="okr-l">Realitný skener: koľko okresov chceš sledovať?</span><div class="stp" role="group" aria-label="Počet okresov"><button type="button" class="stp-b" aria-label="O jeden okres menej" data-okr="-1">−</button><span class="stp-v" aria-live="polite"><b data-v="okrN">1</b> <span data-v="okrW">okres</span></span><button type="button" class="stp-b" aria-label="O jeden okres viac" data-okr="1">+</button></div><span class="okr-h">1 okres 19 €, každý ďalší okres +2 € mesačne s DPH. Pri ročnej platbe máš mesiac zdarma.</span></div></div>
+<div data-show="CSk" style="display: contents" hidden><div class="okr"><span class="okr-l">Realitný skener: koľko okresov chceš sledovať?</span><div class="stp" role="group" aria-label="Počet okresov"><button type="button" class="stp-b" aria-label="O jeden okres menej" data-okr="-1">−</button><span class="stp-v" aria-live="polite"><b data-v="okrN">1</b> <span data-v="okrW">okres</span></span><button type="button" class="stp-b" aria-label="O jeden okres viac" data-okr="1">+</button></div><span class="okr-h">1 okres 19 € mesačne, každý ďalší okres +2 € mesačne, s DPH. Pri ročnej platbe máš mesiac zdarma.</span></div></div>
 <div class="plines" aria-live="polite">
 <div data-show="CSk" style="display: contents" hidden><div class="prow"><span>Realitný skener · <span data-v="cOkr"></span></span><b><span data-v="cSk"></span></b></div></div>
 <div data-show="CWeb" style="display: contents" hidden><div class="prow"><span>Osobný web s doménou a hostingom</span><b><span data-v="cWeb"></span></b></div></div>
@@ -1131,19 +1049,6 @@ List vlastníctva na 1 klik
 </div>
 <a class="btn btn-acc" href="#pristup" style="width: 100%; box-sizing: border-box">Požiadať o bezplatnú verziu</a>
 </aside>
-</div>
-
-<div style="margin-top: 28px; border-radius: 36px; background: #F2E4C6; padding: clamp(24px, 4vw, 44px); display: flex; flex-wrap: wrap; align-items: center; gap: 32px">
-<div style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
-<span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #1E2A35; color: #DB9522; font-size: 12px; font-weight: 700; letter-spacing: 0.1em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8L12 3.5 20.5 8v8L12 20.5 3.5 16z"></path><path d="M3.5 8L12 12.5 20.5 8M12 12.5v8"></path></svg>PRECHOD BEZ STAROSTÍ</span>
-<h3 style="margin: 0; font-size: clamp(26px, 3vw, 38px); line-height: 1.06; letter-spacing: -0.02em; font-weight: 800">Prechádzaš z iného softvéru? Ponuky aj klientov ti prenesieme.</h3>
-<p style="margin: 0; font-size: 17px; line-height: 1.55; color: #3A4B5A">Nemusíš začínať od nuly. Postaráme sa, aby si v Týpkovi mal všetko, s čím si doteraz pracoval.</p>
-</div>
-<div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
-<div class="step"><span class="step-n">1</span><span><strong>Požiadaš o bezplatnú verziu</strong><span>Vyskladáš si moduly, ktoré chceš používať.</span></span></div>
-<div class="step"><span class="step-n">2</span><span><strong>Prenesieme ponuky aj klientov</strong><span>Z tvojho doterajšieho softvéru, nič neprepisuješ ručne.</span></span></div>
-<div class="step"><span class="step-n">3</span><span><strong>Pracuješ v Týpkovi</strong><span>Všetko máš pokope a nič sa nestratí.</span></span></div>
-</div>
 </div>
 
 <div style="margin-top: 28px; border-radius: 36px; background: #1E2A35; color: #F7F2E8; padding: clamp(28px, 4.5vw, 56px); display: flex; flex-wrap: wrap; align-items: center; gap: 40px; overflow: hidden">
@@ -1183,6 +1088,7 @@ List vlastníctva na 1 klik
 <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #4A6074">SME NA ZAČIATKU</div>
 <h2 style="margin: 0; font-size: clamp(34px, 4.4vw, 56px); line-height: 1.02; letter-spacing: -0.03em; font-weight: 800">Pridaj sa k nám do tohto vymakaného projektu</h2>
 <p style="margin: 0; font-size: 18px; line-height: 1.6; color: #3A4B5A; max-width: 560px">Povieme to na rovinu: recenzie na softvér ešte nemáme a vymýšľať si ich nebudeme. V našej kancelárii nám Týpek funguje super a stále ho vylepšujeme.</p>
+<p style="margin: 0; font-size: 18px; line-height: 1.6; color: #3A4B5A; max-width: 560px">Čo ti chýba, povieš priamo nám. Prví makléri a kancelárie majú rovnakú cenu celých 36 mesiacov, čierne na bielom v zmluve.</p>
 <a class="btn btn-acc" href="#pristup" style="align-self: flex-start">Chcem byť pri tom od začiatku</a>
 </div>
 <div style="flex: 0 1 340px; min-width: 240px; margin: 0 auto; display: flex; justify-content: center">
@@ -1199,11 +1105,6 @@ List vlastníctva na 1 klik
 </div>
 </div>
 </div>
-<div style="margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px">
-<div class="fcard"><span class="fcard-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L4 17l3 3 5.2-5.2a4 4 0 0 0 5.3-5.3l-2.4 2.4-2.6-.6-.6-2.6z"></path></svg></span><strong>Softvér, ktorý funguje</strong><span>Lebo chceme, aby fungoval aj nám. Týpka každý deň používame vo vlastnej kancelárii.</span></div>
-<div class="fcard"><span class="fcard-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg></span><strong>Tvoje nápady v softvéri</strong><span>Čo ti chýba, povieš priamo nám. Týpka stále vylepšujeme podľa toho, čo makléri naozaj potrebujú.</span></div>
-<div class="fcard fcard--gold"><span class="fcard-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="rotate(0 12 12)"><path d="M12 12V2.2M12 5.2L9.6 3M12 5.2L14.4 3M12 8.4L8.9 5.9M12 8.4L15.1 5.9"></path></g><g transform="rotate(60 12 12)"><path d="M12 12V2.2M12 5.2L9.6 3M12 5.2L14.4 3M12 8.4L8.9 5.9M12 8.4L15.1 5.9"></path></g><g transform="rotate(120 12 12)"><path d="M12 12V2.2M12 5.2L9.6 3M12 5.2L14.4 3M12 8.4L8.9 5.9M12 8.4L15.1 5.9"></path></g><g transform="rotate(180 12 12)"><path d="M12 12V2.2M12 5.2L9.6 3M12 5.2L14.4 3M12 8.4L8.9 5.9M12 8.4L15.1 5.9"></path></g><g transform="rotate(240 12 12)"><path d="M12 12V2.2M12 5.2L9.6 3M12 5.2L14.4 3M12 8.4L8.9 5.9M12 8.4L15.1 5.9"></path></g><g transform="rotate(300 12 12)"><path d="M12 12V2.2M12 5.2L9.6 3M12 5.2L14.4 3M12 8.4L8.9 5.9M12 8.4L15.1 5.9"></path></g><path d="M12 10.2l1.6.9v1.8l-1.6.9-1.6-.9v-1.8z"></path></svg></span><strong>Cena v ľade na 3 roky</strong><span>Prví makléri a kancelárie, ktorí sa k nám pridajú, budú mať rovnakú cenu celých 36 mesiacov. Čierne na bielom v zmluve.</span></div>
-</div>
 </section>
 
 <!-- PRIPRAVUJEME -->
@@ -1211,191 +1112,51 @@ List vlastníctva na 1 klik
 <div style="max-width: 760px">
 <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: #DB9522; color: #1E2A35; font-size: 13px; font-weight: 800; letter-spacing: 0.12em"><span class="wip-dot"></span>PRIPRAVUJEME</div>
 <h2 style="margin: 16px 0 0; font-size: clamp(36px, 4.8vw, 64px); line-height: 1; letter-spacing: -0.035em; font-weight: 800">Na tomto práve pracujeme</h2>
-<p style="margin: 18px 0 0; font-size: 19px; line-height: 1.55; color: #3A4B5A; max-width: 620px">Týpek rastie každý týždeň. Tieto moduly dokončujeme a pridáme ich priamo do aplikácie – bez ďalšieho prihlasovania a ďalšieho predplatného.</p>
+<p style="margin: 18px 0 0; font-size: 19px; line-height: 1.55; color: #3A4B5A; max-width: 620px">Tieto moduly dokončujeme a pridáme ich priamo do Týpka – bez ďalšieho prihlasovania. Zatiaľ sa nedajú objednať.</p>
 </div>
-
-<div id="p-emailing" class="pcard" style="margin-top: 40px; scroll-margin-top: 20px; border-radius: 36px; background: #F2E4C6; padding: clamp(24px, 4.5vw, 56px); display: flex; flex-wrap: wrap-reverse; align-items: center; gap: 48px; overflow: hidden">
-<div style="flex: 1 1 440px; min-width: 0; position: relative; display: flex; justify-content: center; padding: 20px 0">
-<div aria-hidden="true" style="position: absolute; top: 34px; left: 50%; width: 82%; max-width: 380px; height: 85%; transform: translateX(-56%) rotate(-6deg); border-radius: 22px; background: #E3CFA6"></div>
-<div aria-hidden="true" style="position: absolute; top: 26px; left: 50%; width: 82%; max-width: 380px; height: 88%; transform: translateX(-46%) rotate(4deg); border-radius: 22px; background: #EADBB8"></div>
-<div style="position: relative; width: 100%; max-width: 400px; border-radius: 22px; background: #FFFDF8; overflow: hidden; box-shadow: 0 50px 80px -40px rgba(30,42,53,.55)">
-<div style="padding: 18px 20px; background: #1E2A35; color: #F7F2E8; display: flex; align-items: center; gap: 12px">
-<img src="typek-head.png?v=202610251300" alt="" width="44" height="44" style="display: block; width: 44px; height: 44px">
-<span style="flex: 1; min-width: 0"><span class="disp" style="display: block; font-size: 18px; font-weight: 800">Realitné novinky</span><span style="font-size: 12px; color: #C9D4DD">od [Tvoje meno] · október</span></span>
+<div class="sk-grid" style="margin-top: 40px">
+<div class="feat sk sk-em" style="display: flex; flex-wrap: wrap; align-items: center; gap: 24px 32px">
+<div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<span style="width: 52px; height: 52px; border-radius: 16px; background: #1E2A35; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"></rect><path d="M4 7.5l8 6 8-6"></path></svg></span>
+<span class="soon"><span class="wip-dot"></span>PRIPRAVUJEME</span>
+<h3 style="margin: -6px 0 0; font-size: clamp(26px, 2.8vw, 34px); line-height: 1.08; font-weight: 800">Emailing pre tvoj marketing</h3>
+<p class="disp" style="margin: 0; font-size: 21px; line-height: 1.25; font-weight: 800; color: #8A5A2B">Toto je naozaj podceňovaný nástroj na tvoju reklamu. Uvidíš sám.</p>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Posielaj klientom novinky zo sveta realít, tipy a svoje nové ponuky – ako kancelária alebo cez osobný web. Ostaneš im v hlave, aj keď práve nekupujú ani nepredávajú.</p>
 </div>
-<div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 12px">
-<div class="pop" style="display: flex; gap: 12px; align-items: flex-start">
-<span style="flex: none; width: 54px; height: 54px; border-radius: 12px; background: #DCE3E9; display: grid; place-items: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M21 19H3"></path></svg></span>
-<span><span style="display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: #4A6074">NOVINKY ZO SVETA REALÍT</span><span style="font-size: 15px; font-weight: 700">Čo sa deje na trhu s bytmi na Spiši</span></span>
-</div>
-<div class="pop pop2" style="display: flex; gap: 12px; align-items: flex-start">
-<span style="flex: none; width: 54px; height: 54px; border-radius: 12px; background: #F2E4C6; display: grid; place-items: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8A5A2B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z"></path></svg></span>
-<span><span style="display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: #8A5A2B">TIP MESIACA</span><span style="font-size: 15px; font-weight: 700">Ako pripraviť byt na fotenie za jedno popoludnie</span></span>
-</div>
-<div class="pop pop3" style="display: flex; gap: 12px; align-items: flex-start">
-<span style="flex: none; width: 54px; height: 54px; border-radius: 12px; background: #E3E9DF; display: grid; place-items: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4F6F55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v.5M12 11v5"></path></svg></span>
-<span><span style="display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: #4F6F55">ZAUJÍMAVOSŤ</span><span style="font-size: 15px; font-weight: 700">Čo všetko prezradí list vlastníctva</span></span>
-</div>
-<div class="pop pop4" style="border-top: 1px solid #EEE6D6; padding-top: 12px">
-<span style="display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: #4A6074; margin-bottom: 8px">MOJE NOVÉ PONUKY</span>
-<span style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
-<span style="border-radius: 10px; background: #F7F2E8; overflow: hidden; font-size: 12px"><span style="display: block; height: 52px; background: #C9D4DD"></span><span style="display: block; padding: 6px 8px"><strong>3-izb. byt, Mier</strong><br>129 000 €</span></span>
-<span style="border-radius: 10px; background: #F7F2E8; overflow: hidden; font-size: 12px"><span style="display: block; height: 52px; background: #DCE3E9"></span><span style="display: block; padding: 6px 8px"><strong>Dom, Levoča</strong><br>189 000 €</span></span>
-</span>
+<div class="em-nahlad" aria-hidden="true">
+<div class="em-list"><span class="em-hl"><img src="typek-head.png?v=202610251300" alt="" width="34" height="34"><span><b>Realitné novinky</b>od [Tvoje meno] · november</span></span>
+<span class="em-r"><i style="background: #DCE3E9"></i>Čo sa deje na trhu s bytmi na Spiši</span>
+<span class="em-r"><i style="background: #F2E4C6"></i>Ako pripraviť byt na fotenie</span>
+<span class="em-r"><i style="background: #C9D4DD url(ph-byt.webp) center / cover"></i>Moja nová ponuka: 3-izbový byt</span></div>
+<svg class="fly" width="40" height="40" viewBox="0 0 24 24" fill="#FFFDF8" stroke="#1E2A35" stroke-width="1.6" stroke-linejoin="round"><path d="M3 11l18-8-7 18-3-7-8-3z"></path><path d="M11 14l10-11" fill="none"></path></svg>
 </div>
 </div>
+<div class="feat sk" style="display: flex; flex-direction: column; gap: 16px">
+<span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path></svg></span>
+<span class="soon"><span class="wip-dot"></span>PRIPRAVUJEME</span>
+<h3 style="margin: -6px 0 0; font-size: 24px; font-weight: 700">AI a sociálne siete</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Príspevky, články na web a popisy ponúk z údajov tvojej ponuky. Na Facebook a Instagram ich zverejníš jedným klikom.</p>
+<div class="ai-post" aria-hidden="true"><img src="ph-byt.webp" alt="" width="320" height="238" loading="lazy"><span class="ai-post-t"><b>Slnečný 3-izbový byt na Mieri</b>Hľadáte byt s balkónom a výhľadom do zelene? 68 m², nová kúpeľňa a obhliadky už tento týždeň.</span><span class="ai-post-f"><span class="ai-pise">AI píše<i class="tdot"></i><i class="tdot tdot2"></i><i class="tdot tdot3"></i></span><span>Facebook · Instagram</span></span></div>
 </div>
-<div class="fly" aria-hidden="true" style="position: absolute; top: 46%; right: 4%; color: #1E2A35"><svg width="44" height="44" viewBox="0 0 24 24" fill="#FFFDF8" stroke="#1E2A35" stroke-width="1.6" stroke-linejoin="round"><path d="M3 11l18-8-7 18-3-7-8-3z"></path><path d="M11 14l10-11" fill="none"></path></svg></div>
-<div class="bob2" style="position: absolute; bottom: 4%; left: 0; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; background: #1E2A35; color: #F7F2E8; font-size: 13px; font-weight: 700; box-shadow: 0 20px 40px -20px rgba(30,42,53,.7)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Odošle sa v utorok o 9:00</div>
+<div class="feat sk" style="display: flex; flex-direction: column; gap: 16px">
+<span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H6.5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"></path><path d="M14 3.5V8h4.5"></path><rect x="9" y="13.5" width="6" height="4.5" rx="1"></rect><path d="M10.5 13.5v-1.2a1.5 1.5 0 0 1 3 0v1.2"></path></svg></span>
+<span class="soon"><span class="wip-dot"></span>PRIPRAVUJEME</span>
+<h3 style="margin: -6px 0 0; font-size: 24px; font-weight: 700">Dokumenty kancelárie</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Vzory zmlúv a dokumentov celej kancelárie na jednom mieste. Žiadne posielanie e-mailom ani externý cloud – všetko postráži Týpek.</p>
+<span class="free" style="margin-top: auto">BUDÚ ZADARMO</span>
 </div>
-
-<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
-<span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #1E2A35; color: #DB9522; font-size: 12px; font-weight: 700; letter-spacing: 0.1em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"></rect><path d="M4 7.5l8 6 8-6"></path></svg>EMAILING</span>
-<span style="align-self: flex-start; margin-top: -10px; display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; background: #DB9522; color: #1E2A35; font-size: 12px; font-weight: 800; letter-spacing: 0.08em"><span class="wip-dot"></span>PRIPRAVUJEME</span>
-<h3 style="margin: 0; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.04; letter-spacing: -0.03em; font-weight: 800">Emailing pre tvoj marketing</h3>
-<p class="disp" style="margin: 0; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.25; font-weight: 800; color: #8A5A2B">Toto je naozaj podceňovaný nástroj na tvoju reklamu. Uvidíš sám.</p>
-<p style="margin: 0; font-size: 18px; line-height: 1.6; color: #3A4B5A">Posielaj novinky svojim klientom – ako celá kancelária alebo cez svoj osobný web. Články, novinky zo sveta realít, praktické tipy a k tomu tvoje nové ponuky. Ostaneš im v hlave aj vtedy, keď práve nekupujú ani nepredávajú.</p>
-<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
-<span style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; background: #FFFDF8; font-size: 15px; font-weight: 700"><span style="width: 10px; height: 10px; border-radius: 99px; background: #4A6074; flex: none"></span>Ako kancelária</span>
-<span style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; background: #FFFDF8; font-size: 15px; font-weight: 700"><span style="width: 10px; height: 10px; border-radius: 99px; background: #1E2A35; flex: none"></span>Cez osobný web</span>
-<span style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; background: #FFFDF8; font-size: 15px; font-weight: 700"><span style="width: 10px; height: 10px; border-radius: 99px; background: #8A5A2B; flex: none"></span>Novinky a tipy</span>
-<span style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; background: #FFFDF8; font-size: 15px; font-weight: 700"><span style="width: 10px; height: 10px; border-radius: 99px; background: #4F6F55; flex: none"></span>Tvoje nové ponuky</span>
-</div>
-<p style="margin: 0; font-size: 15px; color: #3A4B5A">Kontakty už máš v Týpkovi. Vyberieš, komu to pôjde, a naplánuješ odoslanie.</p>
-</div>
-</div>
-<div id="p-ai" class="pcard" style="margin-top: 24px; scroll-margin-top: 20px; border-radius: 36px; background: #1E2A35; color: #F7F2E8; padding: clamp(24px, 4.5vw, 56px); display: flex; flex-wrap: wrap; align-items: center; gap: 48px; overflow: hidden">
-<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
-<span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(247,242,232,.1); color: #DB9522; font-size: 12px; font-weight: 700; letter-spacing: 0.1em"><svg class="twinkle" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path></svg>AI ŠTÚDIO</span>
-<span style="align-self: flex-start; margin-top: -10px; display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; background: #DB9522; color: #1E2A35; font-size: 12px; font-weight: 800; letter-spacing: 0.08em"><span class="wip-dot"></span>PRIPRAVUJEME</span>
-<h3 style="margin: 0; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.04; letter-spacing: -0.03em; font-weight: 800">AI, ktorá bude písať a upravovať za teba</h3>
-<p style="margin: 0; font-size: 18px; line-height: 1.6; color: #C9D4DD">Príspevky na Facebook a Instagram, články na web, popisy ponúk aj úprava fotiek. Priamo v Týpkovi, s údajmi z tvojej ponuky. Žiadne kopírovanie medzi oknami.</p>
-<div class="tabs-x" role="group" aria-label="Čo má AI pripraviť" style="display: flex; flex-wrap: wrap; gap: 10px">
-<button type="button" class="aitab aitab-on" aria-pressed="true" data-group="ai" data-key="post"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4a1 1 0 0 0 1 1h2l6 4V5L7 9H5a1 1 0 0 0-1 1z"></path><path d="M17 8.5a5 5 0 0 1 0 7"></path></svg>Príspevok</button>
-<button type="button" class="aitab" aria-pressed="false" data-group="ai" data-key="article"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h9l3 3v14H6z"></path><path d="M9 10h6M9 14h6M9 18h4"></path></svg>Článok</button>
-<button type="button" class="aitab" aria-pressed="false" data-group="ai" data-key="photo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect><circle cx="9" cy="10" r="1.8"></circle><path d="M20.5 16l-5-5-8 8"></path></svg>Úprava fotky</button>
-</div>
-<p style="margin: 0; font-size: 14px; color: #8EA2B3">Klikni a pozri, čo AI pripraví.</p>
-</div>
-
-<div style="flex: 1 1 460px; min-width: 0; position: relative; min-height: 520px; display: flex; align-items: center; justify-content: center">
-
-<div data-group="ai" data-panel="post">
-<div style="position: relative; width: 100%; max-width: 380px">
-<div class="pop" style="border-radius: 24px; background: #FFFDF8; color: #1E2A35; overflow: hidden; box-shadow: 0 50px 80px -40px rgba(0,0,0,.8)">
-<div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px">
-<img src="typek-head.png?v=202610251300" alt="" width="40" height="40" style="display: block; width: 40px; height: 40px; border-radius: 99px; background: #EEE6D6">
-<span style="flex: 1; min-width: 0"><strong style="display: block; font-size: 14px">[Tvoje meno] · maklér</strong><span style="font-size: 12px; color: #4A6074">práve teraz</span></span>
-<svg width="20" height="20" viewBox="0 0 24 24" fill="#4A6074" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
-</div>
-<div style="aspect-ratio: 400 / 260; max-width: 100%"><svg viewBox="0 0 400 260" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Ilustračná fotka obývačky" style="display: block"><rect width="400" height="260" fill="#EEE6D6"></rect><rect y="190" width="400" height="70" fill="#D8C4A0"></rect><rect x="40" y="40" width="130" height="110" rx="4" fill="#F7F2E8"></rect><rect x="48" y="48" width="114" height="94" fill="#AFC6DA"></rect><circle cx="132" cy="78" r="14" fill="#E9B44C"></circle><path d="M48 142 L90 110 L120 128 L162 100 L162 142 Z" fill="#8FA88C"></path><rect x="103" y="48" width="4" height="94" fill="#F7F2E8"></rect><rect x="210" y="60" width="60" height="44" rx="3" fill="#4A6074"></rect><rect x="216" y="66" width="48" height="32" fill="#DB9522"></rect><rect x="190" y="140" width="170" height="56" rx="16" fill="#4A6074"></rect><rect x="180" y="168" width="190" height="40" rx="14" fill="#3E5163"></rect><rect x="205" y="150" width="40" height="26" rx="8" fill="#DB9522"></rect><rect x="300" y="150" width="40" height="26" rx="8" fill="#F7F2E8"></rect><rect x="186" y="206" width="8" height="14" fill="#1E2A35"></rect><rect x="356" y="206" width="8" height="14" fill="#1E2A35"></rect><ellipse cx="270" cy="238" rx="120" ry="14" fill="#C9B38B"></ellipse><rect x="62" y="196" width="34" height="34" rx="6" fill="#B4685A"></rect><path d="M79 196 C60 170 62 150 70 140 C78 160 80 176 79 196 Z M79 196 C92 168 104 160 112 156 C104 176 92 188 79 196 Z M79 196 C78 170 86 150 96 136 C96 160 88 182 79 196 Z" fill="#5E7F64"></path><rect x="380" y="80" width="3" height="130" fill="#1E2A35"></rect><path d="M366 80 L396 80 L388 60 L374 60 Z" fill="#DB9522"></path></svg></div>
-<div style="padding: 14px 16px 6px; font-size: 14px; line-height: 1.5">
-<div class="pop pop2"><strong>Slnečný 3-izbový byt na Mieri</strong></div>
-<div class="pop pop3">Hľadáte byt s balkónom a výhľadom do zelene? 68 m², zrekonštruovaná kúpeľňa a obhliadky už tento týždeň.<span class="caret"></span></div>
-<div class="pop pop4" style="margin-top: 6px; color: #4A6074; font-weight: 600">#reality #SpisskaNovaVes #byt</div>
-</div>
-<div style="display: flex; gap: 18px; padding: 10px 16px 16px; color: #4A6074">
-<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
-<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"></path></svg>
-<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7h16v-7M12 3v12M7 8l5-5 5 5"></path></svg>
-</div>
-</div>
-<div class="bob1" style="position: absolute; top: 22%; left: -16%; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #DB9522; color: #1E2A35; font-size: 13px; font-weight: 800; box-shadow: 0 20px 40px -20px rgba(0,0,0,.7)"><svg class="twinkle" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path></svg>Napísané s AI</div>
-<div class="bob2" style="position: absolute; bottom: 12%; right: -14%; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; background: #4A6074; color: #F7F2E8; font-size: 13px; font-weight: 700; box-shadow: 0 20px 40px -20px rgba(0,0,0,.7)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Naplánované · piatok 18:00</div>
-<div class="bob3 hide-sm" style="position: absolute; top: -4%; right: -10%; padding: 8px 12px; border-radius: 999px; background: #F7F2E8; color: #1E2A35; font-size: 12px; font-weight: 700; box-shadow: 0 20px 40px -20px rgba(0,0,0,.7)">Facebook · Instagram</div>
-</div>
-</div>
-
-<div data-group="ai" data-panel="article" hidden>
-<div style="position: relative; width: 100%; max-width: 440px">
-<div class="pop" style="border-radius: 24px; background: #FFFDF8; color: #1E2A35; padding: 26px; box-shadow: 0 50px 80px -40px rgba(0,0,0,.8); display: flex; flex-direction: column; gap: 14px">
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
-<span style="padding: 4px 10px; border-radius: 6px; background: #EEE6D6; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: #4A6074">ČLÁNOK NA WEB</span>
-<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #8A5A2B">AI píše<span class="tdot" style="width: 5px; height: 5px; border-radius: 9px; background: currentColor"></span><span class="tdot tdot2" style="width: 5px; height: 5px; border-radius: 9px; background: currentColor"></span><span class="tdot tdot3" style="width: 5px; height: 5px; border-radius: 9px; background: currentColor"></span></span>
-</div>
-<div class="disp pop pop2" style="font-size: 24px; line-height: 1.15; font-weight: 800">5 vecí, ktoré pomôžu predať byt rýchlejšie</div>
-<div class="pop pop2" style="font-size: 12px; color: #4A6074">4 min čítania · pripravené s AI z tvojich podkladov</div>
-<p class="pop pop3" style="margin: 0; font-size: 14px; line-height: 1.6">Predaj bytu začína dávno pred prvou obhliadkou. Pripravili sme päť krokov, vďaka ktorým bude váš byt pôsobiť lepšie na fotkách aj naživo.</p>
-<div style="display: flex; flex-direction: column; gap: 8px">
-<span class="shim" style="height: 10px; border-radius: 9px; background: #DCE3E9; width: 100%"></span>
-<span class="shim" style="height: 10px; border-radius: 9px; background: #DCE3E9; width: 92%; animation-delay: .2s"></span>
-<span class="shim" style="height: 10px; border-radius: 9px; background: #DCE3E9; width: 78%; animation-delay: .4s"></span>
-</div>
-<ol style="margin: 4px 0 0; padding: 14px 14px 14px 34px; border-radius: 14px; background: #F7F2E8; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">
-<li class="pop pop2">Upratanie a odpratanie vecí</li>
-<li class="pop pop3">Svetlé a ostré fotky</li>
-<li class="pop pop4">Správna cena od začiatku</li>
-<li class="pop pop5">Dokumenty pripravené vopred</li>
-<li class="pop pop5">Flexibilné termíny obhliadok</li>
-</ol>
-</div>
-<div class="bob1" style="position: absolute; top: 30%; left: -14%; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #DB9522; color: #1E2A35; font-size: 13px; font-weight: 800; box-shadow: 0 20px 40px -20px rgba(0,0,0,.7)"><svg class="twinkle" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path></svg>Na blog aj do newslettera</div>
-</div>
-</div>
-
-<div data-group="ai" data-panel="photo" hidden>
-<div style="position: relative; width: 100%; max-width: 460px">
-<div class="pop" style="position: relative; border-radius: 24px; overflow: hidden; aspect-ratio: 400 / 260; max-width: 100%; box-shadow: 0 50px 80px -40px rgba(0,0,0,.8)">
-<div style="position: absolute; inset: 0"><svg viewBox="0 0 400 260" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Ilustračná fotka obývačky" style="display: block"><rect width="400" height="260" fill="#EEE6D6"></rect><rect y="190" width="400" height="70" fill="#D8C4A0"></rect><rect x="40" y="40" width="130" height="110" rx="4" fill="#F7F2E8"></rect><rect x="48" y="48" width="114" height="94" fill="#AFC6DA"></rect><circle cx="132" cy="78" r="14" fill="#E9B44C"></circle><path d="M48 142 L90 110 L120 128 L162 100 L162 142 Z" fill="#8FA88C"></path><rect x="103" y="48" width="4" height="94" fill="#F7F2E8"></rect><rect x="210" y="60" width="60" height="44" rx="3" fill="#4A6074"></rect><rect x="216" y="66" width="48" height="32" fill="#DB9522"></rect><rect x="190" y="140" width="170" height="56" rx="16" fill="#4A6074"></rect><rect x="180" y="168" width="190" height="40" rx="14" fill="#3E5163"></rect><rect x="205" y="150" width="40" height="26" rx="8" fill="#DB9522"></rect><rect x="300" y="150" width="40" height="26" rx="8" fill="#F7F2E8"></rect><rect x="186" y="206" width="8" height="14" fill="#1E2A35"></rect><rect x="356" y="206" width="8" height="14" fill="#1E2A35"></rect><ellipse cx="270" cy="238" rx="120" ry="14" fill="#C9B38B"></ellipse><rect x="62" y="196" width="34" height="34" rx="6" fill="#B4685A"></rect><path d="M79 196 C60 170 62 150 70 140 C78 160 80 176 79 196 Z M79 196 C92 168 104 160 112 156 C104 176 92 188 79 196 Z M79 196 C78 170 86 150 96 136 C96 160 88 182 79 196 Z" fill="#5E7F64"></path><rect x="380" y="80" width="3" height="130" fill="#1E2A35"></rect><path d="M366 80 L396 80 L388 60 L374 60 Z" fill="#DB9522"></path></svg></div>
-<div class="ba" style="position: absolute; inset: 0; --cut: 50%">
-<div class="ba-before ba-auto" style="position: absolute; inset: 0"><svg viewBox="0 0 400 260" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Ilustračná fotka obývačky" style="display: block"><rect width="400" height="260" fill="#EEE6D6"></rect><rect y="190" width="400" height="70" fill="#D8C4A0"></rect><rect x="40" y="40" width="130" height="110" rx="4" fill="#F7F2E8"></rect><rect x="48" y="48" width="114" height="94" fill="#AFC6DA"></rect><circle cx="132" cy="78" r="14" fill="#E9B44C"></circle><path d="M48 142 L90 110 L120 128 L162 100 L162 142 Z" fill="#8FA88C"></path><rect x="103" y="48" width="4" height="94" fill="#F7F2E8"></rect><rect x="210" y="60" width="60" height="44" rx="3" fill="#4A6074"></rect><rect x="216" y="66" width="48" height="32" fill="#DB9522"></rect><rect x="190" y="140" width="170" height="56" rx="16" fill="#4A6074"></rect><rect x="180" y="168" width="190" height="40" rx="14" fill="#3E5163"></rect><rect x="205" y="150" width="40" height="26" rx="8" fill="#DB9522"></rect><rect x="300" y="150" width="40" height="26" rx="8" fill="#F7F2E8"></rect><rect x="186" y="206" width="8" height="14" fill="#1E2A35"></rect><rect x="356" y="206" width="8" height="14" fill="#1E2A35"></rect><ellipse cx="270" cy="238" rx="120" ry="14" fill="#C9B38B"></ellipse><rect x="62" y="196" width="34" height="34" rx="6" fill="#B4685A"></rect><path d="M79 196 C60 170 62 150 70 140 C78 160 80 176 79 196 Z M79 196 C92 168 104 160 112 156 C104 176 92 188 79 196 Z M79 196 C78 170 86 150 96 136 C96 160 88 182 79 196 Z" fill="#5E7F64"></path><rect x="380" y="80" width="3" height="130" fill="#1E2A35"></rect><path d="M366 80 L396 80 L388 60 L374 60 Z" fill="#DB9522"></path></svg></div>
-<div class="ba-line ba-auto" style="position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: #FFFDF8; pointer-events: none; z-index: 2">
-<span class="ba-knob" style="position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 99px; background: #FFFDF8; display: grid; place-items: center; box-shadow: 0 6px 16px rgba(0,0,0,.35)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E2A35" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"></path></svg></span>
-</div>
-<label for="ba-range" class="sr">Porovnaj fotku pred a po úprave</label>
-<input id="ba-range" class="ba-range" type="range" min="0" max="100" step="1" value="50" data-action="cut">
-</div>
-<span style="position: absolute; top: 12px; left: 12px; z-index: 2; pointer-events: none; padding: 4px 10px; border-radius: 6px; background: rgba(30,42,53,.75); color: #F7F2E8; font-size: 12px; font-weight: 700">Pred</span>
-<span style="position: absolute; top: 12px; right: 12px; z-index: 2; pointer-events: none; padding: 4px 10px; border-radius: 6px; background: #DB9522; color: #1E2A35; font-size: 12px; font-weight: 800">Po</span>
-</div>
-<div style="margin-top: 14px; text-align: center; font-size: 13px; font-weight: 600; color: #C9D4DD">Potiahni posuvník a porovnaj fotku pred a po</div>
-<div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center">
-<span class="pop pop2" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: rgba(247,242,232,.1); font-size: 13px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Viac svetla</span>
-<span class="pop pop3" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: rgba(247,242,232,.1); font-size: 13px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Živšie farby</span>
-<span class="pop pop4" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: rgba(247,242,232,.1); font-size: 13px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DB9522" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Modrá obloha za oknom</span>
-</div>
-</div>
-</div>
-
-</div>
-</div>
-
-<div style="margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px">
-
-<div class="feat" style="display: flex; flex-direction: column; gap: 18px">
+<div class="feat sk" style="display: flex; flex-direction: column; gap: 16px">
 <span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.1-7.5 9.5-4.3-1.4-7.5-4.9-7.5-9.5V6z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg></span>
 <span class="soon"><span class="wip-dot"></span>PRIPRAVUJEME</span>
-<h3 style="margin: -8px 0 0; font-size: 24px; font-weight: 700">AML overenie klienta</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Klienta overíš cez AML priamo v softvéri a všetko budeš mať zdokumentované pri jeho karte.</p>
-<div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 600">
-<span style="display: flex; align-items: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Totožnosť klienta</span>
-<span style="display: flex; align-items: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Sankčné zoznamy</span>
-<span style="display: flex; align-items: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Politicky exponovaná osoba</span>
+<h3 style="margin: -6px 0 0; font-size: 24px; font-weight: 700">AML overenie klienta</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Totožnosť, sankčné zoznamy a politicky exponované osoby priamo v Týpkovi, zdokumentované pri karte klienta.</p>
 </div>
-</div>
-
-<div class="feat" style="display: flex; flex-direction: column; gap: 18px">
-<span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4a1 1 0 0 0 1 1h2l6 4V5L7 9H5a1 1 0 0 0-1 1z"></path><path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12"></path></svg></span>
-<span class="soon"><span class="wip-dot"></span>PRIPRAVUJEME</span>
-<h3 style="margin: -8px 0 0; font-size: 24px; font-weight: 700">Export na sociálne siete</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Z ponuky pripravíš príspevok na Facebook a Instagram a zverejníš ho jedným klikom. Text aj fotky pokope.</p>
-<div style="margin-top: auto; display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 14px; background: #F7F2E8">
-<span style="flex: none; width: 56px; height: 56px; border-radius: 10px; background: #C9D4DD; display: grid; place-items: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"></path><path d="M6 9.5V20h12V9.5"></path></svg></span>
-<span style="font-size: 13px; line-height: 1.4"><strong>Nová ponuka:</strong> slnečný 3-izbový byt na Mieri. Obhliadky už tento týždeň.</span>
-</div>
-</div>
-
-<div class="feat" style="display: flex; flex-direction: column; gap: 18px">
+<div class="feat sk" style="display: flex; flex-direction: column; gap: 16px">
 <span style="width: 52px; height: 52px; border-radius: 16px; background: #EEE6D6; display: grid; place-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5L20 20"></path><path d="M8 10.5h5M10.5 8v5"></path></svg></span>
 <span class="soon"><span class="wip-dot"></span>PRIPRAVUJEME</span>
-<h3 style="margin: -8px 0 0; font-size: 24px; font-weight: 700">Skener sociálnych sietí</h3>
+<h3 style="margin: -6px 0 0; font-size: 24px; font-weight: 700">Skener sociálnych sietí</h3>
 <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A4B5A">Nové inzeráty súkromníkov aj z facebookových skupín a Marketplace, rovno vedľa ponúk z portálov.</p>
-<div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px">
-<div style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #F7F2E8; font-size: 13px"><span>Facebooková skupina</span><span style="color: #8A5A2B; font-weight: 700">nový inzerát</span></div>
-<div style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #F7F2E8; font-size: 13px"><span>Marketplace</span><span style="color: #8A5A2B; font-weight: 700">nový inzerát</span></div>
 </div>
-</div>
-
 </div>
 </section>
 
@@ -1405,7 +1166,7 @@ List vlastníctva na 1 klik
 <div style="flex: 1 1 460px; min-width: 0">
 <span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: #1E2A35; color: #DB9522; font-size: 13px; font-weight: 800; letter-spacing: 0.08em">30 DNÍ ZADARMO</span>
 <h2 style="margin: 16px 0 0; font-size: clamp(36px, 4.8vw, 64px); line-height: 1; letter-spacing: -0.035em; font-weight: 800">Vyskúšaj Týpka.<br>Bezplatne na 30 dní.</h2>
-<p style="margin: 20px 0 0; font-size: 19px; line-height: 1.55; color: #3A4B5A; max-width: 520px">Požiadaj o bezplatnú verziu, vyskladaj si moduly a zisti, koľko času ti ráno ušetrí. Prví makléri a kancelárie majú cenu zamrazenú na 3 roky. Ozveme sa ti osobne.</p>
+<p style="margin: 20px 0 0; font-size: 19px; line-height: 1.55; color: #3A4B5A; max-width: 520px">Požiadaj o bezplatnú verziu, vyskladaj si moduly a zisti, koľko času ti ráno ušetrí. Po 30 dňoch platíš mesačne len za to, čo používaš. Prví makléri a kancelárie majú cenu zamrazenú na 3 roky. Ozveme sa ti osobne.</p>
 <form id="rt-form" style="margin-top: 30px; display: flex; flex-wrap: wrap; gap: 12px; max-width: 560px">
 <label for="rt-email" class="sr">Tvoj e-mail</label>
 <input id="rt-email" class="inp" type="email" placeholder="meno@realitka.sk">
@@ -1428,7 +1189,7 @@ List vlastníctva na 1 klik
 <span style="display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; background: #DB9522; color: #1E2A35; font-size: 12px; font-weight: 800; letter-spacing: 0.08em"><span class="wip-dot"></span>V PRÍPRAVE</span>
 <h2 id="wip-t" style="margin: 0; font-size: 24px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 800">Na webe ešte pracujeme</h2>
 </div>
-<p style="margin: 10px 0 0; font-size: 16px; line-height: 1.55; color: #C9D4DD; max-width: 760px">Týpek rastie každý týždeň, preto sa niektoré časti tejto stránky ešte menia a dopĺňajú. Obrazovky v náhľade sú ilustračné. Ak ti niečo chýba alebo nefunguje, napíš nám na <a href="mailto:info@realitnytypek.sk" style="color: #F2E4C6">info@realitnytypek.sk</a>.</p>
+<p style="margin: 10px 0 0; font-size: 16px; line-height: 1.55; color: #C9D4DD; max-width: 760px">Týpek rastie každý týždeň, preto sa niektoré časti tejto stránky ešte menia a dopĺňajú. Ak ti niečo chýba alebo nefunguje, napíš nám na <a href="mailto:info@realitnytypek.sk" style="color: #F2E4C6">info@realitnytypek.sk</a>.</p>
 </div>
 </div>
 </section>
@@ -1539,13 +1300,16 @@ List vlastníctva na 1 klik
     var n=0;Object.keys(MODSEL).forEach(function(k){if(MODSEL[k])n++;});
     document.querySelectorAll('[data-mod]:not([disabled])').forEach(function(b){var on=!!MODSEL[b.getAttribute('data-mod')];b.classList.toggle('mod-on',on);b.setAttribute('aria-pressed',on?'true':'false');});
     document.querySelectorAll('[data-modpanel]').forEach(function(p){var k=p.getAttribute('data-modpanel');var show=k==='none'?n===0:(k==='perk'?!!MODSEL.web:!!MODSEL[k]);if(show&&p.hidden){p.hidden=false;p.querySelectorAll('.pop').forEach(replay);}else if(!show){p.hidden=true;}});
-    var FREE=['kataster','kalendar','chat','dokumenty'],fr=0;FREE.forEach(function(k){if(MODSEL[k])fr++;});
+    var FREE=['kataster','kalendar','chat'],fr=0;FREE.forEach(function(k){if(MODSEL[k])fr++;});
     document.querySelectorAll('[data-mod-count]').forEach(function(c){c.textContent=n;});
     document.querySelectorAll('[data-free-count]').forEach(function(c){c.textContent=fr;});
     calc();
   }
   var PAY='m',OKR=1,SKP={},WEBP=[69,690],VAT=0.23;
   function eur(n){var r=Math.round(n*100)/100;var p=r.toFixed(2).split('.');var i=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,' ');return (p[1]==='00'?i:i+','+p[1])+' €';}
+  // suma sa pri zmene plynule prepočíta (pri obmedzenom pohybe hneď)
+  var PREVG=null;
+  function tweenEur(el,a,b){var t0=performance.now(),d=520;el.__tw=(el.__tw||0)+1;var id=el.__tw;(function st(t){if(el.__tw!==id)return;var k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=eur(Math.round(a+(b-a)*e));if(k<1)requestAnimationFrame(st);else el.textContent=eur(b);})(t0);}
   function calc(){
     var has=function(k){return !!MODSEL[k];};
     var yi=PAY==='y'?1:0;
@@ -1555,10 +1319,11 @@ List vlastníctva na 1 klik
     var yearN=(has('skener')?SKP[OKR][1]:0)+(has('web')?WEBP[1]:0);
     var UNP=['klienti','email'];if(!has('web'))UNP.push('domena','ponuky');
     var custom=0;UNP.forEach(function(k){if(has(k))custom++;});
-    var freeN=0;['kataster','kalendar','chat','dokumenty'].forEach(function(k){if(has(k))freeN++;});
+    var freeN=0;['kataster','kalendar','chat'].forEach(function(k){if(has(k))freeN++;});
     var V={cOkr:OKR+' '+okrW,okrN:String(OKR),okrW:okrW,cSk:eur(sk),cWeb:eur(wb),cNet:eur(net/(1+VAT)),cGross:eur(net),cPer:yi?'/ rok':'/ mesiac',cMoEq:eur(yearN/12),cSave:eur(fullY-yearN),cCustomN:custom===1?'1 modul':custom<5?custom+' moduly':custom+' modulov'};
     var S={CSk:has('skener'),CWeb:has('web'),CDom:has('web')&&has('domena'),CPon:has('web')&&has('ponuky'),CFree:freeN>0,CCustom:custom>0,CPriced:net>0,CYear:yi===1&&net>0,CMonth:yi===0&&net>0,CNoPrice:net===0};
-    document.querySelectorAll('[data-v]').forEach(function(e){var k=e.getAttribute('data-v');if(k in V)e.textContent=V[k];});
+    document.querySelectorAll('[data-v]').forEach(function(e){var k=e.getAttribute('data-v');if(k==='cGross'&&!reduce&&PREVG!==null&&PREVG!==net&&net>0&&PREVG>0){tweenEur(e,PREVG,net);return;}if(k in V)e.textContent=V[k];});
+    PREVG=net;
     document.querySelectorAll('[data-okr]').forEach(function(b){b.disabled=b.getAttribute('data-okr')==='-1'?OKR<=1:OKR>=79;});
     document.querySelectorAll('[data-show]').forEach(function(e){e.hidden=!S[e.getAttribute('data-show')];});
     document.querySelectorAll('[data-calc]').forEach(function(b){var on=b.getAttribute('data-key')===PAY;b.classList.toggle('seg-on',on);b.setAttribute('aria-pressed',on?'true':'false');});
@@ -1568,7 +1333,7 @@ List vlastníctva na 1 klik
   document.querySelectorAll('.mnav-p a').forEach(function(a){a.addEventListener('click',function(){var d=a.closest('details');if(d)d.open=false;});});
   document.addEventListener('click',function(e){document.querySelectorAll('details.mnav[open]').forEach(function(d){if(!d.contains(e.target))d.open=false;});});
   document.querySelectorAll('[data-mod]:not([disabled])').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-mod');MODSEL[k]=!MODSEL[k];renderMods();});});
-  var PRE={skener:['skener'],web:['skener','web','ponuky'],webonly:['web','ponuky'],all:['skener','web','ponuky','klienti','domena','email','dokumenty','kataster','kalendar','chat']};
+  var PRE={skener:['skener'],web:['skener','web','ponuky'],webonly:['web','ponuky'],all:['skener','web','ponuky','klienti','domena','email','kataster','kalendar','chat']};
   document.querySelectorAll('[data-preset]').forEach(function(b){b.addEventListener('click',function(){MODSEL={};PRE[b.getAttribute('data-preset')].forEach(function(k){MODSEL[k]=true;});renderMods();});});
   renderMods();
   var cutIn=document.querySelector('[data-action="cut"]');
@@ -1617,8 +1382,10 @@ List vlastníctva na 1 klik
   var reduce=mm('(prefers-reduced-motion: reduce)')&&!vzdy,fine=mm('(hover: hover) and (pointer: fine)');
   var hdr=d.querySelector('.hdr'),prog=d.createElement('div');prog.className='rt-prog';prog.setAttribute('aria-hidden','true');d.body.appendChild(prog);
   var hero=d.querySelector('.rt > section'),pas=d.querySelector('.pas'),mnav=d.querySelector('details.mnav');
-  if(!reduce&&'IntersectionObserver' in window){de.classList.add('js-pohyb');if(fine)de.classList.add('js-mys');}
-  var on=de.classList.contains('js-pohyb');
+  // pri obmedzenom pohybe v systéme ostane jemné prelínanie (bez posúvania, hĺbky a efektov pod myšou)
+  var jemne=mm('(prefers-reduced-motion: reduce)')&&!vzdy;
+  if('IntersectionObserver' in window){de.classList.add('js-pohyb');if(jemne)de.classList.add('jemne');else if(fine)de.classList.add('js-mys');}
+  var on=de.classList.contains('js-pohyb'),plne=on&&!jemne;
   var $$=function(q,r){return Array.prototype.slice.call((r||d).querySelectorAll(q));};
 
   // ---------- skrolovanie: hlavička, čiara priebehu, hĺbka úvodu, pás textu
@@ -1631,8 +1398,9 @@ List vlastníctva na 1 klik
       if(dole&&y>520&&!otv)hdr.classList.add('hdr-skry');else if(hore||y<520||otv)hdr.classList.remove('hdr-skry');}
     lastY=y;
     if(!on)return;
-    if(hero){var hr=hero.getBoundingClientRect();if(hr.bottom>0)hero.style.setProperty('--hp',Math.min(1,Math.max(0,-hr.top/Math.max(1,hr.height))).toFixed(4));}
     if(y>=max-4&&window.__rvKoniec)window.__rvKoniec();
+    if(!plne)return;
+    if(hero){var hr=hero.getBoundingClientRect();if(hr.bottom>0)hero.style.setProperty('--hp',Math.min(1,Math.max(0,-hr.top/Math.max(1,hr.height))).toFixed(4));}
     if(pas){var pr=pas.getBoundingClientRect();if(pr.bottom>-200&&pr.top<vh+200)pas.style.setProperty('--pas',((vh-pr.top)/(vh+pr.height)).toFixed(4));}
   }
   function onScroll(){if(!raf)raf=requestAnimationFrame(tick);}
@@ -1667,10 +1435,9 @@ List vlastníctva na 1 klik
   $$('#rano > div:nth-of-type(2) > div').forEach(function(e){mark(e,'hore');});
   var okno=d.querySelector('#nahlad .tabs-x');okno=okno&&okno.nextElementSibling;
   if(okno){okno.classList.add('okno-3d');mark(okno,'okno');}
-  $$('.feat,.fcard,.step,.wfeat,.pidx,.pre,.mod,.sum,.tabs-x').forEach(function(e){mark(e,'hore');});
+  $$('.feat,.kst-i,.wfeat,.pre,.mod,.sum,.tabs-x').forEach(function(e){mark(e,'hore');});
   $$('.qa').forEach(function(e){mark(e,'vpravo');});
-  $$('.hub-node').forEach(function(e){mark(e,'pop');});
-  $$('.hub-core,.team,.ice,.radar').forEach(function(e){mark(e,'zoom');});
+  $$('.team,.ice,.tel-wrap').forEach(function(e){mark(e,'zoom');});
   $$('#pristup img.mfloat').forEach(function(e){mark(e.parentElement,'zoom');});
   if(pas)mark(pas,'hore');
   $$('.rt > footer > *').forEach(function(e){mark(e,'hore');});
@@ -1693,6 +1460,7 @@ List vlastníctva na 1 klik
   $$('.rt > section, .pcard').forEach(function(e){io2.observe(e);});
 
   // ---------- úvod: značky pre vrstvy hĺbky
+  if(!plne)return;
   if(hero){hero.classList.add('uvod');if(hero.children[0])hero.children[0].classList.add('uvod-txt');var mw=hero.querySelector('.mwrap');if(mw&&mw.previousElementSibling)mw.previousElementSibling.classList.add('uvod-bg');}
   $$('#pribeh,#nahlad').forEach(function(e){e.classList.add('svetlo');});
   if(!fine)return;
@@ -1717,6 +1485,46 @@ List vlastníctva na 1 klik
     if(m){var c=m.getBoundingClientRect();m.style.setProperty('--bx',((e.clientX-c.left-c.width/2)*.22).toFixed(1)+'px');m.style.setProperty('--by',((e.clientY-c.top-c.height/2)*.32).toFixed(1)+'px');}
   },{passive:true});
   d.addEventListener('pointerleave',function(){mx=my=0;if(!loop)loop=requestAnimationFrame(plyn);nuluj(tilt,['--rx','--ry']);nuluj(mag,['--bx','--by']);});
+})();
+</script>
+<script>
+/* ŽIVÉ UKÁŽKY – bežia, len keď je časť stránky na obrazovke; pri obmedzenom pohybe sa len prelínajú */
+(function(){
+  var d=document,jemne=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)&&!/[?&]pohyb=1(&|$)/.test(location.search);
+  function vidno(el,cb){if(!('IntersectionObserver' in window)){cb(true);return;}new IntersectionObserver(function(e){cb(e[0].isIntersecting);},{threshold:.25}).observe(el);}
+
+  // ---------- skener v mobile: 1 súkromník pridá inzerát → 2 príde upozornenie → 3 prevezmeš (zoznam ukáže tvoj inzerát)
+  var tel=d.querySelector('.tel'),kroky=[].slice.call(d.querySelectorAll('.kst-i'));
+  if(tel&&kroky.length===3){
+    var PLAN=[[1,0,2400],[2,1,4200],[2,0,700],[3,0,6200]],k=0,tm=null,ide=false;
+    function krok(){var p=PLAN[k];
+      kroky.forEach(function(x,i){x.classList.toggle('on',i===p[0]-1);});
+      tel.setAttribute('data-krok',p[0]);if(p[1])tel.setAttribute('data-push','');else tel.removeAttribute('data-push');
+      tm=setTimeout(function(){k=(k+1)%PLAN.length;krok();},p[2]);}
+    vidno(tel,function(v){if(v&&!ide){ide=true;k=0;krok();}else if(!v&&ide){ide=false;clearTimeout(tm);}});
+  }
+
+  // ---------- náhľad: obrazovky sa striedajú samé, kým na ne človek neklikne
+  var sek=d.getElementById('nahlad'),tl=sek?[].slice.call(sek.querySelectorAll('button[data-group="view"]')):[];
+  if(tl.length>1){
+    var DUR=jemne?8000:6000,st=false,vid=false,tn=null;sek.style.setProperty('--td',DUR+'ms');
+    tl.forEach(function(b){var i=d.createElement('i');i.className='tprog';i.setAttribute('aria-hidden','true');b.appendChild(i);
+      b.addEventListener('click',function(e){if(e.isTrusted){st=true;clearTimeout(tn);sek.classList.remove('nahlad-ide');}});});
+    function bez(){var a=sek.querySelector('.opt-on .tprog');if(a){a.style.animation='none';void a.offsetWidth;a.style.animation='';}}
+    function plan(){clearTimeout(tn);if(st||!vid)return;sek.classList.add('nahlad-ide');bez();tn=setTimeout(dalsi,DUR);}
+    function dalsi(){if(st)return;
+      if(d.hidden||sek.matches(':hover')){tn=setTimeout(dalsi,1500);return;}
+      var i=tl.findIndex(function(b){return b.classList.contains('opt-on');});tl[(i+1)%tl.length].click();plan();}
+    vidno(sek.querySelector('.tabs-x').nextElementSibling,function(v){vid=v;if(v)plan();else{clearTimeout(tn);sek.classList.remove('nahlad-ide');}});
+  }
+
+  // ---------- úvod: v bubline pribúdajú nové inzeráty
+  var cy=d.querySelector('[data-cyklus]');
+  if(cy){var IN=[['3-izbový byt, Spišská N. Ves','pred 2 min · súkromná osoba'],['Chata, Hrabušice','pred 1 min · súkromná osoba'],['1-izbový byt, Levoča','pred 3 min · súkromná osoba'],['Pozemok, Markušovce','pred 1 min · súkromná osoba']],ci=0,cv=true;
+    var cn=cy.querySelector('[data-cyk-n]'),cm=cy.querySelector('[data-cyk-m]');
+    vidno(cy,function(v){cv=v;});
+    setInterval(function(){if(d.hidden||!cv)return;cy.classList.add('cyk-von');
+      setTimeout(function(){ci=(ci+1)%IN.length;cn.textContent=IN[ci][0];cm.textContent=IN[ci][1];cy.classList.remove('cyk-von');},360);},4200);}
 })();
 </script>
 </body>
