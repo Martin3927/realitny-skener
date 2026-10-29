@@ -3147,11 +3147,10 @@
           '<div class="mk-prava"><select data-f="pohlavie" aria-label="Rod (pre text SMS)"><option value="muz"' + (rodMaklera(m) === "muz" ? " selected" : "") + '>Muž</option><option value="zena"' + (rodMaklera(m) === "zena" ? " selected" : "") + ">Žena</option></select>" +
           '<select data-f="rola"' + (ja ? " disabled" : "") + ' aria-label="Rola"><option value="makler"' + (m.rola === "makler" ? " selected" : "") + '>Maklér</option><option value="admin"' + (m.rola === "admin" ? " selected" : "") + ">Administrátor</option></select>" +
           '<label class="toggle"><input type="checkbox" data-f="aktivny"' + (m.aktivny ? " checked" : "") + (ja ? " disabled" : "") + "> Aktívny</label>" +
-          '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label></div>" +
+          '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label>" +
+          '<label class="toggle" data-nestrazit title="Môže zverejniť svoje ponuky na Facebook a Instagram kancelárie. Ukladá sa hneď."><input type="checkbox" data-pravo-siete' + (m.rola === "admin" || (m.pristup || []).indexOf("siete") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Zverejňuje na FB a IG</label></div>" +
           '<div class="mk-pristup"><span class="meta">Vidí sekcie</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor vidí všetko vrátane Výkonu a Maklérov.</span>' :
             SEKCIE.map(function (x) { return '<button type="button" class="cip" data-pristup="' + x[0] + '" aria-pressed="' + ((m.pristup || []).indexOf(x[0]) >= 0) + '">' + x[1] + "</button>"; }).join("")) + "</div></div>" +
-          '<div class="mk-pristup"><span class="meta">Môže</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor môže zverejňovať na Facebook a Instagram kancelárie.</span>' :
-            '<button type="button" class="cip" data-pristup="siete" aria-pressed="' + ((m.pristup || []).indexOf("siete") >= 0) + '">Zverejňovať na Facebook a Instagram kancelárie</button>') + "</div></div>" +
           '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
           '<div class="mk-upoz"><div><b>🔔 Upozornenia do mobilu</b><small class="meta" id="mk-zar-' + m.id + '">' + textZariadeni(m) + "</small></div>" +
             '<div class="cipy">' + DRUHY_UPOZ.map(function (x) {
@@ -3256,10 +3255,22 @@
         if (ix >= 0) nove.splice(ix, 1); else nove.push(b.dataset.pristup);
         b.disabled = true;
         try { await rpc("nastavit_pristup_maklera", { p_id: id, p_pristup: nove }); m.pristup = nove; b.setAttribute("aria-pressed", String(ix < 0));
-          if (b.dataset.pristup === "siete") toast((m.meno || "Maklér") + (ix < 0 ? " teraz môže zverejňovať svoje ponuky na Facebook a Instagram kancelárie." : " už nemôže zverejňovať na Facebook a Instagram kancelárie."));
-          else toast((m.meno || "Maklér") + (ix < 0 ? " teraz vidí: " : " už nevidí: ") + b.textContent); }
+          toast((m.meno || "Maklér") + (ix < 0 ? " teraz vidí: " : " už nevidí: ") + b.textContent); }
         catch (err) { toast(chybaText(err), true); }
         b.disabled = false;
+      };
+    });
+    // právo zverejňovať na FB a IG kancelárie – ukladá sa hneď (ako sekcie), nie tlačidlom Uložiť
+    el.querySelectorAll("[data-pravo-siete]").forEach(function (c) {
+      c.onchange = async function () {
+        var id = c.closest("[data-m]").dataset.m, m = S.mById[id]; if (!m) return;
+        var nove = (m.pristup || []).filter(function (x) { return x !== "siete"; });
+        if (c.checked) nove.push("siete");
+        c.disabled = true;
+        try { await rpc("nastavit_pristup_maklera", { p_id: id, p_pristup: nove }); m.pristup = nove;
+          toast((m.meno || "Maklér") + (c.checked ? " teraz môže zverejňovať svoje ponuky na Facebook a Instagram kancelárie." : " už nemôže zverejňovať na Facebook a Instagram kancelárie.")); }
+        catch (err) { c.checked = !c.checked; toast(chybaText(err), true); }
+        c.disabled = false;
       };
     });
     if ($("#spr-vsetkym")) $("#spr-vsetkym").onclick = async function () {
