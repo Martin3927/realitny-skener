@@ -54,6 +54,17 @@ button, input, select, textarea { font: inherit; color: inherit }
 a { color: var(--info) }
 .wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
 .boot { padding: 40px; text-align: center; color: var(--muted) }
+/* úvodná obrazovka pri spustení – nadväzuje na tmavú ikonu aplikácie (rovnaká vo svetlom aj tmavom režime) */
+.boot-typek { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  padding: 24px; background: #1e2a35; color: #c9d4dd; font-weight: 600; text-align: center }
+.boot-typek img { width: 92px; height: 92px; animation: typekDych 1.8s ease-in-out infinite }
+.boot-typek .btn { margin-top: 4px }
+@keyframes typekDych { 50% { transform: scale(.93); opacity: .82 } }
+@media (prefers-reduced-motion: reduce) { .boot-typek img { animation: none } }
+/* malý pruh dole: obnovujú sa údaje z posledného otvorenia / bez internetu */
+#pruh-stav { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 49;
+  width: max-content; background: #1e2a35; color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; max-width: calc(100% - 32px);
+  text-align: center; box-shadow: 0 8px 24px rgba(30, 42, 53, .28); pointer-events: none; animation: fadeIn .2s ease-out }
 :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px }
 
 /* ---------- prihlásenie */

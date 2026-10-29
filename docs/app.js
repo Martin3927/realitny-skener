@@ -224,7 +224,7 @@
     if (!S.me || S.vyprsalo || S.odhlasujem) return;
     S.vyprsalo = true;
     try { sessionStorage.setItem("typek-odhlaseny", "Prihlásenie vypršalo alebo ste sa odhlásili na inom zariadení. Prihláste sa znova – nič sa nestratilo."); } catch (e) { /* nič */ }
-    sb.auth.signOut({ scope: "local" }).catch(function () {}).then(function () { history.replaceState(null, "", location.pathname); location.reload(); });
+    zmazSnimku().then(function () { return sb.auth.signOut({ scope: "local" }).catch(function () {}); }).then(function () { zabudniPrihlasenie(); history.replaceState(null, "", location.pathname); location.reload(); });
   }
   // Odhlásenie oznámené z iného okna Týpka na tomto zariadení. Môže prísť aj oneskorene – okno, ktoré bolo
   // v mobile dlho na pozadí, ho dostane až po prebudení, keď už je maklér medzitým znova prihlásený.
@@ -392,10 +392,137 @@
     return zmena;
   }
 
+  // ---------- úvodná obrazovka (rovnaká ako v index.html): tmavá s hlavičkou kľúča
+  function uvodnaObrazovka(text, tlacidlo) {
+    return '<div class="boot boot-typek"><img src="typek-hlavicka.png?v=202610251320" alt="" width="239" height="240"><span>' + esc(text) + "</span>" +
+      (tlacidlo ? '<button class="btn primary" type="button" id="b-znova">' + esc(tlacidlo) + "</button>" : "") + "</div>";
+  }
+  // malý pruh dole – „Obnovujem údaje…“ alebo „Bez internetu…“ (prázdny text ho skryje)
+  function stavPruh(text) {
+    var el = $("#pruh-stav");
+    if (!text) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement("div"); el.id = "pruh-stav"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+    el.textContent = text;
+  }
+
+  // ---------- okamžitý štart: údaje z posledného otvorenia uložené v zariadení (IndexedDB)
+  // Pri spustení sa ukážu hneď (ešte pred spojením so serverom) a čerstvé sa doplnia o chvíľu.
+  // Ukážu sa len prihlásenému maklérovi, len ak neplatí odhlásenie pre nečinnosť, a pri odhlásení sa zmažú.
+  var SNIMKA_KLUCE = ["me", "makleri", "hlavny", "odhlPc", "odhlMobil", "odkaz", "novinkyOkno", "meta", "strazca", "inz", "obce", "prev", "canUnder", "odh",
+    "sch", "sidliska", "akcie", "sidPozn", "prip", "ozn", "tel", "chat", "dm", "prihl", "osobne", "oslavy", "mesiac", "pochvaly", "reakcie",
+    "ponuky", "ponukyInt", "obhliadky", "zobrazenia", "dopyty", "dopytyK", "udalosti", "pred", "predTel", "predInz", "predNedostupne", "mp"];
+  // reakcie v chate (odložené, ignorované) sa neukladajú: pri načítaní sa len dopĺňajú, vybavené by ostali visieť;
+  // ani jednorazová kontrola kolegov v kalendári (kalKolegovia) – chvíľková chyba by ostala uložená
+  var SNIMKA_VERZIA = 1, SNIMKA_MAX_DNI = 7, snimkaCas = 0;
+  var S_ZACIATOK = {};   // počiatočné hodnoty – po zrušení uložených údajov sa aplikácia správa ako pri prvom spustení
+  SNIMKA_KLUCE.concat(["mById", "reak"]).forEach(function (k) { if (S[k] !== undefined) S_ZACIATOK[k] = JSON.stringify(S[k]); });
+  function snimkaOperacia(rezim, fn) {
+    return new Promise(function (ok, chyba) {
+      if (!window.indexedDB) return chyba(new Error("Bez úložiska."));
+      var o = indexedDB.open("typek", 1);
+      o.onupgradeneeded = function () { o.result.createObjectStore("snimka"); };
+      o.onerror = function () { chyba(o.error); };
+      o.onblocked = function () { chyba(new Error("Úložisko je zablokované.")); };
+      o.onsuccess = function () {
+        var db = o.result, vysl;
+        try {
+          var tx = db.transaction("snimka", rezim), q = fn(tx.objectStore("snimka"));
+          q.onsuccess = function () { vysl = q.result; };
+          tx.oncomplete = function () { db.close(); ok(vysl); };
+          tx.onerror = tx.onabort = function () { db.close(); chyba(tx.error); };
+        } catch (e) { db.close(); chyba(e); }
+      };
+    });
+  }
+  function citajSnimku(uid) {
+    var citanie = snimkaOperacia("readonly", function (st) { return st.get("posledna"); }).then(function (s) {
+      if (!s || s.verzia !== SNIMKA_VERZIA || s.uid !== uid || !s.d || !s.d.me || Date.now() - s.cas > SNIMKA_MAX_DNI * 864e5) return null;
+      return s;
+    }, function () { return null; });
+    return Promise.race([citanie, new Promise(function (ok) { setTimeout(function () { ok(null); }, 1500); })]);
+  }
+  function ulozSnimku() {
+    if (!S.me || S.zoSnimky || !S.cerstve || !S.inz || S.odhlasujem || S.vyprsalo || ulozenaRelacia() !== S.me.id) return;
+    snimkaCas = Date.now();
+    var d = {};
+    SNIMKA_KLUCE.forEach(function (k) { if (S[k] !== undefined) d[k] = S[k]; });
+    d.inz = S.inz.map(function (z) { var c = Object.assign({}, z); delete c._t; return c; });
+    var zaznam = { verzia: SNIMKA_VERZIA, uid: S.me.id, cas: snimkaCas, d: d };
+    snimkaOperacia("readwrite", function (st) { return st.put(zaznam, "posledna"); }).catch(function () { /* bez úložiska – nevadí */ });
+  }
+  function zmazSnimku() {
+    var mazanie = snimkaOperacia("readwrite", function (st) { return st.delete("posledna"); }).catch(function () {});
+    return Promise.race([mazanie, new Promise(function (ok) { setTimeout(ok, 1500); })]);
+  }
+  // prihlásenie uložené v zariadení (bez spojenia so serverom) – id makléra alebo null
+  function ulozenaRelacia() {
+    try { var u = JSON.parse(localStorage.getItem(sb.auth.storageKey) || "null"); return u && u.refresh_token && u.user && u.user.id ? u.user.id : null; }
+    catch (e) { return null; }
+  }
+  // vráti "necinnost" (treba odhlásiť), true (ukázané) alebo false (nedá sa – počkáme na server)
+  function ukazSnimku(sn, posl) {
+    var d = sn.d;
+    S.odhlPc = Number(d.odhlPc) || 0;
+    S.odhlMobil = d.odhlMobil == null ? S.odhlPc : Number(d.odhlMobil) || 0;
+    S.odhlMin = vMobile() ? S.odhlMobil : S.odhlPc;
+    // rovnaké pravidlo nečinnosti ako pri bežnom štarte; bez záznamu o aktivite radšej počkáme na server
+    if (!posl) return false;
+    if (S.odhlMin > 0 && Date.now() - posl > S.odhlMin * 60000) return "necinnost";
+    try {
+      SNIMKA_KLUCE.forEach(function (k) { if (k in d) S[k] = d[k]; });
+      S.reak = [];
+      S.mById = {}; (S.makleri || []).forEach(function (m) { S.mById[m.id] = m; });
+      if (S.mById[S.me.id]) S.me = S.mById[S.me.id];
+      (S.inz || []).forEach(function (z) { z._t = textHladania(z); });
+      S.pristupPred = JSON.stringify(S.me.pristup || null) + S.me.rola;
+      S.zoSnimky = sn.cas;
+      zaznamenajAktivitu(true);                  // otvorenie aplikácie je činnosť (nové nastavenia zo servera sa overia s časom pred spustením)
+      nastavAdresu();
+      obnovMojeFarby(); aplikujVzhlad(vzhladPreMna());
+      vykresli();
+      stavPruh("Obnovujem údaje…");
+      spustiOdpocet();                           // odhlásenie pre nečinnosť platí aj počas uložených údajov (aj bez internetu)
+      return true;
+    } catch (e) {
+      S.zoSnimky = 1; zrusSnimku();
+      return false;
+    }
+  }
+  // uložené údaje preč z obrazovky aj z pamäte aplikácie (zostane úvodná obrazovka)
+  function zrusSnimku() {
+    if (!S.zoSnimky) return;
+    SNIMKA_KLUCE.concat(["mById", "reak"]).forEach(function (k) { if (k in S_ZACIATOK) S[k] = JSON.parse(S_ZACIATOK[k]); else delete S[k]; });
+    S.zoSnimky = 0; S.me = null; stavPruh("");
+    $("#app").innerHTML = uvodnaObrazovka("Načítavam…");
+  }
+  // bez internetu: údaje z posledného otvorenia ostanú na obrazovke, keď sa signál vráti, načíta sa všetko znova
+  function cakajNaSiet(fn) {
+    stavPruh("Bez internetu – údaje z " + datum(new Date(S.zoSnimky).toISOString(), true));
+    var hotovo = false, t = 0;
+    var znova = function () {
+      if (hotovo) return;
+      hotovo = true; window.removeEventListener("online", znova); clearInterval(t);
+      stavPruh("Obnovujem údaje…");
+      fn();
+    };
+    window.addEventListener("online", znova);
+    t = setInterval(function () { if (navigator.onLine) znova(); }, 20000);
+  }
+
   async function start() {
-    var ses = (await sb.auth.getSession()).data.session;
+    var uid = ulozenaRelacia(), aktivita = poslednaAktivita();   // kedy maklér naposledy niečo robil (pred týmto spustením)
+    if (!uid) zmazSnimku();                        // nikto nie je prihlásený – uložené údaje preč
+    else if (!S.zoSnimky) {
+      var sn = await citajSnimku(uid);
+      if (sn && ukazSnimku(sn, aktivita) === "necinnost") return odhlasitPreNecinnost();
+    }
+    var g = await sb.auth.getSession(), ses = g.data.session;
     nacitajVzhlad().then(function (zmena) { if (zmena && !S.me && $("#f-login")) obrazovkaLogin($("#l-err") ? $("#l-err").textContent : ""); }).catch(function () {});
-    if (ses) return poPrihlaseni(ses.user);
+    if (ses && S.zoSnimky && ses.user.id !== uid) zrusSnimku();
+    if (ses) return poPrihlaseni(ses.user, aktivita);
+    // prihlásenie sa nedalo obnoviť pre výpadok internetu – údaje z posledného otvorenia nechávame
+    if (S.zoSnimky && ulozenaRelacia() === uid && (!navigator.onLine || (g.error && /Retryable|fetch|network|load failed/i.test((g.error.name || "") + " " + (g.error.message || ""))))) return cakajNaSiet(start);
+    if (S.zoSnimky) { zrusSnimku(); zmazSnimku(); }
     var prve = false;
     try { prve = await rpc("je_prve_spustenie", {}); } catch (e) { /* zobrazíme prihlásenie */ }
     var sprava = null;
@@ -433,13 +560,12 @@
   }
 
   function bezSpojenia(user) {
-    $("#app").innerHTML = '<div class="boot">Nepodarilo sa spojiť so serverom. Skontrolujte internet.' +
-      '<div style="margin-top:16px"><button class="btn primary" type="button" id="b-znova">Skúsiť znova</button></div></div>';
+    $("#app").innerHTML = uvodnaObrazovka("Nepodarilo sa spojiť so serverom. Skontrolujte internet.", "Skúsiť znova");
     var hotovo = false;
     var znova = function () {
       if (hotovo) return;
       hotovo = true; window.removeEventListener("online", znova);
-      poPrihlaseni(user);
+      poPrihlaseni(user, poslednaAktivita());
     };
     $("#b-znova").addEventListener("click", znova);
     window.addEventListener("online", znova);
@@ -468,29 +594,8 @@
     });
   }
 
-  async function poPrihlaseni(user) {
-    S.user = user;
-    $("#app").innerHTML = '<div class="boot">Načítavam inzeráty…</div>';
-    // rýchlejší štart: prvé dotazy idú na server naraz, nie jeden po druhom
-    var dotazMaklerov = sb.from("makleri").select("*").order("meno").then(function (x) { return x; });
-    // hlavný správca Realitného týpka – vidí prepínač do správy zákazníkov
-    var hlavny = sb.rpc("je_hlavny_spravca").then(function (hs) { return !hs.error && hs.data === true; }, function () { return false; });
-    var nastavenia = nacitajNastavenia().catch(function () { /* predvolené */ });
-    var r = await sb.from("makleri").select("*").eq("id", user.id).maybeSingle();
-    // bez internetu (alebo slabý signál) makléra neodhlasujeme – ponúkneme skúsiť znova
-    if (r.error && r.status === 0) return bezSpojenia(user);
-    if (r.error || !r.data || !r.data.aktivny) {
-      await sb.auth.signOut({ scope: "local" });
-      return obrazovkaLogin(r.data && !r.data.aktivny ? "Váš účet je deaktivovaný. Kontaktujte administrátora." : "Účet sa nenašiel. Kontaktujte administrátora.");
-    }
-    S.me = r.data;
-    obnovMojeFarby(); aplikujVzhlad(vzhladPreMna());
-    S.hlavny = await hlavny;
-    await nastavenia;
-    // aplikácia bola zatvorená dlhšie, ako je čas odhlásenia → odhlásime
-    var posl = poslednaAktivita();
-    if (S.odhlMin > 0 && posl && Date.now() - posl > S.odhlMin * 60000) return odhlasitPreNecinnost();
-    zaznamenajAktivitu(true);
+  // adresa v prehliadači → sekcia, otvorená ponuka, inzerát alebo konverzácia
+  function nastavAdresu() {
     S.tab = tabZAdresy() || "domov";
     var dmAdresa = location.hash.match(/^#chat\/([0-9a-f-]{36})$/i); if (dmAdresa) S.chatS = dmAdresa[1];
     // odkaz na jednu ponuku alebo inzerát (napr. z realitnej mapy v novom okne)
@@ -500,10 +605,48 @@
       if (S.tab === "inzeraty") { S.jedenId = decodeURIComponent(jedenAdresa[2]); stavAdresy.jeden = S.jedenId; }
     }
     if (location.hash === "#zvoncek") S.zvonOpen = true;   // upozornenie na nový kontakt z webu
-    zistiOdber();
     history.replaceState(stavAdresy, "", "#" + S.tab);
-    try { await nacitajVsetko(dotazMaklerov); } catch (e) { toast(chybaText(e), true); }
-    vykresli();
+  }
+
+  // aktivita = čas poslednej činnosti pred spustením (pri obnovení prihlásenia); po novom prihlásení chýba
+  async function poPrihlaseni(user, aktivita) {
+    S.user = user;
+    var bolaSnimka = !!S.zoSnimky;          // na obrazovke sú už údaje z posledného otvorenia
+    if (!bolaSnimka) $("#app").innerHTML = uvodnaObrazovka("Načítavam inzeráty…");
+    // rýchlejší štart: prvé dotazy idú na server naraz, nie jeden po druhom
+    var dotazMaklerov = sb.from("makleri").select("*").order("meno").then(function (x) { return x; });
+    // hlavný správca Realitného týpka – vidí prepínač do správy zákazníkov
+    var hlavny = sb.rpc("je_hlavny_spravca").then(function (hs) { return !hs.error && hs.data === true; }, function () { return false; });
+    var nastavenia = nacitajNastavenia().catch(function () { /* predvolené */ });
+    var r = await sb.from("makleri").select("*").eq("id", user.id).maybeSingle();
+    // bez internetu (alebo slabý signál) makléra neodhlasujeme – ponúkneme skúsiť znova
+    // pri opakovanom pokuse sa nečinnosť posudzuje podľa poslednej činnosti (maklér mohol medzitým pracovať s uloženými údajmi)
+    if (r.error && r.status === 0) return bolaSnimka ? cakajNaSiet(function () { poPrihlaseni(user, poslednaAktivita()); }) : bezSpojenia(user);
+    if (r.error || !r.data || !r.data.aktivny) {
+      zrusSnimku(); await zmazSnimku();
+      await sb.auth.signOut({ scope: "local" });
+      return obrazovkaLogin(r.data && !r.data.aktivny ? "Váš účet je deaktivovaný. Kontaktujte administrátora." : "Účet sa nenašiel. Kontaktujte administrátora.");
+    }
+    S.me = r.data;
+    obnovMojeFarby(); aplikujVzhlad(vzhladPreMna());
+    S.hlavny = await hlavny;
+    await nastavenia;
+    // aplikácia bola zatvorená dlhšie, ako je čas odhlásenia → odhlásime
+    var posl = aktivita !== undefined ? aktivita : poslednaAktivita();
+    if (S.odhlMin > 0 && posl && Date.now() - posl > S.odhlMin * 60000) return odhlasitPreNecinnost();
+    zaznamenajAktivitu(true);
+    if (!bolaSnimka) nastavAdresu();
+    zistiOdber();
+    try { await nacitajVsetko(dotazMaklerov); S.cerstve = true; } catch (e) { toast(chybaText(e), true); }
+    if (bolaSnimka) {
+      // čerstvé údaje namiesto uložených – prekreslí sa len obsah (otvorené okná a písanie ostanú)
+      S.zoSnimky = 0; stavPruh("");
+      var pr = JSON.stringify(S.me.pristup || null) + S.me.rola;
+      if (S.pristupPred !== pr || !$("#obsah")) { S.pristupPred = pr; vykresli(); }
+      else { prekresliObsah(); ohlasSplatne(); if (S.zvonOpen && !S.pripForm) vykresliZvoncek(); }
+    } else vykresli();
+    setTimeout(ulozSnimku, 3000);
+    document.addEventListener("visibilitychange", function () { if (document.hidden && Date.now() - snimkaCas > 20000) ulozSnimku(); });
     setInterval(obnov, 60000);
     setTimeout(ukazPochvalu, 1200);
     setTimeout(zacniSprievodcuAkTreba, 2200);
@@ -869,7 +1012,10 @@
     if (zostava <= 0) return odhlasitPreNecinnost();
     if (zostava <= 60000) ukazVarovanie(zostava); else if (S.odhlVaruje) skryVarovanie();
   }
+  var odpocetBezi = false;
   function spustiOdpocet() {
+    if (odpocetBezi) return;
+    odpocetBezi = true;
     tikOdpocet();
     setInterval(tikOdpocet, 1000);
     document.addEventListener("visibilitychange", function () { if (!document.hidden) tikOdpocet(); });
@@ -902,7 +1048,9 @@
       sessionStorage.setItem("typek-odhlaseny", "Boli ste automaticky odhlásený po " + dobaPo(min) + " nečinnosti. Prihláste sa znova.");
       localStorage.removeItem(KLUC_AKT);
     } catch (e) { /* bez úložiska */ }
+    await zmazSnimku();
     await sb.auth.signOut({ scope: "local" }).catch(function () {});
+    zabudniPrihlasenie();
     history.replaceState(null, "", location.pathname);
     location.reload();
   }
@@ -1028,19 +1176,30 @@
     vykresli(); window.scrollTo(0, 0);
   });
 
-  async function odhlasit() { S.odhlasujem = true; await sb.auth.signOut({ scope: "local" }); history.replaceState(null, "", location.pathname); location.reload(); }
+  // odhlásenie: uložené údaje a prihlásenie zmizne zo zariadenia aj bez internetu
+  function zabudniPrihlasenie() { try { localStorage.removeItem(sb.auth.storageKey); } catch (e) { /* bez úložiska */ } }
+  async function odhlasit() {
+    S.odhlasujem = true;
+    await zmazSnimku();
+    await sb.auth.signOut({ scope: "local" }).catch(function () {});
+    zabudniPrihlasenie();
+    history.replaceState(null, "", location.pathname); location.reload();
+  }
 
   // ------------------------------------------------------------ dáta
   // celá tabuľka po 1000 riadkoch; toľko strán, koľko mala tabuľka minule, sa pýta naraz (nie jedna po druhej)
   var STRANY = {};
   try { STRANY = JSON.parse(localStorage.getItem("typek-strany") || "{}") || {}; } catch (e) { STRANY = {}; }
   async function vsetkyRiadky(tabulka, stlpce, poradie, uprav) {
-    var krok = 1000, kluc = tabulka + ":" + stlpce, minule = Number(STRANY[kluc]) || 1, naraz = Math.min(Math.max(minule, 1), 10);
-    function strana(i) {
-      var q = sb.from(tabulka).select(stlpce).order(poradie).range(i * krok, i * krok + krok - 1);
+    return poStranach(tabulka + ":" + stlpce, function (od, krok) {
+      var q = sb.from(tabulka).select(stlpce).order(poradie).range(od, od + krok - 1);
       if (uprav) q = uprav(q);
       return q.then(function (r) { if (r.error) throw r.error; return r.data; });
-    }
+    });
+  }
+  async function poStranach(kluc, dajStranu) {
+    var krok = 1000, minule = Number(STRANY[kluc]) || 1, naraz = Math.min(Math.max(minule, 1), 10);
+    function strana(i) { return dajStranu(i * krok, krok); }
     var cisla = [];
     for (var i = 0; i < naraz; i++) cisla.push(i);
     var strany = await Promise.all(cisla.map(strana));
@@ -1054,15 +1213,93 @@
     return out;
   }
 
-  async function nacitajInzeraty() {
-    var rows = await vsetkyRiadky("inzeraty", "*", "id", function (q) { return q.is("duplikat_z", null); });
-    rows.forEach(function (z) { z._t = norm([z.nazov, z.obec, z.predajca, z.popis].join(" ")); });
-    S.inz = rows;
+  // text, v ktorom hľadá vyhľadávanie inzerátov (aj v popise)
+  function textHladania(z) { return norm([z.nazov, z.obec, z.predajca, z.popis].join(" ")); }
+  function prepocitajObce() {
     var obce = {};
-    rows.forEach(function (z) { if (z.obec && z.aktivny) obce[z.obec] = (obce[z.obec] || 0) + 1; });
+    S.inz.forEach(function (z) { if (z.obec && z.aktivny) obce[z.obec] = (obce[z.obec] || 0) + 1; });
     S.obce = Object.keys(obce).sort(function (a, b) { return a.localeCompare(b, "sk"); }).map(function (o) { return [o, obce[o]]; });
+  }
+  // zoznam inzerátov bez popisov – popisy (takmer polovica údajov) prídu hneď po zobrazení zoznamu.
+  // Kým databáza funkciu inzeraty_zoznam nemá, načíta sa všetko naraz ako doteraz.
+  var zoznamBezPopisu = null;
+  async function nacitajInzeraty() {
+    var stare = {};
+    (S.inz || []).forEach(function (z) { if ("popis" in z) stare[z.id] = z; });
+    var rows = null, casy = [];
+    if (zoznamBezPopisu !== false) {
+      try {
+        rows = await poStranach("rpc:inzeraty_zoznam", function (od, krok) {
+          return sb.rpc("inzeraty_zoznam", { p_od: od, p_pocet: krok }).then(function (r) {
+            if (r.error) throw r.error;
+            casy.push(r.data.cas);
+            return r.data.riadky || [];
+          });
+        });
+        zoznamBezPopisu = true;
+      } catch (e) {
+        if (!(e && (e.code === "PGRST202" || e.code === "42883"))) throw e;
+        zoznamBezPopisu = false;
+      }
+    }
+    if (!rows) rows = await vsetkyRiadky("inzeraty", "*", "id", function (q) { return q.is("duplikat_z", null); });
+    var chyba = 0;
+    rows.forEach(function (z) {
+      // popis z minula, ak sa inzerát odvtedy nezmenil
+      var o = stare[z.id];
+      if (!("popis" in z) && o && o.zmenene && o.zmenene === z.zmenene) z.popis = o.popis;
+      if (!("popis" in z)) chyba++;
+      z._t = textHladania(z);
+    });
+    S.inz = rows;
+    prepocitajObce();
     S.lastInzLoad = Date.now();
+    // od tohto času (podľa servera) sa pri obnove sťahujú len zmeny
+    S.zmenyOd = casy.length ? casy.sort(function (a, b) { return new Date(a) - new Date(b); })[0] : null;
     if (S.me && !S.me.inzeraty_videne) inzeratyVidene();   // prvé spustenie – staré inzeráty nehlásime
+    if (chyba) nacitajPopisy(chyba);
+  }
+  // popisy inzerátov na pozadí: pri pár chýbajúcich len tie, inak všetky
+  var popisyBezia = null;
+  function nacitajPopisy(kolko) {
+    if (popisyBezia) return popisyBezia;
+    var chyba = (S.inz || []).filter(function (z) { return !("popis" in z); }).map(function (z) { return z.id; });
+    var dotaz = kolko <= 150 ? sb.from("inzeraty").select("id, popis").in("id", chyba).then(function (r) { if (r.error) throw r.error; return r.data; })
+      : vsetkyRiadky("inzeraty", "id, popis", "id", function (q) { return q.is("duplikat_z", null); });
+    popisyBezia = dotaz.then(function (rows) {
+      var p = {};
+      rows.forEach(function (x) { p[x.id] = x.popis; });
+      (S.inz || []).forEach(function (z) { if (!("popis" in z) && z.id in p) { z.popis = p[z.id]; z._t = textHladania(z); } });
+      // hľadanie a mapa berú do úvahy aj popis
+      if (S.tab === "inzeraty" && S.f && norm(S.f.q || "").trim()) vykresliZoznam();
+      if (S.tab === "mapa" && $("#realitna-mapa")) kresliRealitnuMapu(false, true);
+    }).catch(function () { /* skúsi sa pri ďalšom načítaní */ }).then(function () { popisyBezia = null; });
+    return popisyBezia;
+  }
+  // len inzeráty a odhady zmenené od poslednej obnovy (čas podľa servera, rezerva 2 min na zápisy skenera, ktoré sa práve dokončujú);
+  // nové inzeráty pridáva inzeratyNoveNacitaj (aj s upozornením), tu sa menia existujúce a vyraďujú duplicity
+  async function nacitajZmeny() {
+    if (!S.inz || !S.zmenyOd) return;
+    var d = await rpc("zmeny_inzeratov", { p_od: new Date(new Date(S.zmenyOd).getTime() - 2 * 60000).toISOString() });
+    if (!d) return;
+    var inz = d.inzeraty || [], odh = d.odhady || [];
+    if (inz.length > 500) return Promise.all([nacitajInzeraty(), nacitajOdhady()]);   // priveľa zmien naraz – načítame všetko
+    S.zmenyOd = d.cas;
+    if (S.canUnder) {
+      if (odh.length > 1000) await nacitajOdhady();
+      else odh.forEach(function (x) { S.odh[x.inzerat_id] = x; });
+    }
+    if (!inz.length) return;
+    var poz = {}, vyradit = {}, zmena = false, najnovsi = maxPrvyKrat(), tNajnovsi = najnovsi ? new Date(najnovsi).getTime() : 0;
+    S.inz.forEach(function (z, i) { poz[z.id] = i; });
+    inz.forEach(function (z) {
+      if (z.duplikat_z) { if (z.id in poz) { vyradit[z.id] = true; zmena = true; } return; }
+      z._t = textHladania(z);
+      if (z.id in poz) { S.inz[poz[z.id]] = z; zmena = true; }
+      else if (!tNajnovsi || new Date(z.prvy_krat).getTime() <= tNajnovsi) { S.inz.push(z); poz[z.id] = S.inz.length - 1; zmena = true; }
+    });
+    if (Object.keys(vyradit).length) S.inz = S.inz.filter(function (z) { return !vyradit[z.id]; });
+    if (zmena) prepocitajObce();
   }
   async function nacitajPrevzatia() {
     var rows = await vsetkyRiadky("prevzatia", "*", "inzerat_id");
@@ -1078,10 +1315,10 @@
   }
   async function nacitajOdhady() {
     S.canUnder = admin() || !!S.me.vidi_podhodnotene;
-    S.odh = {};
-    if (!S.canUnder) return;
-    var rows = await vsetkyRiadky("odhady", "*", "inzerat_id");
-    rows.forEach(function (o) { S.odh[o.inzerat_id] = o; });
+    if (!S.canUnder) { S.odh = {}; return; }
+    var rows = await vsetkyRiadky("odhady", "*", "inzerat_id"), o = {};
+    rows.forEach(function (x) { o[x.inzerat_id] = x; });
+    S.odh = o;
   }
   async function nacitajOznacenia() {
     var rows = await vsetkyRiadky("oznacenia", "*", "inzerat_id");
@@ -1229,7 +1466,9 @@
     obnovuje = true;
     try {
       var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), chatNove(), inzeratyNoveNacitaj().catch(function () {})];
-      if (Date.now() - S.lastInzLoad > 10 * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
+      // celý zoznam inzerátov raz za hodinu, medzitým len zmenené (bez databázovej zmeny 075 ako doteraz každých 10 min)
+      if (Date.now() - S.lastInzLoad > (S.zmenyOd ? 60 : 10) * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
+      else if (S.zmenyOd) uloha.push(nacitajZmeny().catch(function () {}));
       uloha.push(nacitajNastavenia().catch(function () {}), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajStrazcu());
       if (S.ponuky && !S.ponukaEdit) uloha.push(nacitajPonuky().catch(function () {}));
       else if (S.dopyty && !S.dopytEdit) uloha.push(nacitajDopyty().catch(function () {}));
@@ -1245,6 +1484,8 @@
       ohlasSplatne();
       ukazPochvalu();
       if (S.zvonOpen && !S.pripForm) vykresliZvoncek();
+      S.cerstve = true;
+      if (Date.now() - snimkaCas > 5 * 60000) ulozSnimku();   // údaje pre okamžitý štart nabudúce
     } catch (e) { /* skúsime pri ďalšej obnove */ }
     obnovuje = false;
   }
@@ -8803,7 +9044,7 @@
     var ma = {}; S.inz.forEach(function (z) { ma[z.id] = true; });
     var nove = r.data.filter(function (z) { return !ma[z.id]; });
     if (!nove.length) return;
-    nove.forEach(function (z) { z._t = norm([z.nazov, z.obec, z.predajca, z.popis].join(" ")); });
+    nove.forEach(function (z) { z._t = textHladania(z); });
     S.inz = S.inz.concat(nove);
     var sukr = nove.filter(function (z) { return z.aktivny && ptyp(z) !== "rk"; });
     if (sukr.length && chceUpoz("inzeraty")) {
