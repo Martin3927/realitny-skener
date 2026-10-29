@@ -201,7 +201,7 @@
   function chybaText(e) {
     var m = (e && (e.message || e.chyba)) || String(e);
     if (/Invalid login credentials/i.test(m)) return "Nesprávny email alebo heslo.";
-    if (/Failed to fetch|NetworkError/i.test(m)) return "Nepodarilo sa spojiť so serverom. Skontrolujte internet.";
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Nepodarilo sa spojiť so serverom. Skontrolujte internet.";
     if (/JWT expired/i.test(m)) return "Prihlásenie vypršalo. Obnovte stránku.";
     return m;
   }
@@ -432,6 +432,19 @@
     });
   }
 
+  function bezSpojenia(user) {
+    $("#app").innerHTML = '<div class="boot">Nepodarilo sa spojiť so serverom. Skontrolujte internet.' +
+      '<div style="margin-top:16px"><button class="btn primary" type="button" id="b-znova">Skúsiť znova</button></div></div>';
+    var hotovo = false;
+    var znova = function () {
+      if (hotovo) return;
+      hotovo = true; window.removeEventListener("online", znova);
+      poPrihlaseni(user);
+    };
+    $("#b-znova").addEventListener("click", znova);
+    window.addEventListener("online", znova);
+  }
+
   function obrazovkaPrve() {
     $("#app").innerHTML =
       '<div class="login"><form class="login-box" id="f-prve">' +
@@ -458,16 +471,22 @@
   async function poPrihlaseni(user) {
     S.user = user;
     $("#app").innerHTML = '<div class="boot">Načítavam inzeráty…</div>';
+    // rýchlejší štart: prvé dotazy idú na server naraz, nie jeden po druhom
+    var dotazMaklerov = sb.from("makleri").select("*").order("meno").then(function (x) { return x; });
+    // hlavný správca Realitného týpka – vidí prepínač do správy zákazníkov
+    var hlavny = sb.rpc("je_hlavny_spravca").then(function (hs) { return !hs.error && hs.data === true; }, function () { return false; });
+    var nastavenia = nacitajNastavenia().catch(function () { /* predvolené */ });
     var r = await sb.from("makleri").select("*").eq("id", user.id).maybeSingle();
+    // bez internetu (alebo slabý signál) makléra neodhlasujeme – ponúkneme skúsiť znova
+    if (r.error && r.status === 0) return bezSpojenia(user);
     if (r.error || !r.data || !r.data.aktivny) {
       await sb.auth.signOut({ scope: "local" });
       return obrazovkaLogin(r.data && !r.data.aktivny ? "Váš účet je deaktivovaný. Kontaktujte administrátora." : "Účet sa nenašiel. Kontaktujte administrátora.");
     }
     S.me = r.data;
     obnovMojeFarby(); aplikujVzhlad(vzhladPreMna());
-    // hlavný správca Realitného týpka – vidí prepínač do správy zákazníkov
-    try { var hs = await sb.rpc("je_hlavny_spravca"); S.hlavny = !hs.error && hs.data === true; } catch (e) { S.hlavny = false; }
-    try { await nacitajNastavenia(); } catch (e) { /* predvolené */ }
+    S.hlavny = await hlavny;
+    await nastavenia;
     // aplikácia bola zatvorená dlhšie, ako je čas odhlásenia → odhlásime
     var posl = poslednaAktivita();
     if (S.odhlMin > 0 && posl && Date.now() - posl > S.odhlMin * 60000) return odhlasitPreNecinnost();
@@ -483,7 +502,7 @@
     if (location.hash === "#zvoncek") S.zvonOpen = true;   // upozornenie na nový kontakt z webu
     zistiOdber();
     history.replaceState(stavAdresy, "", "#" + S.tab);
-    try { await nacitajVsetko(); } catch (e) { toast(chybaText(e), true); }
+    try { await nacitajVsetko(dotazMaklerov); } catch (e) { toast(chybaText(e), true); }
     vykresli();
     setInterval(obnov, 60000);
     setTimeout(ukazPochvalu, 1200);
@@ -1010,16 +1029,25 @@
   async function odhlasit() { S.odhlasujem = true; await sb.auth.signOut({ scope: "local" }); history.replaceState(null, "", location.pathname); location.reload(); }
 
   // ------------------------------------------------------------ dáta
+  // celá tabuľka po 1000 riadkoch; toľko strán, koľko mala tabuľka minule, sa pýta naraz (nie jedna po druhej)
+  var STRANY = {};
+  try { STRANY = JSON.parse(localStorage.getItem("typek-strany") || "{}") || {}; } catch (e) { STRANY = {}; }
   async function vsetkyRiadky(tabulka, stlpce, poradie, uprav) {
-    var out = [], od = 0, krok = 1000;
-    for (;;) {
-      var q = sb.from(tabulka).select(stlpce).order(poradie).range(od, od + krok - 1);
+    var krok = 1000, kluc = tabulka + ":" + stlpce, minule = Number(STRANY[kluc]) || 1, naraz = Math.min(Math.max(minule, 1), 10);
+    function strana(i) {
+      var q = sb.from(tabulka).select(stlpce).order(poradie).range(i * krok, i * krok + krok - 1);
       if (uprav) q = uprav(q);
-      var r = await q;
-      if (r.error) throw r.error;
-      out = out.concat(r.data);
-      if (r.data.length < krok) break;
-      od += krok;
+      return q.then(function (r) { if (r.error) throw r.error; return r.data; });
+    }
+    var cisla = [];
+    for (var i = 0; i < naraz; i++) cisla.push(i);
+    var strany = await Promise.all(cisla.map(strana));
+    while (strany[strany.length - 1].length === krok) strany.push(await strana(strany.length));
+    var out = [].concat.apply([], strany);
+    var treba = Math.floor(out.length / krok) + 1;
+    if (treba !== minule) {
+      STRANY[kluc] = treba;
+      try { localStorage.setItem("typek-strany", JSON.stringify(STRANY)); } catch (e) { /* bez úložiska */ }
     }
     return out;
   }
@@ -1038,8 +1066,8 @@
     var rows = await vsetkyRiadky("prevzatia", "*", "inzerat_id");
     var p = {}; rows.forEach(function (x) { p[x.inzerat_id] = x; }); S.prev = p;
   }
-  async function nacitajMaklerov() {
-    var r = await sb.from("makleri").select("*").order("meno");
+  async function nacitajMaklerov(dotaz) {
+    var r = await (dotaz || sb.from("makleri").select("*").order("meno"));
     if (r.error) throw r.error;
     S.makleri = r.data; S.mById = {};
     r.data.forEach(function (m) { S.mById[m.id] = m; });
@@ -1059,8 +1087,10 @@
   }
   // telefóny pri súkromných inzerátoch: číslo zadané maklérom má prednosť pred číslom z textu inzerátu
   async function nacitajTelefony() {
-    var zText = await vsetkyRiadky("archiv", "inzerat_id, telefon", "inzerat_id", function (q) { return q.not("telefon", "is", null); });
-    var ruc = await vsetkyRiadky("telefony", "*", "inzerat_id");
+    var w = await Promise.all([
+      vsetkyRiadky("archiv", "inzerat_id, telefon", "inzerat_id", function (q) { return q.not("telefon", "is", null); }),
+      vsetkyRiadky("telefony", "*", "inzerat_id")]);
+    var zText = w[0], ruc = w[1];
     var t = {};
     zText.forEach(function (x) { if (x.telefon) t[x.inzerat_id] = { telefon: x.telefon, zdroj: "text" }; });
     ruc.forEach(function (x) { t[x.inzerat_id] = x.telefon ? { telefon: x.telefon, zdroj: "makler", zadal: x.zadal, zadane: x.zadane } : null; });
@@ -1185,8 +1215,8 @@
     });
     popisZvoncek();
   }
-  async function nacitajVsetko() {
-    await nacitajMaklerov();
+  async function nacitajVsetko(dotazMaklerov) {
+    await nacitajMaklerov(dotazMaklerov);
     var meta = sb.from("stav_skenera").select("meta, upravene").maybeSingle().then(function (r) { S.meta = (r.data && r.data.meta) || {}; });
     await Promise.all([nacitajStrazcu(), nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
       nacitajPredajcov().catch(function () { S.pred = null; }), nacitajMatterport().catch(function () { S.mp = null; })]);
@@ -3456,11 +3486,10 @@
   var KROKY = [["druh", "Druh a cena"], ["lokalita", "Lokalita"], ["parametre", "Parametre"], ["fotky", "Fotky, video a text"], ["interne", "Interné a uloženie"]];
 
   async function nacitajPonuky() {
-    var r = await vsetkyRiadky("nehnutelnosti", "*", "id");
-    S.ponuky = r.sort(function (a, b) { return String(b.upravene).localeCompare(String(a.upravene)); });
-    var ri = await vsetkyRiadky("nehnutelnosti_interne", "*", "nehnutelnost_id");
-    var o = {}; ri.forEach(function (x) { o[x.nehnutelnost_id] = x; }); S.ponukyInt = o;
-    await nacitajNastrojePonuk();
+    // ponuky, interné údaje aj obhliadky a dopyty naraz (nie jedno po druhom)
+    var w = await Promise.all([vsetkyRiadky("nehnutelnosti", "*", "id"), vsetkyRiadky("nehnutelnosti_interne", "*", "nehnutelnost_id"), nacitajNastrojePonuk()]);
+    S.ponuky = w[0].sort(function (a, b) { return String(b.upravene).localeCompare(String(a.upravene)); });
+    var o = {}; w[1].forEach(function (x) { o[x.nehnutelnost_id] = x; }); S.ponukyInt = o;
   }
   function fotkaUrl(f) {
     if (!f) return "";
@@ -5024,9 +5053,12 @@
   // ------------------------------------------------------------ KALENDÁR
   var TYPY_UDALOSTI = [["stretnutie", "🤝", "Stretnutie"], ["obhliadka", "🗝️", "Obhliadka"], ["podpis", "✍️", "Podpis zmluvy"], ["telefonat", "📞", "Telefonát"], ["osobne", "🙂", "Osobné"], ["ine", "📌", "Iné"]];
   async function nacitajUdalosti() {
-    S.udalosti = await vsetkyRiadky("udalosti", "*", "id").catch(function () { return []; });
-    // kolegovia na udalosti fungujú až po zmene databázy (stĺpec ucastnici)
-    if (S.kalKolegovia === undefined) S.kalKolegovia = await sb.from("udalosti").select("ucastnici").limit(1).then(function (r) { return !r.error; }, function () { return false; });
+    // kolegovia na udalosti fungujú až po zmene databázy (stĺpec ucastnici) – overí sa naraz s načítaním udalostí
+    var w = await Promise.all([
+      vsetkyRiadky("udalosti", "*", "id").catch(function () { return []; }),
+      S.kalKolegovia !== undefined ? S.kalKolegovia : sb.from("udalosti").select("ucastnici").limit(1).then(function (r) { return !r.error; }, function () { return false; })]);
+    S.udalosti = w[0];
+    if (S.kalKolegovia === undefined) S.kalKolegovia = w[1];
   }
   function d2(n) { return String(n).padStart(2, "0"); }
   function denKluc(d) { d = new Date(d); return d.getFullYear() + "-" + d2(d.getMonth() + 1) + "-" + d2(d.getDate()); }
