@@ -485,6 +485,17 @@ def flight_data(h):
     return "".join(out)
 
 
+def _znova_strana(portal, strana, prvy, nacitaj):
+    """Pri plnej kontrole: strana vrátila menej inzerátov ako plná strana (portál niekedy v noci pošle prázdnu alebo
+    neúplnú stránku, hoci odpovie „v poriadku“). Po chvíli ju skúsime ešte raz – inak by sa zvyšok zoznamu nenačítal."""
+    time.sleep(random.uniform(20, 40))
+    druhy = nacitaj()
+    if len(druhy) > len(prvy):
+        log(f"  ! {portal} strana {strana}: najprv {len(prvy)} inzerátov, na druhý pokus {len(druhy)}")
+        return druhy
+    return prvy
+
+
 def nehn_strana(okres_slug, strana):
     url = f"https://www.nehnutelnosti.sk/vysledky/{okres_slug}/predaj?order=NEWEST&page={strana}"
     h = get(url)
@@ -512,6 +523,8 @@ def skenuj_nehnutelnosti(plny, max_stran):
         strana = 1
         while True:
             ads = nehn_strana(NEHN_OKRES[okres], strana)
+            if plny and len(ads) < 30:
+                ads = _znova_strana("Nehnuteľnosti.sk", strana, ads, lambda: nehn_strana(NEHN_OKRES[okres], strana))
             for ad in ads:
                 ad["_okres"] = okres
             vysledky += ads
@@ -531,11 +544,15 @@ def skenuj_reality(plny, max_stran):
         strana = 1
         while True:
             url = f"https://www.reality.sk/{REALITY_OKRES[okres]}/predaj/" + (f"?page={strana}" if strana > 1 else "")
-            h = get(url)
-            if not h:
+
+            def nacitaj(url=url):
+                h = get(url)
+                return BeautifulSoup(h, "html.parser").select("div.offer[data-offer-id]") if h else []
+            bloky = nacitaj()
+            if plny and len(bloky) < 24:
+                bloky = _znova_strana("Reality.sk", strana, bloky, nacitaj)
+            if not bloky:
                 break
-            s = BeautifulSoup(h, "html.parser")
-            bloky = s.select("div.offer[data-offer-id]")
             for b in bloky:
                 a = b.select_one("a[href]")
                 t = b.select_one("h2.offer-title")
@@ -579,11 +596,18 @@ def skenuj_topreality(plny, max_stran):
         strana = 1
         while True:
             cesta = "/vyhladavanie-nehnutelnosti.html" if strana == 1 else f"/vyhladavanie-nehnutelnosti-{strana}.html"
-            h = get("https://www.topreality.sk" + cesta + q)
-            if not h:
+            stav = {}
+
+            def nacitaj(url="https://www.topreality.sk" + cesta + q, stav=stav):
+                h = get(url)
+                stav["h"] = h or ""
+                return BeautifulSoup(h, "html.parser").select("div.row.estate[data-idinz]") if h else []
+            bloky = nacitaj()
+            if plny and len(bloky) < 15:
+                bloky = _znova_strana("TopReality.sk", strana, bloky, nacitaj)
+            h = stav["h"]
+            if not bloky:
                 break
-            s = BeautifulSoup(h, "html.parser")
-            bloky = s.select("div.row.estate[data-idinz]")
             for e in bloky:
                 a = e.select_one("h2.card-title a")
                 loc = e.select_one(".location")
@@ -1468,6 +1492,8 @@ def main():
     chyby = []
     zlyhane = set()   # portály, ktoré sa v tomto behu nepodarilo prečítať – ich inzeráty sa nesmú označiť ako zmiznuté
 
+    plne_pocty = dict(meta.get("plne_pocty") or {})   # koľko inzerátov vrátil portál pri poslednej plnej kontrole
+
     def bezpecne(nazov, fn, portal=None):
         try:
             v = fn()
@@ -1475,6 +1501,16 @@ def main():
                 if any(portal in h for h in PAUZA_PORTALU):
                     raise RuntimeError("portál je nedostupný (neprijíma spojenie) – skener ho skúsi znova o 30 minút")
                 raise RuntimeError("portál nevrátil žiadne inzeráty (zmenil sa vzhľad stránky?)")
+            if portal and plny and not (portal == "bazos" and bazos_typy is not None):
+                pred = plne_pocty.get(portal)
+                if pred and len(v) < 0.85 * pred:
+                    # portál vrátil citeľne menej než minule – asi neúplné stránky; zmiznuté sa dnes nevyhodnocujú
+                    zlyhane.add(portal)
+                    chyby.append(f"{nazov} vrátil len {len(v)} inzerátov (minule {pred}) – zmiznuté inzeráty sa vyhodnotia pri ďalšej kontrole")
+                    log(f"! {nazov}: len {len(v)} inzerátov (minule {pred}) – zmiznuté inzeráty z neho dnes nevyhodnocujem")
+                    plne_pocty[portal] = round(pred * 0.9)   # ak sa ponuka naozaj zmenšila, o pár nocí sa porovnanie prispôsobí
+                else:
+                    plne_pocty[portal] = len(v)
             return v
         except Exception as e:  # noqa – jeden pokazený portál nesmie zastaviť ostatné
             chyby.append(f"{nazov}: {e}")
@@ -1631,6 +1667,7 @@ def main():
                  + ([f"Radar Bazoša: {radar['chyba']}"] if radar.get("chyba") else []),
         "pauza_portalov": {h: t.isoformat(timespec="seconds") for h, t in PAUZA_PORTALU.items() if t > datetime.now(timezone.utc)},
         "podhodnotene_o_percent": CONFIG["podhodnotene_o_percent"],
+        "plne_pocty": plne_pocty,
     })
     if prvy_beh:
         meta["spusteny"] = NOW_ISO
