@@ -2163,10 +2163,10 @@
   // kedy je inzerát „nový“: prvé zachytenie skenerom, alebo keď ho predajca zverejnil znova (obnovený)
   function novyCas(z) {
     var t = new Date(z.prvy_krat).getTime();
-    if (z.obnovene) { var o = new Date(z.obnovene).getTime(); if (o > t) t = o; }
+    if (z.obnovene && ptyp(z) !== "rk") { var o = new Date(z.obnovene).getTime(); if (o > t) t = o; }   // len súkromníci
     return t;
   }
-  function obnovenyNedavno(z) { return z.obnovene && Date.now() - new Date(z.obnovene).getTime() < 14 * 864e5; }
+  function obnovenyNedavno(z) { return z.obnovene && ptyp(z) !== "rk" && Date.now() - new Date(z.obnovene).getTime() < 14 * 864e5; }
   // kedy bol inzerát zverejnený na portáli (dátum z portálu, inak kedy ho skener prvýkrát videl)
   function zverejnene(z) {
     var t = new Date(z.prvy_krat).getTime();

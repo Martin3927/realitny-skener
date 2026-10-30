@@ -1700,10 +1700,6 @@ def main():
     obnovene = []   # byty, ktoré predajca zverejnil znova (alebo pridal na ďalší portál) aspoň 3 dni po prvom zverejnení
     for pid, cleny in skupiny.items():
         povodny = inzeraty[pid]
-        if any(c["id"] in nove_id for c in cleny) and povodny["id"] not in nove_id \
-                and datetime.fromisoformat(str(povodny["prvy_krat"])) < NOW - timedelta(days=3):
-            povodny["obnovene"] = NOW_ISO
-            obnovene.append(povodny)
         # ten istý predajca dal byt na ten istý portál znova (starý inzerát zvyčajne zmazal) → karta otvára najnovší
         znova = [c for c in cleny if c["portal"] == povodny["portal"] and c.get("predajca") == povodny.get("predajca")
                  and c.get("url") and c["prvy_krat"] > povodny["prvy_krat"]]
@@ -1720,6 +1716,11 @@ def main():
             sukr = next((c for c in cleny if c["predajca_typ"] == "sukromny"), None)
             if sukr:
                 povodny["predajca_typ"], povodny["predajca_dovod"] = "sukromny", f"na {sukr['portal']} – {sukr.get('predajca_dovod') or 'súkromná osoba'}"
+        # súkromník zverejnil byt znova (alebo ho pridal na ďalší portál) aspoň 3 dni po prvom zverejnení
+        if povodny["predajca_typ"] != "rk" and any(c["id"] in nove_id for c in cleny) and povodny["id"] not in nove_id \
+                and datetime.fromisoformat(str(povodny["prvy_krat"])) < NOW - timedelta(days=3):
+            povodny["obnovene"] = NOW_ISO
+            obnovene.append(povodny)
 
     vyhodnot_ceny(inzeraty)
 
