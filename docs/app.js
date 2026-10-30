@@ -1320,6 +1320,12 @@
     rows.forEach(function (x) { o[x.inzerat_id] = x; });
     S.odh = o;
   }
+  // AI kontrola súkromných inzerátov (verdikt, dôvod, návrh hovoru); bez databázovej zmeny 079 jednoducho nič
+  async function nacitajAi() {
+    if (!maSekciu("inzeraty")) { S.ai = {}; return; }
+    var rows = await vsetkyRiadky("inzeraty_ai", "*", "inzerat_id").catch(function () { return []; });
+    var o = {}; rows.forEach(function (x) { o[x.inzerat_id] = x; }); S.ai = o;
+  }
   async function nacitajOznacenia() {
     var rows = await vsetkyRiadky("oznacenia", "*", "inzerat_id");
     var o = {}; rows.forEach(function (x) { if (x.predajca_typ) o[x.inzerat_id] = x; }); S.ozn = o;
@@ -1457,7 +1463,7 @@
   async function nacitajVsetko(dotazMaklerov) {
     await nacitajMaklerov(dotazMaklerov);
     var meta = sb.from("stav_skenera").select("meta, upravene").maybeSingle().then(function (r) { S.meta = (r.data && r.data.meta) || {}; });
-    await Promise.all([nacitajStrazcu(), nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
+    await Promise.all([nacitajStrazcu(), nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
       nacitajPredajcov().catch(function () { S.pred = null; }), nacitajMatterport().catch(function () { S.mp = null; })]);
   }
   var obnovuje = false;
@@ -1465,7 +1471,7 @@
     if (obnovuje || !S.me) return;
     obnovuje = true;
     try {
-      var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajTelefony(), chatNove(), inzeratyNoveNacitaj().catch(function () {})];
+      var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), chatNove(), inzeratyNoveNacitaj().catch(function () {})];
       // celý zoznam inzerátov raz za hodinu, medzitým len zmenené (bez databázovej zmeny 075 ako doteraz každých 10 min)
       if (Date.now() - S.lastInzLoad > (S.zmenyOd ? 60 : 10) * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
       else if (S.zmenyOd) uloha.push(nacitajZmeny().catch(function () {}));
@@ -2312,6 +2318,32 @@
       (k.asi_rk ? ' <span class="chip maybe">veľa inzerátov – možno realitka</span>' : "") + (casti.length ? " – " + casti.join(" · ") : "") + "</span>" +
       '<button class="btn-link" type="button" data-pred-otvor="' + esc(k.tel) + '">Celá história ›</button></div>';
   }
+  // verdikt AI: len označenie – o presune medzi RK rozhoduje maklér („Je to RK“)
+  function aiRiadok(z) {
+    if (ptyp(z) === "rk" || !S.ai) return "";
+    var a = S.ai[z.id]; if (!a || !a.verdikt) return "";
+    var v = a.verdikt === "rk" ? ["ai-rk", "AI: asi realitka"] : a.verdikt === "sukromny" ? ["ai-ok", "AI: súkromník"] : ["ai-na", "AI: nedá sa isto povedať"];
+    return '<div class="ai-row ' + v[0] + '" title="Posúdila AI ' + esc(datum(a.skontrolovane, true)) + ' – len odporúčanie, rozhoduje maklér">🤖 <b>' + v[1] +
+      (a.verdikt !== "neiste" && a.istota ? " · " + a.istota + " %" : "") + "</b>" + (a.dovod ? " – " + esc(a.dovod) : "") + "</div>";
+  }
+  function smsOdkazText(z, text) {
+    var t = S.tel[z.id]; if (!t) return "";
+    return "sms:" + String(t.telefon).split(",")[0].replace(/[^\d+]/g, "") + "?&body=" + encodeURIComponent(text || "");
+  }
+  // návrh prvého hovoru a SMS od AI (vytvára sa na požiadanie, uložený pri inzeráte pre makléra, ktorý ho vytvoril)
+  function panelAiHovor(z) {
+    var a = (S.ai && S.ai[z.id]) || {}, moj = a.hovor && a.hovor_vytvoril === S.me.id;
+    var h = '<div class="panel ai-hovor"><h4>✨ Ako začať prvý hovor</h4>';
+    if (S.aiHovorCaka === z.id) return h + '<div class="meta">Týpek číta inzerát a pripravuje návrh… (pár sekúnd)</div></div>';
+    if (!moj) return h + '<div class="meta">Návrh sa nepodarilo pripraviť.</div><div class="form-actions"><button class="btn" type="button" data-act="ai-hovor-znova">Skúsiť znova</button><button class="btn ghost" type="button" data-act="zavriet">Zavrieť</button></div></div>';
+    return h + '<p class="ai-text">' + esc(a.hovor).replace(/\n/g, "<br>") + "</p>" +
+      (a.sms ? '<h4>SMS predajcovi</h4><p class="ai-text">' + esc(a.sms) + "</p>" : "") +
+      '<div class="form-actions"><button class="btn" type="button" data-act="ai-kopiruj" data-co="hovor">Kopírovať hovor</button>' +
+      (a.sms ? '<button class="btn" type="button" data-act="ai-kopiruj" data-co="sms">Kopírovať SMS</button>' : "") +
+      (a.sms && S.tel[z.id] && !(S.predInz && S.predInz[z.id] && S.predInz[z.id].nevolat) ? '<a class="btn sms-btn" href="' + esc(smsOdkazText(z, a.sms)) + '" data-act="sms-posli">💬 Poslať túto SMS</a>' : "") +
+      '<button class="btn ghost" type="button" data-act="ai-hovor-znova">Nový návrh</button><button class="btn ghost" type="button" data-act="zavriet">Zavrieť</button></div>' +
+      '<small class="meta">Návrh od AI – prispôsob ho po svojom. Nič sa neposiela samo.</small></div>';
+  }
   function formTelefon(z) {
     var t = S.tel[z.id];
     return '<form class="panel" data-form="tel"><h4>Telefón predajcu</h4>' +
@@ -2353,7 +2385,7 @@
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
       (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + (dniNaPortali(z) - Math.floor((Date.now() - new Date(z.prvy_krat).getTime()) / 864e5) >= 2 ?
         '<span title="Zverejnené ' + datum(new Date(zverejnene(z)).toISOString()) + ", v skeneri " + ago(z.prvy_krat) + '">na portáli ' + dniNaPortali(z) + (dniNaPortali(z) <= 4 ? " dni" : " dní") + "</span>" : "<span>v skeneri " + ago(z.prvy_krat) + "</span>") + "</div>" +
-      telRiadok(z) + predRiadok(z) +
+      telRiadok(z) + predRiadok(z) + aiRiadok(z) +
       '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") +
       (obnovenyNedavno(z) ? '<span class="pill new" title="Predajca inzerát zverejnil znova – oplatí sa ozvať">🔁 Znova zverejnený ' + datum(z.obnovene) + "</span>" : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
       '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
@@ -2386,6 +2418,7 @@
         '<button class="btn' + (p && p.email ? " on" : "") + '" type="button" data-act="email">' + (p && p.email ? "✓ Email poslaný" : "Email poslaný") + "</button>";
     }
     h += '<button class="btn ghost" type="button" data-act="zvon" title="Nastaviť pripomienku">🔔 Pripomenúť</button>';
+    if (ptyp(z) !== "rk" && mozeUpravit) h += '<button class="btn ghost" type="button" data-act="ai-hovor" title="AI navrhne, ako začať prvý hovor a SMS predajcovi">✨ Návrh hovoru</button>';
     if (ptyp(z) !== "rk" && (moj || admin())) h += '<button class="btn ghost" type="button" data-act="do-ponuky" title="Preniesť do Nehnuteľností – predvyplní formulár">➕ Do ponuky</button>';
     if (ozn && ozn.predajca_typ === "rk") h += '<button class="btn ghost" type="button" data-act="oznac-zrus" title="Vrátiť rozpoznanie skenera">Nie je RK</button>';
     else if (ptyp(z) !== "rk") h += '<button class="btn ghost" type="button" data-act="oznac-rk" title="Presunúť medzi realitné kancelárie – platí aj pre ďalšie inzeráty s rovnakým číslom">Je to RK</button>';
@@ -2407,6 +2440,7 @@
     if (otv === "zvon") h += '<div class="panel">' + formPripomienka({ inzerat_id: z.id }) + "</div>";
     if (otv === "detail") h += detailPanel(z);
     if (otv === "tel" && ptyp(z) !== "rk") h += formTelefon(z);
+    if (otv === "ai-hovor" && ptyp(z) !== "rk") h += panelAiHovor(z);
     if (otv === "hovor" && mozeUpravit) {
       h += '<form class="panel" data-form="hovor"><h4>Ako dopadol hovor</h4><div class="form-grid">' +
         '<label class="field"><span>Výsledok</span><select name="vysledok" required><option value="">Vyberte…</option>' +
@@ -2522,7 +2556,21 @@
     var b = e.target.closest("#obsah .card [data-act]");
     if (!b || b.tagName === "SELECT") return;
     var id = b.closest(".card").dataset.id, act = b.dataset.act, p = S.prev[id];
-    if (["zvon", "detail", "hovor", "hist", "tel"].indexOf(act) >= 0 && S.open[id] !== act) animPanel();
+    if (["zvon", "detail", "hovor", "hist", "tel", "ai-hovor"].indexOf(act) >= 0 && S.open[id] !== act) animPanel();
+    if (act === "ai-hovor" || act === "ai-hovor-znova") {
+      if (act === "ai-hovor" && S.open[id] === "ai-hovor") { S.open[id] = null; return prekresliKartu(id); }
+      S.open[id] = "ai-hovor";
+      var a0 = S.ai && S.ai[id];
+      if (act === "ai-hovor" && a0 && a0.hovor && a0.hovor_vytvoril === S.me.id) return prekresliKartu(id);
+      if (S.aiHovorCaka) return;
+      S.aiHovorCaka = id; prekresliKartu(id);
+      try {
+        var dh = await volajFunkciu("ai-skener", { hovor: id });
+        S.ai = S.ai || {}; S.ai[id] = Object.assign({}, S.ai[id] || {}, { hovor: dh.hovor, sms: dh.sms, hovor_vytvoril: S.me.id });
+      } catch (err) { toast(chybaText(err), true); }
+      S.aiHovorCaka = null; return prekresliKartu(id);
+    }
+    if (act === "ai-kopiruj") { var a1 = (S.ai && S.ai[id]) || {}; return kopiruj(b.dataset.co === "sms" ? a1.sms : a1.hovor, b.dataset.co === "sms" ? "SMS je skopírovaná." : "Návrh hovoru je skopírovaný."); }
     if (act === "prevziat") return akcia(id, async function () { await rpc("prevziat", { p_inzerat: id }); toast("Inzerát je váš."); });
     if (act === "uvolnit") return akcia(id, async function () { await rpc("uvolnit", { p_inzerat: id }); toast("Inzerát je znova voľný."); });
     if (act === "sms" || act === "email") {

@@ -1806,6 +1806,12 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .pred-row .chip { margin: 0 2px }
 .pred-row.nevolat { background: var(--bad-soft); color: var(--bad) }
 .pred-row.nevolat b { color: var(--bad) }
+/* AI kontrola súkromníka na karte inzerátu a návrh prvého hovoru */
+.ai-row { margin: 4px 0 2px; padding: 5px 10px; border-radius: 8px; font-size: 13px; line-height: 1.45; background: var(--surface-2); color: var(--muted) }
+.ai-row.ai-rk { background: var(--bad-soft); color: var(--bad) }
+.ai-row.ai-ok { background: var(--good-soft); color: var(--good) }
+.ai-hovor .ai-text { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); line-height: 1.55; white-space: normal }
+.ai-hovor h4 + .ai-text { margin-top: 6px }
 .pred-av { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--gold-soft); font-size: 17px }
 .pred-av.velky { width: 48px; height: 48px; font-size: 24px }
 .pred-karta.nevolat { border-color: var(--bad-soft) }
