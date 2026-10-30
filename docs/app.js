@@ -1607,8 +1607,28 @@
     var b = $(".menu-btn"); if (b) b.setAttribute("aria-expanded", "false");
   }
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") zavriMenu(); });
+  // pri obnove zoznamu (každú minútu, po návrate z volania…) nesmú zmiznúť rozpísané formuláre na kartách
+  function zachovajFormulare(koren, fn) {
+    var hodnoty = {}, akt = document.activeElement, aktKluc = null, vyber = null;
+    function kluc(el) {
+      var k = el.closest("[data-id]"), f = el.closest("form");
+      return (k ? k.dataset.id : "") + "|" + (f ? f.dataset.form || f.className : "") + "|" + el.name;
+    }
+    (koren || document).querySelectorAll("#obsah .card [name]").forEach(function (el) {
+      if (!/INPUT|TEXTAREA|SELECT/.test(el.tagName) || el.type === "hidden") return;
+      hodnoty[kluc(el)] = el.type === "checkbox" || el.type === "radio" ? { c: el.checked } : { v: el.value };
+      if (el === akt) { aktKluc = kluc(el); try { vyber = [el.selectionStart, el.selectionEnd]; } catch (e) { vyber = null; } }
+    });
+    fn();
+    if (!Object.keys(hodnoty).length) return;
+    document.querySelectorAll("#obsah .card [name]").forEach(function (el) {
+      var k = kluc(el), h = hodnoty[k]; if (!h) return;
+      if ("c" in h) el.checked = h.c; else if (el.value !== h.v) el.value = h.v;
+      if (k === aktKluc) { el.focus(); if (vyber && vyber[0] != null) try { el.setSelectionRange(vyber[0], vyber[1]); } catch (e) { /* select */ } }
+    });
+  }
   function prekresliObsah() {
-    if (S.tab === "inzeraty") { vykresliStaty(); vykresliZoznam(); }
+    if (S.tab === "inzeraty") zachovajFormulare(null, function () { vykresliStaty(); vykresliZoznam(); });
     else if (S.tab === "schrankovanie") { if (!S.schEdit && !S.sidForm) vykresliSchrankovanie(); }
     else if (S.tab === "makleri") { var fo = document.activeElement, prazdne = !$("#obsah").children.length; if (prazdne || (!S.mkPohlad && !(fo && fo.closest && fo.closest("#obsah") && /INPUT|TEXTAREA|SELECT/.test(fo.tagName)))) vykresliMaklerov(); }
     else if (S.tab === "vykon") vykresliVykon();
@@ -2488,7 +2508,7 @@
     var z = S.inz.find(function (x) { return x.id === id; });
     if (!stara || !z) return vykresliZoznam();
     var t = document.createElement("div"); t.innerHTML = karta(z);
-    stara.replaceWith(t.firstElementChild);
+    zachovajFormulare(stara, function () { stara.replaceWith(t.firstElementChild); });
     vykresliStaty();
   }
 
