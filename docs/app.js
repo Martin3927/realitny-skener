@@ -6570,8 +6570,14 @@
     if (p.izby) par.push("🛏️ " + p.izby + (p.izby === 1 ? " izba" : p.izby <= 4 ? " izby" : " izieb")); if (p.stav_objektu) par.push("✨ " + p.stav_objektu);
     var tagy = ["#AlphaReality", "#reality", p.transakcia === "prenajom" ? "#prenajom" : "#predaj", "#" + String(p.obec || "Spis").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z]/g, ""),
       { byty: "#byt", domy: "#rodinnydom", pozemky: "#pozemok", chaty: "#chata", garaze: "#garaz", priestory: "#priestory", objekty: "#objekt" }[p.kategoria] || "#nehnutelnost"];
+    // návrh od AI (✨ Doladiť s AI): ďalšie výhody z popisu a doladený úvod; zvyšok príspevku ostáva podľa šablóny
+    var ai = S.sieteAi && S.sieteAi.id === p.id ? S.sieteAi : null, uvod = ai && ai.uvod ? ai.uvod : p.intro;
+    if (ai) par = par.concat(ai.vyhody || []);
+    var odkaz = p.kategoria === "byty"
+      ? "\n\n📩 " + (p.virtualna_prehliadka ? "3D virtuálnu prehliadku, viac fotografií a informácií nájdete na našom webe." : "Viac fotografií a informácií nájdete na našom webe.") + "\n👉 " + verejnyOdkaz(p.id)
+      : "\n\n👉 Fotky a detaily: " + verejnyOdkaz(p.id);
     return "🏡 " + (p.transakcia === "prenajom" ? "NA PRENÁJOM" : "NA PREDAJ") + " – " + nazovPonuky(p) + "\n📍 " + [p.cast_obce, p.obec].filter(Boolean).join(", ") + "\n💰 " + cenaPonuky(p) +
-      (par.length ? "\n\n" + par.join("\n") : "") + (p.intro ? "\n\n" + p.intro : "") + "\n\n👉 Fotky a detaily: " + verejnyOdkaz(p.id) +
+      (par.length ? "\n\n" + par.join("\n") : "") + (uvod ? "\n\n" + uvod : "") + odkaz +
       "\n📞 " + (mk.meno || "") + (mk.telefon ? ", " + mk.telefon : "") + "\n\n" + tagy.join(" ");
   }
   function nacitajObr(src) {
@@ -6621,17 +6627,53 @@
     return '<div class="pd-panel" id="pd-siete"><h4>📣 Sociálne siete</h4><div class="seg" role="group">' + FORMATY.map(function (f) {
       return '<button type="button" data-sfmt="' + f[0] + '" aria-pressed="' + (fmt === f[0]) + '" title="' + esc(f[4]) + '">' + esc(f[1]) + "</button>"; }).join("") + "</div>" +
       '<div class="siete-grid"><div class="siete-nahlad"><canvas id="banner" aria-label="Náhľad banneru"></canvas></div><div class="siete-text">' +
-      '<label class="field"><span>Text príspevku</span><textarea id="siete-text" rows="11">' + esc(textNaSiete(p)) + "</textarea></label>" +
+      (maSekciu("asistent") ? '<div class="siete-ai"><button class="btn" type="button" data-siete-ai title="AI doplní výhody z popisu, doladí úvod' + (smieSiete() ? " a vyberie fotky z každej miestnosti" : "") + '. Symboly, odkaz a kontakt ostanú.">✨ Doladiť s AI</button><span class="meta" id="siete-ai-stav">' +
+        (S.sieteAi && S.sieteAi.id === p.id ? "✨ Text" + (S.sieteAi.fotky ? " aj fotky" : "") + " doladila AI – skontroluj pred zverejnením." : "") + "</span></div>" : "") +
+      '<label class="field"><span>Text príspevku</span><textarea id="siete-text" rows="15">' + esc(textNaSiete(p)) + "</textarea></label>" +
       '<div class="pd-zdiel-btns"><button class="btn primary" type="button" data-siete="stiahnut">⬇️ Stiahnuť obrázok</button><button class="btn" type="button" data-siete="text">Kopírovať text</button>' +
       '<a class="btn" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(verejnyOdkaz(p.id)) + '" target="_blank" rel="noopener">Facebook</a>' +
       '<a class="btn" href="https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(verejnyOdkaz(p.id)) + '" target="_blank" rel="noopener">LinkedIn</a>' +
       (navigator.canShare ? '<button class="btn" type="button" data-siete="zdielat">📤 Instagram a iné</button>' : "") + "</div>" +
       '<p class="meta">Banner s logom: stiahnite obrázok a pridajte ho ručne (na mobile cez „Instagram a iné“). Fotky ponuky zverejníte jedným klikom nižšie.</p></div></div>' + blokPriamo(p) + "</div>";
   }
+  // zmenšené náhľady fotiek (JPEG ~448 px) pre AI – fotky sa sťahujú zo servera a zmenšia v prehliadači
+  async function nahladyFotiek(F) {
+    var vys = [];
+    await Promise.all((F || []).slice(0, 30).map(async function (f, i) {
+      var img = await nacitajObr(fotkaUrl(f)); if (!img || !img.naturalWidth) return;
+      var k = Math.min(1, 448 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      try { vys.push({ i: i, w: f.w || img.naturalWidth, h: f.h || img.naturalHeight, data: c.toDataURL("image/jpeg", 0.7).split(",")[1] }); } catch (e) { /* fotka z iného webu */ }
+    }));
+    return vys.sort(function (a, b) { return a.i - b.i; });
+  }
   function napojSiete(p) {
     var c = $("#banner"); if (!c) return;
     kresliBanner(p, S.siteFmt || "stvorec", c);
     napojPriamo(p);
+    var aiB = $("[data-siete-ai]");
+    if (aiB) aiB.onclick = async function () {
+      var ta = $("#siete-text"), st = $("#siete-ai-stav");
+      if (ta && ta.value.trim() !== textNaSiete(p).trim() && !confirm2("AI prepíše text príspevku aj s tvojimi úpravami. Pokračovať?")) return;
+      // fotky vyberá AI len tam, kde sa dá zverejniť jedným klikom (právo na FB a IG kancelárie, aktívna ponuka)
+      var sFotkami = !!$("#siete-priamo") && (p.fotky || []).length > 1;
+      aiB.disabled = true; aiB.textContent = "✨ Pracujem…";
+      try {
+        if (st) st.textContent = sFotkami ? "Pripravujem fotky…" : "Dolaďujem text…";
+        var nahlady = sFotkami ? await nahladyFotiek(p.fotky) : [];
+        if (st) st.textContent = sFotkami ? "Dolaďujem text a vyberám fotky z každej miestnosti… (pár sekúnd)" : "Dolaďujem text…";
+        var d = await volajFunkciu("ai-prispevok", { ponuka_id: p.id, nahlady: nahlady });
+        S.sieteAi = { id: p.id, vyhody: d.vyhody || [], uvod: d.uvod || "", miestnosti: d.miestnosti || {}, fotky: !!(d.fotky && d.fotky.length) };
+        if (d.fotky && d.fotky.length) S.sieteFotky = { id: p.id, v: d.fotky.slice(0, 10) };
+        vykresliDetailPonuky();
+        var pn = $("#pd-siete"); if (pn) pn.scrollIntoView({ behavior: "smooth", block: "start" });
+        toast("✨ Hotovo – skontroluj text" + (d.fotky && d.fotky.length ? " a fotky" : "") + " a potom zverejni.");
+      } catch (err) {
+        toast(chybaText(err), true); if (st) st.textContent = "";
+        aiB.disabled = false; aiB.textContent = "✨ Doladiť s AI";
+      }
+    };
     document.querySelectorAll("[data-sfmt]").forEach(function (b) { b.onclick = function () { S.siteFmt = b.dataset.sfmt; document.querySelectorAll("[data-sfmt]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); kresliBanner(p, S.siteFmt, c); }; });
     document.querySelectorAll("[data-siete]").forEach(function (b) {
       b.onclick = function () {
@@ -6825,8 +6867,9 @@
       '<p class="meta">Príspevok s textom vyššie a vybranými fotkami pošleme na Facebook stránku a Instagram kancelárie. Nič sa nezverejní samo – len po kliknutí na tlačidlo.</p>' +
       '<div class="siete-volby"><label class="toggle"><input type="checkbox" id="sp-fb" checked> Facebook</label><label class="toggle"><input type="checkbox" id="sp-ig" checked> Instagram</label></div>' +
       (F.length ? '<div class="sp-fotky">' + F.map(function (f, i) {
+        var izba = S.sieteAi && S.sieteAi.id === p.id && V.indexOf(i) >= 0 ? (S.sieteAi.miestnosti || {})[String(i)] : "";
         return '<label class="sp-foto' + (igSedi(f) ? "" : " vyska") + '"' + (igSedi(f) ? "" : ' title="Na Instagram nepôjde – fotka je na výšku"') + '><input type="checkbox" data-sp-foto="' + i + '"' + (V.indexOf(i) >= 0 ? " checked" : "") + ">" +
-          '<img src="' + esc(fotkaUrl(f)) + '" alt="Fotka ' + (i + 1) + '" loading="lazy"><span class="sp-n">' + (i + 1) + "</span></label>";
+          '<img src="' + esc(fotkaUrl(f)) + '" alt="Fotka ' + (i + 1) + '" loading="lazy">' + (izba ? '<span class="sp-izba">' + (V.indexOf(i) + 1) + ". " + esc(izba) + "</span>" : "") + '<span class="sp-n">' + (i + 1) + "</span></label>";
       }).join("") + "</div>" : '<p class="meta">Ponuka nemá fotky – najprv ich pridajte.</p>') +
       '<p class="meta" id="sp-info"></p><div class="form-actions"><button class="btn primary" type="button" id="sp-posli"' + (F.length ? "" : " disabled") + ">🚀 Zverejniť teraz</button></div>" +
       '<div id="sp-historia"></div></div>';
@@ -6840,7 +6883,7 @@
     box.querySelectorAll("[data-sp-foto]").forEach(function (c) {
       c.onchange = function () {
         var i = Number(c.dataset.spFoto), V = S.sieteFotky.v;
-        if (c.checked) { if (V.length >= 10) { c.checked = false; return toast("Najviac 10 fotiek v jednom príspevku.", true); } V.push(i); V.sort(function (a, b) { return a - b; }); }
+        if (c.checked) { if (V.length >= 10) { c.checked = false; return toast("Najviac 10 fotiek v jednom príspevku.", true); } V.push(i); }
         else V.splice(V.indexOf(i), 1);
         info();
       };

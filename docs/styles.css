@@ -1303,6 +1303,9 @@ pre.kod { width: 100%; margin: 0; background: var(--graphite); color: #e9e4d6; b
 .siete-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start }
 .siete-nahlad canvas { width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.15); display: block; max-height: 70vh; object-fit: contain }
 .siete-text { display: grid; gap: 10px }
+/* AI v paneli Sociálne siete: tlačidlo a stav, názov miestnosti a poradie na vybraných fotkách */
+.siete-ai { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center }
+.siete-ai .meta { font-size: 13px }
 @media (max-width: 760px) { .siete-grid { grid-template-columns: minmax(0, 1fr) } }
 .stat-nadpis { margin: 18px 0 4px; font-family: var(--display); font-size: 16px }
 
@@ -1577,6 +1580,9 @@ header.top { background: linear-gradient(100deg, var(--graphite) 0%, var(--graph
 .sp-foto:has(input:checked) img { opacity: 1 }
 .sp-foto:focus-within { outline: 2px solid var(--gold); outline-offset: 2px }
 .sp-n { position: absolute; right: 5px; bottom: 4px; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8) }
+.sp-izba { position: absolute; left: 0; right: 0; bottom: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
+  font-size: 10.5px; font-weight: 700; color: #fff; background: rgba(30,42,53,.85); padding: 2px 3px }
+.sp-izba + .sp-n { display: none }
 .sp-foto.vyska::after { content: "IG ✕"; position: absolute; right: 4px; top: 4px; font-size: 10px; font-weight: 800; background: rgba(0,0,0,.6); color: #fff; padding: 1px 4px; border-radius: 4px }
 .sp-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
 .sp-hist li { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
