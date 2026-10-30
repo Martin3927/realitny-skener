@@ -1661,6 +1661,14 @@ def main():
     # typ predajcu za celú skupinu: jasná realitka (portál, meno, text) > jasný súkromník > slabé znaky
     for pid, cleny in skupiny.items():
         povodny = inzeraty[pid]
+        # ten istý predajca dal byt na ten istý portál znova (starý inzerát zvyčajne zmazal) → karta otvára najnovší
+        znova = [c for c in cleny if c["portal"] == povodny["portal"] and c.get("predajca") == povodny.get("predajca")
+                 and c.get("url") and c["prvy_krat"] > povodny["prvy_krat"]]
+        if znova:
+            najnovsi = max(znova, key=lambda c: c["prvy_krat"])
+            povodny["dalsie_odkazy"] = [o for o in povodny["dalsie_odkazy"] if o[1] != najnovsi["url"]]
+            povodny["url"] = najnovsi["url"]
+            povodny["publikovane"] = najnovsi.get("publikovane") or povodny.get("publikovane")
         silne_rk = next((c for c in cleny if c is not povodny and je_silne_rk(c)), None)
         if silne_rk and not je_silne_rk(povodny):
             povodny["predajca_typ"], povodny["predajca_dovod"] = "rk", f"na {silne_rk['portal']} inzeruje RK ({silne_rk.get('predajca') or ''})"
