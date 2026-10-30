@@ -965,6 +965,12 @@ def slova_nazvu(nazov):
     return [w for w in re.findall(r"[a-z0-9]+", bez_diakritiky(nazov or "")) if len(w) >= 3 and w not in ("predaj", "predam", "na", "predaju")]
 
 
+def je_silne_rk(z):
+    """RK podľa portálu, mena predajcu alebo jasného textu – nie len podľa počtu inzerátov či slova „ponúkame“."""
+    d = z.get("predajca_dovod") or ""
+    return z.get("predajca_typ") == "rk" and " inzeruje RK (" not in d and "inzerát" not in d
+
+
 def je_duplikat(a, b):
     """Ten istý inzerát na inom portáli (alebo dvakrát od toho istého predajcu)."""
     if a.get("obec") and b.get("obec") and a["obec"] != b["obec"]:
@@ -1542,15 +1548,21 @@ def main():
                 _rpc("skener_radar_vybavene", p_kluc=SKENER_KLUC, p_kategorie=[BAZOS_KAT[t] for t in (bazos_typy or TYPY)], p_od=NOW_ISO)
             except Exception as e:  # noqa
                 log(f"! radar: {e}")
-        pocty = {}
+        # koľko RÔZNYCH nehnuteľností predajca ponúka – súkromník, ktorý ten istý byt zverejní znova
+        # (alebo v dvoch kategóriách), nesmie vyzerať ako realitka s viacerými inzerátmi
+        nehn_predajcu = {}
         for r in surove:
             if r.get("uzivatel_id"):
-                pocty[r["uzivatel_id"]] = pocty.get(r["uzivatel_id"], 0) + 1
+                cena = cena_z_textu(r.get("cena_txt"))
+                kluc = ("c", cena) if cena else ("n", " ".join(sorted(slova_nazvu(r.get("nazov")))))
+                nehn_predajcu.setdefault(r["uzivatel_id"], set()).add(kluc)
+        pocty = {k: len(v) for k, v in nehn_predajcu.items()}
         # koľko inzerátov má predajca, vieme presne len z plnej kontroly – pri kratších kontrolách použijeme zapamätaný počet
+        meta.pop("bazos_pocty", None)   # staršie počty rátali aj opakované zverejnenie toho istého bytu
         if plny and surove:
-            meta["bazos_pocty"] = {k: v for k, v in pocty.items() if v >= 2}
+            meta["bazos_pocty_nehn"] = {k: v for k, v in pocty.items() if v >= 2}
         else:
-            for k, v in (meta.get("bazos_pocty") or {}).items():
+            for k, v in (meta.get("bazos_pocty_nehn") or {}).items():
                 pocty[k] = max(pocty.get(k, 0), v)
         # celý popis stiahneme len pri nových inzerátoch z našich okresov
         detailov = 0
@@ -1622,8 +1634,12 @@ def main():
 
     # --- duplicity medzi portálmi (rovnaký typ, okres, cena a plocha)
     podla_kluca = {}
+    skupiny = {}
     for e in inzeraty.values():
         e["dalsie_odkazy"] = []
+        # „RK“ prenesené z duplikátu sa vyhodnocuje pri každej kontrole znova (nesmie sa „prilepiť“)
+        if e.get("predajca_typ") == "rk" and " inzeruje RK (" in (e.get("predajca_dovod") or ""):
+            e["predajca_typ"], e["predajca_dovod"] = "asi_sukromny", "bez znakov realitky"
     for e in sorted(inzeraty.values(), key=lambda x: x["prvy_krat"]):
         if not e.get("aktivny"):
             continue
@@ -1639,12 +1655,20 @@ def main():
                     povodny["portaly"].append(p)
             if [e["portal"], e["url"]] not in povodny.setdefault("dalsie_odkazy", []):
                 povodny["dalsie_odkazy"].append([e["portal"], e["url"]])
-            # ak aspoň jeden portál hovorí RK, je to RK
-            if e["predajca_typ"] == "rk" and povodny["predajca_typ"] != "rk":
-                povodny["predajca_typ"], povodny["predajca_dovod"] = "rk", f"na {e['portal']} inzeruje RK ({e.get('predajca') or ''})".strip()
-                povodny["predajca"] = povodny.get("predajca") or e.get("predajca")
+            skupiny.setdefault(povodny["id"], []).append(e)
         else:
             podla_kluca.setdefault(k, []).append(e)
+    # typ predajcu za celú skupinu: jasná realitka (portál, meno, text) > jasný súkromník > slabé znaky
+    for pid, cleny in skupiny.items():
+        povodny = inzeraty[pid]
+        silne_rk = next((c for c in cleny if c is not povodny and je_silne_rk(c)), None)
+        if silne_rk and not je_silne_rk(povodny):
+            povodny["predajca_typ"], povodny["predajca_dovod"] = "rk", f"na {silne_rk['portal']} inzeruje RK ({silne_rk.get('predajca') or ''})"
+            povodny["predajca"] = povodny.get("predajca") or silne_rk.get("predajca")
+        elif not silne_rk and not je_silne_rk(povodny) and povodny["predajca_typ"] != "sukromny":
+            sukr = next((c for c in cleny if c["predajca_typ"] == "sukromny"), None)
+            if sukr:
+                povodny["predajca_typ"], povodny["predajca_dovod"] = "sukromny", f"na {sukr['portal']} – {sukr.get('predajca_dovod') or 'súkromná osoba'}"
 
     vyhodnot_ceny(inzeraty)
 
