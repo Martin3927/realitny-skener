@@ -1322,7 +1322,7 @@
   }
   // AI kontrola súkromných inzerátov (verdikt, dôvod, návrh hovoru); bez databázovej zmeny 079 jednoducho nič
   async function nacitajAi() {
-    if (!maSekciu("inzeraty") || !maSekciu("asistent")) { S.ai = {}; return; }
+    if (!maSekciu("inzeraty")) { S.ai = {}; return; }
     var rows = await vsetkyRiadky("inzeraty_ai", "*", "inzerat_id").catch(function () { return []; });
     var o = {}; rows.forEach(function (x) { o[x.inzerat_id] = x; }); S.ai = o;
   }
@@ -2318,9 +2318,9 @@
       (k.asi_rk ? ' <span class="chip maybe">veľa inzerátov – možno realitka</span>' : "") + (casti.length ? " – " + casti.join(" · ") : "") + "</span>" +
       '<button class="btn-link" type="button" data-pred-otvor="' + esc(k.tel) + '">Celá história ›</button></div>';
   }
-  // verdikt AI: len označenie – o presune medzi RK rozhoduje maklér („Je to RK“)
+  // verdikt AI: len označenie – o presune medzi RK rozhoduje maklér („Je to RK“); vidí ho každý so skenerom
   function aiRiadok(z) {
-    if (ptyp(z) === "rk" || !S.ai || !maSekciu("asistent")) return "";
+    if (ptyp(z) === "rk" || !S.ai) return "";
     var a = S.ai[z.id]; if (!a || !a.verdikt) return "";
     var v = a.verdikt === "rk" ? ["ai-rk", "AI: asi realitka"] : a.verdikt === "sukromny" ? ["ai-ok", "AI: súkromník"] : ["ai-na", "AI: nedá sa isto povedať"];
     return '<div class="ai-row ' + v[0] + '" title="Posúdila AI ' + esc(datum(a.skontrolovane, true)) + ' – len odporúčanie, rozhoduje maklér">🤖 <b>' + v[1] +
@@ -3225,7 +3225,7 @@
           '<label class="toggle"><input type="checkbox" data-f="aktivny"' + (m.aktivny ? " checked" : "") + (ja ? " disabled" : "") + "> Aktívny</label>" +
           '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label>" +
           '<label class="toggle" data-nestrazit title="Môže zverejniť svoje ponuky na Facebook a Instagram kancelárie. Ukladá sa hneď."><input type="checkbox" data-pravo="siete"' + (m.rola === "admin" || (m.pristup || []).indexOf("siete") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Zverejňuje na FB a IG</label>" +
-          '<label class="toggle" data-nestrazit title="AI asistent, ✨ Doladiť s AI pri príspevkoch, ✨ Návrh hovoru a hodnotenie AI v skeneri. Ukladá sa hneď."><input type="checkbox" data-pravo="asistent"' + (m.rola === "admin" || (m.pristup || []).indexOf("asistent") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Používa AI</label></div>" +
+          '<label class="toggle" data-nestrazit title="AI asistent, ✨ Doladiť s AI pri príspevkoch a ✨ Návrh hovoru v skeneri. Hodnotenie AI v skeneri vidia všetci. Ukladá sa hneď."><input type="checkbox" data-pravo="asistent"' + (m.rola === "admin" || (m.pristup || []).indexOf("asistent") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Používa AI</label></div>" +
           '<div class="mk-pristup"><span class="meta">Vidí sekcie</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor vidí všetko vrátane Výkonu a Maklérov.</span>' :
             SEKCIE.filter(function (x) { return x[0] !== "asistent"; }).map(function (x) { return '<button type="button" class="cip" data-pristup="' + x[0] + '" aria-pressed="' + ((m.pristup || []).indexOf(x[0]) >= 0) + '">' + x[1] + "</button>"; }).join("")) + "</div></div>" +
           '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
@@ -3339,7 +3339,7 @@
     });
     // práva makléra (FB a IG kancelárie, AI) – ukladajú sa hneď (ako sekcie), nie tlačidlom Uložiť
     var PRAVA = { siete: [" teraz môže zverejňovať svoje ponuky na Facebook a Instagram kancelárie.", " už nemôže zverejňovať na Facebook a Instagram kancelárie."],
-      asistent: [" teraz môže používať AI (asistent, texty, návrhy hovorov, hodnotenie v skeneri).", " už nemôže používať AI."] };
+      asistent: [" teraz môže používať AI (asistent, texty, návrhy hovorov).", " už nemôže používať AI (hodnotenie AI v skeneri vidí ďalej)."] };
     el.querySelectorAll("[data-pravo]").forEach(function (c) {
       c.onchange = async function () {
         var id = c.closest("[data-m]").dataset.m, m = S.mById[id], pravo = c.dataset.pravo; if (!m || !PRAVA[pravo]) return;
