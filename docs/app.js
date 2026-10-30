@@ -1644,7 +1644,7 @@
     else if (S.tab === "asistent") { if (!$("#ai-spravy")) vykresliAsistenta(); }
     else if (S.tab === "web") { if (!$(".web-box")) vykresliWeb(); }
     else if (S.tab === "recenzie") { if (!S.recForm) vykresliRecenzie(); }
-    else if (S.tab === "chat") { if (!$("#chat-spravy")) vykresliChat(); else oznacPrecitane(); }
+    else if (S.tab === "chat") { if (!$("#chat-spravy")) vykresliChat(); else { oznacPrecitane(); kresliVidenie(); } }
     else if (S.tab === "matterport") { if (!$(".mp-box") || (!S.mpOkno && !$("#mp-okno"))) vykresliMatterport(); }
     else if (S.mpOkno || $("#mp-okno")) { S.mpOkno = null; zavriMpOkno(); }
     var m = S.meta || {};
@@ -7880,8 +7880,14 @@
         });
       }
     }
+    // spoločný chat: kto čo videl (čas poslednej videnej správy každého kolegu)
+    var videnie = false;
+    if (S.tab === "chat" && !S.chatS) {
+      var mk = await sb.from("makleri").select("id,chat_precitane");
+      if (!mk.error) mk.data.forEach(function (x) { var m = S.mById[x.id]; if (m && m.id !== S.me.id && m.chat_precitane !== x.chat_precitane) { m.chat_precitane = x.chat_precitane; videnie = true; } });
+    }
     if (S.tab !== "chat") return;
-    if (prekreslit) vykresliChat(); else if (znacka) znackaPrecitania();
+    if (prekreslit) vykresliChat(); else { if (znacka) znackaPrecitania(); if (videnie) kresliVidenie(); }
   }
   // prečítané na inom zariadení (počítač ↔ mobil): obálka, zvonček, čísla aj upozornenie v systéme zmiznú aj tu
   async function synchPrecitane(hned) {
@@ -8505,6 +8511,78 @@
     el.insertAdjacentHTML("afterend", '<div class="sprava-stav' + (m.precitane ? " prec" : "") + '">' + (m.precitane ? "✓✓ Prečítané " +
       casKonverzacie(m.precitane) : "✓ Doručené") + "</div>");
   }
+  // ---------- spoločný chat: kto videl správu
+  // makleri.chat_precitane = čas poslednej správy tímu, ktorú kolega videl (pri odoslaní vlastnej správy sa posunie tiež)
+  function casVidenia(m) {
+    var t = m.chat_precitane ? new Date(m.chat_precitane).getTime() : 0;
+    for (var i = S.chat.length - 1; i >= 0; i--) if (S.chat[i].makler_id === m.id) { t = Math.max(t, new Date(S.chat[i].vytvorene).getTime()); break; }
+    return t;
+  }
+  // kolegovia okrem autora správy a mňa: kto ju už videl a kto ešte nie
+  function ktoVidel(sp) {
+    var t = new Date(sp.vytvorene).getTime(), videli = [], nie = [];
+    clenoviaChatu().forEach(function (m) {
+      if (m.id === S.me.id || m.id === sp.makler_id) return;
+      (casVidenia(m) >= t ? videli : nie).push(m);
+    });
+    return { videli: videli, nie: nie };
+  }
+  function detailVidenia(id) {
+    var sp = S.chat.find(function (m) { return m.id === Number(id); }); if (!sp) return "";
+    var k = ktoVidel(sp); if (!k.videli.length && !k.nie.length) return "";
+    var mena = function (z) { return z.map(function (m) { return esc(krstneMeno(m.id)); }).join(", "); };
+    return '<div class="videli-detail' + (sp.makler_id === S.me.id ? " ja" : "") + '" data-detail="' + sp.id + '">' +
+      (!k.nie.length ? '<span class="vd-ano">✓✓ Videli všetci (' + k.videli.length + ")</span>" :
+        (k.videli.length ? '<span class="vd-ano">✓✓ Videli: ' + mena(k.videli) + "</span>" : '<span class="vd-nikto">Zatiaľ to nikto nevidel</span>') +
+        '<span class="vd-nie">Ešte nevideli: ' + mena(k.nie) + "</span>") + "</div>";
+  }
+  // malé fotky kolegov pod poslednou správou, ktorú videli (ako v Messengeri)
+  function kresliVidenie() {
+    var box = $("#chat-spravy"); if (!box || S.chatS) return;
+    box.querySelectorAll(".videli-rad").forEach(function (x) { x.remove(); });
+    var od = box.querySelector(".videli-detail"); if (od) { var nd = detailVidenia(od.dataset.detail); if (nd) od.outerHTML = nd; else od.remove(); }
+    var zoz = S.chat; if (!zoz.length) return;
+    var casy = zoz.map(function (m) { return new Date(m.vytvorene).getTime(); }), kde = {};
+    clenoviaChatu().forEach(function (m) {
+      if (m.id === S.me.id) return;
+      var t = casVidenia(m); if (!t) return;
+      for (var i = zoz.length - 1; i >= 0; i--) {
+        if (casy[i] > t) continue;
+        if (zoz[i].makler_id !== m.id) (kde[zoz[i].id] = kde[zoz[i].id] || []).push(m);
+        break;
+      }
+    });
+    Object.keys(kde).forEach(function (id) {
+      var el = box.querySelector('[data-sprava="' + id + '"]'); if (!el) return;
+      var ludia = kde[id].sort(function (a, b) { return casVidenia(a) - casVidenia(b); });
+      var slovo = ludia.length > 1 ? "Videli" : rod(ludia[0].id, "Videl", "Videla");
+      var popis = slovo + ": " + ludia.map(function (m) { return krstneMeno(m.id); }).join(", ");
+      var za = el.nextElementSibling && el.nextElementSibling.classList.contains("videli-detail") ? el.nextElementSibling : el;
+      za.insertAdjacentHTML("afterend", '<button type="button" class="videli-rad" data-po="' + esc(id) + '" title="' + esc(popis) + '" aria-label="' + esc(popis) + '">' +
+        "<span>" + slovo + "</span>" + ludia.slice(0, 8).map(function (m) { return avatar(m.id, 18); }).join("") +
+        (ludia.length > 8 ? "<b>+" + (ludia.length - 8) + "</b>" : "") + "</button>");
+    });
+  }
+  // ťuknutie na správu: v spoločnom chate ukáže, kto ju videl; na dotykovom zariadení aj kôš
+  function klikNaSpravu(e) {
+    var box = $("#chat-spravy"); if (!box) return;
+    var rad = e.target.closest(".videli-rad");
+    if (!rad && e.target.closest("a, button, input, .pril-foto, .pril-subor, .videli-detail")) return;
+    if (!rad && window.getSelection && String(window.getSelection()).trim()) return;
+    var sp = rad ? box.querySelector('[data-sprava="' + rad.dataset.po + '"]') : e.target.closest(".sprava, .sprava-sys");
+    var bola = sp && sp.classList.contains("vybrana");
+    box.querySelectorAll(".vybrana").forEach(function (x) { x.classList.remove("vybrana", "ukaz-x"); });
+    box.querySelectorAll(".videli-detail").forEach(function (x) { x.remove(); });
+    if (!sp || bola) return;
+    var kos = window.matchMedia("(hover: none)").matches && sp.querySelector(".sprava-x"), det = S.chatS ? "" : detailVidenia(sp.dataset.sprava);
+    if (!kos && !det) return;
+    sp.classList.add("vybrana"); if (kos) sp.classList.add("ukaz-x");
+    if (det) {
+      sp.insertAdjacentHTML("afterend", det);
+      var d = sp.nextElementSibling, rd = d.getBoundingClientRect(), rb = box.getBoundingClientRect();
+      if (rd.bottom > rb.bottom - 4) box.scrollBy({ top: rd.bottom - rb.bottom + 12, behavior: "smooth" });
+    }
+  }
   // zoznam konverzácií: celý tím + každý kolega zvlášť
   function kresliKonverzacie() {
     var el = $("#chat-kto"); if (!el) return;
@@ -8605,7 +8683,7 @@
       if (window.matchMedia("(pointer: fine)").matches) $("#chat-text").focus();
     };
     var box = $("#chat-spravy");
-    znackaPrecitania();
+    znackaPrecitania(); kresliVidenie();
     kresliZasobnik();
     vyskaChatu(); box.scrollTop = box.scrollHeight;
     doplnPrilohy(el);
@@ -8642,13 +8720,8 @@
     t.addEventListener("blur", function () { setTimeout(vyskaChatu, 60); });
     // ťuknutie na Odoslať alebo smajlík nezavrie klávesnicu (pole na písanie ostane aktívne)
     el.querySelectorAll(".chat-poslat, [data-emoji]").forEach(function (b) { b.addEventListener("mousedown", function (e) { if (document.activeElement === t) e.preventDefault(); }); });
-    // dotykové zariadenia: kôš pri správe sa ukáže až po ťuknutí na správu
-    box.addEventListener("click", function (e) {
-      if (!window.matchMedia("(hover: none)").matches || e.target.closest("a, button, input, .pril-foto, .pril-subor")) return;
-      var sp = e.target.closest(".sprava"), bola = sp && sp.classList.contains("ukaz-x");
-      box.querySelectorAll(".sprava.ukaz-x").forEach(function (x) { x.classList.remove("ukaz-x"); });
-      if (sp && !bola && sp.querySelector(".sprava-x")) sp.classList.add("ukaz-x");
-    });
+    // ťuknutie na správu: kto ju videl (spoločný chat), na dotykových zariadeniach aj kôš
+    box.addEventListener("click", klikNaSpravu);
     t.addEventListener("input", function () { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 160) + "px"; });
     t.addEventListener("keydown", function (e) {
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing && window.matchMedia("(pointer: fine)").matches) { e.preventDefault(); $("#f-chat").requestSubmit(); }
@@ -8723,7 +8796,7 @@
     var vsetky = oknoSpravy(), start = vsetky.length - nove.length;
     var html = nove.map(function (m, i) { return htmlSpravy(m, vsetky[start + i - 1]); }).join("");
     box.insertAdjacentHTML("beforeend", html.replace(/class="sprava/g, 'class="nova sprava'));
-    znackaPrecitania();
+    znackaPrecitania(); kresliVidenie();
     doplnPrilohy(box);
     var so = $("#chat-subory-obsah");
     if (so && nove.some(function (m) { return m.prilohy && m.prilohy.length; })) { so.innerHTML = htmlSuboryKonverzacie(); doplnPrilohy(so); }

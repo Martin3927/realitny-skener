@@ -2498,7 +2498,6 @@ html.bez-posuvu #toast { z-index: 210 }
 @media (hover: none) {
   .sprava-x { display: none }
   .sprava.ukaz-x .sprava-x { display: grid; opacity: 1; color: var(--bad); background: var(--bad-soft) }
-  .sprava.ukaz-x .bublina { box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / .45) }
 }
 @media (max-width: 640px) {
   main .wrap:has(#chat-spravy) { padding-block: 0 }
@@ -2536,3 +2535,19 @@ html.bez-posuvu #toast { z-index: 210 }
   .chat-form textarea { min-height: 42px; padding: 9px 14px; font-size: 16px }
   .chat-poslat { width: 42px; height: 42px; margin-left: 2px }
 }
+
+/* ---------- spoločný chat: kto videl správu (30. 10. 2026) */
+.sprava.vybrana .bublina, .sprava-sys.vybrana { box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / .45) }
+.sprava, .sprava-sys { cursor: default }
+.videli-rad { align-self: flex-end; display: inline-flex; align-items: center; gap: 0; margin: 4px 2px 2px 0; padding: 2px 4px 2px 8px; border: 0; border-radius: 999px; background: none; font: inherit; color: var(--muted); cursor: pointer }
+.videli-rad:hover, .videli-rad:focus-visible { background: color-mix(in srgb, var(--surface) 70%, transparent) }
+.videli-rad > span { font-size: 11px; margin-right: 6px }
+.videli-rad .av { margin-left: -5px; box-shadow: 0 0 0 2px var(--surface-2); font-size: 8px !important }
+.videli-rad span + .av { margin-left: 0 }
+.videli-rad b { font-size: 10.5px; margin-left: 4px }
+.videli-detail { display: grid; gap: 2px; justify-items: start; align-self: flex-start; max-width: min(520px, 86%); margin: 6px 0 2px 40px; padding: 7px 12px; border-radius: 12px;
+  background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.06); font-size: 12.5px; line-height: 1.4; color: var(--muted); animation: vstup .2s ease-out both }
+.videli-detail.ja { align-self: flex-end; justify-items: end; text-align: right; margin-left: 0 }
+.vd-ano { color: var(--good); font-weight: 600 }
+.vd-nikto { color: var(--ink); font-weight: 600 }
+@media (max-width: 640px) { .videli-detail { margin-left: 36px } .videli-detail.ja { margin-left: 0 } }
