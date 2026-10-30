@@ -1315,6 +1315,17 @@ pre.kod { width: 100%; margin: 0; background: var(--graphite); color: #e9e4d6; b
 .ai-ulozene p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.45; white-space: pre-wrap }
 .ai-ulozene-akcie { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
 .ai-uloha small.ai-ma-ulozene { color: var(--good); font-weight: 600 }
+.ai-hlava-btn { display: flex; gap: 6px; flex: none }
+.ai-hlava-btn .btn { padding: 6px 11px }
+@media (max-width: 460px) { .ai-box .chat-titul .meta { display: none } .ai-hlava-btn .btn { padding: 6px 9px; font-size: 13px } }
+.ai-naposledy { display: grid; gap: 8px; margin-top: 4px }
+.ai-naposledy-hl { display: flex; justify-content: space-between; align-items: baseline; gap: 10px }
+.ai-naposledy-hl b { font-size: 14px; color: var(--muted) }
+.ai-hist-riadok { display: flex; gap: 6px; align-items: stretch }
+.ai-hist-riadok .ai-hist { flex: 1 1 auto; min-width: 0 }
+.ai-hist .ai-ponuka-bez { width: 40px; height: 40px; font-size: 18px; background: var(--gold-soft) }
+.ai-hist-x { flex: none; width: 40px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--muted); cursor: pointer; font-size: 14px }
+.ai-hist-x:hover { color: var(--bad); border-color: var(--bad) }
 .ai-akcie { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0 2px }
 .ai-akcie .btn { padding: 5px 11px; font-size: 13px; min-height: 0 }
 
