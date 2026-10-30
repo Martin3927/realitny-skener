@@ -29,18 +29,25 @@ Deno.serve(async (req) => {
   const limit = Math.max(1, Math.floor(Number(Deno.env.get("AI_DENNY_LIMIT"))) || 50);
   const { data: vLimite, error: chybaLimitu } = await db.rpc("asistent_pocitaj", { p_makler: u.user.id, p_limit: limit });
   if (!chybaLimitu && vLimite === false) return json({ chyba: "Dnes ste už položili " + limit + " otázok, čo je denný limit AI asistenta. Zajtra môžete pokračovať." }, 429);
+  const model = Deno.env.get("AI_MODEL") || "claude-sonnet-5-5";
+  // Sonnet 5.5 pred odpoveďou predvolene premýšľa a to premýšľanie sa ráta do max_tokens – pri textoch pre maklérov ho netreba
+  // („between_tools“ = bez premýšľania vopred; bez nástrojov príde len text). Ostatné modely dostanú len vyšší limit.
+  const bezPremyslania = model.startsWith("claude-sonnet-5-5") ? { thinking: { type: "between_tools" }, output_config: { effort: "medium" } } : {};
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": kluc, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
-      model: Deno.env.get("AI_MODEL") || "claude-sonnet-5-5", max_tokens: 1500,
+      model, max_tokens: 4000, ...bezPremyslania,
       system: SYSTEM + "\nPíšeš pre makléra: " + m.meno + "." + (telo.kontext ? "\n\nPodklady (údaje z Realitného týpka):\n" + String(telo.kontext).slice(0, 6000) : ""),
       messages: spravy,
     }),
   });
   const d = await r.json().catch(() => ({}));
+  // do záznamov len technické údaje (bez obsahu otázky a odpovede)
+  console.log("asistent", JSON.stringify({ model, status: r.status, stop: d.stop_reason, typy: ((d.content as any[]) || []).map((c) => c.type), vstup: d.usage?.input_tokens, vystup: d.usage?.output_tokens, chyba: d.error?.type }));
   if (!r.ok) return json({ chyba: "AI asistent teraz neodpovedá (" + r.status + "). Skúste to o chvíľu." }, 502);
   // deno-lint-ignore no-explicit-any
   const text = ((d.content as any[]) || []).filter((c) => c.type === "text").map((c) => c.text).join("\n").trim();
+  if (!text) return json({ chyba: d.stop_reason === "max_tokens" ? "Odpoveď sa nezmestila do limitu. Skúste otázku zúžiť alebo rozdeliť na menšie časti." : d.stop_reason === "refusal" ? "Na túto požiadavku AI asistent neodpovie. Skúste ju sformulovať inak." : "AI asistent neposlal odpoveď. Skúste to znova." }, 502);
   return json({ text });
 });
