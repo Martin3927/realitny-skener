@@ -854,7 +854,7 @@ SKENER_KLUC = os.environ.get("SKENER_KLUC") or ""
 POUZI_DB = bool(DB_URL and DB_KEY and SKENER_KLUC)
 STLPCE = ["id", "portal", "portaly", "url", "nazov", "typ", "podtyp", "izby", "cena", "plocha", "cena_m2", "obec",
           "okres", "predajca", "predajca_typ", "predajca_dovod", "foto", "popis", "publikovane", "prvy_krat",
-          "naposledy", "aktivny", "duplikat_z", "dalsie_odkazy", "historia_cien", "lat", "lon", "ulica"]
+          "naposledy", "aktivny", "duplikat_z", "dalsie_odkazy", "historia_cien", "lat", "lon", "ulica", "obnovene"]
 _POVODNE = {}  # odtlačky riadkov z databázy – posielame len zmenené
 
 
@@ -1344,6 +1344,43 @@ def text_push(i):
             "url": f"./#inzeraty/{i['id']}", "tag": i["id"]}
 
 
+def text_push_obnoveny(i):
+    """🔁 Znova zverejnený súkromný inzerát – 3-izbový byt, Spišská Nová Ves / 149 000 € (pôvodne 159 000 €, −6 %) · Bazoš"""
+    t = text_push(i)
+    t["title"] = t["title"].replace("🔎 Nový súkromný inzerát", "🔁 Znova zverejnený súkromný inzerát")
+    hist = [h for h in (i.get("historia_cien") or []) if h and len(h) > 1 and h[1]]
+    cena = i.get("cena")
+    eur = lambda x: f"{int(x):,} €".replace(",", " ")  # noqa: E731
+    if cena:
+        c = eur(cena)
+        prva = hist[0][1] if hist else None
+        if prva and prva > cena:
+            c += f" (pôvodne {eur(prva)}, −{round((prva - cena) * 100 / prva)} %)"
+        elif prva and prva < cena:
+            c += f" (pôvodne {eur(prva)})"
+    else:
+        c = "cena neuvedená"
+    t["body"] = f"{i.get('nazov') or ''}\n{c} · {PORTAL_NAZOV.get(i.get('portal'), '')}".strip()
+    t["tag"] = "obnova:" + i["id"]
+    return t
+
+
+def posli_push_obnovene(ids):
+    if not POUZI_DB or not ids:
+        return
+    k = vapid_kluce()
+    if not k or not k.get("private"):
+        return
+    ciele = _rpc("skener_push_ciele_obnovene", p_kluc=SKENER_KLUC, p_ids=ids) or []
+    ok, zrusit, poslane = [], [], 0
+    for c in ciele:
+        o, z = _posli_odberom(c.get("odbery") or [], text_push_obnoveny(c["inzerat"]), k["private"])
+        ok += o; zrusit += z; poslane += len(o)
+    if ciele:
+        _rpc("skener_push_vysledok", p_kluc=SKENER_KLUC, p_ok=sorted(set(ok)), p_zrusit=sorted(set(zrusit)))
+        log(f"Upozornenia na znova zverejnené: odoslané {poslane}")
+
+
 PORTAL_NAZOV = {"bazos": "Bazoš", "nehnutelnosti": "Nehnuteľnosti.sk", "reality": "Reality.sk", "topreality": "TopReality.sk"}
 
 
@@ -1659,8 +1696,14 @@ def main():
         else:
             podla_kluca.setdefault(k, []).append(e)
     # typ predajcu za celú skupinu: jasná realitka (portál, meno, text) > jasný súkromník > slabé znaky
+    nove_id = {z["id"] for z in nove}
+    obnovene = []   # byty, ktoré predajca zverejnil znova (alebo pridal na ďalší portál) aspoň 3 dni po prvom zverejnení
     for pid, cleny in skupiny.items():
         povodny = inzeraty[pid]
+        if any(c["id"] in nove_id for c in cleny) and povodny["id"] not in nove_id \
+                and datetime.fromisoformat(str(povodny["prvy_krat"])) < NOW - timedelta(days=3):
+            povodny["obnovene"] = NOW_ISO
+            obnovene.append(povodny)
         # ten istý predajca dal byt na ten istý portál znova (starý inzerát zvyčajne zmazal) → karta otvára najnovší
         znova = [c for c in cleny if c["portal"] == povodny["portal"] and c.get("predajca") == povodny.get("predajca")
                  and c.get("url") and c["prvy_krat"] > povodny["prvy_krat"]]
@@ -1687,7 +1730,8 @@ def main():
     podhodn = [z for z in nove_ok if z.get("podhodnotene") and (ec["posielat_podhodnotene_aj_od_rk"] or z["predajca_typ"] != "rk")
                and z not in nove_sukr]
     zniz = [z for z in znizenia if ec["posielat_znizenie_ceny_sukromnych"] and z["predajca_typ"] != "rk" and not z.get("duplikat_z")]
-    log(f"Nové: {len(nove)} (z toho súkromné {len(nove_sukr)}, podhodnotené {len(podhodn)}), zníženia cien súkromných: {len(zniz)}")
+    log(f"Nové: {len(nove)} (z toho súkromné {len(nove_sukr)}, podhodnotené {len(podhodn)}), zníženia cien súkromných: {len(zniz)}"
+        + (f", znova zverejnené: {len(obnovene)}" if obnovene else ""))
 
     meta.update({
         "posledna_kontrola": NOW_ISO,
@@ -1720,6 +1764,10 @@ def main():
             posli_push([z["id"] for z in nove_ok if z["predajca_typ"] in ("sukromny", "asi_sukromny")])
         except Exception as e:  # noqa – upozornenia nesmú zastaviť skener
             log(f"! upozornenia do mobilu: {e}")
+        try:
+            posli_push_obnovene([z["id"] for z in obnovene if z["predajca_typ"] in ("sukromny", "asi_sukromny")])
+        except Exception as e:  # noqa
+            log(f"! upozornenia na znova zverejnené: {e}")
 
     if plny and not prvy_beh:
         try:

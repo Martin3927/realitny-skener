@@ -2094,8 +2094,8 @@
     var sukr = akt.filter(function (z) { return ptyp(z) !== "rk"; });
     var sukrVolne = sukr.filter(function (z) { return !(S.prev[z.id] && S.prev[z.id].makler_id); }).length;
     var moje = vid.filter(function (z) { return S.prev[z.id] && S.prev[z.id].makler_id === S.me.id; }).length;
-    var nove = akt.filter(function (z) { return new Date(z.prvy_krat).getTime() > den; }).length;
-    var sukr24 = sukr.filter(function (z) { return new Date(z.prvy_krat).getTime() > den; });
+    var nove = akt.filter(function (z) { return novyCas(z) > den; }).length;
+    var sukr24 = sukr.filter(function (z) { return novyCas(z) > den; });
     var sukr24Volne = sukr24.filter(function (z) { return !(S.prev[z.id] && S.prev[z.id].makler_id); }).length;
     var h = '<button class="stat" type="button" data-act="preset" data-v="vsetky"><b>' + nf.format(akt.length) + "</b><small>Aktívne inzeráty</small></button>" +
       '<button class="stat gold" type="button" data-act="preset" data-v="sukr"><b>' + nf.format(sukr.length) + "</b><small>Súkromní · voľných " + nf.format(sukrVolne) + "</small></button>" +
@@ -2134,6 +2134,13 @@
     el.querySelectorAll('[data-act="preset"]').forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === v)); });
   }
 
+  // kedy je inzerát „nový“: prvé zachytenie skenerom, alebo keď ho predajca zverejnil znova (obnovený)
+  function novyCas(z) {
+    var t = new Date(z.prvy_krat).getTime();
+    if (z.obnovene) { var o = new Date(z.obnovene).getTime(); if (o > t) t = o; }
+    return t;
+  }
+  function obnovenyNedavno(z) { return z.obnovene && Date.now() - new Date(z.obnovene).getTime() < 14 * 864e5; }
   // kedy bol inzerát zverejnený na portáli (dátum z portálu, inak kedy ho skener prvýkrát videl)
   function zverejnene(z) {
     var t = new Date(z.prvy_krat).getTime();
@@ -2154,7 +2161,7 @@
       var okPr = (f.praca === "vsetky" || (f.praca === "volne" && !maj) || (f.praca === "moje" && maj === me) || (f.praca === "prevzate" && maj)) && (!f.kto || maj === f.kto);
       var okIne = (!f.typ || z.typ === f.typ) &&
         (!f.okres || (f.okres === "moje" ? (S.me.obce || []).indexOf(z.obec) >= 0 : f.okres.indexOf("o:") === 0 ? z.okres === f.okres.slice(2) : z.obec === f.okres)) &&
-        (!lim || new Date(z.prvy_krat).getTime() >= lim) &&
+        (!lim || novyCas(z) >= lim) &&
         (!vekDo || dniNaPortali(z) <= vekDo) && (!vekNad || dniNaPortali(z) > vekNad) &&
         (!f.under || (S.odh[z.id] && S.odh[z.id].podhodnotene)) &&
         (!q || z._t.indexOf(q) >= 0 || (qd.length >= 4 && S.tel[z.id] && telCifry(S.tel[z.id].telefon).indexOf(qd) >= 0));
@@ -2169,7 +2176,7 @@
       if (s === "cenam2") return (a.cena_m2 || 9e12) - (b.cena_m2 || 9e12);
       if (s === "stare") return zverejnene(a) - zverejnene(b);
       if (s === "hovor") return String((S.prev[b.id] || {}).posledny_hovor || "").localeCompare(String((S.prev[a.id] || {}).posledny_hovor || ""));
-      return String(b.prvy_krat).localeCompare(String(a.prvy_krat)) || String(b.publikovane || "").localeCompare(String(a.publikovane || ""));
+      return novyCas(b) - novyCas(a) || String(b.publikovane || "").localeCompare(String(a.publikovane || ""));
     });
     return { out: out, pocty: pocty };
   }
@@ -2327,7 +2334,8 @@
       (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + (dniNaPortali(z) - Math.floor((Date.now() - new Date(z.prvy_krat).getTime()) / 864e5) >= 2 ?
         '<span title="Zverejnené ' + datum(new Date(zverejnene(z)).toISOString()) + ", v skeneri " + ago(z.prvy_krat) + '">na portáli ' + dniNaPortali(z) + (dniNaPortali(z) <= 4 ? " dni" : " dní") + "</span>" : "<span>v skeneri " + ago(z.prvy_krat) + "</span>") + "</div>" +
       telRiadok(z) + predRiadok(z) +
-      '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
+      '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") +
+      (obnovenyNedavno(z) ? '<span class="pill new" title="Predajca inzerát zverejnil znova – oplatí sa ozvať">🔁 Znova zverejnený ' + datum(z.obnovene) + "</span>" : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
       '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
       (ozn ? '<span class="pill rk">Označil ' + esc(meno(ozn.oznacil)) + "</span>" : "") +
       (o && o.podhodnotene ? '<span class="pill priv">Pod cenou</span>' : "") +
@@ -3374,7 +3382,7 @@
     var akt = S.inz.filter(function (z) { return z.aktivny; });
     var sukr = akt.filter(function (z) { return ptyp(z) !== "rk"; });
     var volne = sukr.filter(function (z) { return !(S.prev[z.id] && S.prev[z.id].makler_id); }).length;
-    var den = Date.now() - 864e5, nove = sukr.filter(function (z) { return new Date(z.prvy_krat).getTime() > den; }).length;
+    var den = Date.now() - 864e5, nove = sukr.filter(function (z) { return novyCas(z) > den; }).length;
     var moje = Object.values(S.prev).filter(function (p) { return p.makler_id === S.me.id; }).length;
     var sch = S.sch.filter(function (r) { return !r.zmazane; }).length;
     var prip = splatne().length, pripVsetky = mojeAktivne().length, pripNove = splatne().filter(function (p) { return noveOd(p.cas); }).length;
@@ -3519,7 +3527,7 @@
     var prip = mojeAktivne().filter(function (p) { return new Date(p.cas) <= koniecDna; });
     var obce = S.me.obce || [], den = Date.now() - 864e5;
     var vObciach = obce.length ? S.inz.filter(function (z) { return z.aktivny && ptyp(z) !== "rk" && obce.indexOf(z.obec) >= 0; }) : [];
-    var noveObce = vObciach.filter(function (z) { return new Date(z.prvy_krat).getTime() > den; });
+    var noveObce = vObciach.filter(function (z) { return novyCas(z) > den; });
     var volneObce = vObciach.filter(function (z) { return !(S.prev[z.id] && S.prev[z.id].makler_id); });
     var uvol = S.inz.filter(function (z) {
       var p = S.prev[z.id]; if (!p || p.makler_id !== S.me.id) return false;
@@ -9035,12 +9043,13 @@
   function noveInzeraty() {
     if (!S.me || !S.inz || !maSekciu("inzeraty") || !S.me.inzeraty_videne) return [];
     var od = new Date(S.me.inzeraty_videne).getTime();
-    return S.inz.filter(function (z) { return z.aktivny && ptyp(z) !== "rk" && new Date(z.prvy_krat).getTime() > od; })
-      .sort(function (a, b) { return new Date(b.prvy_krat) - new Date(a.prvy_krat); });
+    return S.inz.filter(function (z) { return z.aktivny && ptyp(z) !== "rk" && novyCas(z) > od; })
+      .sort(function (a, b) { return novyCas(b) - novyCas(a); });
   }
   function inzeratyVidene() {
     if (!S.me || !maSekciu("inzeraty")) return;
-    var t = maxPrvyKrat(); if (!t) return;
+    var tm = 0; (S.inz || []).forEach(function (z) { var x = novyCas(z); if (x > tm) tm = x; });   // aj znova zverejnené
+    var t = tm ? new Date(tm).toISOString() : null; if (!t) return;
     if (S.me.inzeraty_videne && new Date(S.me.inzeraty_videne) >= new Date(t)) return;
     S.me.inzeraty_videne = t;
     rpc("inzeraty_videne", { p_cas: t }).catch(function () {});
@@ -9074,8 +9083,8 @@
     return '<div class="zvon-spravy zvon-inz"><h4>🏠 Nové súkromné inzeráty (' + zoz.length + ")" + (moje >= 0 ? " · " + moje + " vo vašich obciach" : "") + "</h4>" +
       zoz.slice(0, 5).map(function (z) {
         return '<div class="zs-pol zs-klik" data-zvon-inz="' + esc(z.id) + '" role="button" tabindex="0" title="Otvoriť celý inzerát">' + (z.foto ? '<img class="zs-foto" src="' + esc(z.foto) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="zs-tim">🏠</span>') +
-          '<div class="zs-text"><div class="zs-hl"><b>' + esc(z.nazov || TYP[z.typ] || "Inzerát") + '</b><span class="meta">' + esc(casKonverzacie(z.prvy_krat)) + "</span></div>" +
-          '<div class="zs-nahlad">' + esc([z.obec, z.cena ? eur(z.cena) : "", PORTAL[z.portal] || z.portal, (PRED[ptyp(z)] || [""])[0]].filter(Boolean).join(" · ")) + "</div></div>" +
+          '<div class="zs-text"><div class="zs-hl"><b>' + esc(z.nazov || TYP[z.typ] || "Inzerát") + '</b><span class="meta">' + esc(casKonverzacie(new Date(novyCas(z)).toISOString())) + "</span></div>" +
+          '<div class="zs-nahlad">' + esc([novyCas(z) > new Date(z.prvy_krat).getTime() ? "🔁 znova zverejnený" : "", z.obec, z.cena ? eur(z.cena) : "", PORTAL[z.portal] || z.portal, (PRED[ptyp(z)] || [""])[0]].filter(Boolean).join(" · ")) + "</div></div>" +
           '<button class="btn primary" type="button" data-zvon-inz="' + esc(z.id) + '">Otvoriť</button></div>';
       }).join("") +
       '<div class="zs-tlacidla">' + (zoz.length > 5 ? '<button class="btn" type="button" data-zvon-inz-vsetky>Zobraziť všetkých ' + zoz.length + " v skeneri</button>" :
