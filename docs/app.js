@@ -1322,7 +1322,7 @@
   }
   // AI kontrola súkromných inzerátov (verdikt, dôvod, návrh hovoru); bez databázovej zmeny 079 jednoducho nič
   async function nacitajAi() {
-    if (!maSekciu("inzeraty")) { S.ai = {}; return; }
+    if (!maSekciu("inzeraty") || !maSekciu("asistent")) { S.ai = {}; return; }
     var rows = await vsetkyRiadky("inzeraty_ai", "*", "inzerat_id").catch(function () { return []; });
     var o = {}; rows.forEach(function (x) { o[x.inzerat_id] = x; }); S.ai = o;
   }
@@ -2320,7 +2320,7 @@
   }
   // verdikt AI: len označenie – o presune medzi RK rozhoduje maklér („Je to RK“)
   function aiRiadok(z) {
-    if (ptyp(z) === "rk" || !S.ai) return "";
+    if (ptyp(z) === "rk" || !S.ai || !maSekciu("asistent")) return "";
     var a = S.ai[z.id]; if (!a || !a.verdikt) return "";
     var v = a.verdikt === "rk" ? ["ai-rk", "AI: asi realitka"] : a.verdikt === "sukromny" ? ["ai-ok", "AI: súkromník"] : ["ai-na", "AI: nedá sa isto povedať"];
     return '<div class="ai-row ' + v[0] + '" title="Posúdila AI ' + esc(datum(a.skontrolovane, true)) + ' – len odporúčanie, rozhoduje maklér">🤖 <b>' + v[1] +
@@ -2418,7 +2418,7 @@
         '<button class="btn' + (p && p.email ? " on" : "") + '" type="button" data-act="email">' + (p && p.email ? "✓ Email poslaný" : "Email poslaný") + "</button>";
     }
     h += '<button class="btn ghost" type="button" data-act="zvon" title="Nastaviť pripomienku">🔔 Pripomenúť</button>';
-    if (ptyp(z) !== "rk" && mozeUpravit) h += '<button class="btn ghost" type="button" data-act="ai-hovor" title="AI navrhne, ako začať prvý hovor a SMS predajcovi">✨ Návrh hovoru</button>';
+    if (ptyp(z) !== "rk" && mozeUpravit && maSekciu("asistent")) h += '<button class="btn ghost" type="button" data-act="ai-hovor" title="AI navrhne, ako začať prvý hovor a SMS predajcovi">✨ Návrh hovoru</button>';
     if (ptyp(z) !== "rk" && (moj || admin())) h += '<button class="btn ghost" type="button" data-act="do-ponuky" title="Preniesť do Nehnuteľností – predvyplní formulár">➕ Do ponuky</button>';
     if (ozn && ozn.predajca_typ === "rk") h += '<button class="btn ghost" type="button" data-act="oznac-zrus" title="Vrátiť rozpoznanie skenera">Nie je RK</button>';
     else if (ptyp(z) !== "rk") h += '<button class="btn ghost" type="button" data-act="oznac-rk" title="Presunúť medzi realitné kancelárie – platí aj pre ďalšie inzeráty s rovnakým číslom">Je to RK</button>';
@@ -2440,7 +2440,7 @@
     if (otv === "zvon") h += '<div class="panel">' + formPripomienka({ inzerat_id: z.id }) + "</div>";
     if (otv === "detail") h += detailPanel(z);
     if (otv === "tel" && ptyp(z) !== "rk") h += formTelefon(z);
-    if (otv === "ai-hovor" && ptyp(z) !== "rk") h += panelAiHovor(z);
+    if (otv === "ai-hovor" && ptyp(z) !== "rk" && maSekciu("asistent")) h += panelAiHovor(z);
     if (otv === "hovor" && mozeUpravit) {
       h += '<form class="panel" data-form="hovor"><h4>Ako dopadol hovor</h4><div class="form-grid">' +
         '<label class="field"><span>Výsledok</span><select name="vysledok" required><option value="">Vyberte…</option>' +
@@ -3224,9 +3224,10 @@
           '<select data-f="rola"' + (ja ? " disabled" : "") + ' aria-label="Rola"><option value="makler"' + (m.rola === "makler" ? " selected" : "") + '>Maklér</option><option value="admin"' + (m.rola === "admin" ? " selected" : "") + ">Administrátor</option></select>" +
           '<label class="toggle"><input type="checkbox" data-f="aktivny"' + (m.aktivny ? " checked" : "") + (ja ? " disabled" : "") + "> Aktívny</label>" +
           '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label>" +
-          '<label class="toggle" data-nestrazit title="Môže zverejniť svoje ponuky na Facebook a Instagram kancelárie. Ukladá sa hneď."><input type="checkbox" data-pravo-siete' + (m.rola === "admin" || (m.pristup || []).indexOf("siete") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Zverejňuje na FB a IG</label></div>" +
+          '<label class="toggle" data-nestrazit title="Môže zverejniť svoje ponuky na Facebook a Instagram kancelárie. Ukladá sa hneď."><input type="checkbox" data-pravo="siete"' + (m.rola === "admin" || (m.pristup || []).indexOf("siete") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Zverejňuje na FB a IG</label>" +
+          '<label class="toggle" data-nestrazit title="AI asistent, ✨ Doladiť s AI pri príspevkoch, ✨ Návrh hovoru a hodnotenie AI v skeneri. Ukladá sa hneď."><input type="checkbox" data-pravo="asistent"' + (m.rola === "admin" || (m.pristup || []).indexOf("asistent") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Používa AI</label></div>" +
           '<div class="mk-pristup"><span class="meta">Vidí sekcie</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor vidí všetko vrátane Výkonu a Maklérov.</span>' :
-            SEKCIE.map(function (x) { return '<button type="button" class="cip" data-pristup="' + x[0] + '" aria-pressed="' + ((m.pristup || []).indexOf(x[0]) >= 0) + '">' + x[1] + "</button>"; }).join("")) + "</div></div>" +
+            SEKCIE.filter(function (x) { return x[0] !== "asistent"; }).map(function (x) { return '<button type="button" class="cip" data-pristup="' + x[0] + '" aria-pressed="' + ((m.pristup || []).indexOf(x[0]) >= 0) + '">' + x[1] + "</button>"; }).join("")) + "</div></div>" +
           '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
           '<div class="mk-upoz"><div><b>🔔 Upozornenia do mobilu</b><small class="meta" id="mk-zar-' + m.id + '">' + textZariadeni(m) + "</small></div>" +
             '<div class="cipy">' + DRUHY_UPOZ.map(function (x) {
@@ -3336,15 +3337,17 @@
         b.disabled = false;
       };
     });
-    // právo zverejňovať na FB a IG kancelárie – ukladá sa hneď (ako sekcie), nie tlačidlom Uložiť
-    el.querySelectorAll("[data-pravo-siete]").forEach(function (c) {
+    // práva makléra (FB a IG kancelárie, AI) – ukladajú sa hneď (ako sekcie), nie tlačidlom Uložiť
+    var PRAVA = { siete: [" teraz môže zverejňovať svoje ponuky na Facebook a Instagram kancelárie.", " už nemôže zverejňovať na Facebook a Instagram kancelárie."],
+      asistent: [" teraz môže používať AI (asistent, texty, návrhy hovorov, hodnotenie v skeneri).", " už nemôže používať AI."] };
+    el.querySelectorAll("[data-pravo]").forEach(function (c) {
       c.onchange = async function () {
-        var id = c.closest("[data-m]").dataset.m, m = S.mById[id]; if (!m) return;
-        var nove = (m.pristup || []).filter(function (x) { return x !== "siete"; });
-        if (c.checked) nove.push("siete");
+        var id = c.closest("[data-m]").dataset.m, m = S.mById[id], pravo = c.dataset.pravo; if (!m || !PRAVA[pravo]) return;
+        var nove = (m.pristup || []).filter(function (x) { return x !== pravo; });
+        if (c.checked) nove.push(pravo);
         c.disabled = true;
         try { await rpc("nastavit_pristup_maklera", { p_id: id, p_pristup: nove }); m.pristup = nove;
-          toast((m.meno || "Maklér") + (c.checked ? " teraz môže zverejňovať svoje ponuky na Facebook a Instagram kancelárie." : " už nemôže zverejňovať na Facebook a Instagram kancelárie.")); }
+          toast((m.meno || "Maklér") + PRAVA[pravo][c.checked ? 0 : 1]); }
         catch (err) { c.checked = !c.checked; toast(chybaText(err), true); }
         c.disabled = false;
       };

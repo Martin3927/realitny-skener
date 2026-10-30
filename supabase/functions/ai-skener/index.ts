@@ -84,6 +84,7 @@ Deno.serve(async (req) => {
     if (!u?.user) return json({ chyba: "Prihláste sa znova." }, 401);
     const { data: m } = await db.from("makleri").select("id, meno, telefon, aktivny, rola, pristup").eq("id", u.user.id).maybeSingle();
     if (!m?.aktivny || (m.rola !== "admin" && !(m.pristup || []).includes("inzeraty"))) return json({ chyba: "Nemáte prístup k Realitnému skeneru." }, 403);
+    if (m.rola !== "admin" && !(m.pristup || []).includes("asistent")) return json({ chyba: "AI vám administrátor zatiaľ nezapol." }, 403);
     const { data: z } = await db.from("inzeraty").select("*").eq("id", String(telo.hovor)).maybeSingle();
     if (!z) return json({ chyba: "Inzerát sa nenašiel." }, 404);
     const limit = Math.max(1, Math.floor(Number(Deno.env.get("AI_DENNY_LIMIT"))) || 50);
