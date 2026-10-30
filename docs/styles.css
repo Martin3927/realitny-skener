@@ -1296,6 +1296,25 @@ pre.kod { width: 100%; margin: 0; background: var(--graphite); color: #e9e4d6; b
 .ai-pill button:hover { background: rgba(0,0,0,.06); color: var(--ink) }
 .ai-pripojit { border: 0; background: none; padding: 2px 0; color: var(--muted); cursor: pointer; font-family: inherit }
 .ai-pripojit:hover { color: var(--ink); text-decoration: underline }
+.ai-otazky { gap: 14px }
+.ai-otazka { display: grid; gap: 7px }
+.ai-otazka > b, .ai-detail > span { font-size: 14.5px; font-weight: 700; color: var(--ink) }
+.ai-volby { display: flex; flex-wrap: wrap; gap: 6px }
+.ai-volba { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 8px 13px; font: inherit; font-size: 14px; cursor: pointer; line-height: 1.25 }
+.ai-volba:hover { border-color: var(--gold-strong) }
+.ai-volba[aria-checked="true"] { background: var(--gold-soft); border-color: var(--gold-strong); font-weight: 700 }
+.ai-volba[aria-checked="true"]::before { content: "✓ " }
+.ai-detail { margin: 0 }
+.ai-detail > span { display: flex; gap: 6px; align-items: baseline }
+.ai-detail > span small { font-weight: 400 }
+.ai-detail textarea { width: 100%; resize: vertical; min-height: 58px }
+.ai-napisat { justify-self: start; padding: 10px 20px; font-size: 15px }
+@media (max-width: 640px) { .ai-napisat { justify-self: stretch } }
+.ai-ulozene { display: grid; gap: 6px; padding: 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--gold-strong); box-shadow: 0 1px 2px rgba(0,0,0,.04) }
+.ai-ulozene-hl { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap }
+.ai-ulozene p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.45; white-space: pre-wrap }
+.ai-ulozene-akcie { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+.ai-uloha small.ai-ma-ulozene { color: var(--good); font-weight: 600 }
 .ai-akcie { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0 2px }
 .ai-akcie .btn { padding: 5px 11px; font-size: 13px; min-height: 0 }
 

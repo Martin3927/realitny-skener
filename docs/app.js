@@ -6382,19 +6382,38 @@
   }
 
   // ------------------------------------------------------------ AI ASISTENT
-  // úlohy na úvodnej obrazovke; pri úlohách s ponukou sa najprv ťukne na ponuku (ak ešte nie je pripojená) a hneď sa píše
+  // postup: úloha → (ponuka, ak treba) → otázky „Komu píšeš?“ a „Čo má byť výsledok?“ (bez AI, nič nestoja) → až potom jedno volanie AI.
+  // Hotový text sa uloží k ponuke (ai_texty) a nabudúce sa ponúkne hneď – bez nového volania AI.
   var AI_ULOHY = [
-    { ik: "✍️", nazov: "Popis ponuky", tip: "predajný text a názov", ponuka: true,
+    { k: "popis", ik: "✍️", nazov: "Popis ponuky", tip: "predajný text a názov", ponuka: true,
+      komu: ["Rodiny s deťmi", "Mladí – prvé bývanie", "Seniori", "Investori", "Všetkým"],
+      ciel: ["Čo najviac obhliadok", "Vyzdvihnúť výnimočnosť", "Rýchly predaj", "Ukázať dobrú cenu"],
+      detail: "napr. zdôrazni novú kuchyňu a tichú lokalitu",
       prompt: "Napíš predajný popis tejto nehnuteľnosti (približne 1 200 znakov) a nad neho pútavý názov do 60 znakov. Použi len údaje z podkladov." },
-    { ik: "📣", nazov: "Príspevok na siete", tip: "Facebook a Instagram", ponuka: true,
+    { k: "prispevok", ik: "📣", nazov: "Príspevok na siete", tip: "Facebook a Instagram", ponuka: true,
+      komu: ["Rodiny s deťmi", "Mladí – prvé bývanie", "Investori", "Všetkým"],
+      ciel: ["Napíšu alebo zavolajú", "Prídu na obhliadku", "Pozrú si ponuku na webe", "Zdieľajú príspevok"],
+      detail: "napr. deň otvorených dverí v sobotu o 10:00",
       prompt: "Napíš príspevok na Facebook a Instagram k tejto ponuke – krátky, pútavý, s emoji a 5 hashtagmi (#SpisskaNovaVes #Levoca …)." },
-    { ik: "📧", nazov: "E-mail po obhliadke", tip: "poďakovanie a ďalší krok", ponuka: true,
-      prompt: "Napíš e-mail klientovi po obhliadke tejto nehnuteľnosti – poďakovanie, zhrnutie výhod a ďalší krok (druhá obhliadka alebo rezervácia)." },
-    { ik: "💬", nazov: "SMS predajcovi", tip: "prvý kontakt so súkromníkom", ponuka: false,
-      prompt: "Napíš krátku zdvorilú SMS súkromnému predajcovi, že máme klientov na nehnuteľnosti v jeho lokalite, a poprosím o krátky telefonát." },
-    { ik: "🛡️", nazov: "„Predám sám“", tip: "ako odpovedať majiteľovi", ponuka: false,
+    { k: "email", ik: "📧", nazov: "E-mail po obhliadke", tip: "poďakovanie a ďalší krok", ponuka: true,
+      komu: ["Záujemca po obhliadke", "Majiteľ nehnuteľnosti"],
+      ciel: ["Druhá obhliadka", "Rezervácia", "Spätná väzba", "Len poďakovanie"],
+      detail: "napr. klient sa volá pán Novák, páčila sa mu záhrada",
+      prompt: "Napíš e-mail po obhliadke tejto nehnuteľnosti." },
+    { k: "sms", ik: "💬", nazov: "SMS predajcovi", tip: "prvý kontakt so súkromníkom", ponuka: false,
+      komu: ["Súkromný predajca – prvý kontakt", "Predajca, s ktorým som už hovoril"],
+      ciel: ["Krátky telefonát", "Stretnutie", "Obhliadka s kupujúcim"],
+      detail: "napr. predáva 3-izbový byt na Mieri, volá sa pani Kováčová",
+      prompt: "Napíš krátku zdvorilú SMS predajcovi nehnuteľnosti (najviac 300 znakov)." },
+    { k: "namietka", ik: "🛡️", nazov: "„Predám sám“", tip: "ako odpovedať majiteľovi", ponuka: false,
+      komu: ["Majiteľ na telefóne", "Majiteľ na stretnutí", "Majiteľ v SMS alebo e-maile"],
+      ciel: ["Dohodnúť stretnutie", "Podpísať zmluvu", "Aspoň nechať kontakt"],
+      detail: "napr. majiteľ predáva už 3 mesiace bez úspechu",
       prompt: "Majiteľ hovorí, že predá sám bez realitky. Daj mi 5 krátkych, slušných odpovedí, ako vysvetliť prínos makléra." },
-    { ik: "📊", nazov: "Rozhovor o cene", tip: "keď je cena nad trhom", ponuka: false,
+    { k: "cena", ik: "📊", nazov: "Rozhovor o cene", tip: "keď je cena nad trhom", ponuka: false,
+      komu: ["Majiteľ pred podpisom zmluvy", "Majiteľ po mesiacoch bez záujmu"],
+      ciel: ["Znížiť cenu", "Nastaviť reálnu cenu od začiatku", "Dohodnúť termín, kedy cenu prehodnotíme"],
+      detail: "napr. podobné byty na Mieri sa predávajú okolo 1 900 €/m²",
       prompt: "Ako mám majiteľovi vysvetliť, že jeho cena je nad trhom? Navrhni rozhovor v bodoch." },
   ];
   var AI_DALEJ = { kratsie: ["Skráť to približne na polovicu, nech zostane to podstatné.", "✂️ Kratšie"], inak: ["Napíš to inak – iným štýlom a inými slovami.", "🔄 Napísať inak"] };
@@ -6416,6 +6435,17 @@
     });
   }
   function aiPonuka() { return S.aiPonuka ? (S.ponuky || []).find(function (x) { return x.id === Number(S.aiPonuka); }) || null : null; }
+  function aiUlozeny(p, u) { return p && S.aiTexty ? S.aiTexty[p.id + ":" + u.k] || null : null; }
+  // uložené texty k ponukám (malá tabuľka – načíta sa raz pri otvorení asistenta)
+  async function nacitajAiTexty() {
+    var rows = await vsetkyRiadky("ai_texty", "*", "upravene").catch(function () { return []; });
+    var o = {}; rows.forEach(function (x) { o[x.nehnutelnost_id + ":" + x.uloha] = x; }); S.aiTexty = o;
+  }
+  async function ulozAiText(u, text) {
+    var row = { nehnutelnost_id: u.ponuka, uloha: u.k, text: aiCistyText(text).slice(0, 12000), nastavenia: u.nastavenia || {}, makler_id: S.me.id, upravene: new Date().toISOString() };
+    try { var r = await sb.from("ai_texty").upsert(row, { onConflict: "nehnutelnost_id,uloha" }); if (!r.error) { S.aiTexty = S.aiTexty || {}; S.aiTexty[u.ponuka + ":" + u.k] = row; } }
+    catch (e) { /* uloženie nie je nutné */ }
+  }
   // odpoveď AI s jednoduchým formátovaním: tučné ostane tučné, nadpisy tučné, odrážky „•“, čiary (---) a značky ** zmiznú
   function aiPriprav(t) {
     return String(t || "").replace(/```[a-z]*\n?/gi, "").replace(/^\s*([-*_])\1{2,}\s*$/gm, "").replace(/^(\s*)[-*]\s+/gm, "$1• ")
@@ -6428,17 +6458,21 @@
     }).join("\n");
   }
   function aiCistyText(t) { return aiPriprav(t).replace(/\*\*(.+?)\*\*/g, "$1").replace(/^\s*#{1,6}\s+/gm, ""); }
+  function aiZadanie(u, n) { return u.prompt + "\n\nKomu píšem: " + n.komu + "\nČo má byť výsledok: " + n.ciel + (n.detail ? "\nDoplnenie od makléra: " + n.detail : ""); }
+  function aiPopisZadania(u, p, n) { return u.ik + " " + u.nazov + (p ? " · " + nazovPonuky(p) : "") + "\n" + n.komu + " → " + n.ciel + (n.detail ? "\n„" + n.detail + "“" : ""); }
   function aiUvod() {
-    var o = oslovenie(S.me);
+    var o = oslovenie(S.me), p = aiPonuka();
     return '<div class="ai-uvod"><div class="ai-pozdrav"><img class="ai-typek" src="typek-postava.png" alt="" width="568" height="640"><div><b>Ahoj' + (o ? " " + esc(o) : "") +
       ", s čím ti pomôžem?</b><span class=\"meta\">Ťukni na úlohu alebo napíš vlastnú otázku dole.</span></div></div>" +
       '<div class="ai-ulohy">' + AI_ULOHY.map(function (u, i) {
-        return '<button type="button" class="ai-uloha" data-ai-uloha="' + i + '"><span class="ik" aria-hidden="true">' + u.ik + "</span><b>" + esc(u.nazov) + "</b><small>" + esc(u.tip) + "</small></button>";
+        var ul = aiUlozeny(p, u);
+        return '<button type="button" class="ai-uloha" data-ai-uloha="' + i + '"><span class="ik" aria-hidden="true">' + u.ik + "</span><b>" + esc(u.nazov) + "</b>" +
+          (ul ? '<small class="ai-ma-ulozene">💾 uložený text</small>' : "<small>" + esc(u.tip) + "</small>") + "</button>";
       }).join("") + "</div></div>";
   }
-  // výber ponuky: pri úlohe (jedno ťuknutie a hneď sa píše) alebo cez „Pripojiť ponuku“
-  function aiVyber() {
-    var u = S.aiVyber === "pripojit" ? null : AI_ULOHY[S.aiVyber], P = aiPonuky();
+  // výber ponuky (pri úlohe alebo cez „Pripojiť ponuku“)
+  function aiVyberPonuky() {
+    var u = S.aiKrok.pripojit ? null : AI_ULOHY[S.aiKrok.u], P = aiPonuky();
     return '<div class="ai-vyber"><div class="ai-vyber-hl"><button type="button" class="btn ghost" data-ai="spat">‹ Späť</button><b>' +
       (u ? esc(u.ik + " " + u.nazov) + " – ku ktorej ponuke?" : "Ktorú ponuku pripojiť?") + "</b></div>" +
       (P.length > 6 ? '<input type="search" class="ai-hladaj" id="ai-hladaj" placeholder="Hľadať ponuku…" aria-label="Hľadať ponuku" autocomplete="off">' : "") +
@@ -6450,11 +6484,38 @@
       }).join("") : '<p class="meta">Zatiaľ tu nie je žiadna ponuka – pridáš ju v Nehnuteľnostiach.</p>') + "</div>" +
       (u ? '<button type="button" class="btn-link ai-bez" data-ai-ponuka="">Bez ponuky – údaje doplním sám</button>' : "") + "</div>";
   }
+  function aiVolby(kluc, otazka, moznosti, zvolene) {
+    return '<div class="ai-otazka"><b>' + esc(otazka) + '</b><div class="ai-volby" role="radiogroup" aria-label="' + esc(otazka) + '">' + moznosti.map(function (m) {
+      return '<button type="button" class="ai-volba" role="radio" aria-checked="' + (m === zvolene) + '" data-ai-volba="' + kluc + '" data-hodnota="' + esc(m) + '">' + esc(m) + "</button>";
+    }).join("") + "</div></div>";
+  }
+  // otázky pred písaním – odpovede nič nestoja, AI sa zavolá až tlačidlom Napísať
+  function aiOtazky() {
+    var K = S.aiKrok, u = AI_ULOHY[K.u], p = aiPonuka(), ul = aiUlozeny(p, u);
+    return '<div class="ai-vyber ai-otazky"><div class="ai-vyber-hl"><button type="button" class="btn ghost" data-ai="spat">‹ Späť</button><b>' + esc(u.ik + " " + u.nazov) +
+      (p ? ' <span class="meta">· ' + esc(nazovPonuky(p)) + "</span>" : "") + "</b></div>" +
+      (ul ? '<div class="ai-ulozene"><div class="ai-ulozene-hl"><b>💾 Uložený text</b><small class="meta">' + esc(datum(ul.upravene, true)) +
+        (ul.makler_id && ul.makler_id !== S.me.id ? " · " + esc(meno(ul.makler_id)) : "") + "</small></div>" +
+        "<p>" + esc(ul.text.length > 220 ? ul.text.slice(0, 220) + "…" : ul.text) + "</p>" +
+        '<div class="ai-ulozene-akcie"><button type="button" class="btn primary" data-ai="pouzit">Použiť uložený text</button><small class="meta">bez míňania kreditu</small></div></div>' : "") +
+      aiVolby("komu", "Komu píšeš?", u.komu, K.komu) + aiVolby("ciel", "Čo má byť výsledok?", u.ciel, K.ciel) +
+      '<label class="field ai-detail"><span>Niečo navyše? <small class="meta">(nepovinné)</small></span><textarea id="ai-detail" rows="2" maxlength="600" placeholder="' + esc(u.detail) + '">' + esc(K.detail || "") + "</textarea></label>" +
+      '<button type="button" class="btn ' + (ul ? "" : "primary ") + 'ai-napisat" data-ai="napisat">✨ ' + (ul ? "Napísať nový text" : "Napísať") + "</button></div>";
+  }
+  function aiZacniUlohu(i) {
+    var u = AI_ULOHY[i], p = aiPonuka(), n = (aiUlozeny(p, u) || {}).nastavenia || {};
+    S.aiKrok = { u: i, faza: u.ponuka && !p && aiPonuky().length ? "ponuka" : "otazky",
+      komu: u.komu.indexOf(n.komu) >= 0 ? n.komu : u.komu[0], ciel: u.ciel.indexOf(n.ciel) >= 0 ? n.ciel : u.ciel[0], detail: n.detail || "" };
+  }
   function vykresliAsistenta() {
     var el = $("#obsah"); if (!el) return;
-    var M = S.aiSpravy = S.aiSpravy || [], p = aiPonuka(), posledna = -1;
+    if (S.aiTexty == null && !S.aiTextyBezi) {
+      S.aiTextyBezi = true;
+      nacitajAiTexty().then(function () { S.aiTextyBezi = false; if (S.tab === "asistent" && (!S.aiKrok || S.aiKrok.faza === "otazky") && !($("#ai-text") && $("#ai-text").value)) vykresliAsistenta(); });
+    }
+    var M = S.aiSpravy = S.aiSpravy || [], p = aiPonuka(), K = S.aiKrok, posledna = -1;
     M.forEach(function (m, i) { if (m.role !== "user" && !m.chyba) posledna = i; });
-    var obsah = S.aiVyber != null ? aiVyber() : !M.length ? aiUvod() : M.map(function (m, i) {
+    var obsah = K ? (K.pripojit || K.faza === "ponuka" ? aiVyberPonuky() : aiOtazky()) : !M.length ? aiUvod() : M.map(function (m, i) {
       if (m.role === "user") return '<div class="sprava ja"><div class="sprava-telo"><div class="bublina">' + esc(m.zobraz || m.content) + "</div></div></div>";
       var prva = i === 0 || M[i - 1].role === "user";
       return '<div class="sprava"><span class="sprava-av">' + (prva ? '<img class="typek-av" src="typek-hlava.png" alt="" width="36" height="36">' : "") + '</span><div class="sprava-telo">' +
@@ -6467,51 +6528,64 @@
       (M.length ? '<button class="btn ghost" type="button" data-ai="nova">↺ Nový rozhovor</button>' : "") + "</div>" +
       '<div class="chat-spravy" id="ai-spravy">' + obsah + "</div>" +
       '<div class="ai-dole">' + (p ? '<div class="ai-pill" title="AI píše z údajov tejto ponuky"><span>📎 ' + esc(nazovPonuky(p)) + '</span><button type="button" data-ai="odopnut" aria-label="Odobrať ponuku">✕</button></div>' :
-        S.aiVyber == null ? '<button type="button" class="ai-pripojit" data-ai="pripojit">📎 Pripojiť ponuku</button>' : "") +
+        !K ? '<button type="button" class="ai-pripojit" data-ai="pripojit">📎 Pripojiť ponuku</button>' : "") +
       '<form class="chat-form" id="f-ai"><textarea id="ai-text" rows="1" maxlength="4000" placeholder="' + (M.length ? "Napíš, čo upraviť alebo na čo sa opýtať…" : "Alebo napíš vlastnú otázku…") + '" aria-label="Otázka"></textarea>' +
       '<button class="chat-poslat" type="submit" aria-label="Odoslať"' + (S.aiCaka ? " disabled" : "") + '><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z" fill="currentColor"/></svg></button></form></div></div>';
     vyskaAi();
-    var box = $("#ai-spravy"); if (S.aiVyber == null) box.scrollTop = box.scrollHeight;
+    var box = $("#ai-spravy"); if (!K) box.scrollTop = box.scrollHeight;
     var t = $("#ai-text");
     t.addEventListener("input", function () { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 160) + "px"; });
     t.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && window.matchMedia("(pointer: fine)").matches) { e.preventDefault(); $("#f-ai").requestSubmit(); } });
-    $("#f-ai").onsubmit = function (e) { e.preventDefault(); var v = t.value.trim(); if (v) { S.aiVyber = null; posliAi(v); } };
-    el.querySelectorAll("[data-ai-uloha]").forEach(function (b) {
-      b.onclick = function () {
-        var i = Number(b.dataset.aiUloha), u = AI_ULOHY[i];
-        if (u.ponuka && !aiPonuka() && aiPonuky().length) { S.aiVyber = i; return vykresliAsistenta(); }
-        posliAi(u.prompt, u.ik + " " + u.nazov + (aiPonuka() ? " · " + nazovPonuky(aiPonuka()) : ""));
-      };
-    });
+    $("#f-ai").onsubmit = function (e) { e.preventDefault(); var v = t.value.trim(); if (v) { S.aiKrok = null; S.aiAkt = null; posliAi(v); } };
+    el.querySelectorAll("[data-ai-uloha]").forEach(function (b) { b.onclick = function () { aiZacniUlohu(Number(b.dataset.aiUloha)); vykresliAsistenta(); }; });
     el.querySelectorAll("[data-ai-ponuka]").forEach(function (b) {
       b.onclick = function () {
-        var k = S.aiVyber; S.aiPonuka = b.dataset.aiPonuka || ""; S.aiVyber = null;
-        if (k == null || k === "pripojit") return vykresliAsistenta();
-        var u = AI_ULOHY[k]; posliAi(u.prompt, u.ik + " " + u.nazov + (aiPonuka() ? " · " + nazovPonuky(aiPonuka()) : ""));
+        S.aiPonuka = b.dataset.aiPonuka || "";
+        if (!S.aiKrok || S.aiKrok.pripojit) S.aiKrok = null;
+        else { var d = S.aiKrok.detail; aiZacniUlohu(S.aiKrok.u); S.aiKrok.faza = "otazky"; if (d) S.aiKrok.detail = d; }
+        vykresliAsistenta();
       };
     });
     var hl = $("#ai-hladaj");
     if (hl) hl.oninput = function () { var q = norm(hl.value.trim()); el.querySelectorAll(".ai-ponuka").forEach(function (b) { b.hidden = !!q && b.dataset.hladaj.indexOf(q) < 0; }); };
+    el.querySelectorAll("[data-ai-volba]").forEach(function (b) {
+      b.onclick = function () {
+        S.aiKrok[b.dataset.aiVolba] = b.dataset.hodnota;
+        b.parentNode.querySelectorAll(".ai-volba").forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); });
+      };
+    });
+    var det = $("#ai-detail"); if (det) det.oninput = function () { S.aiKrok.detail = det.value; };
     el.querySelectorAll("[data-ai]").forEach(function (b) {
       b.onclick = function () {
-        var a = b.dataset.ai;
-        if (a === "nova") { S.aiSpravy = []; S.aiVyber = null; }
-        if (a === "spat") S.aiVyber = null;
-        if (a === "pripojit") S.aiVyber = "pripojit";
+        var a = b.dataset.ai, K2 = S.aiKrok;
+        if (a === "napisat" || a === "pouzit") {
+          var u = AI_ULOHY[K2.u], pp = aiPonuka(), n = { komu: K2.komu, ciel: K2.ciel, detail: String(K2.detail || "").trim() };
+          var ulozit = pp ? { k: u.k, ponuka: pp.id, nastavenia: n } : null;
+          S.aiKrok = null;
+          if (a === "napisat") return posliAi(aiZadanie(u, n), aiPopisZadania(u, pp, n), ulozit);
+          var ul = aiUlozeny(pp, u), nu = ul.nastavenia && ul.nastavenia.komu ? ul.nastavenia : n;
+          S.aiSpravy = S.aiSpravy || [];
+          S.aiSpravy.push({ role: "user", content: aiZadanie(u, nu), zobraz: aiPopisZadania(u, pp, nu) + "\n💾 uložený text" }, { role: "assistant", content: ul.text });
+          S.aiAkt = { k: u.k, ponuka: pp.id, nastavenia: nu };
+          return vykresliAsistenta();
+        }
+        if (a === "nova") { S.aiSpravy = []; S.aiKrok = null; S.aiAkt = null; }
+        if (a === "spat") S.aiKrok = null;
+        if (a === "pripojit") S.aiKrok = { pripojit: true };
         if (a === "odopnut") S.aiPonuka = "";
         vykresliAsistenta();
       };
     });
     el.querySelectorAll("[data-ai-kopiruj]").forEach(function (b) { b.onclick = function () { kopiruj(aiCistyText(M[Number(b.dataset.aiKopiruj)].content), "Text je skopírovaný."); }; });
-    el.querySelectorAll("[data-ai-dalej]").forEach(function (b) { b.onclick = function () { var x = AI_DALEJ[b.dataset.aiDalej]; posliAi(x[0], x[1]); }; });
+    el.querySelectorAll("[data-ai-dalej]").forEach(function (b) { b.onclick = function () { var x = AI_DALEJ[b.dataset.aiDalej]; posliAi(x[0], x[1], S.aiAkt); }; });
   }
   function vyskaAi() {
     var c = $(".ai-box"); if (!c) return;
     var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     c.style.height = Math.max(420, vh - Math.min(c.getBoundingClientRect().top + window.scrollY, vh * 0.45) - 16) + "px";
   }
-  // zobraz = krátky popis v bubline (napr. „📣 Príspevok na siete · Byt Mier“); AI dostane celé zadanie
-  async function posliAi(text, zobraz) {
+  // zobraz = krátky popis v bubline; AI dostane celé zadanie. ulozit = { k, ponuka, nastavenia } → výsledok sa uloží k ponuke
+  async function posliAi(text, zobraz, ulozit) {
     if (S.aiCaka) return;
     var M = S.aiSpravy = S.aiSpravy || [];
     M.push({ role: "user", content: text, zobraz: zobraz || "" }); S.aiCaka = true; vykresliAsistenta();
@@ -6523,7 +6597,10 @@
         body: JSON.stringify({ spravy: M.filter(function (m) { return !m.chyba; }).map(function (m) { return { role: m.role, content: m.content }; }), kontext: kontextPonuky(p) }) });
       var d = {}; try { d = await r.json(); } catch (e) { /* nič */ }
       if (!r.ok || !d.text) M.push({ role: "assistant", content: d.chyba || "AI asistent teraz nie je dostupný.", chyba: true });
-      else M.push({ role: "assistant", content: d.text });
+      else {
+        M.push({ role: "assistant", content: d.text });
+        if (ulozit) { S.aiAkt = ulozit; ulozAiText(ulozit, d.text); }
+      }
     } catch (err) { M.push({ role: "assistant", content: chybaText(err), chyba: true }); }
     S.aiCaka = false; if (S.tab === "asistent") vykresliAsistenta();
   }
