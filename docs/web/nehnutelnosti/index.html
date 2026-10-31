@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uwxziqapghlyktwpipjd.supabase.co" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Instrument+Sans:wght@400..700&amp;family=Montserrat:wght@900&amp;display=swap">
-<link rel="stylesheet" href="portal.css?v=202610311">
+<link rel="stylesheet" href="portal.css?v=202610312">
 <script>
   // všetky animácie aj pri obmedzenom pohybe v systéme: adresa ?pohyb=1
   if (/[?&]pohyb=1/.test(location.search)) document.documentElement.classList.add("pohyb-vzdy");
@@ -34,10 +34,23 @@
       <span class="tn-wm"><span class="a">Týpkove</span> <span class="b">nehnuteľnosti</span></span>
     </a>
     <nav class="tn-nav" aria-label="Hlavné menu">
-      <a href="./#ponuky" data-nav="ponuky"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg><span class="t-text">Ponuky</span></a>
-      <a href="./?pohlad=mapa#ponuky" data-nav="mapa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span class="t-text">Mapa</span></a>
-      <button type="button" data-akcia="oblubene" aria-pressed="false"><svg class="srdce-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-9.3-9.2C1.5 7.6 3.6 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.4 0 5.5 3.1 4.3 6.3C19.5 15.4 12 20 12 20z"/></svg><span class="t-text">Obľúbené</span><span class="tn-pocet" id="pocet-obl" hidden>0</span></button>
-      <a class="tn-pre" href="../">Ste maklér?</a>
+      <a class="nd" href="./#ponuky" data-nav="ponuky">Ponuky</a>
+      <a class="nd" href="./?pohlad=mapa#ponuky" data-nav="mapa">Mapa</a>
+      <a class="nd" href="./#makleri" data-nav="makleri">Makléri</a>
+      <a class="nd" href="./#clanky" data-nav="clanky">Články</a>
+      <button type="button" data-akcia="oblubene" aria-pressed="false" aria-label="Obľúbené"><svg class="srdce-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-9.3-9.2C1.5 7.6 3.6 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.4 0 5.5 3.1 4.3 6.3C19.5 15.4 12 20 12 20z"/></svg><span class="t-text">Obľúbené</span><span class="tn-pocet" id="pocet-obl" hidden>0</span></button>
+      <a class="tn-pre nd" href="./#inzerovat" data-nav="inzerovat">Inzerovať</a>
+      <details class="tn-menu" id="tn-menu">
+        <summary aria-label="Menu"><span class="burger" aria-hidden="true"><i></i><i></i><i></i></span></summary>
+        <div class="tn-menu-p">
+          <a href="./#ponuky" data-nav="ponuky">Ponuky</a>
+          <a href="./?pohlad=mapa#ponuky" data-nav="mapa">Mapa ponúk</a>
+          <a href="./#makleri" data-nav="makleri">Vyhľadať makléra</a>
+          <a href="./#clanky" data-nav="clanky">Články</a>
+          <a href="./#pre-vas" data-nav="pre-vas">Chcem byť maklér</a>
+          <a class="btn btn-zlate" href="./#inzerovat" data-nav="inzerovat">Inzerovať u Týpka</a>
+        </div>
+      </details>
     </nav>
   </div>
 </header>
@@ -75,14 +88,75 @@
           <div class="mapa-obal" id="mapa-obal" hidden><div id="mapa" class="mapa-svetla" aria-label="Mapa ponúk"></div></div>
         </div>
 
-        <aside class="pre-maklerov" data-rv aria-label="Pre maklérov a realitné kancelárie">
-          <img src="../typek-head.png?v=202610251300" width="96" height="96" alt="">
-          <div>
-            <h2>Ste maklér alebo realitná kancelária?</h2>
-            <p>Ponuky, ktoré spravujete v Realitnom týpku, sa tu zobrazia samé. Netreba ich pridávať druhýkrát a dopyty od kupujúcich vám prídu rovno do aplikácie.</p>
+      </div>
+    </section>
+
+    <!-- vyhľadaj makléra -->
+    <section class="sekcia" id="makleri" aria-labelledby="makleri-nadpis" hidden>
+      <div class="obal">
+        <div class="sek-hl" data-rv>
+          <div><span class="sek-stitok">Makléri</span><h2 id="makleri-nadpis">Vyhľadajte makléra</h2>
+          <p>Makléri a kancelárie, ktorí tu majú ponuky. Pozrite si ich ponuky, web alebo im rovno zavolajte.</p></div>
+          <label class="mk-hladaj"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="sr">Hľadať makléra</span><input type="search" id="mk-q" placeholder="Meno, kancelária alebo oblasť" autocomplete="off"></label>
+        </div>
+        <div class="mk-mriezka" id="mk-mriezka"></div>
+      </div>
+    </section>
+
+    <!-- pre vás -->
+    <section class="sekcia" id="pre-vas" aria-label="Chcem byť maklér a financovanie">
+      <div class="obal">
+        <div class="pv-mriezka">
+          <article class="pv pv-makler" data-rv>
+            <span class="pv-ic" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="12" r="4"/><path d="M11.5 12H21M18 12v3.5M21 12v2.5"/></svg></span>
+            <h2>Chcem byť maklér</h2>
+            <p>Baví vás pomáhať ľuďom nájsť domov a radi sa stretávate s ľuďmi? Ozvite sa. Povieme vám, ako začať, aj keď v realitách ešte nemáte skúsenosti.</p>
+            <ul class="pv-body"><li>povieme vám, ako v realitách začať</li><li>moderný softvér, v ktorom máte všetko pokope</li><li>ozveme sa vám osobne</li></ul>
+            <button type="button" class="btn btn-ink" data-akcia="chcem-makler">Mám záujem</button>
+          </article>
+          <article class="pv pv-fin" data-rv style="--rd:120ms">
+            <span class="pv-pripravujeme">PRIPRAVUJEME</span>
+            <span class="pv-ic" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M7 15h3"/></svg></span>
+            <h2>Chcem financovať</h2>
+            <p>Hypotéka a poistenie k nehnuteľnosti, ktorú si vyberiete. Porovnáme ponuky bánk a pomôžeme vám s vybavením.</p>
+            <span class="pv-coskoro">Pripravujeme – čoskoro tu</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- články -->
+    <section class="sekcia" id="clanky" aria-labelledby="clanky-nadpis" hidden>
+      <div class="obal">
+        <div class="sek-hl" data-rv>
+          <div><span class="sek-stitok">Články</span><h2 id="clanky-nadpis">Rady a novinky z realít</h2>
+          <p>Čo vedieť pri kúpe, predaji aj prenájme. Krátko a zrozumiteľne.</p></div>
+        </div>
+        <div class="cl-mriezka" id="cl-mriezka"></div>
+      </div>
+    </section>
+
+    <!-- veľká výzva pre maklérov a kancelárie -->
+    <section class="sekcia" id="inzerovat" aria-labelledby="inzerovat-nadpis">
+      <div class="obal">
+        <div class="inz" data-rv>
+          <div class="inz-tx">
+            <span class="inz-stitok">Pre maklérov a realitné kancelárie</span>
+            <h2 id="inzerovat-nadpis">Si maklér alebo realitná kancelária a chceš inzerovať u Týpka?</h2>
+            <p>Ponuky, ktoré spravuješ v Realitnom týpku, sa tu zobrazia samé. Netreba ich pridávať druhýkrát.</p>
+            <ul class="inz-body">
+              <li><b>Ponuky sa zobrazia samé</b>pridáš ich raz v Týpkovi a sú aj tu, na mape s piktogramom</li>
+              <li><b>Dopyty rovno do aplikácie</b>správa od kupujúceho ti príde do zvončeka aj do mobilu</li>
+              <li><b>Tvoj profil makléra</b>s fotkou, ponukami a odkazom na tvoj web vo Vyhľadaj makléra</li>
+              <li><b>Bez topovania a kreditov</b>poradie je od najnovších, rovnaké pre všetkých</li>
+            </ul>
+            <div class="inz-tl">
+              <a class="btn btn-zlate" href="../#pristup">Chcem inzerovať u Týpka</a>
+              <a class="btn btn-svetly" href="../">Viac o Týpkovi</a>
+            </div>
           </div>
-          <a class="btn btn-zlate" href="../">Zistiť viac o Týpkovi</a>
-        </aside>
+          <div class="inz-postava" aria-hidden="true"><span class="inz-kruh"></span><img src="../typek.png" width="881" height="1000" alt="" loading="lazy"></div>
+        </div>
       </div>
     </section>
   </div>
@@ -95,6 +169,9 @@
   <div class="obal">
     <span>Týpkove nehnuteľnosti sú súčasťou <a href="../">Realitného týpka</a>.</span>
     <nav aria-label="Odkazy v pätičke">
+      <a href="./#makleri" data-nav="makleri">Makléri</a>
+      <a href="./#clanky" data-nav="clanky">Články</a>
+      <a href="./#inzerovat" data-nav="inzerovat">Inzerovať u Týpka</a>
       <a href="../ochrana-udajov.html">Ochrana osobných údajov</a>
       <a href="mailto:info@realitnytypek.sk">info@realitnytypek.sk</a>
     </nav>
@@ -103,6 +180,6 @@
 
 <div class="tn-toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p style="max-width:640px;margin:20px auto;padding:16px;border-radius:16px;background:#FFFDF8">Ponuky sa zobrazia po zapnutí JavaScriptu v prehliadači.</p></noscript>
-<script src="portal.js?v=202610311" defer></script>
+<script src="portal.js?v=202610312" defer></script>
 </body>
 </html>

@@ -95,6 +95,10 @@
   }
   function trasa() {
     var h = location.hash;
+    if (h === "#clanky") return clankyPrehlad();
+    if (h === "#clanok-novy") return clanokEditor(null);
+    var mc = h.match(/^#clanok\/(\d+)$/);
+    if (mc) return clanokEditor(Number(mc[1]));
     var m = h.match(/^#z\/(\d+)$/);
     if (m) { var z = S.zak.find(function (x) { return x.id === Number(m[1]); }); if (z) return detail(z); }
     if (h === "#novy") return detail(null);
@@ -112,7 +116,7 @@
     var tento = dnes().slice(0, 7);
     var mesiac = S.platby.filter(function (p) { return String(p.datum).slice(0, 7) === tento; }).reduce(function (s, p) { return s + Number(p.suma); }, 0);
 
-    $("#sp").innerHTML =
+    $("#sp").innerHTML = zalozky("zak") +
       '<div class="sp-uvod"><div><h1>Zákazníci</h1><p>Kancelárie a samostatní makléri, ktorí používajú Realitný týpek.</p></div>' +
         '<a class="btn primary sp-novy" href="#novy">+ Nový zákazník</a></div>' +
       '<div class="sp-dlazdice">' +
@@ -388,6 +392,101 @@
     return '<section class="sp-box sp-pristup"><h3>Prístup do aplikácie</h3>' +
       "<p>Vlastný účet pre túto kanceláriu a pozvánky pre jej maklérov pribudnú v ďalšom kroku, keď budú kancelárie v databáze od seba oddelené. " +
       "Dovtedy zákazníkovi ukazuj aplikáciu iba osobne.</p></section>";
+  }
+
+  // ---------------------------------------------------------------- články na portáli (Týpkove nehnuteľnosti)
+  var PORTAL = "https://realitnytypek.sk/nehnutelnosti/";
+  var KNIZNICA = ["byt-obyvacka", "byt-kuchyna", "byt-spalna", "byt-centrum", "byt-tehla", "byt-dom", "dom-rodinny", "dom-novostavba", "dom-zahrada", "dom-obyvacka",
+    "luxus-obyvacka", "chata", "chata-krb", "chatka", "pozemok", "mesto-namestie", "mesto-letecky"];
+  S.clanky = null;
+  function zalozky(akt) {
+    return '<nav class="sp-zalozky" aria-label="Časti správy">' +
+      '<a href="#"' + (akt === "zak" ? ' aria-current="page"' : "") + ">Zákazníci</a>" +
+      '<a href="#clanky"' + (akt === "cl" ? ' aria-current="page"' : "") + ">Články na portáli</a></nav>";
+  }
+  function fotoClanku(f, maly) {
+    if (!f) return "";
+    if (/^https:\/\//.test(f)) return f;
+    return /^[a-z0-9-]{2,60}$/.test(f) ? "img/web/" + f + (maly ? "-m" : "") + ".webp" : "";
+  }
+  async function nacitajClanky() {
+    var r = await sb.rpc("portal_clanky_sprava");
+    if (r.error) throw r.error;
+    S.clanky = r.data || [];
+  }
+  async function clankyPrehlad() {
+    $("#sp").innerHTML = zalozky("cl") + '<div class="boot">Načítavam články…</div>';
+    try { await nacitajClanky(); } catch (e) { $("#sp").innerHTML = zalozky("cl") + '<p class="sp-nic">Články sa nepodarilo načítať: ' + esc(chybaText(e)) + "</p>"; return; }
+    var zv = S.clanky.filter(function (c) { return c.stav === "zverejnene"; }).length;
+    $("#sp").innerHTML = zalozky("cl") +
+      '<div class="sp-uvod"><div><h1>Články na portáli</h1><p>Články v Týpkových nehnuteľnostiach (' + zv + " zverejnených). " +
+        '<a href="' + PORTAL + '#clanky" target="_blank" rel="noopener">Pozrieť na portáli</a></p></div>' +
+        '<a class="btn primary sp-novy" href="#clanok-novy">+ Nový článok</a></div>' +
+      (S.clanky.length ? '<div class="sp-clanky">' + S.clanky.map(function (c) {
+        var f = fotoClanku(c.foto, true);
+        return '<a class="sp-cl" href="#clanok/' + c.id + '">' + (f ? '<img src="' + esc(f) + '" alt="" loading="lazy">' : '<span class="sp-cl-bez"></span>') +
+          "<span><b>" + esc(c.nadpis) + "</b><small>" + dat(c.datum) + (c.autor ? " · " + esc(c.autor) : "") + "</small>" +
+          (c.perex ? "<em>" + esc(c.perex) + "</em>" : "") + "</span>" +
+          '<i class="sp-stav ' + (c.stav === "zverejnene" ? "dobry" : "sivy") + '">' + (c.stav === "zverejnene" ? "Zverejnený" : "Koncept") + "</i></a>";
+      }).join("") + "</div>"
+      : '<div class="sp-prazdne"><img src="typek-postava.png" alt="" width="110" height="124"><h3>Zatiaľ žiadne články</h3><p>Napíš prvý článok. Zobrazí sa v Týpkových nehnuteľnostiach v časti Články.</p><a class="btn primary" href="#clanok-novy">+ Nový článok</a></div>');
+  }
+  async function clanokEditor(id) {
+    if (!S.clanky) { try { await nacitajClanky(); } catch (e) { return hlaska("Články sa nepodarilo načítať", chybaText(e), '<a class="btn" href="#clanky">Späť</a>'); } }
+    var c = id ? S.clanky.find(function (x) { return x.id === id; }) : null;
+    if (id && !c) { location.hash = "#clanky"; return; }
+    var novy = !c;
+    c = c || { nadpis: "", perex: "", text: "", foto: "", autor: "", stav: "koncept" };
+    var vlastna = c.foto && !/^[a-z0-9-]{2,60}$/.test(c.foto) ? c.foto : "";
+    $("#sp").innerHTML = zalozky("cl") +
+      '<a class="sp-spat" href="#clanky">← Všetky články</a>' +
+      '<div class="sp-uvod"><div><h1>' + (novy ? "Nový článok" : esc(c.nadpis)) + "</h1>" +
+        (novy ? "<p>Článok sa zobrazí v Týpkových nehnuteľnostiach, keď ho zverejníš.</p>" :
+          "<p>" + (c.stav === "zverejnene" ? 'Zverejnený ' + dat(c.datum) + ' · <a href="' + PORTAL + "clanky/" + esc(c.slug) + '" target="_blank" rel="noopener">Pozrieť na portáli</a>' : "Koncept – na portáli ho zatiaľ nikto nevidí") + "</p>") + "</div></div>" +
+      '<form id="cl-form" class="sp-form" novalidate>' +
+        '<section class="sp-box"><h3>Text</h3>' +
+          '<label class="field"><span>Nadpis</span><input id="cl-nadpis" maxlength="140" required value="' + esc(c.nadpis) + '"></label>' +
+          '<label class="field"><span>Úvod (zobrazí sa aj na karte článku)</span><textarea id="cl-perex" rows="3" maxlength="400">' + esc(c.perex) + "</textarea></label>" +
+          '<label class="field"><span>Text článku</span><textarea id="cl-text" rows="16" maxlength="40000">' + esc(c.text) + "</textarea></label>" +
+          '<p class="sp-pozn">Prázdny riadok = nový odsek. Riadok začínajúci <b>## </b> je medzinadpis. Riadky začínajúce <b>- </b> sú zoznam.</p>' +
+          '<label class="field"><span>Autor (nepovinné)</span><input id="cl-autor" maxlength="80" value="' + esc(c.autor || "") + '" placeholder="napr. Martin Augustiňák"></label>' +
+        "</section>" +
+        '<section class="sp-box"><h3>Fotka</h3>' +
+          '<div class="sp-kniznica" role="radiogroup" aria-label="Fotka z knižnice">' +
+            '<label><input type="radio" name="cl-foto" value=""' + (!c.foto ? " checked" : "") + '><span class="sp-kn-bez">Bez fotky</span></label>' +
+            KNIZNICA.map(function (k) { return '<label><input type="radio" name="cl-foto" value="' + k + '"' + (c.foto === k ? " checked" : "") + '><img src="img/web/' + k + '-m.webp" alt="' + k + '" loading="lazy"></label>'; }).join("") +
+          "</div>" +
+          '<label class="field"><span>Alebo adresa vlastnej fotky (https://…)</span><input id="cl-url" type="url" placeholder="https://" value="' + esc(vlastna) + '"></label>' +
+        "</section>" +
+        '<section class="sp-box"><h3>Zverejnenie</h3><div class="sp-seg" role="radiogroup" aria-label="Stav článku">' +
+          [["koncept", "Koncept"], ["zverejnene", "Zverejnený na portáli"]].map(function (x) { return '<label><input type="radio" name="cl-stav" value="' + x[0] + '"' + (c.stav === x[0] ? " checked" : "") + "><span>" + x[1] + "</span></label>"; }).join("") +
+        "</div></section>" +
+        '<div class="sp-uloz"><button type="submit" class="btn primary">' + (novy ? "Uložiť článok" : "Uložiť zmeny") + '</button><a class="btn ghost" href="#clanky">Zrušiť</a>' +
+          (novy ? "" : '<button type="button" class="btn danger sp-zmaz" id="cl-zmaz">Zmazať článok</button>') + "</div>" +
+      "</form>";
+    var form = $("#cl-form");
+    $("#cl-url").addEventListener("input", function () { if (this.value.trim()) form.querySelectorAll('[name="cl-foto"]').forEach(function (r) { r.checked = false; }); });
+    form.querySelectorAll('[name="cl-foto"]').forEach(function (r) { r.addEventListener("change", function () { $("#cl-url").value = ""; }); });
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var vyb = form.querySelector('[name="cl-foto"]:checked'), url = $("#cl-url").value.trim();
+      var data = { id: novy ? null : c.id, nadpis: $("#cl-nadpis").value, perex: $("#cl-perex").value, text: $("#cl-text").value,
+        autor: $("#cl-autor").value, foto: url || (vyb ? vyb.value : ""), stav: (form.querySelector('[name="cl-stav"]:checked') || {}).value || "koncept" };
+      if (url && !/^https:\/\//.test(url)) return toast("Adresa fotky musí začínať https://", true);
+      var btn = form.querySelector('[type="submit"]'); btn.disabled = true;
+      var r = await sb.rpc("ulozit_portal_clanok", { p: data });
+      btn.disabled = false;
+      if (r.error) return toast(chybaText(r.error), true);
+      await nacitajClanky();
+      toast(r.data.stav === "zverejnene" ? "Článok je uložený a zverejnený na portáli." : "Článok je uložený ako koncept.");
+      if (novy) location.hash = "#clanok/" + r.data.id; else clanokEditor(r.data.id);
+    });
+    if (!novy) $("#cl-zmaz").addEventListener("click", async function () {
+      if (!confirm("Zmazať článok „" + c.nadpis + "“? Z portálu zmizne hneď.")) return;
+      var r = await sb.rpc("zmazat_portal_clanok", { p_id: c.id });
+      if (r.error) return toast(chybaText(r.error), true);
+      await nacitajClanky(); toast("Článok je zmazaný."); location.hash = "#clanky";
+    });
   }
 
   start().catch(function (e) { hlaska("Niečo sa pokazilo", chybaText(e)); });

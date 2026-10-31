@@ -43,6 +43,9 @@
     mail: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/></svg>',
     zdielat: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     kocka: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>',
+    web: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+    domcek: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7M5 9.5V20h14V9.5"/></svg>',
+    sipka: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
     video: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3"/></svg>',
   };
   var KAT = [
@@ -55,12 +58,28 @@
     ["garaze", "Garáže", "Garáž", '<path d="M3 21V9l9-5 9 5v12M7 21v-8h10v8M7 16h10"/>'],
   ];
   var KAT_M = {}; KAT.forEach(function (k) { KAT_M[k[0]] = k; });
+  // farba krúžku s piktogramom na mape (podľa druhu nehnuteľnosti)
+  var KAT_FARBA = { byty: "#4A6074", domy: "#1E2A35", pozemky: "#2E7D5B", chaty: "#8A5A2B", priestory: "#2F4152", objekty: "#3A4B5A", garaze: "#5E7387" };
+  function katFarba(k) { return KAT_FARBA[k] || "#1E2A35"; }
   function katIkona(k, s) { return '<svg width="' + (s || 18) + '" height="' + (s || 18) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ((KAT_M[k] || KAT[1])[3]) + "</svg>"; }
 
   // ---------------------------------------------------------------- adresy (pekné na realitnytypek.sk, inde ?id=)
   var PEKNE = /(^|\.)realitnytypek\.sk$/.test(location.hostname);
-  var ROOT = location.pathname.replace(/\/\d{1,10}(?:-[a-z0-9-]*)?\/?$/, "/").replace(/[^/]*$/, "");
+  var ROOT = location.pathname.replace(/\/clanky\/[a-z0-9-]{1,100}\/?$/, "/").replace(/\/\d{1,10}(?:-[a-z0-9-]*)?\/?$/, "/").replace(/[^/]*$/, "");
+  function clanokZAdresy() {
+    var m = location.pathname.match(/\/clanky\/([a-z0-9-]{1,100})\/?$/);
+    if (m) return m[1];
+    var q = new URLSearchParams(location.search).get("clanok");
+    return q && /^[a-z0-9-]{1,100}$/.test(q) ? q : "";
+  }
+  function odkazClanku(c) { return PEKNE ? ROOT + "clanky/" + c.slug : ROOT + "?clanok=" + c.slug; }
+  function fotoClanku(f, maly) {
+    if (!f) return "";
+    if (/^https:\/\//.test(f)) return f;
+    return /^[a-z0-9-]{2,60}$/.test(f) ? "https://app.realitnytypek.sk/img/web/" + f + (maly ? "-m" : "") + ".webp" : "";
+  }
   function idZAdresy() {
+    if (clanokZAdresy()) return 0;
     var m = location.pathname.match(/\/(\d{1,10})(?:-[a-z0-9-]*)?\/?$/);
     if (m) return Number(m[1]);
     var q = new URLSearchParams(location.search).get("id");
@@ -128,7 +147,7 @@
 
   // ---------------------------------------------------------------- stav a filtre
   var S = { ponuky: [], makleri: {}, kancelarie: {}, detaily: {}, nacitane: false, chyba: "", vyber: [], obl: citaj("typek-oblubene", []), mapa: null, piny: {}, detail: null, zoznamY: 0 };
-  var F0 = { t: "", k: "", q: "", cod: "", cdo: "", pod: "", izby: "", stav: "", vyb: [], d3: false, zor: "nove", pohlad: "zoznam", obl: false };
+  var F0 = { t: "", k: "", q: "", cod: "", cdo: "", pod: "", izby: "", stav: "", vyb: [], d3: false, zor: "nove", pohlad: "zoznam", obl: false, m: "" };
   var F = Object.assign({}, F0);
   var ZORADENIE = [["nove", "Najnovšie"], ["lacne", "Najlacnejšie"], ["drahe", "Najdrahšie"], ["velke", "Najväčšie"]];
   var STAVY = [["novostavba", "Novostavba"], ["rekonstrukcia", "Po rekonštrukcii"], ["povodny", "Pôvodný stav"]];
@@ -137,7 +156,8 @@
   function citajFiltre() {
     var u = new URLSearchParams(location.search);
     F = Object.assign({}, F0);
-    ["t", "k", "q", "cod", "cdo", "pod", "izby", "stav", "zor", "pohlad"].forEach(function (k) { if (u.get(k)) F[k] = u.get(k).slice(0, 80); });
+    ["t", "k", "q", "cod", "cdo", "pod", "izby", "stav", "zor", "pohlad", "m"].forEach(function (k) { if (u.get(k)) F[k] = u.get(k).slice(0, 80); });
+    if (!/^[0-9a-f-]{36}$/.test(F.m)) F.m = "";
     F.vyb = (u.get("vyb") || "").split(",").filter(function (v) { return VYBAVENIE.indexOf(v) >= 0; });
     F.d3 = u.get("d3") === "1"; F.obl = u.get("obl") === "1";
     if (["predaj", "prenajom"].indexOf(F.t) < 0) F.t = "";
@@ -163,6 +183,7 @@
   }
   function vyhovuje(p, bezKategorie) {
     if (F.obl && S.obl.indexOf(p.id) < 0) return false;
+    if (F.m && p.makler !== F.m) return false;
     if (F.t && p.transakcia !== F.t) return false;
     if (!bezKategorie && F.k && p.kategoria !== F.k) return false;
     if (F.q) {
@@ -300,6 +321,7 @@
     // čipy aktívnych filtrov
     var c = [];
     if (F.obl) c.push(["obl", "Len obľúbené"]);
+    if (F.m) c.push(["m", "Maklér: " + ((S.makleri[F.m] || {}).meno || "vybraný")]);
     if (F.t) c.push(["t", F.t === "predaj" ? "Kúpa" : "Prenájom"]);
     if (F.k) c.push(["k", KAT_M[F.k][1]]);
     if (F.q) c.push(["q", "„" + F.q + "“"]);
@@ -440,7 +462,7 @@
       var zoz = S.vyber.filter(function (p) { return p.lat != null && p.lon != null; });
       zoz.forEach(function (p) {
         var m = L.marker([p.lat, p.lon], {
-          icon: L.divIcon({ className: "pin-obal", html: '<div class="pin' + (jeObl(p.id) ? " obl" : "") + '" data-pin="' + p.id + '">' + esc(kratkaCena(p)) + "</div>", iconSize: null }),
+          icon: L.divIcon({ className: "pin-obal", html: '<div class="pin' + (jeObl(p.id) ? " obl" : "") + '" data-pin="' + p.id + '" style="--kc:' + katFarba(p.kategoria) + '"><span class="pin-ic">' + katIkona(p.kategoria, 15) + "</span>" + esc(kratkaCena(p)) + "</div>", iconSize: null }),
           title: nazov(p), riseOnHover: true,
         });
         m.on("click", function (e) { if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent); vyberNaMape(p.id); });
@@ -451,6 +473,11 @@
         if (zoz.length) S.mapa.fitBounds(L.latLngBounds(zoz.map(function (p) { return [p.lat, p.lon]; })).pad(0.2), { maxZoom: 14, animate: !MALO_POHYBU });
         else S.mapa.setView([48.72, 19.6], 7);
       }, 30);
+      // legenda: druhy, ktoré sú práve na mape
+      var druhy = {}; zoz.forEach(function (p) { if (KAT_M[p.kategoria]) druhy[p.kategoria] = 1; });
+      var leg = $(".mapa-legenda", $("#mapa-obal"));
+      if (!leg) { leg = document.createElement("div"); leg.className = "mapa-legenda"; leg.setAttribute("aria-hidden", "true"); $("#mapa-obal").appendChild(leg); }
+      leg.innerHTML = KAT.filter(function (k) { return druhy[k[0]]; }).map(function (k) { return '<span><i style="--kc:' + katFarba(k[0]) + '">' + katIkona(k[0], 13) + "</i>" + esc(k[1]) + "</span>"; }).join("");
       var bez = S.vyber.length - zoz.length, info = $(".mapa-info", $("#mapa-obal"));
       if (!info) { info = document.createElement("div"); info.className = "mapa-info"; $("#mapa-obal").appendChild(info); }
       info.hidden = !bez;
@@ -760,7 +787,7 @@
         var el = $("#d-mapa"); if (!el || !P) return;
         var m = L.map(el, { scrollWheelZoom: false, dragging: !L.Browser.mobile, tap: false }).setView([P.lat, P.lon], 15);
         L.tileLayer(OSM, { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(m);
-        L.marker([P.lat, P.lon], { icon: L.divIcon({ className: "pin-obal", html: '<div class="pin-bod"></div>', iconSize: null }), keyboard: false }).addTo(m);
+        L.marker([P.lat, P.lon], { icon: L.divIcon({ className: "pin-obal", html: '<div class="pin-d" style="--kc:' + katFarba(P.kategoria) + '">' + katIkona(P.kategoria, 22) + "</div>", iconSize: null }), keyboard: false }).addTo(m);
         S.dMapa = m;
       }, function () { /* mapa sa nenačítala – zvyšok stránky funguje */ });
     }
@@ -826,27 +853,205 @@
     if (S.lbFokus && S.lbFokus.focus) S.lbFokus.focus();
   }
 
+  // ================================================================ VYHĽADAJ MAKLÉRA
+  var MK = { zoznam: [], kancelarie: {}, q: "", nacitanie: null };
+  function nacitajMaklerov() {
+    if (MK.nacitanie) return MK.nacitanie;
+    MK.nacitanie = rpc("portal_makleri").then(function (d) {
+      MK.zoznam = (d && Array.isArray(d.makleri)) ? d.makleri : []; MK.kancelarie = (d && d.kancelarie) || {};
+      kresliMaklerov();
+    }, function () { MK.nacitanie = null; });
+    return MK.nacitanie;
+  }
+  function kresliMaklerov() {
+    var sek = $("#makleri"), g = $("#mk-mriezka"); if (!sek || !g) return;
+    sek.hidden = !MK.zoznam.length;
+    var q = norm(MK.q);
+    var zoz = MK.zoznam.filter(function (m) { return !q || norm([m.meno, m.oblast, (MK.kancelarie[m.kancelaria] || {}).nazov].join(" ")).indexOf(q) >= 0; });
+    if (!zoz.length) { g.innerHTML = '<div class="mk-nic">Takého makléra tu zatiaľ nemáme. Skúste iné meno, kanceláriu alebo oblasť.</div>'; return; }
+    g.innerHTML = zoz.map(function (m, i) {
+      var k = MK.kancelarie[m.kancelaria] || {}, foto = /^(data:image\/|https:\/\/)/.test(m.foto || "") ? m.foto : "";
+      return '<article class="mk" data-rv style="--rd:' + Math.min(i, 6) * 70 + 'ms">' +
+        '<div class="mk-hl"><span class="mk-foto">' + (foto ? '<img src="' + esc(foto) + '" alt="" loading="lazy">' : esc(inicialy(m.meno))) + "</span>" +
+          "<span><b>" + esc(m.meno) + "</b><small>" + esc(k.nazov || "Realitná kancelária") + "</small></span></div>" +
+        '<div class="mk-cipy">' + (m.ponuk ? "<span>" + IC.domcek + pocetPonuk(m.ponuk) + "</span>" : "") +
+          (m.oblast ? "<span>" + IC.pin + esc(m.oblast) + "</span>" : "") +
+          (m.roky ? "<span>" + m.roky + " " + sklon(m.roky, "rok", "roky", "rokov") + " v realitách</span>" : "") + "</div>" +
+        '<div class="mk-akcie">' +
+          (m.ponuk ? '<button type="button" class="btn btn-ink" data-mk-ponuky="' + esc(m.id) + '">Ponuky makléra</button>' : "") +
+          (m.telefon ? '<button type="button" class="btn btn-obrys" data-akcia="telefon" data-tel="' + esc(m.telefon) + '">' + IC.tel + "Telefón</button>" : "") +
+          (m.web ? '<a class="btn btn-jemne" href="' + esc(m.web) + '" target="_blank" rel="noopener">' + IC.web + "Web makléra</a>" : "") +
+          (m.email && !m.telefon ? '<a class="btn btn-obrys" href="mailto:' + esc(m.email) + '">' + IC.mail + "E-mail</a>" : "") +
+        "</div></article>";
+    }).join("");
+    odkryvaj(g);
+  }
+
+  // ================================================================ ČLÁNKY
+  var CL = { zoznam: [], detaily: {}, vsetky: false, nacitanie: null };
+  function nacitajClanky() {
+    if (CL.nacitanie) return CL.nacitanie;
+    CL.nacitanie = rpc("portal_clanky", { p_limit: 48 }).then(function (d) {
+      CL.zoznam = Array.isArray(d) ? d : [];
+      kresliClanky();
+    }, function () { CL.nacitanie = null; });
+    return CL.nacitanie;
+  }
+  function datumText(d) { var x = new Date(d); return isNaN(x) ? "" : x.toLocaleDateString("sk-SK", { day: "numeric", month: "long", year: "numeric" }); }
+  function kartaClanku(c, i) {
+    var f = fotoClanku(c.foto, true);
+    return '<a class="cl" href="' + esc(odkazClanku(c)) + '" data-clanok="' + esc(c.slug) + '" data-rv style="--rd:' + Math.min(i, 5) * 80 + 'ms">' +
+      '<span class="cl-foto">' + (f ? '<img src="' + esc(f) + '" alt="" loading="lazy">' : "") + "</span>" +
+      '<span class="cl-telo"><small>' + esc(datumText(c.datum)) + "</small><h3>" + esc(c.nadpis) + "</h3>" + (c.perex ? "<p>" + esc(c.perex) + "</p>" : "") +
+      '<span class="cl-dalej">Čítať ďalej ' + IC.sipka + "</span></span></a>";
+  }
+  function kresliClanky() {
+    var sek = $("#clanky"), g = $("#cl-mriezka"); if (!sek || !g) return;
+    sek.hidden = !CL.zoznam.length;
+    var n = CL.vsetky ? CL.zoznam.length : 6;
+    g.innerHTML = CL.zoznam.slice(0, n).map(kartaClanku).join("") +
+      (CL.zoznam.length > n ? '<div class="cl-viac"><button type="button" class="btn btn-ink" data-akcia="vsetky-clanky">Všetky články (' + CL.zoznam.length + ")</button></div>" : "");
+    odkryvaj(g);
+  }
+  // text článku: odseky oddelené prázdnym riadkom, „## “ = medzinadpis, riadky s „- “ = zoznam
+  function textClanku(t) {
+    return String(t || "").split(/\n{2,}/).map(function (blok) {
+      blok = blok.trim(); if (!blok) return "";
+      var r = blok.split("\n");
+      if (/^## /.test(r[0])) return "<h2>" + esc(r[0].slice(3).trim()) + "</h2>" + (r.length > 1 ? textClanku(r.slice(1).join("\n")) : "");
+      if (r.every(function (x) { return /^[-•] /.test(x.trim()); })) return "<ul>" + r.map(function (x) { return "<li>" + esc(x.trim().slice(2)) + "</li>"; }).join("") + "</ul>";
+      return "<p>" + r.map(esc).join("<br>") + "</p>";
+    }).join("");
+  }
+  function ukazClanok(slug) {
+    if (!S.detail) { S.zoznamY = window.scrollY; S.zoznamUrl = $("#zoznam").hidden ? S.zoznamUrl : adresaZoznamu(); }
+    odidZDetailu();
+    S.detail = "c:" + slug;
+    $("#zoznam").hidden = true;
+    var el = $("#detail"); el.hidden = false;
+    window.scrollTo(0, 0);
+    var vlozene = $("#clanok-data"), data = null;
+    if (vlozene) { try { data = JSON.parse(vlozene.textContent); } catch (e) { data = null; } vlozene.remove(); }
+    if (data && data.slug === slug) return zobrazClanok(data);
+    if (CL.detaily[slug]) return zobrazClanok(CL.detaily[slug]);
+    el.innerHTML = '<div class="detail"><div class="obal"><div class="clanok"><div class="clanok-foto"></div>' + kostry(1) + "</div></div></div>";
+    rpc("portal_clanok", { p_slug: slug }).then(function (c) {
+      if (S.detail !== "c:" + slug) return;
+      if (!c) {
+        document.title = "Článok sa nenašiel · Týpkove nehnuteľnosti";
+        el.innerHTML = '<div class="detail"><div class="obal">' + prazdne("Tento článok sa nenašiel", "Možno bol presunutý alebo zmazaný. Pozrite si ďalšie články.", '<a class="btn btn-ink" href="' + esc(ROOT) + '" data-nav="clanky">Všetky články</a>') + "</div></div>";
+        return;
+      }
+      zobrazClanok(c);
+    }, function (e) {
+      if (S.detail !== "c:" + slug) return;
+      el.innerHTML = '<div class="detail"><div class="obal">' + prazdne("Článok sa nepodarilo načítať", e.message, '<a class="btn btn-ink" href="' + esc(ROOT) + '" data-akcia="spat">Späť</a>') + "</div></div>";
+    });
+  }
+  function zobrazClanok(c) {
+    CL.detaily[c.slug] = c;
+    document.title = c.nadpis + " · Týpkove nehnuteľnosti";
+    var f = fotoClanku(c.foto);
+    $("#detail").innerHTML = '<div class="detail"><div class="obal"><article class="clanok">' +
+      '<div class="omrvinky"><a class="spat" href="' + esc(S.zoznamUrl || ROOT) + '" data-akcia="spat">' + IC.vlavo + "Späť</a><span>Články</span></div>" +
+      (f ? '<div class="clanok-foto"><img src="' + esc(f) + '" alt="" fetchpriority="high"></div>' : "") +
+      '<div class="clanok-meta"><span>' + esc(datumText(c.datum)) + "</span>" + (c.autor ? "<span>" + esc(c.autor) + "</span>" : "") + "</div>" +
+      "<h1>" + esc(c.nadpis) + "</h1>" + (c.perex ? '<p class="clanok-perex">' + esc(c.perex) + "</p>" : "") +
+      '<div class="clanok-text">' + textClanku(c.text) + "</div>" +
+      '<div class="clanok-pata"><a class="btn btn-zlate" href="' + esc(ROOT) + '#ponuky" data-nav="ponuky">Pozrieť ponuky</a>' +
+        '<button type="button" class="btn btn-jemne" data-akcia="zdielat">' + IC.zdielat + "Zdieľať</button></div>" +
+      '</article><section class="podobne" id="dalsie-clanky" hidden></section></div></div>';
+    nacitajClanky().then(function () {
+      var box = $("#dalsie-clanky"); if (!box || S.detail !== "c:" + c.slug) return;
+      var ine = CL.zoznam.filter(function (x) { return x.slug !== c.slug; }).slice(0, 3);
+      if (!ine.length) return;
+      box.hidden = false;
+      box.innerHTML = '<div class="podobne-hl"><h2>Ďalšie články</h2></div><div class="cl-mriezka">' + ine.map(kartaClanku).join("") + "</div>";
+      odkryvaj(box);
+    });
+  }
+
+  // ================================================================ CHCEM BYŤ MAKLÉR
+  var ZM = { posiela: false, chyba: "", hotovo: false, v: {} };
+  var PRAX = [["zaciatok", "Začínam"], ["prax", "Mám prax v realitách"], ["kancelaria", "Mením kanceláriu"]];
+  function formularMakler() {
+    if (ZM.hotovo) {
+      return '<div class="hotovo" role="status"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true"><circle cx="32" cy="32" r="25" stroke="#DB9522" stroke-width="4"/><path d="M21 33l7.5 7.5L43 25" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        "<h3>Ďakujeme, máme to</h3><p>Ozveme sa vám čo najskôr a dohodneme sa na stretnutí alebo telefonáte.</p>" +
+        '<button type="button" class="btn btn-ink btn-male" data-akcia="zavriet">Zavrieť</button></div>';
+    }
+    var v = ZM.v;
+    return '<form class="fz" id="form-makler" novalidate>' +
+      '<p class="fz-uvod">Napíšte nám pár slov o sebe. Ozveme sa vám a povieme, ako v realitách začať.</p>' +
+      '<label>Meno a priezvisko<input class="vstup" name="meno" autocomplete="name" maxlength="80" required value="' + esc(v.meno || "") + '"></label>' +
+      '<label>Telefón alebo e-mail<input class="vstup" name="kontakt" autocomplete="tel" maxlength="120" required value="' + esc(v.kontakt || "") + '"></label>' +
+      '<label>Kde by ste chceli pracovať?<input class="vstup" name="okres" maxlength="60" placeholder="mesto alebo okres" value="' + esc(v.okres || "") + '"></label>' +
+      '<fieldset><legend>Skúsenosti</legend><div class="volby">' + PRAX.map(function (x) { return '<button type="button" data-prax="' + x[0] + '" aria-pressed="' + (v.prax === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div></fieldset>" +
+      '<label>Správa (nepovinné)<textarea class="vstup" name="co" rows="3" maxlength="1500" placeholder="Čo vás na práci makléra láka?">' + esc(v.co || "") + "</textarea></label>" +
+      '<input class="med" name="web" tabindex="-1" autocomplete="off" aria-hidden="true">' +
+      (ZM.chyba ? '<p class="chyba" role="alert">' + esc(ZM.chyba) + "</p>" : "") +
+      '<button class="btn btn-zlate" type="submit"' + (ZM.posiela ? " disabled" : "") + ">" + (ZM.posiela ? '<span class="toci" aria-hidden="true"></span>Odosielam…' : "Odoslať") + "</button>" +
+      '<p class="fz-pozn">Vaše údaje použijeme iba na to, aby sme sa vám ozvali.</p></form>';
+  }
+  function kresliFormularMakler(fokus) {
+    var t = $("#panel-telo-makler"); if (!t) return;
+    t.innerHTML = formularMakler();
+    var f = $("#form-makler");
+    if (f) f.addEventListener("focusin", function () { overenie("portal-makler", "makler"); }, { once: true });
+    if (fokus) { var x = $('[name="' + fokus + '"]', t); if (x) x.focus(); }
+  }
+  function otvorChcemMakler() {
+    zavriPanel();
+    if (ZM.hotovo) ZM = { posiela: false, chyba: "", hotovo: false, v: {} };
+    var z = document.createElement("div"); z.className = "zaclona"; z.dataset.panel = "1";
+    var p = document.createElement("div"); p.className = "panel"; p.setAttribute("role", "dialog"); p.setAttribute("aria-modal", "true"); p.setAttribute("aria-labelledby", "panel-makler"); p.dataset.panel = "1";
+    p.innerHTML = '<div class="panel-hlava"><h2 id="panel-makler">Chcem byť maklér</h2><button type="button" class="x" data-akcia="zavriet" aria-label="Zavrieť">' + IC.x + "</button></div>" +
+      '<div class="panel-telo" id="panel-telo-makler"></div>';
+    document.body.appendChild(z); document.body.appendChild(p);
+    document.body.style.overflow = "hidden";
+    S.panelFokus = document.activeElement;
+    kresliFormularMakler();
+    setTimeout(function () { var x = $('#form-makler [name="meno"]'); if (x) x.focus(); }, 60);
+  }
+  function odosliMakler(f) {
+    ZM.v = { meno: f.meno.value.trim(), kontakt: f.kontakt.value.trim(), okres: f.okres.value.trim(), co: f.co.value.trim(), prax: ZM.v.prax };
+    var med = f.web.value;
+    if (ZM.v.meno.length < 2) { ZM.chyba = "Napíšte svoje meno."; kresliFormularMakler("meno"); return; }
+    if (ZM.v.kontakt.length < 5) { ZM.chyba = "Napíšte telefón alebo e-mail, aby sme sa vám mohli ozvať."; kresliFormularMakler("kontakt"); return; }
+    ZM.chyba = ""; ZM.posiela = true; kresliFormularMakler();
+    overenie("portal-makler", "makler").then(function (ov) {
+      delete POW.makler;
+      return rpc("portal_ziadost", { p_typ: "makler", p_meno: ZM.v.meno, p_kontakt: ZM.v.kontakt, p_co: ZM.v.co || null,
+        p_udaje: { okres: ZM.v.okres || null, prax: ZM.v.prax || null }, p_overenie: { ts: ov.ts, n: ov.n, med: med } });
+    }).then(function () { ZM.posiela = false; ZM.hotovo = true; kresliFormularMakler(); }, function (e) { ZM.posiela = false; ZM.chyba = e.message; kresliFormularMakler(); });
+  }
+
   // ================================================================ prepínanie zoznam ↔ detail
   function sPrechodom(fn) {
     if (document.startViewTransition && !MALO_POHYBU) document.startViewTransition(fn);
     else fn();
   }
-  function ukazZoznam(obnovScroll) {
-    S.detail = null; P = null;
+  function odidZDetailu() {
+    P = null;
     if (S.dIo) { S.dIo.disconnect(); S.dIo = null; }
     if (S.dMapa) { S.dMapa.remove(); S.dMapa = null; }
     zavriGaleriu();
+  }
+  function ukazZoznam(obnovScroll) {
+    S.detail = null; odidZDetailu();
     $("#detail").hidden = true; $("#detail").innerHTML = "";
     $("#zoznam").hidden = false;
     document.title = "Týpkove nehnuteľnosti – ponuky realitných kancelárií a maklérov";
     citajFiltre();
     nacitajPonuky().then(function () { prepocitaj(); }, function () { kresliKarty(); kresliListu(); });
+    nacitajMaklerov(); nacitajClanky();
     prepocitaj();
     if (obnovScroll) window.scrollTo(0, S.zoznamY || 0);
     if (S.mapa) setTimeout(function () { S.mapa.invalidateSize(); }, 50);
   }
   function ukazDetail(id) {
     if (!S.detail) { S.zoznamY = window.scrollY; S.zoznamUrl = $("#zoznam").hidden ? S.zoznamUrl : adresaZoznamu(); }
+    if (typeof S.detail === "string") odidZDetailu();
     S.detail = id; Z = { zdroj: "obhliadka", posiela: false, chyba: "", hotovo: false, v: {} };
     $("#zoznam").hidden = true;
     var el = $("#detail"); el.hidden = false;
@@ -879,6 +1084,8 @@
     $("#detail").innerHTML = '<div class="detail"><div class="obal">' + prazdne("Táto ponuka už nie je dostupná", "Nehnuteľnosť je už predaná alebo ju maklér stiahol. Pozrite si ďalšie ponuky.", '<a class="btn btn-ink" href="' + esc(ROOT) + '" data-akcia="spat">Všetky ponuky</a>') + '<section class="podobne" id="podobne" hidden></section></div></div>';
   }
   function smeruj(obnovScroll) {
+    var cl = clanokZAdresy();
+    if (cl) return ukazClanok(cl);
     var id = idZAdresy();
     if (id) ukazDetail(id); else ukazZoznam(obnovScroll);
   }
@@ -898,12 +1105,23 @@
       chodNa(a.getAttribute("href"), function () { ukazDetail(id); });
       return;
     }
+    var ac = t.closest("a[data-clanok]");
+    if (ac && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0) {
+      e.preventDefault(); var sl = ac.dataset.clanok;
+      chodNa(ac.getAttribute("href"), function () { ukazClanok(sl); });
+      return;
+    }
     // klik kdekoľvek na kartu (okrem tlačidiel)
     var k = t.closest(".karta");
     if (k && !t.closest("button, a") && !e.defaultPrevented) { var l = $("h3 a", k); if (l) { l.click(); return; } }
     var b = t.closest("button, a[data-akcia], a[data-nav]");
     if (!b) return;
     var ak = b.dataset.akcia;
+    if (b.dataset.mkPonuky) {
+      var poh3 = F.pohlad, zor3 = F.zor; F = Object.assign({}, F0, { pohlad: poh3, zor: zor3, vyb: [], m: b.dataset.mkPonuky });
+      prepocitaj(); $("#ponuky").scrollIntoView({ behavior: MALO_POHYBU ? "auto" : "smooth" }); return;
+    }
+    if (b.dataset.prax) { ZM.v.prax = ZM.v.prax === b.dataset.prax ? "" : b.dataset.prax; $$("[data-prax]").forEach(function (x) { x.setAttribute("aria-pressed", String(x.dataset.prax === ZM.v.prax)); }); return; }
     if (b.dataset.obl) { e.preventDefault(); prepniObl(Number(b.dataset.obl), b.classList.contains("srdce") ? b : null); return; }
     if (b.dataset.listuj) { var pas = $("[data-pas]", b.closest(".karta-foto")); if (pas) pas.scrollBy({ left: Number(b.dataset.listuj) * pas.clientWidth, behavior: MALO_POHYBU ? "auto" : "smooth" }); return; }
     if (b.hasAttribute("data-t") && b.closest("#hladanie")) { F.t = b.dataset.t; if (F.cdo && cenyDo().indexOf(Number(F.cdo)) < 0) F.cdo = ""; prepocitaj(); return; }
@@ -931,10 +1149,18 @@
     var nav = b.dataset.nav;
     if (nav) {
       e.preventDefault();
+      var md = $("#tn-menu"); if (md) md.open = false;
       if (nav === "mapa") F.pohlad = "mapa";
-      if (nav === "ponuky") F.pohlad = "zoznam";
-      var ciel = nav === "uvod" ? null : "ponuky";
-      var hotovo = function () { if (ciel) { var c = $("#" + ciel); if (c) c.scrollIntoView({ behavior: MALO_POHYBU ? "auto" : "smooth" }); } else window.scrollTo({ top: 0, behavior: MALO_POHYBU ? "auto" : "smooth" }); };
+      if (nav === "ponuky" && b.closest(".tn-nav, .tn-pata")) F.pohlad = "zoznam";
+      var ciel = nav === "uvod" ? null : nav === "mapa" ? "ponuky" : nav;
+      var hotovo = function () {
+        var cakaj = ciel === "makleri" ? nacitajMaklerov() : ciel === "clanky" ? nacitajClanky() : null;
+        Promise.resolve(cakaj).then(function () {
+          var c = ciel && $("#" + ciel);
+          if (c && c.hidden) c = $("#ponuky");
+          if (c) c.scrollIntoView({ behavior: MALO_POHYBU ? "auto" : "smooth" }); else window.scrollTo({ top: 0, behavior: MALO_POHYBU ? "auto" : "smooth" });
+        });
+      };
       if (S.detail) { var url = adresaZoznamu(); chodNa(url, function () { ukazZoznam(false); hotovo(); }); }
       else { prepocitaj(); hotovo(); }
       return;
@@ -947,6 +1173,8 @@
       return;
     }
     if (ak === "filtre") { otvorFiltre(); return; }
+    if (ak === "chcem-makler") { otvorChcemMakler(); return; }
+    if (ak === "vsetky-clanky") { CL.vsetky = true; kresliClanky(); return; }
     if (ak === "zavriet") { zavriPanel(); return; }
     if (ak === "zrusit-filtre") { var poh2 = F.pohlad, zor2 = F.zor; F = Object.assign({}, F0, { pohlad: poh2, zor: zor2, vyb: [] }); prepocitaj(); zavriPanel(); otvorFiltre(); return; }
     if (ak === "znova") { S.nacitanie = null; S.chyba = ""; kresliKarty(); nacitajPonuky().then(function () { prepocitaj(); }, function () { kresliKarty(); }); return; }
@@ -965,7 +1193,7 @@
     }
     if (ak === "zdielat") {
       var url2 = location.href.split("#")[0];
-      if (navigator.share) { navigator.share({ title: nazov(P), url: url2 }).catch(function () {}); return; }
+      if (navigator.share) { navigator.share({ title: P ? nazov(P) : document.title, url: url2 }).catch(function () {}); return; }
       (navigator.clipboard ? navigator.clipboard.writeText(url2) : Promise.reject()).then(function () { toast("Odkaz je skopírovaný"); }, function () { prompt("Skopírujte si odkaz:", url2); });
       return;
     }
@@ -988,10 +1216,12 @@
       $("#ponuky").scrollIntoView({ behavior: MALO_POHYBU ? "auto" : "smooth" });
     }
     if (e.target.id === "form-zaujem") { e.preventDefault(); if (!Z.posiela) odosliFormular(e.target); }
+    if (e.target.id === "form-makler") { e.preventDefault(); if (!ZM.posiela) odosliMakler(e.target); }
   });
   document.addEventListener("input", function (e) {
     var t = e.target;
     if (t.id === "hl-q") { navrhAkt = -1; kresliNavrhy(); F.q = t.value.trim(); prepocitajNeskor(true); return; }
+    if (t.id === "mk-q") { MK.q = t.value; clearTimeout(MK.t); MK.t = setTimeout(kresliMaklerov, 120); return; }
     if (t.dataset && t.dataset.pole && t.closest(".panel")) {
       if (t.type === "checkbox") F[t.dataset.pole] = t.checked;
       else { t.value = t.value.replace(/\D/g, "").slice(0, 9); F[t.dataset.pole] = t.value; }
@@ -1049,7 +1279,11 @@
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   kresliPocetObl();
   odkryvaj(document);
-  if (idZAdresy()) {
+  if (clanokZAdresy()) {
+    // priamo otvorený článok
+    S.zoznamUrl = ROOT;
+    ukazClanok(clanokZAdresy());
+  } else if (idZAdresy()) {
     // priamo otvorená ponuka: zoznam sa načíta na pozadí (podobné ponuky, návrat)
     S.zoznamUrl = ROOT;
     ukazDetail(idZAdresy());
@@ -1057,6 +1291,12 @@
     citajFiltre();
     prepocitaj();
     nacitajPonuky().then(function () { prepocitaj(); }, function () { kresliKarty(); kresliListu(); });
-    if (location.hash === "#ponuky") setTimeout(function () { $("#ponuky").scrollIntoView(); }, 60);
+    nacitajMaklerov(); nacitajClanky();
+    var h = (location.hash || "").slice(1);
+    if (["ponuky", "makleri", "clanky", "pre-vas", "inzerovat"].indexOf(h) >= 0) {
+      Promise.resolve(h === "makleri" ? nacitajMaklerov() : h === "clanky" ? nacitajClanky() : null).then(function () {
+        setTimeout(function () { var c = $("#" + h); if (c && !c.hidden) c.scrollIntoView(); }, 60);
+      });
+    }
   }
 })();

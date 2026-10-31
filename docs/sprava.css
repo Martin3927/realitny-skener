@@ -111,3 +111,26 @@ a.sp-riadok:hover { background: var(--surface-2) }
   .sp-pl span:nth-child(3) { grid-column: 1 / -2; grid-row: 2 }
   .sp-zmaz { margin-left: 0 }
 }
+
+/* záložky: zákazníci / články na portáli */
+.sp-zalozky { display: flex; gap: 6px; margin-top: 18px; flex-wrap: wrap }
+.sp-zalozky a { padding: 8px 16px; border-radius: 999px; background: var(--surface); color: var(--muted); font-weight: 700; font-size: 14px; text-decoration: none; box-shadow: 0 6px 20px rgb(30 42 53 / .06) }
+.sp-zalozky a:hover { color: var(--ink) }
+.sp-zalozky a[aria-current="page"] { background: var(--ink); color: var(--surface) }
+/* články na portáli */
+.sp-clanky { display: grid; gap: 10px }
+.sp-cl { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px; border-radius: 12px; background: var(--surface); color: inherit; text-decoration: none; box-shadow: 0 6px 20px rgb(30 42 53 / .06) }
+.sp-cl:hover { background: var(--surface-2) }
+.sp-cl img, .sp-cl-bez { width: 120px; height: 76px; border-radius: 10px; object-fit: cover; background: var(--surface-2); display: block }
+.sp-cl span { display: grid; gap: 3px; min-width: 0 }
+.sp-cl b { font-size: 15px }
+.sp-cl small { color: var(--muted); font-size: 12.5px }
+.sp-cl em { font-style: normal; color: var(--muted); font-size: 13px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical }
+.sp-form textarea { width: 100%; font: inherit; line-height: 1.5 }
+.sp-kniznica { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 12px }
+.sp-kniznica label { position: relative; cursor: pointer }
+.sp-kniznica input { position: absolute; opacity: 0; pointer-events: none }
+.sp-kniznica img, .sp-kn-bez { display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 10px; border: 3px solid transparent; background: var(--surface-2); font-size: 12.5px; font-weight: 700; color: var(--muted) }
+.sp-kniznica input:checked + img, .sp-kniznica input:checked + .sp-kn-bez { border-color: var(--gold-strong) }
+.sp-kniznica input:focus-visible + img, .sp-kniznica input:focus-visible + .sp-kn-bez { outline: 2px solid var(--ink); outline-offset: 2px }
+@media (max-width: 520px) { .sp-cl { grid-template-columns: 84px minmax(0, 1fr) } .sp-cl img, .sp-cl-bez { width: 84px; height: 60px } .sp-cl .sp-stav { grid-column: 2 } }
