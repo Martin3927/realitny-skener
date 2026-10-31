@@ -138,6 +138,21 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .mod-tag--free{background:#E3E9DF;color:#3D5A42}
 .mod-tag--fee{background:#EEE6D6;color:#8A5A2B}
 .mod-tag--soon{background:#1E2A35;color:#F2E4C6}
+/* baner Týpkove nehnuteľnosti v úvode */
+.tnb{display:flex;align-items:center;gap:14px;max-width:540px;margin-top:30px;padding:12px 14px 12px 12px;border-radius:24px;background:#FFFDF8;color:#1E2A35;text-decoration:none;box-shadow:0 1px 0 rgba(30,42,53,.05),0 24px 44px -30px rgba(30,42,53,.55);transition:transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s}
+.tnb:hover{transform:translateY(-3px);color:#1E2A35;box-shadow:0 1px 0 rgba(30,42,53,.05),0 34px 54px -30px rgba(30,42,53,.65)}
+.tnb:focus-visible{outline:3px solid #DB9522;outline-offset:3px}
+.tnb-ic{position:relative;flex:none;width:58px;height:58px;border-radius:18px;background:#DB9522;color:#1E2A35;display:grid;place-items:center}
+.tnb-ic::after{content:'';position:absolute;inset:0;border-radius:18px;animation:tnbPing 2.6s ease-out infinite}
+@keyframes tnbPing{0%{box-shadow:0 0 0 0 rgba(219,149,34,.5)}75%,100%{box-shadow:0 0 0 13px rgba(219,149,34,0)}}
+.tnb-ic svg{animation:tnbSkok 3.4s ease-in-out infinite}
+@keyframes tnbSkok{0%,68%,100%{transform:translateY(0)}78%{transform:translateY(-5px)}88%{transform:translateY(0)}93%{transform:translateY(-2px)}}
+.tnb-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;font-size:14.5px;line-height:1.4;color:#4A6074}
+.tnb-tx strong{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:17px;line-height:1.2;color:#1E2A35}
+.tnb-nove{padding:3px 8px;border-radius:999px;background:#DB9522;color:#1E2A35;font-size:10.5px;font-weight:800;letter-spacing:.08em}
+.tnb-go{flex:none;width:44px;height:44px;border-radius:999px;background:#1E2A35;color:#DB9522;display:grid;place-items:center;transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
+.tnb:hover .tnb-go{transform:translateX(4px)}
+@media (max-width: 640px){.tnb{gap:12px;padding:12px 14px 12px 12px;border-radius:22px}.tnb-ic{width:48px;height:48px;border-radius:15px}.tnb-ic::after{border-radius:15px}.tnb-ic svg{width:26px;height:26px}.tnb-go{display:none}.tnb-tx{font-size:14px}.tnb-tx strong{font-size:16px}}
 .mod-soon,.mod-soon:hover{cursor:not-allowed;transform:none;border-style:dashed;border-color:#C9D4DD;background:#F7F2E8;box-shadow:none}
 .mod-soon .mod-ic{background:#EEE6D6;color:#8EA2B3}
 .mod-soon .mod-tx strong{color:#4A6074}
@@ -538,6 +553,11 @@ softvér od makléra pre maklérov
 <span style="display: inline-flex; align-items: center; gap: 8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Od 19 € mesačne</span>
 <span style="display: inline-flex; align-items: center; gap: 8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A6074" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>30 dní zadarmo</span>
 </div>
+<a class="tnb rise" href="nehnutelnosti/" style="animation-delay:.85s">
+<span class="tnb-ic" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-7.5-6.6-7.5-12.3a7.5 7.5 0 0 1 15 0C19.5 15.4 12 22 12 22z"></path><path d="M8.6 10.8 12 8l3.4 2.8V14.2H8.6z"></path></svg></span>
+<span class="tnb-tx"><strong>Týpkove nehnuteľnosti <span class="tnb-nove">NOVÉ</span></strong>Tvoje ponuky z Týpka sa samé zobrazia kupujúcim a ich dopyty ti prídu rovno do Týpka.</span>
+<span class="tnb-go" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+</a>
 </div>
 
 <div style="flex: 1 1 420px; min-width: 0; display: flex; justify-content: center">
