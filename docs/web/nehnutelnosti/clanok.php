@@ -57,8 +57,8 @@ try {
   $html = $sablona;
   $html = str_replace($TITUL, '<title>' . e($nadpis) . ' · Týpkove nehnuteľnosti</title>', $html);
   $html = preg_replace('/<meta property="og:type" content="[^"]*">/', '<meta property="og:type" content="article">', $html, 1);
-  $html = preg_replace('/<meta property="og:title" content="[^"]*">/', '<meta property="og:title" content="' . e($nadpis) . '">', $html, 1);
-  $html = preg_replace('/<meta property="og:description" content="[^"]*">/', '<meta property="og:description" content="' . e($perex) . '">', $html, 1);
+  $html = preg_replace_callback('/<meta property="og:title" content="[^"]*">/', function () use ($nadpis) { return '<meta property="og:title" content="' . e($nadpis) . '">'; }, $html, 1);
+  $html = preg_replace_callback('/<meta property="og:description" content="[^"]*">/', function () use ($perex) { return '<meta property="og:description" content="' . e($perex) . '">'; }, $html, 1);
   $html = preg_replace_callback('/<meta name="description" content="[^"]*">/', function () use ($perex, $hlava) {
     return '<meta name="description" content="' . e($perex) . '">' . "\n" . $hlava;
   }, $html, 1);

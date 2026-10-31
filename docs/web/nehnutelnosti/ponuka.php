@@ -83,8 +83,8 @@ try {
 
   $html = $sablona;
   $html = str_replace($TITUL, '<title>' . e($nazov) . ' · ' . e($kn) . ' · Týpkove nehnuteľnosti</title>', $html);
-  $html = preg_replace('/<meta property="og:title" content="[^"]*">/', '<meta property="og:title" content="' . e($titul) . '">', $html, 1);
-  $html = preg_replace('/<meta property="og:description" content="[^"]*">/', '<meta property="og:description" content="' . e($popis) . '">', $html, 1);
+  $html = preg_replace_callback('/<meta property="og:title" content="[^"]*">/', function () use ($titul) { return '<meta property="og:title" content="' . e($titul) . '">'; }, $html, 1);
+  $html = preg_replace_callback('/<meta property="og:description" content="[^"]*">/', function () use ($popis) { return '<meta property="og:description" content="' . e($popis) . '">'; }, $html, 1);
   $html = preg_replace_callback('/<meta name="description" content="[^"]*">/', function () use ($popis, $hlava) {
     return '<meta name="description" content="' . e($popis) . '">' . "\n" . $hlava;
   }, $html, 1);

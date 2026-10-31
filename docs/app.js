@@ -4719,8 +4719,7 @@
     var X = (S.portalStat || {})[p.id];
     if (!X && (p.na_portali === false || (p.stav !== "aktivne" && p.stav !== "rezervovane"))) return "";
     X = X || { z: 0, z7: 0, d: 0, d30: 0 };
-    return '<span title="Týpkove nehnuteľnosti na realitnytypek.sk">🏡 <b>' + nf.format(X.z) + "</b> " + (X.z === 1 ? "zobrazenie" : X.z >= 2 && X.z <= 4 ? "zobrazenia" : "zobrazení") +
-      " v Týpkových nehnuteľnostiach" + (X.z7 ? " (" + X.z7 + " za 7 dní)" : "") + "</span>" +
+    return '<span title="Týpkove nehnuteľnosti na realitnytypek.sk – sú už zarátané v celkovom počte zobrazení">🏡 z toho <b>' + nf.format(X.z) + "</b> v Týpkových nehnuteľnostiach" + (X.z7 ? " (" + X.z7 + " za 7 dní)" : "") + "</span>" +
       "<span>💬 <b>" + nf.format(X.d) + "</b> " + (X.d === 1 ? "dopyt" : X.d >= 2 && X.d <= 4 ? "dopyty" : "dopytov") + " odtiaľ</span>";
   }
 

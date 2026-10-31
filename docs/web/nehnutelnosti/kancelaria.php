@@ -48,8 +48,13 @@ try {
     '<meta property="og:image" content="' . e($logo) . '">' . "\n" .
     '<meta property="og:url" content="' . e($url) . '">';
   $html = str_replace($TITUL, '<title>' . e($nazov) . ' · Týpkove nehnuteľnosti</title>', $sablona);
-  $html = preg_replace('/<meta property="og:title" content="[^"]*">/', '<meta property="og:title" content="' . e($nazov) . ' · Týpkove nehnuteľnosti">', $html, 1);
-  $html = preg_replace('/<meta property="og:description" content="[^"]*">/', '<meta property="og:description" content="' . e($popis) . '">', $html, 1);
+  // náhrada cez funkciu: znaky ako $0 v názve kancelárie sa neberú ako odkaz na nájdený text
+  $html = preg_replace_callback('/<meta property="og:title" content="[^"]*">/', function () use ($nazov) {
+    return '<meta property="og:title" content="' . e($nazov) . ' · Týpkove nehnuteľnosti">';
+  }, $html, 1);
+  $html = preg_replace_callback('/<meta property="og:description" content="[^"]*">/', function () use ($popis) {
+    return '<meta property="og:description" content="' . e($popis) . '">';
+  }, $html, 1);
   $html = preg_replace_callback('/<meta name="description" content="[^"]*">/', function () use ($popis, $hlava) {
     return '<meta name="description" content="' . e($popis) . '">' . "\n" . $hlava;
   }, $html, 1);

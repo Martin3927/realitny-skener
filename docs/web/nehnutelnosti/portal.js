@@ -22,7 +22,9 @@
   var MALO_POHYBU = window.matchMedia("(prefers-reduced-motion: reduce)").matches && !document.documentElement.classList.contains("pohyb-vzdy");
   var mobil = function () { return window.matchMedia("(max-width: 860px)").matches; };
   function uloz(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* súkromné okno */ } }
-  function citaj(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || "null"); return v == null ? d : v; } catch (e) { return d; } }
+  function citaj(k, d) {
+    try { var v = JSON.parse(localStorage.getItem(k) || "null"); return v == null || (Array.isArray(d) && !Array.isArray(v)) ? d : v; } catch (e) { return d; }
+  }
 
   var IC = {
     pin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
@@ -453,6 +455,7 @@
       S.obl = S.obl.filter(function (id) { return ids.indexOf(id) >= 0; }); uloz("typek-oblubene", S.obl); kresliPocetObl();
       S.por = S.por.filter(function (id) { return ids.indexOf(id) >= 0; }); uloz("typek-porovnanie", S.por); kresliListuPor();
       kresliNaposledy();
+      if (MK.zoznam.length && !S.detail) kresliMaklerov();
     }, function (e) { S.chyba = e.message; S.nacitanie = null; throw e; });
     return S.nacitanie;
   }
@@ -1172,15 +1175,25 @@
     if (f.q) x.push(f.q);
     if (f.cod && f.cdo) x.push(eur(f.cod) + " – " + eur(f.cdo)); else if (f.cdo) x.push("do " + eur(f.cdo)); else if (f.cod) x.push("od " + eur(f.cod));
     if (f.pod) x.push("od " + nf.format(f.pod) + " m²");
-    if (f.izby) x.push(f.izby + "+ izby");
+    if (f.izby) x.push(izbyText(Number(f.izby)) + " a viac");
     return x.join(" · ");
+  }
+  function nesledovaneFiltre() {
+    var x = [];
+    if (F.stav) x.push("stav");
+    if (F.vyb.length) x.push("vybavenie");
+    if (F.d3) x.push("3D prehliadku");
+    if (F.m) x.push("výber makléra");
+    if (F.obl) x.push("obľúbené");
+    return x;
   }
   function formularStrazcu() {
     if (SZ.hotovo) return hotovoHtml("Ešte jeden krok", "Na adresu <b>" + esc(SZ.v.email) + "</b> sme poslali e-mail s odkazom. Ponuky vám začnú chodiť, keď ho potvrdíte.", '<button type="button" class="btn btn-ink btn-male" data-akcia="zavriet">Zavrieť</button>');
     var v = SZ.v;
     return '<form class="fz" id="form-strazca" novalidate>' +
       '<p class="fz-uvod">Keď pribudne ponuka podľa vašich filtrov alebo niektorá zlacnie, pošleme vám e-mail. Najviac jeden za 12 hodín.</p>' +
-      '<div class="sz-co"><small>Budeme strážiť</small><b>' + esc(popisStrazcu(filtreStrazcu())) + '</b><button type="button" class="btn btn-jemne btn-male" data-akcia="sz-filtre">' + IC.filtre + "Upraviť filtre</button></div>" +
+      '<div class="sz-co"><small>Budeme strážiť</small><b>' + esc(popisStrazcu(filtreStrazcu())) + '</b><button type="button" class="btn btn-jemne btn-male" data-akcia="sz-filtre">' + IC.filtre + "Upraviť filtre</button>" +
+        (nesledovaneFiltre().length ? '<span class="sz-nie">Strážca nesleduje ' + esc(nesledovaneFiltre().join(", ")) + " – pošle všetky ponuky podľa ostatných filtrov.</span>" : "") + "</div>" +
       '<label>E-mail<input class="vstup" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" required value="' + esc(v.email || "") + '"></label>' +
       '<label>Meno (nepovinné)<input class="vstup" name="meno" autocomplete="given-name" maxlength="40" value="' + esc(v.meno || "") + '"></label>' +
       '<input class="med" name="web" tabindex="-1" autocomplete="off" aria-hidden="true">' +
@@ -1276,19 +1289,32 @@
     document.body.appendChild(d); document.body.style.overflow = "hidden";
     S.porFokus = document.activeElement;
     kresliPorovnanie();
-    // podrobnosti (rok výstavby, certifikát…) sa dotiahnu
-    Promise.all(S.por.map(function (id) {
-      return S.detaily[id] ? null : rpc("portal_ponuka", { p_id: id }).then(function (x) { if (x) S.detaily[id] = x; }, function () {});
+    // podrobnosti (rok výstavby, certifikát…) sa dotiahnu; prekreslí sa, len keď niečo pribudlo
+    var chyba = S.por.filter(function (id) { return !S.detaily[id]; });
+    if (chyba.length) Promise.all(chyba.map(function (id) {
+      return rpc("portal_ponuka", { p_id: id }).then(function (x) { if (x) S.detaily[id] = x; }, function () {});
     })).then(function () { if ($("#porovnanie")) kresliPorovnanie(); });
-    setTimeout(function () { var x = $("#porovnanie .x"); if (x) x.focus(); }, 40);
+    setTimeout(function () { var x = $("#porovnanie .x"); if (x && !$("#porovnanie").contains(document.activeElement)) x.focus(); }, 40);
   }
   function zavriPorovnanie(ticho) {
     var d = $("#porovnanie"); if (!d) return;
     d.remove(); document.body.style.overflow = "";
-    if (!ticho && S.porFokus && S.porFokus.focus) S.porFokus.focus();
+    if (ticho) return;
+    var f = S.porFokus && S.porFokus.isConnected ? S.porFokus : $('#por-lista [data-akcia="porovnat"]');
+    if (f && f.focus) f.focus();
+  }
+  // po prekreslení vráti fokus na to isté tlačidlo (alebo na zatváranie), aby sa čítačka obrazovky nestratila
+  function kluceFokusu(el) {
+    if (!el || !el.getAttribute) return null;
+    return el.dataset.por ? '[data-por="' + el.dataset.por + '"]' : el.dataset.akcia ? '[data-akcia="' + el.dataset.akcia + '"]' : el.dataset.ponuka ? '.por-n[data-ponuka="' + el.dataset.ponuka + '"]' : null;
   }
   function kresliPorovnanie() {
     var d = $("#porovnanie"); if (!d) return;
+    var mal = d.contains(document.activeElement) ? kluceFokusu(document.activeElement) || ".x" : null;
+    kresliPorovnanieObsah(d);
+    if (mal && $("#porovnanie")) { var x = $(mal, d) || $(".x", d); if (x) x.focus(); }
+  }
+  function kresliPorovnanieObsah(d) {
     var zoz = S.por.map(ponukaPodlaId).filter(Boolean);
     if (zoz.length < 2) { zavriPorovnanie(); return; }
     var rovnakaT = zoz.every(function (p) { return p.transakcia === zoz[0].transakcia; });
@@ -1299,8 +1325,9 @@
       return h.every(function (x) { return x === c; }) ? null : c;
     };
     // „najnižšia / najväčšia“ len medzi porovnateľnými ponukami (rovnaký druh a kúpa/prenájom)
+    var zaCelu = function (p) { return !p.typ_ceny || p.typ_ceny === "za nehnuteľnosť"; };
     var rovnakaK = rovnakaT && zoz.every(function (p) { return p.kategoria === zoz[0].kategoria; });
-    var nC = rovnakaT ? naj(function (p) { return p.cena == null ? null : Number(p.cena); }, true) : null;
+    var nC = rovnakaK && zoz.every(zaCelu) ? naj(function (p) { return p.cena == null ? null : Number(p.cena); }, true) : null;
     var nM = rovnakaK ? naj(cm2, true) : null, nP = rovnakaK ? naj(function (p) { return plocha(p); }, false) : null;
     var oz = function (t) { return '<span class="por-naj">' + t + "</span>"; };
     var mk = function (p) { var m = p.makler && typeof p.makler === "object" ? p.makler : S.makleri[p.makler] || {}; return m.meno_cele || m.meno || ""; };
@@ -1343,7 +1370,7 @@
         '<label class="hk-r"><span>Doba splácania <output id="hk-roky-t"></output></span><input type="range" id="hk-roky" min="5" max="30" step="1" value="' + HK.roky + '"></label>' +
         '<label class="hk-r"><span>Úroková sadzba <output id="hk-urok-t"></output></span><input type="range" id="hk-urok" min="1" max="7" step="0.1" value="' + HK.urok + '"></label>' +
       "</div>" +
-      '<div class="hk-vysl"><small>Mesačná splátka</small><b class="hk-spl" aria-live="polite"><span class="cislo" id="hk-spl">0</span> €</b>' +
+      '<div class="hk-vysl"><small>Mesačná splátka</small><b class="hk-spl" aria-hidden="true"><span class="cislo" id="hk-spl">0</span> €</b><span class="sr" id="hk-spl-sr" aria-live="polite"></span>' +
         '<div class="hk-pruh" aria-hidden="true"><i class="ist" id="hk-p-ist"></i><i class="ur" id="hk-p-ur"></i></div>' +
         '<dl class="hk-dl"><div><dt><i class="hk-b ist"></i>Výška úveru</dt><dd id="hk-uver"></dd></div><div><dt><i class="hk-b ur"></i>Úroky spolu</dt><dd id="hk-ur"></dd></div><div><dt>Spolu zaplatíte</dt><dd id="hk-spolu"></dd></div></dl>' +
         '<a class="hk-fin" href="' + esc(ROOT) + '#pre-vas" data-nav="pre-vas">Chcem financovať<span>pripravujeme</span></a></div>' +
@@ -1353,7 +1380,7 @@
     if (!$("#hk-vz")) return;
     var c = Number(String($("#hk-cena").value || "").replace(/\D/g, "")) || 0;
     var vz = Number($("#hk-vz").value), r = Number($("#hk-roky").value), u = Number($("#hk-urok").value);
-    HK = { vz: vz, roky: r, urok: u };
+    HK.vz = vz; HK.roky = r; HK.urok = u;
     var uver = Math.max(0, c * (1 - vz / 100)), n = r * 12, i = u / 100 / 12;
     var spl = uver <= 0 ? 0 : i ? uver * i / (1 - Math.pow(1 + i, -n)) : uver / n;
     var spolu = spl * n, ur = Math.max(0, spolu - uver);
@@ -1361,6 +1388,7 @@
     $("#hk-roky-t").textContent = r + " " + sklon(r, "rok", "roky", "rokov");
     $("#hk-urok-t").textContent = nf1.format(u) + " %";
     animujCislo($("#hk-spl"), Math.round(spl));
+    clearTimeout(HK.t); HK.t = setTimeout(function () { var sr = $("#hk-spl-sr"); if (sr) sr.textContent = "Mesačná splátka " + eur(spl); }, 500);
     $("#hk-uver").textContent = eur(uver); $("#hk-ur").textContent = eur(ur); $("#hk-spolu").textContent = eur(spolu);
     var podiel = spolu ? uver / spolu : 1;
     $("#hk-p-ist").style.flexGrow = String(podiel); $("#hk-p-ur").style.flexGrow = String(1 - podiel);
@@ -1369,7 +1397,7 @@
 
   // ================================================================ CENOVÁ MAPA (ponukové ceny za m² podľa obcí)
   var TYPY_CIEN = [["byt", "Byty"], ["dom", "Domy"], ["pozemok", "Pozemky"]];
-  var MN_CIEN = { byt: "byty", dom: "domy", pozemok: "pozemky" };
+  var MN_CIEN = { byt: "byty", dom: "domy", pozemok: "stavebné pozemky" };
   // jeden odtieň (bridlicová) od svetlej po tmavú; overené: jas klesá rovnomerne, najsvetlejší stupeň má 2,4 : 1 voči krémovej
   var RAMPA = ["#8EA2B3", "#6B8297", "#4A6074", "#2F4152", "#1E2A35"];
   var CN = { data: null, nacitanie: null, chyba: "", typ: "byt", mapa: null, vrstva: null, piny: {}, akt: "", viditelna: false, hr: [] };
@@ -1377,17 +1405,21 @@
     if (CN.nacitanie) return CN.nacitanie;
     CN.nacitanie = rpc("portal_ceny").then(function (d) {
       CN.data = d || { obce: [], okresy: [], zoznam: [] }; CN.chyba = "";
-      kresliCeny(); kresliOdhad();
-    }, function (e) { CN.nacitanie = null; CN.chyba = e.message; kresliCeny(); });
+      kresliCeny(); obnovOdhadPoCenach();
+    }, function () {
+      CN.nacitanie = null; CN.chyba = "Ceny sa teraz nepodarilo načítať.";
+      kresliCeny(); obnovOdhadPoCenach();
+    });
     return CN.nacitanie;
   }
   function obceTypu(t) { return ((CN.data || {}).obce || []).filter(function (o) { return o.typ === t; }); }
-  // hranice 5 stupňov podľa kvantilov, zaokrúhlené na 50 €
+  // hranice 5 stupňov podľa kvantilov, zaokrúhlené podľa veľkosti cien (pozemky po 5 €, byty a domy po 50 €)
   function hranice(hodnoty) {
     var h = hodnoty.slice().sort(function (a, b) { return a - b; }), out = [];
     if (h.length < 2) return out;
+    var krok = h[h.length - 1] < 200 ? 5 : h[h.length - 1] < 1000 ? 10 : 50;
     [0.2, 0.4, 0.6, 0.8].forEach(function (q) {
-      var v = Math.round(h[Math.min(h.length - 1, Math.floor(q * h.length))] / 50) * 50;
+      var v = Math.round(h[Math.min(h.length - 1, Math.floor(q * h.length))] / krok) * krok;
       if (v > h[0] && out.indexOf(v) < 0) out.push(v);
     });
     return out;
@@ -1398,7 +1430,10 @@
   function kresliCeny() {
     var sek = $("#ceny"); if (!sek) return;
     var zozEl = $("#cn-zoznam");
-    if (!CN.data) { if (CN.chyba) zozEl.innerHTML = '<p class="cn-tip">' + esc(CN.chyba) + "</p>"; return; }
+    if (!CN.data) {
+      if (CN.chyba) zozEl.innerHTML = '<div class="cn-tip cn-chyba"><span>' + esc(CN.chyba) + '</span><button type="button" class="btn btn-ink btn-male" data-akcia="ceny-znova">Skúsiť znova</button></div>';
+      return;
+    }
     var maObce = (CN.data.obce || []).length > 0;
     sek.hidden = !maObce;
     if (!maObce) return;
@@ -1473,7 +1508,10 @@
     Object.keys(CN.piny).forEach(function (k) { var el = CN.piny[k].getElement(), x = el && $(".cn-pin", el); if (x) x.classList.toggle("akt", k === CN.akt); });
     kresliVyberCien();
     if (CN.akt && !zMapy && CN.piny[CN.akt] && CN.mapa) CN.mapa.panTo(CN.piny[CN.akt].getLatLng(), { animate: !MALO_POHYBU });
-    if (zMapy) { var b = $('[data-cn-obec="' + cssEsc(obec) + '"]'); if (b) b.scrollIntoView({ block: "nearest", behavior: MALO_POHYBU ? "auto" : "smooth" }); }
+    if (zMapy) {
+      var b = $('[data-cn-obec="' + cssEsc(obec) + '"]'), zz = $("#cn-zoznam");
+      if (b && zz) { var r1 = b.getBoundingClientRect(), r2 = zz.getBoundingClientRect(); if (r1.top < r2.top || r1.bottom > r2.bottom) zz.scrollTo({ top: zz.scrollTop + r1.top - r2.top - 8, behavior: MALO_POHYBU ? "auto" : "smooth" }); }
+    }
   }
   function zvyrazniObecCien(obec, zap) {
     var m = CN.piny[obec], el = m && m.getElement(), x = el && $(".cn-pin", el);
@@ -1503,6 +1541,8 @@
     S.ponuky.forEach(function (p) { if (p.obec && !m[p.obec]) { m[p.obec] = 1; out.push(p.obec); } });
     return out;
   }
+  // okres k obci zo zoznamu (rovnaký názov obce môže byť vo viacerých okresoch – databáza tak trafí správnu)
+  function okresObce(obec) { var n = norm(obec); return (((CN.data || {}).zoznam || []).filter(function (x) { return norm(x[0]) === n; })[0] || [])[1] || null; }
   function datalistObci(id) { return '<datalist id="' + id + '">' + zoznamObci().slice(0, 500).map(function (o) { return '<option value="' + esc(o) + '">'; }).join("") + "</datalist>"; }
   function cenyPreObec(druh, obec) {
     if (!CN.data || !obec || !MN_CIEN[druh]) return null;
@@ -1558,6 +1598,13 @@
     if (f && OD.ukaz) f.addEventListener("focusin", function (e) { if (e.target.name === "meno" || e.target.name === "kontakt") overenie("portal-odhad", "odhad"); });
     if (fokus) { var x = $('[name="' + fokus + '"]', box); if (x) x.focus({ preventScroll: fokus !== "meno" }); }
   }
+  // keď prídu ceny: rozpísaný formulár sa neprekresľuje, doplní sa len zoznam obcí a výsledok
+  function obnovOdhadPoCenach() {
+    var f = $("#form-odhad");
+    if (!f || OD.hotovo) return kresliOdhad();
+    var dl = $("#obce-od"); if (dl) dl.outerHTML = datalistObci("obce-od");
+    if (OD.ukaz) aktualizujVysledokOdhadu();
+  }
   function citajOdhad() {
     var f = $("#form-odhad"); if (!f) return;
     Object.assign(OD.v, hodnotyFormulara(f, ["obec", "m2", "meno", "kontakt"]));
@@ -1576,7 +1623,7 @@
     overenie("portal-odhad", "odhad").then(function (ov) {
       delete POW.odhad;
       return rpc("portal_predaj", { p_typ: "odhad", p_meno: v.meno || null, p_kontakt: v.kontakt,
-        p_udaje: { druh: v.druh, obec: v.obec, m2: v.m2 || null, izby: v.izby || null, stav: v.stav || null }, p_overenie: { ts: ov.ts, n: ov.n, med: med } });
+        p_udaje: { druh: v.druh, obec: v.obec, okres: okresObce(v.obec), m2: v.m2 || null, izby: v.izby || null, stav: v.stav || null }, p_overenie: { ts: ov.ts, n: ov.n, med: med } });
     }).then(function (d) { OD.posiela = false; OD.hotovo = d || {}; kresliOdhad(); }, function (e) { OD.posiela = false; OD.chyba = e.message; kresliOdhad(); });
   }
   function aktualizujVysledokOdhadu() {
@@ -1632,7 +1679,7 @@
     overenie("portal-predat", "predat").then(function (ov) {
       delete POW.predat;
       return rpc("portal_predaj", { p_typ: "predat", p_meno: v.meno || null, p_kontakt: v.kontakt,
-        p_udaje: { druh: v.druh, obec: v.obec, m2: v.m2 || null, kedy: v.kedy || null, pozn: v.pozn || null }, p_overenie: { ts: ov.ts, n: ov.n, med: med } });
+        p_udaje: { druh: v.druh, obec: v.obec, okres: okresObce(v.obec), m2: v.m2 || null, kedy: v.kedy || null, pozn: v.pozn || null }, p_overenie: { ts: ov.ts, n: ov.n, med: med } });
     }).then(function (d) { PD.posiela = false; PD.hotovo = d || {}; kresliPredaj(); }, function (e) { PD.posiela = false; PD.chyba = e.message; kresliPredaj(); });
   }
 
@@ -1706,13 +1753,14 @@
   }
   function odidZDetailu() {
     P = null;
+    document.body.classList.remove("je-ponuka");
     if (S.dIo) { S.dIo.disconnect(); S.dIo = null; }
     if (S.dMapa) { S.dMapa.remove(); S.dMapa = null; }
     zavriGaleriu();
   }
   function ukazZoznam(obnovScroll) {
     S.detail = null; odidZDetailu();
-    document.body.classList.remove("je-detail");
+    document.body.classList.remove("je-detail", "je-ponuka");
     $("#detail").hidden = true; $("#detail").innerHTML = "";
     $("#zoznam").hidden = false;
     document.title = "Týpkove nehnuteľnosti – ponuky realitných kancelárií a maklérov";
@@ -1731,7 +1779,7 @@
     if (!S.detail) { S.zoznamY = window.scrollY; S.zoznamUrl = $("#zoznam").hidden ? S.zoznamUrl : adresaZoznamu(); }
     if (typeof S.detail === "string") odidZDetailu();
     S.detail = id; Z = { zdroj: "obhliadka", posiela: false, chyba: "", hotovo: false, v: {} };
-    document.body.classList.add("je-detail");
+    document.body.classList.add("je-detail", "je-ponuka");
     $("#zoznam").hidden = true;
     var el = $("#detail"); el.hidden = false;
     window.scrollTo(0, 0);
@@ -1817,6 +1865,7 @@
     if (b.dataset.cnTyp) { CN.typ = b.dataset.cnTyp; CN.akt = ""; kresliCeny(); return; }
     if (b.dataset.cnObec != null) { vyberObecCien(b.dataset.cnObec); return; }
     if (b.dataset.cnOdhad) {
+      citajOdhad();
       OD.hotovo = null; OD.chyba = ""; OD.ukaz = true; OD.v.obec = b.dataset.cnOdhad; if (MN_CIEN[CN.typ]) OD.v.druh = CN.typ;
       kresliOdhad();
       $("#predat").scrollIntoView({ behavior: MALO_POHYBU ? "auto" : "smooth" });
@@ -1904,6 +1953,7 @@
     }
     if (ak === "odhad-znova") { OD = { v: { druh: OD.v.druh, meno: OD.v.meno, kontakt: OD.v.kontakt }, ukaz: false, posiela: false, chyba: "", hotovo: null }; kresliOdhad("obec"); return; }
     if (ak === "np-vymaz") { uloz("typek-videne", []); kresliNaposledy(); return; }
+    if (ak === "ceny-znova") { CN.chyba = ""; $("#cn-zoznam").innerHTML = '<p class="cn-tip">Načítavam ceny…</p>'; nacitajCeny(); return; }
     if (ak === "kn-ponuky") { var knp = $("#kn-ponuky"); if (knp) knp.scrollIntoView({ behavior: MALO_POHYBU ? "auto" : "smooth" }); return; }
     if (ak === "vsetky-clanky") { CL.vsetky = true; kresliClanky(); return; }
     if (ak === "zavriet") { zavriPanel(); return; }
@@ -1957,7 +2007,10 @@
     var t = e.target;
     if (t.id === "hl-q") { navrhAkt = -1; kresliNavrhy(); F.q = t.value.trim(); prepocitajNeskor(true); return; }
     if (t.id === "mk-q") { MK.q = t.value; clearTimeout(MK.t); MK.t = setTimeout(kresliMaklerov, 120); return; }
-    if (t.id && t.id.indexOf("hk-") === 0) { if (t.id === "hk-cena") t.value = t.value.replace(/[^\d ]/g, "").slice(0, 11); prepocitajHypo(); return; }
+    if (t.id && t.id.indexOf("hk-") === 0) {
+      if (t.id === "hk-cena") { var cv = t.value.replace(/[^\d\s]/g, "").slice(0, 11); if (cv !== t.value) t.value = cv; }
+      prepocitajHypo(); return;
+    }
     if (t.form && t.form.id === "form-odhad" && (t.name === "obec" || t.name === "m2")) {
       OD.v[t.name] = t.value.trim();
       if (t.name === "obec") { clearTimeout(OD.t); OD.t = setTimeout(aktualizujVysledokOdhadu, 160); }
@@ -1977,6 +2030,18 @@
   });
   document.addEventListener("focusin", function (e) { if (e.target.id === "hl-q") kresliNavrhy(); });
   document.addEventListener("keydown", function (e) {
+    if (e.key === "Tab") {
+      var okno = $("#lightbox") || $("#porovnanie") || $(".panel[data-panel]");
+      if (okno) {
+        var fz = $$('a[href], button:not([disabled]), input:not([type="hidden"]):not(.med), select, textarea, [tabindex]:not([tabindex="-1"])', okno).filter(function (x) { return x.offsetParent !== null || x === document.activeElement; });
+        if (fz.length) {
+          var prvy = fz[0], posl = fz[fz.length - 1];
+          if (!okno.contains(document.activeElement)) { e.preventDefault(); prvy.focus(); }
+          else if (e.shiftKey && document.activeElement === prvy) { e.preventDefault(); posl.focus(); }
+          else if (!e.shiftKey && document.activeElement === posl) { e.preventDefault(); prvy.focus(); }
+        }
+      }
+    }
     if ($("#lightbox")) {
       if (e.key === "Escape") zavriGaleriu();
       if (e.key === "ArrowRight") ukazFotku(galeriaI + 1);
@@ -2025,6 +2090,7 @@
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   kresliPocetObl();
   kresliListuPor();
+  kresliOdhad();
   odkryvaj(document);
   if (clanokZAdresy()) {
     // priamo otvorený článok

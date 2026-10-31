@@ -326,6 +326,7 @@ button{font:inherit;color:inherit}
 .clanok-pata{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px;padding-top:24px;border-top:1px dashed var(--cream2)}
 #inzerovat{padding-bottom:80px}
 .ma-por .tn-pata{padding-bottom:96px}
+.ma-por .tn-toast{bottom:96px}
 @media (max-width:620px){.clanok-perex{font-size:18px}.clanok-text{font-size:16.5px}.clanok-text h2{font-size:22px}.clanok-foto{border-radius:22px;aspect-ratio:16/10}#inzerovat{padding-bottom:50px}}
 
 /* ---------------------------------------------------------------- veľká realitná mapa */
@@ -669,6 +670,7 @@ main section[id]{scroll-margin-top:calc(var(--hlava) + 8px)}
 .sz-co small{flex:1 1 100%;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--slate)}
 .sz-co b{flex:1;min-width:0;font-size:16px;line-height:1.35}
 .sz-co .btn{min-height:38px;padding:0 12px;font-size:13px}
+.sz-nie{flex:1 1 100%;font-size:13px;line-height:1.45;color:var(--slate)}
 
 /* naposledy prezerané */
 .np-sekcia{padding:10px 0 0}
@@ -750,6 +752,7 @@ main section[id]{scroll-margin-top:calc(var(--hlava) + 8px)}
 .cn-zoznam-hl small{font-size:13px;color:var(--slate)}
 .cn-zoznam{max-height:430px;overflow:auto;border-radius:22px;background:var(--paper);box-shadow:var(--tien);scrollbar-width:thin}
 .cn-zoznam .cn-tip{box-shadow:none}
+.cn-chyba{flex-wrap:wrap;justify-content:space-between}
 .cn-rad{margin:0;padding:6px;list-style:none}
 .cn-rad li{animation:prelinHore .45s var(--ease) backwards;animation-delay:var(--rd,0ms)}
 .cn-rad button{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;min-height:52px;padding:6px 12px;border:0;border-radius:14px;background:transparent;text-align:left;cursor:pointer;transition:background .2s}
@@ -870,7 +873,8 @@ main section[id]{scroll-margin-top:calc(var(--hlava) + 8px)}
 @media (max-width:860px){
   .pr-mriezka{grid-template-columns:minmax(0,1fr)}
   .hk{grid-template-columns:minmax(0,1fr)}
-  .je-detail .por-lista{display:none}
+  .je-ponuka .por-lista{display:none}
+  body:has(.mapa-karta) .por-lista{visibility:hidden}
   .np-pas{margin:14px -16px 0;padding:6px 16px 18px}
   .kn-hlava{flex-direction:column;align-items:flex-start}
   .por-tab thead td,.por-tab tbody th{width:118px}
