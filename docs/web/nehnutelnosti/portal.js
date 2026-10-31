@@ -43,6 +43,7 @@
     mail: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/></svg>',
     zdielat: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     kocka: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>',
+    rozsir: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5"/></svg>',
     web: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
     domcek: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7M5 9.5V20h14V9.5"/></svg>',
     sipka: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
@@ -416,7 +417,8 @@
     split.classList.toggle("s-mapou", F.pohlad === "mapa");
     mo.hidden = F.pohlad !== "mapa";
     if (F.pohlad === "mapa") kresliMapu();
-    $$('.tn-nav [data-nav="mapa"]').forEach(function (a) { a.setAttribute("aria-current", String(F.pohlad === "mapa" && !S.detail)); });
+    if (VM.viditelna) { zavriKartuVM(); kresliVelkuMapu(); }
+
     $$('.tn-nav [data-akcia="oblubene"]').forEach(function (a) { a.setAttribute("aria-pressed", String(F.obl)); });
     if (!S.detail) history.replaceState(history.state, "", adresaZoznamu() + (location.hash || ""));
   }
@@ -519,9 +521,95 @@
     if (k) { k.scrollIntoView({ behavior: MALO_POHYBU ? "auto" : "smooth", block: "nearest" }); k.classList.add("akt"); setTimeout(function () { k.classList.remove("akt"); }, 1400); }
   }
   function zavriMapovuKartu() {
-    $$(".mapa-karta").forEach(function (x) { x.remove(); });
+    $$("#mapa-obal .mapa-karta").forEach(function (x) { x.remove(); });
     Object.keys(S.piny).forEach(function (k) { zvyrazniPin(Number(k), false); });
   }
+
+  // ================================================================ VEĽKÁ REALITNÁ MAPA (hneď pod úvodom)
+  var VM = { mapa: null, vrstva: null, piny: {}, akt: null, viditelna: false, prvy: true };
+  function kresliVelkuMapu() {
+    if (!VM.viditelna || S.detail) return;
+    kresliDruhyMapy();
+    nacitajLeaflet().then(function () {
+      if (S.detail) return;
+      var el = $("#velka-mapa"); if (!el) return;
+      if (!VM.mapa) {
+        VM.mapa = L.map(el, { zoomControl: true, scrollWheelZoom: false, tap: false, zoomSnap: 0.5 });
+        L.tileLayer(OSM, { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(VM.mapa);
+        VM.vrstva = L.layerGroup().addTo(VM.mapa);
+        VM.mapa.on("click", function () { zavriKartuVM(); VM.mapa.scrollWheelZoom.enable(); $("#vm-obal").classList.add("aktivna"); });
+        VM.mapa.on("focus", function () { VM.mapa.scrollWheelZoom.enable(); });
+        el.addEventListener("mouseleave", function () { VM.mapa.scrollWheelZoom.disable(); $("#vm-obal").classList.remove("aktivna"); });
+        // koliesko myši bez kliknutia do mapy: stránka sa skroluje ďalej a ukáže sa rada
+        el.addEventListener("wheel", function () {
+          if (VM.mapa.scrollWheelZoom.enabled()) return;
+          var h = $("#vm-hint"); h.classList.add("on"); clearTimeout(VM.hintT); VM.hintT = setTimeout(function () { h.classList.remove("on"); }, 1400);
+        }, { passive: true });
+      }
+      VM.vrstva.clearLayers(); VM.piny = {};
+      var zoz = S.vyber.filter(function (p) { return p.lat != null && p.lon != null; });
+      zoz.forEach(function (p, i) {
+        var m = L.marker([p.lat, p.lon], {
+          icon: L.divIcon({ className: "pin-obal", html: '<div class="pin pin-nastup' + (jeObl(p.id) ? " obl" : "") + (VM.akt === p.id ? " akt" : "") + '" style="--kc:' + katFarba(p.kategoria) + ";--rd:" + Math.min(i, 20) * 45 + 'ms"><span class="pin-ic">' + katIkona(p.kategoria, 15) + "</span>" + esc(kratkaCena(p)) + "</div>", iconSize: null }),
+          title: nazov(p), riseOnHover: true,
+        });
+        m.on("click", function (e) { if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent); ukazKartuVM(p.id); });
+        m.addTo(VM.vrstva); VM.piny[p.id] = m;
+      });
+      setTimeout(function () {
+        VM.mapa.invalidateSize();
+        if (zoz.length) VM.mapa.fitBounds(L.latLngBounds(zoz.map(function (p) { return [p.lat, p.lon]; })).pad(0.25), { maxZoom: 13, animate: !MALO_POHYBU && !VM.prvy });
+        else VM.mapa.setView([48.72, 19.6], 7);
+        VM.prvy = false;
+      }, 30);
+      var bez = S.vyber.length - zoz.length;
+      $("#vm-pocet").innerHTML = "<b>" + pocetPonuk(zoz.length) + "</b> na mape" + (bez ? " · " + bez + " bez polohy" : "");
+    }, function (e) { toast(e.message); });
+  }
+  // druhy nad mapou = rýchly filter (rovnaký ako v hľadaní)
+  function kresliDruhyMapy() {
+    var box = $("#vm-druhy"); if (!box) return;
+    var zakl = S.ponuky.filter(function (p) { return vyhovuje(p, true); }), pocty = {};
+    zakl.forEach(function (p) { pocty[p.kategoria] = (pocty[p.kategoria] || 0) + 1; });
+    box.innerHTML = '<button type="button" data-vm-k="" aria-pressed="' + (!F.k) + '"><i style="--kc:#1E2A35">' + IC.pin + "</i>Všetko <small>" + zakl.length + "</small></button>" +
+      KAT.filter(function (k) { return pocty[k[0]] || F.k === k[0]; }).map(function (k) {
+        return '<button type="button" data-vm-k="' + k[0] + '" aria-pressed="' + (F.k === k[0]) + '"><i style="--kc:' + katFarba(k[0]) + '">' + katIkona(k[0], 14) + "</i>" + esc(k[1]) + " <small>" + (pocty[k[0]] || 0) + "</small></button>";
+      }).join("");
+  }
+  function ukazKartuVM(id) {
+    var p = S.ponuky.filter(function (x) { return x.id === id; })[0]; if (!p) return;
+    zavriKartuVM(true);
+    VM.akt = id;
+    var pin = VM.piny[id] && VM.piny[id].getElement(); if (pin) { pin.classList.add("akt-z"); var q = $(".pin", pin); if (q) q.classList.add("akt"); }
+    var d = document.createElement("div"); d.className = "mapa-karta vm-karta";
+    d.innerHTML = karta(p, 0).replace("karta nastup", "karta");
+    var x = document.createElement("button"); x.type = "button"; x.className = "zavriet"; x.setAttribute("aria-label", "Zavrieť"); x.innerHTML = IC.x;
+    x.addEventListener("click", function (e) { e.stopPropagation(); zavriKartuVM(); });
+    d.appendChild(x);
+    $("#vm-obal").appendChild(d);
+    if (!mobil()) VM.mapa.panInside([p.lat, p.lon], { paddingTopLeft: [460, 40], paddingBottomRight: [40, 40], animate: !MALO_POHYBU });
+  }
+  function zavriKartuVM(ticho) {
+    $$("#vm-obal .mapa-karta").forEach(function (x) { x.remove(); });
+    Object.keys(VM.piny).forEach(function (k) { var el = VM.piny[k].getElement(); if (el) { el.classList.remove("akt-z"); var q = $(".pin", el); if (q) q.classList.remove("akt"); } });
+    if (!ticho) VM.akt = null;
+  }
+  function prepniCeluMapu(zap) {
+    var o = $("#vm-obal"); if (!o) return;
+    zap = zap == null ? !o.classList.contains("vm-cela") : zap;
+    o.classList.toggle("vm-cela", zap);
+    document.body.style.overflow = zap ? "hidden" : "";
+    var b = $('[data-akcia="vm-cela"]'); if (b) b.innerHTML = zap ? IC.x + "Zmenšiť mapu" : IC.rozsir + "Na celú obrazovku";
+    if (VM.mapa) { if (zap) VM.mapa.scrollWheelZoom.enable(); setTimeout(function () { VM.mapa.invalidateSize(); }, 60); }
+  }
+  // mapa sa načíta, až keď sa k nej človek priblíži
+  (function () {
+    var sek = $("#realitna-mapa"); if (!sek) return;
+    var start = function () { if (VM.viditelna) return; VM.viditelna = true; kresliVelkuMapu(); };
+    if (!("IntersectionObserver" in window)) return start();
+    var io = new IntersectionObserver(function (z) { if (z.some(function (x) { return x.isIntersecting; })) { start(); io.disconnect(); } }, { rootMargin: "400px 0px" });
+    io.observe(sek);
+  })();
 
   // ---------------------------------------------------------------- panel filtrov
   function otvorFiltre() {
@@ -1048,6 +1136,7 @@
     prepocitaj();
     if (obnovScroll) window.scrollTo(0, S.zoznamY || 0);
     if (S.mapa) setTimeout(function () { S.mapa.invalidateSize(); }, 50);
+    if (VM.mapa) setTimeout(function () { VM.mapa.invalidateSize(); }, 50);
   }
   function ukazDetail(id) {
     if (!S.detail) { S.zoznamY = window.scrollY; S.zoznamUrl = $("#zoznam").hidden ? S.zoznamUrl : adresaZoznamu(); }
@@ -1117,6 +1206,7 @@
     var b = t.closest("button, a[data-akcia], a[data-nav]");
     if (!b) return;
     var ak = b.dataset.akcia;
+    if (b.hasAttribute("data-vm-k")) { F.k = b.dataset.vmK; prepocitaj(); return; }
     if (b.dataset.mkPonuky) {
       var poh3 = F.pohlad, zor3 = F.zor; F = Object.assign({}, F0, { pohlad: poh3, zor: zor3, vyb: [], m: b.dataset.mkPonuky });
       prepocitaj(); $("#ponuky").scrollIntoView({ behavior: MALO_POHYBU ? "auto" : "smooth" }); return;
@@ -1150,9 +1240,8 @@
     if (nav) {
       e.preventDefault();
       var md = $("#tn-menu"); if (md) md.open = false;
-      if (nav === "mapa") F.pohlad = "mapa";
       if (nav === "ponuky" && b.closest(".tn-nav, .tn-pata")) F.pohlad = "zoznam";
-      var ciel = nav === "uvod" ? null : nav === "mapa" ? "ponuky" : nav;
+      var ciel = nav === "uvod" ? null : nav === "mapa" ? "realitna-mapa" : nav;
       var hotovo = function () {
         var cakaj = ciel === "makleri" ? nacitajMaklerov() : ciel === "clanky" ? nacitajClanky() : null;
         Promise.resolve(cakaj).then(function () {
@@ -1173,6 +1262,7 @@
       return;
     }
     if (ak === "filtre") { otvorFiltre(); return; }
+    if (ak === "vm-cela") { prepniCeluMapu(); return; }
     if (ak === "chcem-makler") { otvorChcemMakler(); return; }
     if (ak === "vsetky-clanky") { CL.vsetky = true; kresliClanky(); return; }
     if (ak === "zavriet") { zavriPanel(); return; }
@@ -1242,6 +1332,7 @@
       return;
     }
     if (e.key === "Escape" && $(".panel")) { zavriPanel(); return; }
+    if (e.key === "Escape" && $(".vm-cela")) { prepniCeluMapu(false); return; }
     if (e.target.id === "hl-q") {
       var box = $("#navrhy"), bt = box ? $$("button", box) : [];
       if (e.key === "ArrowDown" && bt.length) { e.preventDefault(); navrhAkt = (navrhAkt + 1) % bt.length; kresliNavrhy(); }
@@ -1293,7 +1384,7 @@
     nacitajPonuky().then(function () { prepocitaj(); }, function () { kresliKarty(); kresliListu(); });
     nacitajMaklerov(); nacitajClanky();
     var h = (location.hash || "").slice(1);
-    if (["ponuky", "makleri", "clanky", "pre-vas", "inzerovat"].indexOf(h) >= 0) {
+    if (["ponuky", "realitna-mapa", "makleri", "clanky", "pre-vas", "inzerovat"].indexOf(h) >= 0) {
       Promise.resolve(h === "makleri" ? nacitajMaklerov() : h === "clanky" ? nacitajClanky() : null).then(function () {
         setTimeout(function () { var c = $("#" + h); if (c && !c.hidden) c.scrollIntoView(); }, 60);
       });

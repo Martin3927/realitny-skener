@@ -327,6 +327,38 @@ button{font:inherit;color:inherit}
 #inzerovat{padding-bottom:80px}
 @media (max-width:620px){.clanok-perex{font-size:18px}.clanok-text{font-size:16.5px}.clanok-text h2{font-size:22px}.clanok-foto{border-radius:22px;aspect-ratio:16/10}#inzerovat{padding-bottom:50px}}
 
+/* ---------------------------------------------------------------- veľká realitná mapa */
+.uvod-mapa{margin-top:24px}
+.uvod-mapa svg{color:var(--brown)}
+.uvod-mapa:hover svg{color:var(--gold)}
+.vm-sekcia{padding:34px 0 0}
+main section[id]{scroll-margin-top:calc(var(--hlava) + 8px)}
+.vm-hl{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.vm-hl h2{margin-top:14px;font-size:clamp(30px,3.8vw,48px);font-weight:800;line-height:1.05;letter-spacing:-.03em}
+.vm-hl p{margin:10px 0 0;max-width:620px;font-size:17px;color:var(--inksoft)}
+.vm-druhy{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.vm-druhy button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px 0 6px;border-radius:999px;border:0;background:var(--paper);box-shadow:var(--tien);color:var(--ink);font-weight:700;font-size:14px;cursor:pointer;transition:transform .25s var(--pruzna),background .2s,color .2s}
+.vm-druhy button:hover{transform:translateY(-2px)}
+.vm-druhy button i{display:grid;place-items:center;width:32px;height:32px;border-radius:999px;background:var(--kc);color:#F2E4C6}
+.vm-druhy button i svg{width:16px;height:16px}
+.vm-druhy button small{font-size:12px;font-weight:800;color:var(--slate)}
+.vm-druhy button[aria-pressed="true"]{background:var(--ink);color:var(--cream)}
+.vm-druhy button[aria-pressed="true"] small{color:var(--gold)}
+.vm-druhy button[aria-pressed="true"] i{background:var(--gold);color:var(--ink)}
+.vm-obal{position:relative;margin-top:16px;height:min(68vh,620px);min-height:420px;border-radius:36px;overflow:hidden;background:var(--cream2);box-shadow:0 1px 0 rgba(30,42,53,.05),0 40px 70px -40px rgba(30,42,53,.6);isolation:isolate}
+#velka-mapa{position:absolute;inset:0}
+.vm-hore{position:absolute;left:62px;right:14px;top:14px;z-index:500;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;pointer-events:none}
+.vm-pocet{padding:9px 14px;border-radius:999px;background:rgba(255,253,248,.95);box-shadow:var(--tien);font-size:14px;color:var(--slate)}
+.vm-pocet b{color:var(--ink)}
+.vm-tl{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--cream);font-weight:700;font-size:14px;cursor:pointer;box-shadow:var(--tien);transition:background .2s}
+.vm-tl:hover{background:var(--slate)}
+.vm-hint{position:absolute;left:50%;top:50%;z-index:600;transform:translate(-50%,-50%) scale(.96);padding:12px 18px;border-radius:999px;background:rgba(30,42,53,.88);color:var(--cream);font-weight:700;font-size:14px;pointer-events:none;opacity:0;transition:opacity .25s,transform .25s}
+.vm-hint.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.vm-obal.vm-cela{position:fixed;inset:0;z-index:85;height:auto;min-height:0;margin:0;border-radius:0}
+.vm-karta{right:auto;width:min(420px,calc(100% - 24px));left:14px;bottom:14px}
+.pin-nastup{animation:pinIn .55s var(--pruzna) backwards;animation-delay:var(--rd,0ms)}
+@keyframes pinIn{from{opacity:0;transform:translate(-50%,-130%) scale(.5)}to{opacity:1;transform:translate(-50%,-100%)}}
+
 /* ---------------------------------------------------------------- mapa */
 .leaflet-container{font-family:'Instrument Sans',system-ui,sans-serif;background:var(--cream2)}
 .mapa-svetla .leaflet-tile-pane{filter:saturate(.55) sepia(.12) brightness(1.03)}
@@ -592,6 +624,13 @@ button{font:inherit;color:inherit}
   @keyframes zdola{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
 }
 @media (max-width:620px){
+  .vm-obal{height:66vh;min-height:380px;border-radius:24px}
+  .vm-hore{left:56px}
+  .vm-tl{padding:0 12px}
+  .vm-druhy{flex-wrap:nowrap;overflow-x:auto;margin:16px -16px 0;padding:4px 16px 10px;scrollbar-width:none}
+  .vm-druhy::-webkit-scrollbar{display:none}
+  .vm-druhy button{flex:none}
+  .vm-karta{width:auto;right:12px;left:12px;bottom:12px}
   .mriezka{grid-template-columns:minmax(0,1fr);gap:20px}
   .mk-mriezka,.cl-mriezka{grid-template-columns:minmax(0,1fr)}
   .mk-hladaj{flex:1 1 100%}
