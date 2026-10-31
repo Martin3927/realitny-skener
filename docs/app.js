@@ -3985,8 +3985,19 @@
   }
   // či sa ponuka ukáže na webe kancelárie (predvolene áno); chyba tu nezastaví uloženie ponuky
   function ulozWebKancelarie(id, p) {
-    if (typeof p.web_kancelarie !== "boolean" || !id) return Promise.resolve();
-    return rpc("nastavit_web_kancelarie_ponuky", { p_id: id, p_zobrazit: p.web_kancelarie }).catch(function (e) { toast("Ponuka je uložená, ale nastavenie webu kancelárie sa nezmenilo: " + chybaText(e), true); });
+    if (!id) return Promise.resolve();
+    var w = [];
+    if (typeof p.web_kancelarie === "boolean")
+      w.push(rpc("nastavit_web_kancelarie_ponuky", { p_id: id, p_zobrazit: p.web_kancelarie }).catch(function (e) { toast("Ponuka je uložená, ale nastavenie webu kancelárie sa nezmenilo: " + chybaText(e), true); }));
+    // Týpkove nehnuteľnosti (realitnytypek.sk/nehnutelnosti) – predvolene zapnuté
+    if (typeof p.na_portali === "boolean")
+      w.push(rpc("nastavit_portal_ponuky", { p_id: id, p_zobrazit: p.na_portali }).catch(function (e) { toast("Ponuka je uložená, ale nastavenie Týpkových nehnuteľností sa nezmenilo: " + chybaText(e), true); }));
+    return Promise.all(w);
+  }
+  // adresa ponuky v Týpkových nehnuteľnostiach (napr. realitnytypek.sk/nehnutelnosti/12-bungalov-s-terasou)
+  function odkazNaPortal(p) {
+    var slug = normLok(p.nazov && p.nazov.trim() ? p.nazov : [p.typ, p.obec].filter(Boolean).join(" ") || "ponuka").replace(/[^a-z0-9]+/g, "-").slice(0, 60).replace(/^-+|-+$/g, "") || "ponuka";
+    return "https://realitnytypek.sk/nehnutelnosti/" + p.id + "-" + slug;
   }
   function prepinac(nazov, pole, hodnota, interne) {
     return '<label class="toggle"><input type="checkbox" ' + (interne ? 'data-i="' : 'data-p="') + pole + '"' + (hodnota ? " checked" : "") + "> " + nazov + "</label>";
@@ -4020,7 +4031,7 @@
         vyber("Typ ceny", "typ_ceny", TYP_CENY, p.typ_ceny) +
         text1("Text k cene", "text_k_cene", p.text_k_cene, { ph: "napr. vrátane provízie RK" }) +
         (p.transakcia === "prenajom" ? text1("Cena za energie", "cena_energie", p.cena_energie, { ph: "napr. 150 €/mesiac" }) : "") + "</div>" +
-        '<div class="pf-prepinace">' + prepinac("Zobrazovať cenu", "zobrazit_cenu", p.zobrazit_cenu) + prepinac("Exkluzívne", "exkluzivne", p.exkluzivne) + prepinac("Na webe kancelárie", "web_kancelarie", p.web_kancelarie !== false) + "</div>" +
+        '<div class="pf-prepinace">' + prepinac("Zobrazovať cenu", "zobrazit_cenu", p.zobrazit_cenu) + prepinac("Exkluzívne", "exkluzivne", p.exkluzivne) + prepinac("Na webe kancelárie", "web_kancelarie", p.web_kancelarie !== false) + prepinac("V Týpkových nehnuteľnostiach", "na_portali", p.na_portali !== false) + "</div>" +
         '<div class="form-grid">' +
         (admin() ? '<label class="field"><span>Zodpovedný maklér</span><select data-p="makler_id">' + S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) {
           return '<option value="' + m.id + '"' + (p.makler_id === m.id ? " selected" : "") + ">" + esc(m.meno || m.email) + "</option>";
@@ -4512,7 +4523,7 @@
       (mozem && p.makler_id === S.me.id && !S.me.telefon ? '<div class="note">📞 Doplňte si telefón v <a href="#" data-act-profil>Mojom profile</a> – klient ho uvidí na stránke ponuky a na letáku.</div>' : "") +
       '<div class="pd-grid"><div class="pd-galeria">' + galeriaDetailu(F, g) + "</div>" +
       '<div class="pd-info"><div class="pd-cipy"><span class="chip ' + st[1] + '">' + st[0] + '</span><span class="chip">' + (p.transakcia === "prenajom" ? "Prenájom" : "Predaj") + "</span>" +
-        (p.exkluzivne ? '<span class="chip won">Exkluzívne</span>' : "") + (p.web_kancelarie === false ? '<span class="chip" title="Ponuka sa neukazuje na webe kancelárie">Skrytá na webe kancelárie</span>' : "") + (p.specialne || []).map(function (s) { return '<span class="chip">' + esc(s) + "</span>"; }).join("") + "</div>" +
+        (p.exkluzivne ? '<span class="chip won">Exkluzívne</span>' : "") + (p.web_kancelarie === false ? '<span class="chip" title="Ponuka sa neukazuje na webe kancelárie">Skrytá na webe kancelárie</span>' : "") + (p.na_portali === false ? '<span class="chip" title="Ponuka sa neukazuje na realitnytypek.sk/nehnutelnosti">Skrytá v Týpkových nehnuteľnostiach</span>' : "") + (p.specialne || []).map(function (s) { return '<span class="chip">' + esc(s) + "</span>"; }).join("") + "</div>" +
         "<h2>" + esc(nazovPonuky(p)) + "</h2>" +
         '<div class="pd-lok">📍 ' + esc([p.ulica, p.cast_obce, p.obec].filter(Boolean).join(", ")) + (p.okres ? " · okres " + esc(p.okres) : "") + "</div>" +
         '<div class="pd-cena">' + esc(cenaPonuky(p)) + (p.zobrazit_cenu === false ? ' <small class="meta">(cena sa nezobrazuje)</small>' : "") + "</div>" +
@@ -4709,6 +4720,7 @@
       '<a class="btn" href="ponuka.html?id=' + p.id + '&amp;nahlad=1" target="_blank" rel="noopener" data-nahlad-ponuky="' + p.id + '" title="Otvorí stránku ponuky tak, ako ju uvidí klient">👁 Pozrieť náhľad</a>' +
       '<button class="btn" type="button" data-pdn="zdielat" aria-pressed="' + (S.pdPanel === "zdielat") + '">🔗 Poslať klientovi</button>' +
       '<a class="btn" href="letak.html?id=' + p.id + '" target="_blank" rel="noopener">🖨 Leták (PDF)</a>' +
+      (p.na_portali !== false && (p.stav === "aktivne" || p.stav === "rezervovane") ? '<a class="btn" href="' + esc(odkazNaPortal(p)) + '" target="_blank" rel="noopener" title="Ponuka v Týpkových nehnuteľnostiach na realitnytypek.sk">🏡 V Týpkových nehnuteľnostiach</a>' : "") +
       (mozem ? '<button class="btn" type="button" data-pdn="report" aria-pressed="' + (S.pdPanel === "report") + '">📊 Report majiteľovi</button>' : "") +
       (mozem ? '<button class="btn" type="button" data-pdn="siete" aria-pressed="' + (S.pdPanel === "siete") + '">📣 Sociálne siete</button>' : "") +
       '<button class="btn" type="button" data-pdn="text">📋 Text pre portál</button>' + katasterTlacidlo(p, "btn") +
@@ -7364,7 +7376,7 @@
   var POLIA_HIST = { nazov: "Názov", cena: "Cena", stav: "Stav", popis: "Popis", intro: "Úvodný text", fotky: "Fotky", makler_id: "Maklér", typ: "Druh", kategoria: "Kategória", transakcia: "Predaj / prenájom",
     obec: "Obec", ulica: "Ulica", cast_obce: "Časť obce", okres: "Okres", kraj: "Kraj", plocha_uzitkova: "Úžitková plocha", plocha_pozemku: "Plocha pozemku", plocha_zastavana: "Zastavaná plocha", izby: "Izby",
     poschodie: "Poschodie", pocet_podlazi: "Počet podlaží", rok_vystavby: "Rok výstavby", vlastnictvo: "Vlastníctvo", stav_objektu: "Stav objektu", konstrukcia: "Konštrukcia", energ_certifikat: "Energetický certifikát",
-    kurenie: "Kúrenie", vybavenie: "Vybavenie", orientacia: "Orientácia", exkluzivne: "Exkluzívne", web_kancelarie: "Na webe kancelárie", specialne: "Štítky", zobrazit_cenu: "Zobraziť cenu", text_k_cene: "Text k cene", typ_ceny: "Typ ceny", video: "Video",
+    kurenie: "Kúrenie", vybavenie: "Vybavenie", orientacia: "Orientácia", exkluzivne: "Exkluzívne", web_kancelarie: "Na webe kancelárie", na_portali: "V Týpkových nehnuteľnostiach", specialne: "Štítky", zobrazit_cenu: "Zobraziť cenu", text_k_cene: "Text k cene", typ_ceny: "Typ ceny", video: "Video",
     virtualna_prehliadka: "Virtuálna prehliadka", lat: "Poloha", lon: "Poloha", cislo: "Číslo ponuky", cena_energie: "Cena energií", uc_export: "Export do Realsoftu", uc_ulica_id: "Ulica v Realsofte", uc_teren: "Terén pozemku",
     majitel_meno: "Majiteľ", majitel_telefon: "Telefón majiteľa", majitel_email: "Email majiteľa", zmluva: "Zmluva", zmluva_typ: "Typ zmluvy", zmluva_do: "Zmluva platí do", provizia: "Provízia", provizia_typ: "Provízia v",
     provizia_rk: "Provízia pre RK", provizia_rk_typ: "Provízia pre RK v", poznamka: "Poznámka", dokumenty: "Dokumenty", ulica_interna: "Presná adresa", report_tyzdenne: "Týždenný report",

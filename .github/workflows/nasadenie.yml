@@ -91,6 +91,9 @@ jobs:
           RewriteCond %{HTTP_HOST} ^www\. [NC]
           RewriteRule ^ https://realitnytypek.sk%{REQUEST_URI} [L,R=301]
           RewriteRule ^app/?(.*)$ https://app.realitnytypek.sk/$1 [L,R=301]
+          # Týpkove nehnuteľnosti: detail ponuky na peknej adrese /nehnutelnosti/123-nazov-ponuky (server pripraví náhľad pre zdieľanie)
+          RewriteRule ^nehnutelnosti/([0-9]{1,10}(?:-[a-z0-9-]{0,100})?)/$ https://realitnytypek.sk/nehnutelnosti/$1 [L,R=301]
+          RewriteRule ^nehnutelnosti/([0-9]{1,10})(?:-[a-z0-9-]{0,100})?$ nehnutelnosti/ponuka.php?id=$1 [L,QSA]
           <IfModule mod_headers.c>
             <FilesMatch "\.html$">
               Header set Cache-Control "no-cache"
