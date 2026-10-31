@@ -4662,8 +4662,10 @@
       vsetkyRiadky("obhliadky", "*", "id").catch(function () { return []; }),
       vsetkyRiadky("zobrazenia_ponuk", "*", "nehnutelnost_id").catch(function () { return []; }),
       nacitajDopyty().catch(function () {}),
+      rpc("portal_statistika").catch(function () { return null; }),
     ]);
     S.obhliadky = w[0];
+    S.portalStat = (w[3] && w[3].ponuky) || {};
     var z = {}, hranica = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
     w[1].forEach(function (r) { var o = z[r.nehnutelnost_id] = z[r.nehnutelnost_id] || { spolu: 0, d7: 0 }; o.spolu += r.pocet; if (r.den > hranica) o.d7 += r.pocet; });
     S.zobrazenia = z;
@@ -4712,6 +4714,16 @@
     return r.join(" · ");
   }
 
+  // štatistika z Týpkových nehnuteľností: zobrazenia ponuky na portáli a dopyty, ktoré odtiaľ prišli
+  function portalStatHtml(p) {
+    var X = (S.portalStat || {})[p.id];
+    if (!X && (p.na_portali === false || (p.stav !== "aktivne" && p.stav !== "rezervovane"))) return "";
+    X = X || { z: 0, z7: 0, d: 0, d30: 0 };
+    return '<span title="Týpkove nehnuteľnosti na realitnytypek.sk">🏡 <b>' + nf.format(X.z) + "</b> " + (X.z === 1 ? "zobrazenie" : X.z >= 2 && X.z <= 4 ? "zobrazenia" : "zobrazení") +
+      " v Týpkových nehnuteľnostiach" + (X.z7 ? " (" + X.z7 + " za 7 dní)" : "") + "</span>" +
+      "<span>💬 <b>" + nf.format(X.d) + "</b> " + (X.d === 1 ? "dopyt" : X.d >= 2 && X.d <= 4 ? "dopyty" : "dopytov") + " odtiaľ</span>";
+  }
+
   // ---------- panel nástrojov v detaile ponuky
   function nastrojePonuky(p, mozem) {
     var Z = (S.zobrazenia || {})[p.id] || { spolu: 0, d7: 0 };
@@ -4729,7 +4741,7 @@
       (admin() && p.stav === "predane" ? '<button class="btn" type="button" data-pdn="provizia">💶 Zapísať províziu</button>' : "") + "</div>" +
       '<div class="pd-staty"><span>👁 <b>' + nf.format(Z.spolu) + "</b> zobrazení ponuky" + (Z.d7 ? " (" + Z.d7 + " za 7 dní)" : "") + "</span>" +
       "<span>🗝️ <b>" + nO + "</b> " + (nO === 1 ? "obhliadka" : nO >= 2 && nO <= 4 ? "obhliadky" : "obhliadok") + "</span>" +
-      "<span>🎯 <b>" + nD + "</b> " + (nD === 1 ? "potenciálny klient" : nD >= 2 && nD <= 4 ? "potenciálni klienti" : "potenciálnych klientov") + "</span></div>";
+      "<span>🎯 <b>" + nD + "</b> " + (nD === 1 ? "potenciálny klient" : nD >= 2 && nD <= 4 ? "potenciálni klienti" : "potenciálnych klientov") + "</span>" + portalStatHtml(p) + "</div>";
     if (S.pdPanel === "zdielat") h += panelZdielat(p);
     if (S.pdPanel === "report" && mozem) h += panelReport(p);
     if (S.pdPanel === "siete") h += panelSiete(p);
@@ -9666,7 +9678,7 @@
     var ids = S.prip.filter(function (p) { return p.druh === "web" && p.web_kontakt_id && S.webKontakty[p.web_kontakt_id] === undefined; }).map(function (p) { return p.web_kontakt_id; });
     if (!ids.length) return;
     webKontaktyNacitavam = true;
-    sb.from("web_kontakty").select("id, zdroj, meno, kontakt, co, nehnutelnost_id, termin").in("id", ids.slice(0, 200)).then(function (r) {
+    sb.from("web_kontakty").select("id, zdroj, meno, kontakt, co, nehnutelnost_id, termin, portal").in("id", ids.slice(0, 200)).then(function (r) {
       ids.forEach(function (id) { S.webKontakty[id] = false; });
       (r.data || []).forEach(function (k) { S.webKontakty[k.id] = k; });
     }, function () { ids.forEach(function (id) { S.webKontakty[id] = false; }); }).then(function () { webKontaktyNacitavam = false; vykresliZvoncek(); });

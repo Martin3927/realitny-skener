@@ -3,7 +3,7 @@
 // Používa aplikácia (zvonček) aj editor webu (Prehľad).
 (function () {
   "use strict";
-  var ZDROJ = { odhad: "Odhad ceny", strazca: "Strážca ponúk", obhliadka: "Obhliadka", callback: "Zavolať späť", dotaznik: "Dotazník", ebook: "E-book", kontakt: "Správa", podobna: "Hľadá podobnú", hypoteka: "Ponuka hypotéky", kariera: "Práca makléra" };
+  var ZDROJ = { odhad: "Odhad ceny", strazca: "Strážca ponúk", obhliadka: "Obhliadka", callback: "Zavolať späť", dotaznik: "Dotazník", ebook: "E-book", kontakt: "Správa", podobna: "Hľadá podobnú", hypoteka: "Ponuka hypotéky", kariera: "Práca makléra", predaj: "Chce predať" };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function jeEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim()); }
   function cisloTel(v) { return String(v || "").replace(/[^\d+]/g, ""); }
@@ -36,9 +36,12 @@
       ebook: "ďakujem za záujem o môj e-book. Ak budete mať k predaju či kúpe nehnuteľnosti akúkoľvek otázku, pokojne sa ozvite.",
       kontakt: "ďakujem za vašu správu z môjho webu" + o + ". " + g("Rád", "Rada") + " vám pomôžem.",
       hypoteka: "ďakujem za záujem o ponuku hypotéky" + (ponuka ? " k nehnuteľnosti „" + ponuka + "“" : "") + ". " + g("Rád", "Rada") + " vám pomôžem s financovaním a pripravím porovnanie podľa vašich čísel. Kedy sa vám môžem ozvať?",
+      predaj: "ďakujem, že ste sa ozvali kvôli predaju vašej nehnuteľnosti. " + g("Rád", "Rada") + " vám s predajom pomôžem. Kedy by sme sa mohli stretnúť pri nehnuteľnosti?",
       kariera: "ďakujem za záujem o prácu makléra. " + g("Rád", "Rada") + " vám poviem viac o tom, ako u nás začať. Kedy sa vám hodí krátky telefonát?",
       podobna: "ďakujem za záujem" + (ponuka ? " o „" + ponuka + "“" : "") + ". Táto nehnuteľnosť už nie je voľná, ale " + g("rád", "rada") + " vám pomôžem nájsť podobnú. Čo je pre vás pri hľadaní najdôležitejšie?"
     }[k.zdroj] || "ďakujem za vašu správu z môjho webu.";
+    // kontakt z Týpkových nehnuteľností (realitnytypek.sk), nie z webu makléra
+    if (k.portal) telo = telo.replace(/cez môj web|z môjho webu|na mojom webe/g, "cez Týpkove nehnuteľnosti");
     var oslovenie = "Dobrý deň" + (k.meno ? ", " + String(k.meno).trim() : "") + ",";
     if (kratko) return (oslovenie + " " + telo + " " + (m.meno || "")).trim();
     return oslovenie + "\n\n" + telo + "\n\nS pozdravom\n" + (m.meno || "") + (m.telefon ? "\n" + m.telefon : "");

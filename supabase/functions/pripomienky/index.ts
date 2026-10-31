@@ -1,5 +1,6 @@
 // Odošle emaily k pripomienkam, ktorým nastal čas (aj automatické uvoľnenie a zníženú cenu),
-// e-maily strážcu ponúk klientom z webu makléra a v pondelok ráno týždenný prehľad výkonu maklérov administrátorom.
+// e-maily strážcu ponúk klientom z webu makléra aj z Týpkových nehnuteľností
+// a v pondelok ráno týždenný prehľad výkonu maklérov administrátorom.
 // Volá ju databáza každú minútu (pg_cron); chránená tajným kľúčom v hlavičke x-kluc.
 // Email: Brevo (BREVO_API_KEY) alebo SMTP cez port 465 (SMTP_HOST, SMTP_USER, SMTP_PASS).
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -321,6 +322,95 @@ async function strazcaPotvrdenia(db: any) {
   return { ok: chyby.length === 0, odoslane, chyby };
 }
 
+// strážca ponúk Týpkových nehnuteľností (realitnytypek.sk/nehnutelnosti): potvrdenie a e-maily s novými ponukami
+const PORTAL = "https://realitnytypek.sk/nehnutelnosti/";
+const PORTAL_OD = "Týpkove nehnuteľnosti";
+const PORTAL_ODPOVED = "info@realitnytypek.sk";
+function obalPortalu(obsah: string, pata: string) {
+  return `<div style="background:#f7f2e8;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#1e2a35">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;margin:0 auto"><tr><td>
+    <p style="margin:0 0 18px;font-size:19px;font-weight:900;letter-spacing:-.3px;color:#15191c">Týpkove <span style="color:#b9771a">nehnuteľnosti</span></p>
+    ${obsah}
+    <p style="font-size:12px;line-height:1.5;color:#7a828c;margin:26px 0 0;border-top:1px solid #e6dccb;padding-top:12px">${pata}</p>
+    </td></tr></table></div>`;
+}
+// deno-lint-ignore no-explicit-any
+async function portalStrazcaPotvrdenia(db: any) {
+  const { data: zoz, error } = await db.rpc("_portal_strazca_potvrdenia", { p_limit: 20 });
+  if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const s of (zoz as any[]) ?? []) {
+    try {
+      const potvrdit = PORTAL + "strazca.php?a=potvrdit&t=" + encodeURIComponent(s.token);
+      const html = obalPortalu(`
+        <p style="font-size:16px;margin:0 0 10px">Dobrý deň${s.meno ? ", " + esc(s.meno) : ""},</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 14px">zapli ste si strážcu ponúk: <b>${esc(s.popis)}</b>.</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 20px">Potvrďte prosím, že nové ponuky vám môžeme posielať na tento e-mail:</p>
+        <p style="margin:0 0 8px"><a href="${esc(potvrdit)}" style="display:inline-block;background:#1e2a35;color:#fff;font-weight:700;font-size:15px;padding:12px 22px;border-radius:999px;text-decoration:none">Áno, posielajte mi ponuky</a></p>`,
+        "Ak ste sa neprihlásili vy, tento e-mail pokojne ignorujte. Bez potvrdenia vám už nič nepríde.");
+      await posli(s.email, "Potvrďte strážcu ponúk – Týpkove nehnuteľnosti", html, { odMeno: PORTAL_OD, odpovedat: PORTAL_ODPOVED });
+      odoslane++;
+    } catch (e) {
+      chyby.push(String((e as Error).message || e));
+      await db.rpc("_portal_strazca_potvrdenie_chyba", { p_id: s.id });
+    }
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
+}
+// deno-lint-ignore no-explicit-any
+async function portalStrazcaEmaily(db: any) {
+  const { data: zoz, error } = await db.rpc("_portal_strazca_na_odoslanie", { p_limit: 20 });
+  if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const s of (zoz as any[]) ?? []) {
+    try {
+      // deno-lint-ignore no-explicit-any
+      const ponuky = (s.ponuky as any[]) || [];
+      if (!ponuky.length) continue;
+      const odhlasit = PORTAL + "strazca.php?a=odhlasit&t=" + encodeURIComponent(s.token);
+      const karty = ponuky.map((x) => {
+        const f = fotkaPonuky(x), u = /^https:\/\//.test(x.url || "") ? x.url : PORTAL;
+        const kto = [x.makler_meno, x.kancelaria_nazov].filter(Boolean).join(" · ");
+        return `<tr><td style="padding:0 0 18px">
+          <a href="${esc(u)}" style="display:block;text-decoration:none;color:#1e2a35;border:1px solid #e6dccb;border-radius:14px;overflow:hidden;background:#fff">
+            ${f ? `<img src="${esc(f)}" alt="" width="520" style="display:block;width:100%;max-width:520px;height:auto;border:0">` : ""}
+            <div style="padding:14px 16px">
+              ${x.nova_cena ? `<div style="display:inline-block;background:#fdecc8;color:#7a4b00;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;margin-bottom:6px">Znížená cena</div>` : ""}
+              <div style="font-size:17px;font-weight:700;line-height:1.3">${esc(nazovPonuky(x))}</div>
+              <div style="font-size:14px;color:#5a6470;margin-top:4px">${esc(parametrePonuky(x))}</div>
+              <div style="font-size:18px;font-weight:700;margin-top:8px">${esc(cenaPonuky(x))}</div>
+              ${kto ? `<div style="font-size:13px;color:#5a6470;margin-top:6px">Maklér: ${esc(kto)}${x.makler_telefon ? " · " + esc(x.makler_telefon) : ""}</div>` : ""}
+              <div style="margin-top:12px"><span style="display:inline-block;background:#1e2a35;color:#fff;font-weight:700;font-size:14px;padding:9px 16px;border-radius:999px">Pozrieť ponuku</span></div>
+            </div></a></td></tr>`;
+      }).join("");
+      const jedna = ponuky.length === 1;
+      const predmet = jedna
+        ? (ponuky[0].nova_cena ? "Znížená cena: " : "Nová ponuka: ") + nazovPonuky(ponuky[0]).slice(0, 70) + " – " + cenaPonuky(ponuky[0])
+        : ponuky.length + " nové ponuky podľa toho, čo hľadáte";
+      const html = obalPortalu(`
+        <p style="font-size:16px;margin:0 0 10px">Dobrý deň${s.meno ? ", " + esc(s.meno) : ""},</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 18px">${jedna ? "pribudla ponuka" : "pribudli ponuky"}, ktoré zodpovedajú tomu, čo hľadáte (<b>${esc(s.popis)}</b>):</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">${karty}</table>
+        <p style="font-size:15px;line-height:1.55;margin:4px 0 0">Ak vás niektorá zaujala, napíšte maklérovi priamo pri ponuke. Správa mu príde hneď.</p>`,
+        `Tento e-mail vám prišiel, lebo ste si v Týpkových nehnuteľnostiach zapli strážcu ponúk. Nové ponuky posielame najviac raz za 12 hodín.
+          <a href="${esc(odhlasit)}" style="color:#7a828c">Vypnúť strážcu ponúk</a>`);
+      await posli(s.email, predmet, html, {
+        odMeno: PORTAL_OD, odpovedat: PORTAL_ODPOVED,
+        hlavicky: { "List-Unsubscribe": `<${odhlasit}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      });
+      odoslane++;
+    } catch (e) {
+      chyby.push(String((e as Error).message || e));
+      await db.rpc("_portal_strazca_chyba", { p_id: s.id, p_ids: s.ids, p_chyba: String((e as Error).message || e) });
+    }
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
+}
+
 async function sha256(t: string) {
   const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
   return Array.from(new Uint8Array(h)).map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -393,5 +483,9 @@ Deno.serve(async (req) => {
   const web = await webZiadosti(db).catch(() => 0);
   const potvrdenia = await strazcaPotvrdenia(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
   const strazca = await strazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
-  return Response.json({ ok: true, odoslane, web, potvrdenia, strazca });
+  const portal = {
+    potvrdenia: await portalStrazcaPotvrdenia(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) })),
+    strazca: await portalStrazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) })),
+  };
+  return Response.json({ ok: true, odoslane, web, potvrdenia, strazca, portal });
 });

@@ -96,6 +96,8 @@ jobs:
           RewriteRule ^nehnutelnosti/([0-9]{1,10})(?:-[a-z0-9-]{0,100})?$ nehnutelnosti/ponuka.php?id=$1 [L,QSA]
           # článok: /nehnutelnosti/clanky/nazov-clanku
           RewriteRule ^nehnutelnosti/clanky/([a-z0-9-]{1,100})/?$ nehnutelnosti/clanok.php?s=$1 [L,QSA]
+          # stránka kancelárie: /nehnutelnosti/kancelaria/alpha
+          RewriteRule ^nehnutelnosti/kancelaria/([a-z0-9_-]{1,40})/?$ nehnutelnosti/kancelaria.php?k=$1 [L,QSA]
           <IfModule mod_headers.c>
             <FilesMatch "\.html$">
               Header set Cache-Control "no-cache"
