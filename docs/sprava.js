@@ -34,12 +34,15 @@
   function eur(n) { if (n == null || n === "") return "–"; return Number(n).toLocaleString("sk-SK", { minimumFractionDigits: Number(n) % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " €"; }
   function dni(n) { n = Math.abs(n); return n === 1 ? "1 deň" : n < 5 ? n + " dni" : n + " dní"; }
 
-  // cenník (s DPH): skener 19 € + 2 € za každý ďalší okres, osobný web 69 €
+  // cenník (s DPH, od 1. 11. 2026): skener 21 € + 2 € za každý ďalší okres, osobný web 57 €;
+  // s osobným webom je skener za polovicu (balík Jednotlivec = web + skener + pracovný e-mail, správa ponúk a AI v cene)
+  function cenaSkenera(pocetOkresov, sWebom) { return (21 + 2 * (Math.max(1, pocetOkresov) - 1)) * (sWebom ? 0.5 : 1); }
   function cenaPodlaCennika(moduly, pocetOkresov) {
-    var c = 0, nezname = [];
+    var c = 0, nezname = [], web = moduly.indexOf("web") >= 0, sk = moduly.indexOf("skener") >= 0;
     moduly.forEach(function (m) {
-      if (m === "skener") c += 19 + 2 * (Math.max(1, pocetOkresov) - 1);
-      else if (m === "web") c += 69;
+      if (m === "skener") c += cenaSkenera(pocetOkresov, web);
+      else if (m === "web") c += 57;
+      else if (web && (m === "ponuky" || m === "ai" || (m === "pracovny_email" && sk))) { /* v cene webu / balíka */ }
       else nezname.push(MOD_N[m] || m);
     });
     return { cena: c, nezname: nezname };
@@ -247,8 +250,9 @@
       var okr = okresyZPola();
       var c = cenaPodlaCennika(moduly, okr.length);
       $("#z-cena").value = c.cena || "";
-      $("#z-cennik-info").textContent = (moduly.indexOf("skener") >= 0 ? "Skener: " + Math.max(1, okr.length) + " okr. = " + eur(19 + 2 * (Math.max(1, okr.length) - 1)) + ". " : "") +
-        (moduly.indexOf("web") >= 0 ? "Osobný web 69 €. " : "") + (c.nezname.length ? "Bez ceny v cenníku: " + c.nezname.join(", ") + " – dopíš ručne." : "") +
+      var sWebom = moduly.indexOf("web") >= 0;
+      $("#z-cennik-info").textContent = (moduly.indexOf("skener") >= 0 ? "Skener: " + Math.max(1, okr.length) + " okr. = " + eur(cenaSkenera(okr.length, sWebom)) + (sWebom ? " (s webom za polovicu)" : "") + ". " : "") +
+        (sWebom ? "Osobný web 57 €. " : "") + (c.nezname.length ? "Bez ceny v cenníku: " + c.nezname.join(", ") + " – dopíš ručne." : "") +
         ($("#z-obdobie").value === "rocne" && c.cena ? " Ročne: " + eur(c.cena * 11) + "." : "");
     });
     form.querySelector("[data-predlz]").addEventListener("click", function () {
