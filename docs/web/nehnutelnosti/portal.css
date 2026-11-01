@@ -902,6 +902,51 @@ main section[id]{scroll-margin-top:calc(var(--hlava) + 8px)}
   .np-pas{grid-auto-columns:78%}
 }
 
+
+/* ================================================================ 089: stránka Predať, orientačné ceny, vývoj, termín, sledovanie ceny */
+body:not(.v-predat) #predat,body:not(.v-predat) #ceny{display:none}
+.v-predat #zoznam>section:not(#predat):not(#ceny){display:none}
+.v-predat #predat{padding-top:22px}
+.pr-spat{display:none}
+.v-predat .pr-spat{display:flex;margin-bottom:22px}
+.pp{display:flex;align-items:center;gap:22px;padding:clamp(22px,3vw,32px);border-radius:36px;background:var(--goldsoft)}
+.pp-ic{flex:none;display:grid;place-items:center;width:64px;height:64px;border-radius:20px;background:var(--ink);color:var(--gold)}
+.pp-tx{flex:1;min-width:0}
+.pp-tx h2{margin-top:10px;font-size:clamp(26px,2.8vw,34px);font-weight:800;line-height:1.05;letter-spacing:-.03em}
+.pp-tx p{margin:8px 0 0;max-width:620px;font-size:16px;line-height:1.55;color:var(--inksoft)}
+.pp-tl{display:flex;flex-direction:column;gap:10px}
+.cn-malo{color:var(--goldsoft)!important;font-weight:700}
+.cn-leg-malo{color:var(--slate);font-weight:700}
+.odh-malo-inz{margin-top:4px;color:var(--goldsoft)}
+.cn-vyvoj{margin-top:10px;padding-top:10px;border-top:1px solid rgba(247,242,232,.14);color:var(--goldsoft)}
+.cn-vyvoj>span{display:block;font-size:13.5px;font-weight:700;color:var(--cream)}
+.cn-vyvoj svg{display:block;margin-top:6px;overflow:visible}
+.cn-vyvoj circle{fill:var(--ink);stroke:currentColor;stroke-width:2}
+.cn-vyvoj small{display:block;margin-top:4px;font-size:12.5px;color:var(--mist)}
+/* termín obhliadky v tmavom formulári */
+.d-termin{display:flex;flex-direction:column;gap:8px}
+.d-termin-h{font-size:13px;font-weight:700;color:var(--mist)}
+.d-termin-h small{font-weight:600;color:var(--mistm)}
+.d-dni{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:thin}
+.d-dni button{flex:none;display:flex;flex-direction:column;align-items:center;min-width:54px;padding:7px 6px;border:0;border-radius:12px;background:rgba(247,242,232,.08);color:var(--cream);cursor:pointer;font-size:12px;line-height:1.2;transition:background .2s}
+.d-dni button b{font-size:14px}
+.d-dni button:hover{background:rgba(247,242,232,.16)}
+.d-dni button[aria-pressed="true"],.d-casy button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
+.d-dni button:disabled,.d-casy button:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+.d-casy{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.d-casy button{min-height:40px;border:0;border-radius:10px;background:rgba(247,242,232,.08);color:var(--cream);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;cursor:pointer}
+.d-casy button:hover{background:rgba(247,242,232,.16)}
+.d-termin-vyb{margin:0;font-size:13.5px;color:var(--goldsoft)}
+/* upozornenie na zníženie ceny */
+.sc-tl{width:100%;margin-top:8px}
+.fz-pozn a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+.form-pozn a{color:var(--cream);text-decoration:underline;text-underline-offset:2px}
+@media (max-width:860px){
+  .pp{flex-direction:column;align-items:flex-start}
+  .pp-tl{flex-direction:row;flex-wrap:wrap;width:100%}
+  .pp-tl .btn{flex:1 1 220px}
+}
+
 /* obmedzený pohyb: nič sa neposúva, len jemne prelína (všetky animácie: ?pohyb=1) */
 @media (prefers-reduced-motion:reduce){
   html:not(.pohyb-vzdy) *,html:not(.pohyb-vzdy) *::before,html:not(.pohyb-vzdy) *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}

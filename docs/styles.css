@@ -2627,3 +2627,24 @@ html.bez-posuvu #toast { z-index: 210 }
 .vd-ano { color: var(--good); font-weight: 600 }
 .vd-nikto { color: var(--ink); font-weight: 600 }
 @media (max-width: 640px) { .videli-detail { margin-left: 36px } .videli-detail.ja { margin-left: 0 } }
+
+/* naše inzeráty zo skenera → ponuky (hromadný prenos) */
+.prenos-volby { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 14px 0 }
+.prenos-vsetko { display: flex; gap: 6px; margin-left: auto }
+.prenos-zoznam { display: grid; gap: 10px }
+.prenos-riadok { display: grid; grid-template-columns: auto 112px minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 10px 10px }
+.prenos-riadok.hotovo { opacity: .7 }
+.prenos-riadok .pr-foto { width: 112px }
+.prenos-vyber { display: grid; place-items: center; padding: 6px; cursor: pointer }
+.prenos-pozn { font-size: 12.5px; color: var(--warn) }
+.prenos-pozn.chyba { color: var(--bad) }
+.prenos-makler { display: grid; gap: 3px; justify-items: end }
+.prenos-makler select { max-width: 190px }
+.prenos-pata { position: sticky; bottom: 0; display: flex; justify-content: flex-end; padding: 12px 0 4px; background: linear-gradient(to top, var(--surface) 70%, transparent) }
+@media (max-width: 720px) {
+  .prenos-riadok { grid-template-columns: auto 84px minmax(0, 1fr); padding: 10px }
+  .prenos-riadok .pr-foto { width: 84px }
+  .prenos-riadok .pr-vpravo { grid-column: 2 / -1; justify-items: start; text-align: left }
+  .prenos-makler { justify-items: start }
+  .prenos-vsetko { margin-left: 0 }
+}

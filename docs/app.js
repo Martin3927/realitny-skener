@@ -1165,7 +1165,7 @@
     S.tab = tabPovoleny(st.tab) ? st.tab : "domov";
     S.jedenId = st.jeden || null; S.shown = 100;
     if (S.tab === "vykon") S.vykon = null;
-    if (S.tab === "nehnutelnosti") { S.ponukaDetail = st.detail || null; if (!st.form) S.ponukaEdit = null; S.ponukaExport = !!st.export; }
+    if (S.tab === "nehnutelnosti") { S.ponukaDetail = st.detail || null; if (!st.form) S.ponukaEdit = null; S.ponukaExport = st.export === "prenos" ? "prenos" : !!st.export; }
     if (S.tab === "klienti") {
       S.dopytDetail = st.dopyt || null; if (!st.dform) S.dopytEdit = null;
       S.predDetail = st.pred || null;
@@ -3851,7 +3851,7 @@
     var el = $("#obsah"); if (!el) return;
     if (S.ponukaEdit) return vykresliFormularPonuky();
     if (S.ponukaDetail) return vykresliDetailPonuky();
-    if (S.ponukaExport) return vykresliExport();
+    if (S.ponukaExport) return S.ponukaExport === "prenos" ? vykresliPrenos() : vykresliExport();
     if (!S.ponuky) { el.innerHTML = '<div class="box"><div class="meta">Načítavam ponuky…</div></div>'; nacitajPonuky().then(vykresliNehnutelnosti, function (e) { toast(chybaText(e), true); S.ponuky = []; vykresliNehnutelnosti(); }); return; }
     var poc = { aktivne: 0, neaktivne: 0, koncepty: 0, archiv: 0 };
     S.ponuky.forEach(function (p) { poc[skupinaStavu(p.stav)]++; });
@@ -3863,7 +3863,8 @@
     });
     var koncept = nacitajKoncept(), pohlad = pohladPonuk();
     var h = '<div class="box nehn"><div class="vykon-hlava"><h3>🏠 Nehnuteľnosti v ponuke</h3>' +
-      '<div class="nehn-akcie"><button class="btn" type="button" data-ponuka="export">🌐 Web a export</button><button class="btn primary" type="button" data-ponuka="nova">+ Pridať ponuku</button></div></div>' +
+      '<div class="nehn-akcie">' + (admin() ? '<button class="btn" type="button" data-ponuka="prenos" title="Preniesť inzeráty kancelárie, ktoré našiel skener na realitných portáloch">Naše inzeráty zo skenera</button>' : "") +
+        '<button class="btn" type="button" data-ponuka="export">🌐 Web a export</button><button class="btn primary" type="button" data-ponuka="nova">+ Pridať ponuku</button></div></div>' +
       (koncept ? '<div class="note koncept-pozn">📝 Máte rozpracovanú ponuku' + (koncept.p.obec ? " (" + esc(koncept.p.obec) + ")" : "") + ' z ' + datum(koncept.ulozene, true) +
         ' <button class="btn" type="button" data-ponuka="pokracovat">Pokračovať</button> <button class="btn ghost" type="button" data-ponuka="zahodit">Zahodiť</button></div>' : "") +
       '<div class="nehn-filtre"><div class="seg" role="group">' + OBD.map(function (o) {
@@ -3936,6 +3937,7 @@
       if (a === "upravit") { var p = S.ponuky.find(function (x) { return x.id === S.ponukaDetail; }); if (p) S.ponukaEdit = { p: JSON.parse(JSON.stringify(p)), i: JSON.parse(JSON.stringify(S.ponukyInt[p.id] || { provizia_typ: "eur", provizia_rk_typ: "eur", dokumenty: [] })), krok: 0, uprava: true }; }
       if (a === "spat") { S.ponukaDetail = null; }
       if (a === "export") { S.ponukaExport = true; history.pushState({ tab: "nehnutelnosti", export: 1 }, "", "#nehnutelnosti"); }
+      if (a === "prenos") { S.ponukaExport = "prenos"; S.prenos = null; history.pushState({ tab: "nehnutelnosti", export: "prenos" }, "", "#nehnutelnosti"); }
       if (S.ponukaEdit && a !== "spat") history.pushState({ tab: "nehnutelnosti", form: 1, detail: S.ponukaDetail }, "", "#nehnutelnosti");
       vykresliNehnutelnosti(); window.scrollTo(0, 0); return;
     }
@@ -4585,22 +4587,39 @@
   }
 
   // ---------- prenos inzerátu zo skenera do ponuky
-  async function zInzeratu(z) {
-    await nacitajLokality().catch(function () {});
-    var a = S.arch[z.id];
-    if (a === undefined) { var ra = await sb.from("archiv").select("*").eq("inzerat_id", z.id).maybeSingle(); a = S.arch[z.id] = ra.data || null; }
+  // údaje novej ponuky z inzerátu skenera (z) a jeho archívu (a); vlastny = inzerát našej kancelárie (hromadný prenos)
+  function ponukaZInzeratu(z, a, vlastny) {
     var kat = { byt: "byty", dom: "domy", pozemok: "pozemky", chata: "chaty", garaz: "garaze" }[z.typ] || "";
     var typ = "";
     if (kat === "byty") typ = z.izby ? (z.izby >= 5 ? "5 a viac izbový byt" : z.izby + "-izbový byt") : "";
     if (kat === "domy") typ = "Rodinný dom"; if (kat === "chaty") typ = "Chata"; if (kat === "garaze") typ = "Garáž";
+    if (kat === "pozemky" && vlastny) typ = { stavebny: "Stavebný pozemok – rodinné domy", zahrada: "Záhrada" }[z.podtyp] || "";
     var lok = (window.LOKALITY || []).find(function (l) { return !l[5] && normLok(l[0]) === normLok(z.obec) && (!z.okres || l[1] === z.okres); }) ||
       (window.LOKALITY || []).find(function (l) { return !l[5] && normLok(l[0]) === normLok(z.obec); });
     var fotky = a && a.fotky && a.fotky.length ? a.fotky.map(function (c) { return { url: fotoUrl(c) }; }) : [];
-    var t = S.tel[z.id];
+    var nazov = String(z.nazov || "").trim(), exk = false;
+    if (vlastny) {
+      // „EXKLUZÍVNE …“ na začiatku inzerátu → štítok Exkluzívne a názov bez neho
+      var m = nazov.match(/^exkluz[ií]vne\b[\s,.:–-]*/i);
+      if (m && m[0].length < nazov.length) { exk = true; nazov = nazov.slice(m[0].length); nazov = nazov.charAt(0).toUpperCase() + nazov.slice(1); }
+    }
     var p = { transakcia: "predaj", kategoria: kat, typ: typ, cena: z.cena || "", izby: z.izby || "", zdroj_inzerat: z.id, fotky: fotky,
-      popis: (a && a.popis) || z.popis || "", nazov: String(z.nazov || "").slice(0, 60),
+      popis: (a && a.popis) || z.popis || "", nazov: nazov.slice(0, 60),
       obec: lok ? lok[0] : z.obec || "", okres: lok ? lok[1] : z.okres || "", kraj: lok ? (window.OKRES_KRAJ || {})[lok[1]] || "" : "", lat: lok ? lok[3] : null, lon: lok ? lok[4] : null };
     if (kat === "pozemky") p.plocha_pozemku = z.plocha || ""; else p.plocha_uzitkova = z.plocha || "";
+    if (vlastny) {
+      if (exk) p.exkluzivne = true;
+      if (z.ulica) p.ulica = String(z.ulica).slice(0, 120);
+      if (!z.cena) p.typ_ceny = "na vyžiadanie";
+    }
+    return p;
+  }
+  async function zInzeratu(z) {
+    await nacitajLokality().catch(function () {});
+    var a = S.arch[z.id];
+    if (a === undefined) { var ra = await sb.from("archiv").select("*").eq("inzerat_id", z.id).maybeSingle(); a = S.arch[z.id] = ra.data || null; }
+    var p = ponukaZInzeratu(z, a, false);
+    var t = S.tel[z.id];
     var i = { majitel_meno: z.predajca && ptyp(z) !== "rk" ? z.predajca : "", majitel_telefon: t ? String(t.telefon).split(",")[0].trim() : "", poznamka: "Prenesené zo skenera: " + (z.url || "") };
     zmazKoncept(); novaPonuka({ p: p, i: i, krok: 0 }); ulozKoncept();
     S.tab = "nehnutelnosti"; history.pushState({ tab: "nehnutelnosti" }, "", "#nehnutelnosti"); vykresli(); window.scrollTo(0, 0);
@@ -4955,6 +4974,144 @@
     });
     el.querySelectorAll("[data-dopyt-otvor]").forEach(function (b) { b.onclick = function () { otvorDopyt(Number(b.dataset.dopytOtvor)); }; });
     el.querySelectorAll("[data-klienti-novy]").forEach(function (b) { b.onclick = function () { novyDopyt(); }; });
+  }
+
+  // ---------- naše inzeráty zo skenera → ponuky (hromadný prenos, len administrátor)
+  // maklér podľa mena v poli predajca („Mgr. Martina Macejová, RSc. - Alpha Reality“); tituly sa ignorujú
+  function maklerZPredajcu(t) {
+    var cast = String(t || "").split(/\s+[-–]\s+/)[0];
+    var slova = normLok(cast).replace(/[^a-z\s]/g, " ").split(/\s+/).filter(function (w) {
+      return w.length > 2 && !/^(mgr|ing|bc|phd|rsc|judr|mudr|paeddr|rndr|phdr|doc|prof|mba|dis)$/.test(w);
+    });
+    if (!slova.length) return null;
+    var zhoda = (S.makleri || []).filter(function (m) {
+      if (m.aktivny === false) return false;
+      var mm = normLok(m.meno || "").split(/\s+/);
+      return slova.every(function (w) { return mm.indexOf(w) >= 0; });
+    });
+    return zhoda.length === 1 ? zhoda[0].id : null;
+  }
+  async function nacitajPrenos() {
+    var R = S.prenos, nazov = nazovKancelarie();
+    try {
+      await Promise.all([nacitajLokality().catch(function () {}), S.ponuky ? null : nacitajPonuky()]);
+      var vzor = "%" + nazov.replace(/[\\%_]/g, function (c) { return "\\" + c; }) + "%";
+      var r = await sb.from("inzeraty").select("id,url,portal,portaly,nazov,typ,podtyp,izby,cena,plocha,obec,okres,ulica,predajca,foto,popis,prvy_krat")
+        .ilike("predajca", vzor).eq("aktivny", true).is("duplikat_z", null).order("prvy_krat", { ascending: false }).limit(300);
+      if (r.error) throw r.error;
+      var prenesene = {}; (S.ponuky || []).forEach(function (p) { if (p.zdroj_inzerat) prenesene[p.zdroj_inzerat] = p; });
+      var zoz = (r.data || []).filter(function (z) { return !prenesene[z.id]; });
+      R.prenesene = (r.data || []).length - zoz.length;
+      var arch = {};
+      for (var k = 0; k < zoz.length; k += 100) {
+        var ra = await sb.from("archiv").select("inzerat_id,popis,fotky").in("inzerat_id", zoz.slice(k, k + 100).map(function (z) { return z.id; }));
+        if (ra.error) throw ra.error;
+        (ra.data || []).forEach(function (a) { arch[a.inzerat_id] = a; });
+      }
+      var videne = {};
+      R.zoz = zoz.map(function (z) {
+        var a = arch[z.id] || null, p = ponukaZInzeratu(z, a, true), fotiek = (p.fotky || []).length;
+        // rovnaký byt/dom vložený na portál viackrát (novší inzerát je prvý) a ponuka, ktorá už v Týpkovi je
+        var kluc = [z.typ, normLok(z.obec), Math.round(Number(z.plocha) || 0), z.izby || ""].join("|"), pozn = "";
+        if (Number(z.plocha) > 0 && videne[kluc]) pozn = "Pravdepodobne staršie vloženie rovnakej ponuky ako „" + videne[kluc] + "“.";
+        else if (Number(z.plocha) > 0) videne[kluc] = p.nazov;
+        var uz = !pozn && (S.ponuky || []).find(function (x) {
+          var pl = Number(x.kategoria === "pozemky" ? x.plocha_pozemku : x.plocha_uzitkova) || 0;
+          return x.stav !== "archiv" && x.kategoria === p.kategoria && normLok(x.obec) === normLok(p.obec) && pl > 0 && Math.abs(pl - Number(z.plocha)) < 1;
+        });
+        if (uz) pozn = "V Týpkovi už možno je: „" + nazovPonuky(uz) + "“.";
+        return { z: z, p: p, fotiek: fotiek, pozn: pozn, makler: maklerZPredajcu(z.predajca) || S.me.id, vyb: !pozn && fotiek > 0,
+          foto: fotiek ? fotkaUrl(p.fotky[0]) : (/^https:\/\//.test(z.foto || "") ? z.foto : "") };
+      });
+      R.nacitava = false;
+    } catch (e) { R.nacitava = false; R.chyba = chybaText(e); }
+    if (S.prenos === R && S.ponukaExport === "prenos" && S.tab === "nehnutelnosti") vykresliPrenos();
+  }
+  function vykresliPrenos() {
+    var el = $("#obsah"); if (!el) return;
+    if (!S.prenos) { S.prenos = { nacitava: true, stav: "koncept", zoz: [] }; nacitajPrenos(); }
+    var R = S.prenos, nazov = nazovKancelarie();
+    var h = '<div class="box prenos"><div class="pd-hlava"><button class="btn ghost" type="button" data-prenos="spat">← Ponuky</button></div>' +
+      "<h3>Naše inzeráty zo skenera</h3>" +
+      '<p class="meta">Skener našiel na realitných portáloch aktívne inzeráty kancelárie ' + esc(nazov) + ", ktoré ešte nie sú v Týpkovi. Vyberte, ktoré chcete preniesť – skopíruje sa názov, cena, lokalita, popis a fotky a maklér sa priradí podľa mena v inzeráte. Prenesené ponuky potom skontrolujte a doplňte, čo v inzeráte chýba (presná adresa, parametre, energetický certifikát).</p>";
+    if (!admin()) { el.innerHTML = h + '<div class="note">Hromadný prenos môže spustiť len administrátor.</div></div>'; napojPrenos(el); return; }
+    if (R.nacitava) { el.innerHTML = h + '<div class="meta">Hľadám inzeráty…</div></div>'; napojPrenos(el); return; }
+    if (R.chyba) { el.innerHTML = h + '<div class="note zle">' + esc(R.chyba) + ' <button class="btn" type="button" data-prenos="znova">Skúsiť znova</button></div></div>'; napojPrenos(el); return; }
+    var bezie = !!R.beh, vyb = R.zoz.filter(function (x) { return x.vyb; }).length;
+    if (!R.zoz.length) {
+      h += '<div class="prazdne"><span class="dl-ikona velka">' + ikona("nehn") + "</span><b>Všetko je prenesené</b>" +
+        '<span class="meta">' + (R.prenesene ? "Všetkých " + R.prenesene + " inzerátov kancelárie už v Týpkovi máte." : "Skener zatiaľ nenašiel žiadny aktívny inzerát s názvom „" + esc(nazov) + "“.") + "</span></div>";
+    } else {
+      h += '<div class="prenos-volby"><div class="seg" role="group" aria-label="Ako uložiť">' +
+          '<button type="button" data-prenos-stav="koncept" aria-pressed="' + (R.stav === "koncept") + '"' + (bezie ? " disabled" : "") + ">Ako koncepty</button>" +
+          '<button type="button" data-prenos-stav="aktivne" aria-pressed="' + (R.stav === "aktivne") + '"' + (bezie ? " disabled" : "") + ">Rovno zverejniť</button></div>" +
+        '<span class="meta">' + (R.stav === "aktivne" ? "Ponuky sa hneď ukážu na webe kancelárie aj v Týpkových nehnuteľnostiach." : "Koncepty klienti nevidia – zverejníte ich, keď ich skontrolujete.") + "</span>" +
+        '<span class="prenos-vsetko"><button class="btn ghost" type="button" data-prenos="vsetky"' + (bezie ? " disabled" : "") + ">Vybrať všetky</button>" +
+        '<button class="btn ghost" type="button" data-prenos="ziadne"' + (bezie ? " disabled" : "") + ">Zrušiť výber</button></span></div>" +
+        '<div class="prenos-zoznam">' + R.zoz.map(function (x, n) {
+          var p = x.p, z = x.z;
+          var par = [z.plocha ? nf.format(z.plocha) + " m²" + (p.kategoria === "pozemky" ? " pozemok" : "") : "", z.izby ? z.izby + "-izb." : ""].filter(Boolean).join(" · ");
+          return '<div class="prenos-riadok' + (x.hotovo ? " hotovo" : "") + '">' +
+            '<label class="prenos-vyber"><input type="checkbox" class="prepinac" data-prenos-vyb="' + n + '"' + (x.vyb ? " checked" : "") + (bezie || x.hotovo ? " disabled" : "") +
+              ' aria-label="Preniesť: ' + esc(p.nazov || z.nazov) + '"></label>' +
+            '<span class="pr-foto">' + (x.foto ? '<img loading="lazy" src="' + esc(x.foto) + '" alt="">' : '<span class="pk-bez">' + (KATEGORIE.find(function (k) { return k[0] === p.kategoria; }) || ["", "", "🏠"])[2] + "</span>") + "</span>" +
+            '<span class="pr-telo"><span class="pk-tr">' + esc([p.typ || (KATEGORIE.find(function (k) { return k[0] === p.kategoria; }) || ["", "Iné"])[1], p.exkluzivne ? "Exkluzívne" : ""].filter(Boolean).join(" · ")) + "</span>" +
+              "<b>" + esc(p.nazov || z.nazov || "Bez názvu") + "</b>" +
+              '<span class="meta">' + esc([[p.obec, p.okres ? "okr. " + p.okres : ""].filter(Boolean).join(", "), par, z.cena ? eur(z.cena) : "cena na vyžiadanie"].filter(Boolean).join(" · ")) + "</span>" +
+              '<span class="meta">' + (x.fotiek ? x.fotiek + " " + (x.fotiek === 1 ? "fotka" : x.fotiek < 5 ? "fotky" : "fotiek") : "Fotky skener ešte sťahuje – zvyčajne do hodiny.") +
+                (z.url ? ' · <a href="' + esc(z.url) + '" target="_blank" rel="noopener">pôvodný inzerát</a>' : "") + "</span>" +
+              (x.pozn ? '<span class="prenos-pozn">' + esc(x.pozn) + "</span>" : "") +
+              (x.chyba ? '<span class="prenos-pozn chyba">' + esc(x.chyba) + "</span>" : "") + "</span>" +
+            '<span class="pr-vpravo">' + (x.hotovo ? '<span class="chip won">Prenesené</span>' :
+              '<label class="prenos-makler"><span class="meta">Maklér</span><select data-prenos-makler="' + n + '"' + (bezie ? " disabled" : "") + ">" +
+                (S.makleri || []).filter(function (m) { return m.aktivny !== false || m.id === x.makler; }).map(function (m) {
+                  return '<option value="' + esc(m.id) + '"' + (m.id === x.makler ? " selected" : "") + ">" + esc(m.meno || m.email) + "</option>";
+                }).join("") + "</select></label>") + "</span></div>";
+        }).join("") + "</div>" +
+        '<div class="prenos-pata">' + (bezie ? '<span class="meta">Prenášam ' + R.beh.hotovo + " z " + R.beh.spolu + "…</span>" :
+          '<button class="btn primary" type="button" data-prenos="spustit"' + (vyb ? "" : " disabled") + ">Preniesť vybrané (" + vyb + ")</button>") + "</div>";
+    }
+    el.innerHTML = h + "</div>";
+    napojPrenos(el);
+  }
+  function napojPrenos(el) {
+    var R = S.prenos;
+    el.querySelectorAll("[data-prenos]").forEach(function (b) {
+      b.onclick = function () {
+        var a = b.dataset.prenos;
+        if (a === "spat") { S.ponukaExport = false; S.prenos = null; vykresliNehnutelnosti(); window.scrollTo(0, 0); return; }
+        if (a === "znova") { S.prenos = null; vykresliPrenos(); return; }
+        if (a === "vsetky" || a === "ziadne") { R.zoz.forEach(function (x) { if (!x.hotovo) x.vyb = a === "vsetky"; }); vykresliPrenos(); return; }
+        if (a === "spustit") spustiPrenos();
+      };
+    });
+    el.querySelectorAll("[data-prenos-stav]").forEach(function (b) { b.onclick = function () { R.stav = b.dataset.prenosStav; vykresliPrenos(); }; });
+    el.querySelectorAll("[data-prenos-vyb]").forEach(function (c) {
+      c.onchange = function () { R.zoz[Number(c.dataset.prenosVyb)].vyb = c.checked; var t = el.querySelector('[data-prenos="spustit"]'), n = R.zoz.filter(function (x) { return x.vyb; }).length; if (t) { t.textContent = "Preniesť vybrané (" + n + ")"; t.disabled = !n; } };
+    });
+    el.querySelectorAll("[data-prenos-makler]").forEach(function (sel) { sel.onchange = function () { R.zoz[Number(sel.dataset.prenosMakler)].makler = sel.value; }; });
+  }
+  async function spustiPrenos() {
+    var R = S.prenos, ciel = R.zoz.filter(function (x) { return x.vyb && !x.hotovo; });
+    if (!ciel.length || R.beh) return;
+    R.beh = { hotovo: 0, spolu: ciel.length }; vykresliPrenos();
+    var ok = 0, zle = 0;
+    for (var k = 0; k < ciel.length; k++) {
+      var x = ciel[k], stav = R.stav === "aktivne" && x.p.kategoria && x.p.obec ? "aktivne" : "koncept";
+      var data = Object.assign({}, x.p, { stav: stav, makler_id: x.makler, zobrazit_cenu: true, zobrazit_mapu: true, orientacia: [], vybavenie: [], specialne: [] });
+      if (!data.typ_ceny) data.typ_ceny = "za nehnuteľnosť";
+      try {
+        await rpc("ulozit_nehnutelnost", { p: data, p_int: { provizia_typ: "eur", provizia_rk_typ: "eur", dokumenty: [], poznamka: "Prenesené zo skenera: " + (x.z.url || "") } });
+        x.hotovo = true; x.vyb = false; x.chyba = ""; ok++;
+      } catch (e) { x.chyba = chybaText(e); zle++; }
+      R.beh.hotovo = k + 1;
+      if (S.prenos === R && S.ponukaExport === "prenos") vykresliPrenos();
+    }
+    R.beh = null;
+    await nacitajPonuky().catch(function () { /* zoznam sa obnoví neskôr */ });
+    if (ok) S.nehnObd = R.stav === "aktivne" ? "aktivne" : "koncepty";
+    if (S.prenos === R && S.ponukaExport === "prenos") vykresliPrenos();
+    toast(ok ? "✅ Prenesené: " + ok + " " + (ok === 1 ? "ponuka" : ok < 5 ? "ponuky" : "ponúk") + (R.stav === "aktivne" ? "" : " ako koncepty") + (zle ? ". Nepodarilo sa: " + zle + "." : ".") : "Ponuky sa nepodarilo preniesť.", !ok);
   }
 
   // ---------- web a export

@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uwxziqapghlyktwpipjd.supabase.co" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Instrument+Sans:wght@400..700&amp;family=Montserrat:wght@900&amp;display=swap">
-<link rel="stylesheet" href="portal.css?v=202610315">
+<link rel="stylesheet" href="portal.css?v=202611011">
 <script>
   // všetky animácie aj pri obmedzenom pohybe v systéme: adresa ?pohyb=1
   if (/[?&]pohyb=1/.test(location.search)) document.documentElement.classList.add("pohyb-vzdy");
@@ -36,8 +36,8 @@
     <nav class="tn-nav" aria-label="Hlavné menu">
       <a class="nd" href="./#ponuky" data-nav="ponuky">Ponuky</a>
       <a class="nd" href="./#realitna-mapa" data-nav="mapa">Mapa</a>
-      <a class="nd" href="./#ceny" data-nav="ceny">Ceny</a>
-      <a class="nd" href="./#predat" data-nav="predat">Predať</a>
+      <a class="nd" href="./predat#ceny" data-nav="ceny">Ceny</a>
+      <a class="nd" href="./predat" data-nav="predat">Predať</a>
       <a class="nd" href="./#makleri" data-nav="makleri">Makléri</a>
       <a class="nd" href="./#clanky" data-nav="clanky">Články</a>
       <button type="button" data-akcia="oblubene" aria-pressed="false" aria-label="Obľúbené"><svg class="srdce-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-9.3-9.2C1.5 7.6 3.6 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.4 0 5.5 3.1 4.3 6.3C19.5 15.4 12 20 12 20z"/></svg><span class="t-text">Obľúbené</span><span class="tn-pocet" id="pocet-obl" hidden>0</span></button>
@@ -47,8 +47,8 @@
         <div class="tn-menu-p">
           <a href="./#ponuky" data-nav="ponuky">Ponuky</a>
           <a href="./#realitna-mapa" data-nav="mapa">Mapa ponúk</a>
-          <a href="./#predat" data-nav="predat">Koľko stojí moja nehnuteľnosť?</a>
-          <a href="./#ceny" data-nav="ceny">Cenová mapa</a>
+          <a href="./predat" data-nav="predat">Koľko stojí moja nehnuteľnosť?</a>
+          <a href="./predat#ceny" data-nav="ceny">Cenová mapa</a>
           <a href="./#makleri" data-nav="makleri">Vyhľadať makléra</a>
           <a href="./#clanky" data-nav="clanky">Články</a>
           <a href="./#pre-vas" data-nav="pre-vas">Chcem byť maklér</a>
@@ -127,9 +127,25 @@
       </div>
     </section>
 
-    <!-- pre predávajúcich: odhad ceny a Chcem predať -->
+    <!-- na úvode len pás s odkazom na stránku pre predávajúcich -->
+    <section class="sekcia pp-sekcia" id="predat-pas" aria-label="Pre predávajúcich">
+      <div class="obal">
+        <div class="pp" data-rv>
+          <span class="pp-ic" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7M5 9.5V20h14V9.5"/><path d="M9.5 14.5l2 2 3.5-4"/></svg></span>
+          <div class="pp-tx"><span class="sek-stitok">Pre predávajúcich</span><h2>Predávate nehnuteľnosť?</h2>
+            <p>Pozrite sa, za koľko sa v obci ponúkajú podobné nehnuteľnosti, a nechajte si poradiť od makléra, ktorý tam pôsobí.</p></div>
+          <div class="pp-tl">
+            <a class="btn btn-zlate" href="./predat" data-nav="predat">Koľko stojí moja nehnuteľnosť?</a>
+            <a class="btn btn-obrys" href="./predat#ceny" data-nav="ceny">Cenová mapa</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- pre predávajúcich: odhad ceny a Chcem predať (samostatná stránka /nehnutelnosti/predat) -->
     <section class="sekcia" id="predat" aria-labelledby="predat-nadpis">
       <div class="obal">
+        <div class="omrvinky pr-spat"><a class="spat" href="./" data-nav="uvod"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Ponuky</a><span>Pre predávajúcich</span></div>
         <div class="sek-hl" data-rv>
           <div><span class="sek-stitok">Pre predávajúcich</span><h2 id="predat-nadpis">Predávate nehnuteľnosť?</h2>
           <p>Pozrite sa, za koľko sa v obci ponúkajú podobné nehnuteľnosti, a nechajte si poradiť od makléra, ktorý tam pôsobí.</p></div>
@@ -246,11 +262,11 @@
     <span>Týpkove nehnuteľnosti sú súčasťou <a href="../">Realitného týpka</a>.</span>
     <nav aria-label="Odkazy v pätičke">
       <a href="./#makleri" data-nav="makleri">Makléri</a>
-      <a href="./#predat" data-nav="predat">Predať nehnuteľnosť</a>
-      <a href="./#ceny" data-nav="ceny">Cenová mapa</a>
+      <a href="./predat" data-nav="predat">Predať nehnuteľnosť</a>
+      <a href="./predat#ceny" data-nav="ceny">Cenová mapa</a>
       <a href="./#clanky" data-nav="clanky">Články</a>
       <a href="./#inzerovat" data-nav="inzerovat">Inzerovať u Týpka</a>
-      <a href="../ochrana-udajov.html">Ochrana osobných údajov</a>
+      <a href="./ochrana-udajov.html">Ochrana osobných údajov</a>
       <a href="mailto:info@realitnytypek.sk">info@realitnytypek.sk</a>
     </nav>
   </div>
@@ -259,6 +275,6 @@
 <div class="por-lista" id="por-lista" aria-hidden="true"></div>
 <div class="tn-toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><p style="max-width:640px;margin:20px auto;padding:16px;border-radius:16px;background:#FFFDF8">Ponuky sa zobrazia po zapnutí JavaScriptu v prehliadači.</p></noscript>
-<script src="portal.js?v=202610315" defer></script>
+<script src="portal.js?v=202611011" defer></script>
 </body>
 </html>

@@ -344,9 +344,14 @@ async function portalStrazcaPotvrdenia(db: any) {
   for (const s of (zoz as any[]) ?? []) {
     try {
       const potvrdit = PORTAL + "strazca.php?a=potvrdit&t=" + encodeURIComponent(s.token);
+      // jedno potvrdenie platí pre všetky čakajúce prihlásenia tejto adresy
+      const popisy = (Array.isArray(s.popisy) && s.popisy.length ? s.popisy : [s.popis]).map((x: unknown) => String(x || "")).filter(Boolean);
+      const co = popisy.length > 1
+        ? `<p style="font-size:15px;line-height:1.55;margin:0 0 6px">zapli ste si strážcu ponúk:</p><ul style="font-size:15px;line-height:1.55;margin:0 0 14px;padding-left:20px">${popisy.map((x: string) => `<li><b>${esc(x)}</b></li>`).join("")}</ul>`
+        : `<p style="font-size:15px;line-height:1.55;margin:0 0 14px">zapli ste si strážcu ponúk: <b>${esc(popisy[0] || "")}</b>.</p>`;
       const html = obalPortalu(`
         <p style="font-size:16px;margin:0 0 10px">Dobrý deň${s.meno ? ", " + esc(s.meno) : ""},</p>
-        <p style="font-size:15px;line-height:1.55;margin:0 0 14px">zapli ste si strážcu ponúk: <b>${esc(s.popis)}</b>.</p>
+        ${co}
         <p style="font-size:15px;line-height:1.55;margin:0 0 20px">Potvrďte prosím, že nové ponuky vám môžeme posielať na tento e-mail:</p>
         <p style="margin:0 0 8px"><a href="${esc(potvrdit)}" style="display:inline-block;background:#1e2a35;color:#fff;font-weight:700;font-size:15px;padding:12px 22px;border-radius:999px;text-decoration:none">Áno, posielajte mi ponuky</a></p>`,
         "Ak ste sa neprihlásili vy, tento e-mail pokojne ignorujte. Bez potvrdenia vám už nič nepríde.");
@@ -389,11 +394,11 @@ async function portalStrazcaEmaily(db: any) {
       }).join("");
       const jedna = ponuky.length === 1;
       const predmet = jedna
-        ? (ponuky[0].nova_cena ? "Znížená cena: " : "Nová ponuka: ") + nazovPonuky(ponuky[0]).slice(0, 70) + " – " + cenaPonuky(ponuky[0])
+        ? (ponuky[0].nova_cena || s.cena ? "Znížená cena: " : "Nová ponuka: ") + nazovPonuky(ponuky[0]).slice(0, 70) + " – " + cenaPonuky(ponuky[0])
         : ponuky.length + " nové ponuky podľa toho, čo hľadáte";
       const html = obalPortalu(`
         <p style="font-size:16px;margin:0 0 10px">Dobrý deň${s.meno ? ", " + esc(s.meno) : ""},</p>
-        <p style="font-size:15px;line-height:1.55;margin:0 0 18px">${jedna ? "pribudla ponuka" : "pribudli ponuky"}, ktoré zodpovedajú tomu, čo hľadáte (<b>${esc(s.popis)}</b>):</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 18px">${s.cena ? "ponuka, ktorú sledujete, zlacnela:" : (jedna ? "pribudla ponuka, ktorá zodpovedá" : "pribudli ponuky, ktoré zodpovedajú") + ` tomu, čo hľadáte (<b>${esc(s.popis)}</b>):`}</p>
         <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">${karty}</table>
         <p style="font-size:15px;line-height:1.55;margin:4px 0 0">Ak vás niektorá zaujala, napíšte maklérovi priamo pri ponuke. Správa mu príde hneď.</p>`,
         `Tento e-mail vám prišiel, lebo ste si v Týpkových nehnuteľnostiach zapli strážcu ponúk. Nové ponuky posielame najviac raz za 12 hodín.
@@ -402,6 +407,8 @@ async function portalStrazcaEmaily(db: any) {
         odMeno: PORTAL_OD, odpovedat: PORTAL_ODPOVED,
         hlavicky: { "List-Unsubscribe": `<${odhlasit}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
       });
+      // odoslané sa označí až teraz – keď funkcia skončí skôr, ponuky sa pošlú pri ďalšom behu
+      await db.rpc("_portal_strazca_odoslane", { p_id: s.id, p_ids: s.ids });
       odoslane++;
     } catch (e) {
       chyby.push(String((e as Error).message || e));
