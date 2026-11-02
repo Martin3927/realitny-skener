@@ -188,7 +188,7 @@
     var novy = !z;
     if (novy) {
       var d = dnes();
-      z = { typ: "kancelaria", nazov: "", stav: "skusobna", moduly: ["skener"], okresy: [], pocet_maklerov: 1, skusobna_od: d, skusobna_do: plusDni(d, 30),
+      z = { typ: "kancelaria", nazov: "", stav: "skusobna", moduly: ["skener"], okresy: [], pocet_maklerov: 1, skusobna_od: d, skusobna_do: plusDni(d, 14),
         platba_obdobie: "mesacne", cena_zamrazena_do: plusMes(d, 36) };
     }
     var platby = novy ? [] : S.platby.filter(function (p) { return p.zakaznik_id === z.id; });
@@ -315,7 +315,7 @@
   // ---------------------------------------------------------------- rýchle akcie
   function rychleAkcie(z) {
     var b = [];
-    if (z.stav === "zaujemca") b.push(["skuska", "Spustiť skúšobnú dobu (30 dní)"]);
+    if (z.stav === "zaujemca") b.push(["skuska", "Spustiť skúšobnú dobu (14 dní)"]);
     if (z.stav === "skusobna") b.push(["predlz14", "Predĺžiť skúšku o 14 dní"], ["aktivny", "Prešiel na platenú verziu"]);
     if (z.stav === "aktivny") b.push(["pozastavit", "Pozastaviť"]);
     if (z.stav === "pozastaveny") b.push(["aktivny", "Obnoviť"]);
@@ -326,7 +326,7 @@
   }
   async function rychlaAkcia(z, a) {
     var zmena = {};
-    if (a === "skuska") { zmena = { stav: "skusobna", skusobna_od: dnes(), skusobna_do: plusDni(dnes(), 30) }; }
+    if (a === "skuska") { zmena = { stav: "skusobna", skusobna_od: dnes(), skusobna_do: plusDni(dnes(), 14) }; }
     if (a === "predlz14") { var zaklad = z.skusobna_do && z.skusobna_do > dnes() ? z.skusobna_do : dnes(); zmena = { skusobna_do: plusDni(zaklad, 14) }; }
     if (a === "aktivny") zmena = { stav: "aktivny" };
     if (a === "pozastavit") { if (!confirm("Pozastaviť zákazníka „" + z.nazov + "“?")) return; zmena = { stav: "pozastaveny" }; }

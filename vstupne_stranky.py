@@ -252,9 +252,9 @@ def skener_objednavka():
 <section id="pristup" style="max-width: 1200px; margin: 0 auto; padding: 110px 24px 90px">
 <div class="obj-obal">
 <div class="obj-uvod">
-<span class="obj-badge">30 DNÍ ZADARMO</span>
-<h2 style="margin: 16px 0 0; font-size: clamp(32px, 3.6vw, 48px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 800">Objednaj si skener.<br>Prvých 30 dní zadarmo.</h2>
-<p style="margin: 18px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A">Vyber si balík a okresy, ktoré ti má Týpek strážiť. Prvých 30 dní neplatíš nič, potom platíš mesačne len za to, čo používaš. Ozveme sa ti osobne.</p>
+<span class="obj-badge">14 DNÍ ZADARMO</span>
+<h2 style="margin: 16px 0 0; font-size: clamp(32px, 3.6vw, 48px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 800">Objednaj si skener.<br>Prvých 14 dní zadarmo.</h2>
+<p style="margin: 18px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A">Vyber si balík a okresy, ktoré ti má Týpek strážiť. Prvých 14 dní neplatíš nič, potom platíš mesačne len za to, čo používaš. Ozveme sa ti osobne.</p>
 <ul class="obj-plusy"><li>%(f)sVšetky kraje a okresy Slovenska</li><li>%(f)sĎalší okres len za 2 € mesačne</li><li>%(f)sZmena balíka kedykoľvek</li></ul>
 <div class="obj-typek"><img class="mfloat" src="typek.png?v=202610251300" alt="Maskot Realitný týpek" style="display: block; width: 100%%; height: auto; filter: drop-shadow(0 18px 22px rgba(30,42,53,.25))"></div>
 </div>
@@ -287,10 +287,10 @@ def skener_objednavka():
 <label class="obj-f"><span class="obj-l">E-mail</span><input class="obj-in" name="email" type="email" autocomplete="email" maxlength="200" placeholder="meno@realitka.sk" required></label>
 </fieldset>
 <div class="obj-sum">
-<div class="obj-sum-c"><small>Po 30 dňoch zadarmo</small><b data-obj-suma>21 €</b><span data-obj-det>mesačne s DPH · skener 21 €</span></div>
+<div class="obj-sum-c"><small>Po 14 dňoch zadarmo</small><b data-obj-suma>21 €</b><span data-obj-det>mesačne s DPH · skener 21 €</span></div>
 <div class="seg-wrap" role="group" aria-label="Platba"><button type="button" class="seg seg-on" aria-pressed="true" data-calc="pay" data-key="m">Mesačne</button><button type="button" class="seg" aria-pressed="false" data-calc="pay" data-key="y">Ročne <small>mesiac zdarma</small></button></div>
 </div>
-<button type="submit" class="btn btn-acc obj-odosli">Objednať – 30 dní zadarmo</button>
+<button type="submit" class="btn btn-acc obj-odosli">Objednať – 14 dní zadarmo</button>
 <p id="rt-note" class="obj-note" aria-live="polite">Žiadny spam. Údaje použijeme len na vybavenie objednávky – viac v <a href="ochrana-udajov.html">Ochrane osobných údajov</a>.</p>
 </form>
 </div>
@@ -467,7 +467,7 @@ def skener_js():
         p_kancelaria:b==='kancelaria'?kanc:null,p_pocet_maklerov:b==='kancelaria'&&pm>0?pm:null})})
     .then(function(r){if(!r.ok)return r.json().catch(function(){return {};}).then(function(j){throw new Error((j&&j.message)||r.status);});
       note.classList.add('obj-ok');
-      note.textContent='Ďakujeme, objednávku máme! '+BN[b]+', '+okresy(ok.length)+': '+ok.join(', ')+'. Prvých 30 dní je zadarmo, ozveme sa ti osobne.';
+      note.textContent='Ďakujeme, objednávku máme! '+BN[b]+', '+okresy(ok.length)+': '+ok.join(', ')+'. Prvých 14 dní je zadarmo, ozveme sa ti osobne.';
       E.meno.value=E.telefon.value=E.email.value=E.kancelaria.value=E.pocet.value='';})
     .catch(function(err){note.classList.remove('obj-ok');note.classList.add('obj-zle');
       note.textContent=/prilis_vela/.test(err&&err.message)?'Z tohto zariadenia prišlo veľa objednávok naraz. Skús to prosím o hodinu alebo nám napíš na info@realitnytypek.sk.'
@@ -481,7 +481,7 @@ def skener_js():
 
 stranka('skener.html', 'skener',
         'Realitný skener – nové inzeráty súkromníkov ako prvý | Realitný týpek',
-        'Týpek cez deň každých 10 minút prejde Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality a nový inzerát súkromníka ti hneď pošle do mobilu. 21 € mesačne s DPH, 30 dní zadarmo.',
+        'Týpek cez deň každých 10 minút prejde Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality a nový inzerát súkromníka ti hneď pošle do mobilu. 21 € mesačne s DPH, 14 dní zadarmo.',
         'https://realitnytypek.sk/skener',
         S['hero'] + skener_sekcia() + skener_zadarmo() + skener_cennik() + otazky([
             ('Z ktorých portálov skener berie inzeráty?',
@@ -495,7 +495,7 @@ stranka('skener.html', 'skener',
             ('Musím niečo inštalovať?',
              'Nie. Týpek je webová aplikácia, funguje na počítači aj v mobile. Do mobilu si ho pridáš ako ikonu a upozornenia ti budú chodiť ako správy.'),
             ('Môžem to najprv vyskúšať?',
-             'Áno, 30 dní zadarmo. Potom platíš mesačne, ceny sú vždy s DPH. Keď zaplatíš na rok dopredu, máš mesiac zdarma.'),
+             'Áno, 14 dní zadarmo. Potom platíš mesačne, ceny sú vždy s DPH. Keď zaplatíš na rok dopredu, máš mesiac zdarma.'),
         ]),
         cta=skener_objednavka(), css=SKENER_CSS, js=skener_js())
 
@@ -505,7 +505,7 @@ web = re.sub(r'<h2( style="[^"]*">Tvoj vlastný realitný web\. Bez programátor
 assert '<h1 ' in web
 stranka('osobny-web.html', 'web',
         'Osobný web makléra bez programátora | Realitný týpek',
-        'Vlastný realitný web s ponukami, recenziami, doménou a hostingom. Ponuky aj web si upravuješ sám. 57 € mesačne s DPH, Realitný skener k nemu za polovicu, 30 dní zadarmo.',
+        'Vlastný realitný web s ponukami, recenziami, doménou a hostingom. Ponuky aj web si upravuješ sám. 57 € mesačne s DPH, Realitný skener k nemu za polovicu, 14 dní zadarmo.',
         'https://realitnytypek.sk/osobny-web',
         web + S['funkcie'] + cennik(['web', 'jednotlivec']) + otazky([
             ('Potrebujem programátora alebo grafika?',
@@ -519,5 +519,5 @@ stranka('osobny-web.html', 'web',
             ('Môžem mať k webu aj Realitný skener?',
              'Áno, s osobným webom máš Realitný skener za polovicu – od 10,50 € mesačne s DPH. Spolu je to balík Jednotlivec.'),
             ('Môžem to najprv vyskúšať?',
-             'Áno, 30 dní zadarmo. Potom platíš mesačne, ceny sú vždy s DPH. Keď zaplatíš na rok dopredu, máš mesiac zdarma.'),
+             'Áno, 14 dní zadarmo. Potom platíš mesačne, ceny sú vždy s DPH. Keď zaplatíš na rok dopredu, máš mesiac zdarma.'),
         ]))

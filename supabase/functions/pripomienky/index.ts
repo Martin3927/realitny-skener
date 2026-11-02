@@ -177,8 +177,8 @@ async function webZiadosti(db: any) {
   const potvrdenie = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35;line-height:1.55">
     <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Realitný týpek</b></div>
     <p style="font-size:16px;margin:16px 0 0">Ahoj,</p>
-    <p style="margin:10px 0 0">ďakujeme za záujem o Realitného týpka. Tvoju žiadosť o bezplatnú verziu na 30 dní máme.</p>
-    <p style="margin:10px 0 0">Ozveme sa ti osobne, vyskladáme moduly podľa toho, čo potrebuješ, a pomôžeme ti so začiatkom. Prví makléri a kancelárie majú cenu zamrazenú na 3 roky.</p>
+    <p style="margin:10px 0 0">ďakujeme za záujem o Realitného týpka. Tvoju žiadosť o bezplatnú verziu na 14 dní máme.</p>
+    <p style="margin:10px 0 0">Ozveme sa ti osobne, vyskladáme moduly podľa toho, čo potrebuješ, a pomôžeme ti so začiatkom.</p>
     <p style="margin:10px 0 0">Ak máš otázku, stačí odpísať na tento e-mail.</p>
     <p style="margin:18px 0 0">Tím Realitného týpka<br><a href="https://realitnytypek.sk/" style="color:#8a5a2b">realitnytypek.sk</a></p>
     <p style="color:#999;font-size:12px;margin-top:20px">Tento e-mail ti prišiel, lebo si na webe realitnytypek.sk požiadal o bezplatnú verziu. Ak si to nebol ty, správu pokojne ignoruj.</p></div>`;
