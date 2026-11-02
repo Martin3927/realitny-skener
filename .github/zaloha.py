@@ -11,7 +11,7 @@
 Do výpisu (verejný log GitHubu) nikdy nejdú údaje z tabuliek – len názvy tabuliek a rozdiely v počtoch.
 Prostredie: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJEKT.
 """
-import json, os, subprocess, sys, urllib.request, urllib.error
+import json, os, subprocess, sys, time, urllib.request, urllib.error
 
 POCTY_SQL = """
 select format('%s.%s', table_schema, table_name) as t,
@@ -97,7 +97,7 @@ def stiahni_verejne(ciel):
         cesta = os.path.join(ciel, r["b"], *cast)
         os.makedirs(os.path.dirname(cesta), exist_ok=True)
         url = f"https://{REF}.supabase.co/storage/v1/object/public/{r['b']}/" + "/".join(quote(x) for x in cast)
-        for pokus in range(3):
+        for pokus in range(4):
             try:
                 with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "realitny-typek-zaloha"}),
                                             timeout=120) as resp, open(cesta, "wb") as f:
@@ -109,18 +109,27 @@ def stiahni_verejne(ciel):
                 if r["s"] in (-1, os.path.getsize(cesta)):
                     return r["b"], None
                 chyba = "nesedí veľkosť"
+            except urllib.error.HTTPError as e:
+                chyba = f"HTTP {e.code}"
+                if e.code in (400, 404):  # v úložisku naozaj nie je – nemá zmysel skúšať znova
+                    break
             except Exception as e:  # noqa: BLE001 – stačí zapísať a skúsiť znova
                 chyba = type(e).__name__
+            time.sleep(2 * (pokus + 1))
+        if os.path.exists(cesta) and chyba:
+            os.remove(cesta)
         return r["b"], chyba
 
-    with ThreadPoolExecutor(8) as ex:
+    with ThreadPoolExecutor(6) as ex:
         vysledky = list(ex.map(jeden, verejne))
     zle = [v for v in vysledky if v[1]]
     for b in sorted({r["b"] for r in verejne}):
         n = sum(1 for v in vysledky if v[0] == b)
         print(f"{b}: {n - sum(1 for v in zle if v[0] == b)} z {n} súborov")
     if zle:
-        print(f"::warning::Nepodarilo sa stiahnuť {len(zle)} súborov ({', '.join(sorted({c for _, c in zle}))})")
+        from collections import Counter
+        druhy = ", ".join(f"{c}: {n}×" for c, n in Counter(c for _, c in zle).most_common())
+        print(f"::warning::Nepodarilo sa stiahnuť {len(zle)} súborov ({druhy}) – HTTP 400/404 = súbor v úložisku už nie je")
     if len(zle) > max(3, len(verejne) // 50):
         sys.exit(1)
 
