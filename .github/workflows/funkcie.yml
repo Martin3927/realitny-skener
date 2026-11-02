@@ -1,0 +1,76 @@
+name: Funkcie (Supabase)
+
+# Po zmene v supabase/functions/<nazov>/ nasadí do Supabase len tie funkcie, ktoré sa zmenili.
+# Ručne (Actions → Funkcie (Supabase) → Run workflow) sa dá nasadiť jedna funkcia podľa názvu.
+# Používa ten istý kľúč SUPABASE_ACCESS_TOKEN ako zmeny databázy (prístup Edge Functions: Read-write).
+# Všetky funkcie Týpka si overujú volajúceho samy (kľúč v hlavičke), preto --no-verify-jwt.
+
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/functions/**", ".github/workflows/funkcie.yml"]
+  workflow_dispatch:
+    inputs:
+      funkcia:
+        description: "Názov funkcie (priečinok v supabase/functions), napr. pripomienky"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: funkcie
+  cancel-in-progress: false
+
+jobs:
+  nasadit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MA_KLUC: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+    steps:
+      - name: Prístup do Supabase
+        if: env.MA_KLUC != 'true'
+        run: echo "::notice::Kľúč SUPABASE_ACCESS_TOKEN nie je nastavený – funkcie nenasadzujem."
+
+      - uses: actions/checkout@v4
+        if: env.MA_KLUC == 'true'
+        with:
+          fetch-depth: 2
+
+      - uses: supabase/setup-cli@v1
+        if: env.MA_KLUC == 'true'
+        with:
+          version: latest
+
+      - name: Ktoré funkcie nasadiť
+        id: ktore
+        if: env.MA_KLUC == 'true'
+        env:
+          RUCNE: ${{ github.event.inputs.funkcia }}
+        run: |
+          if [ -n "$RUCNE" ]; then
+            zoz="$RUCNE"
+          else
+            zoz=$(git diff --name-only HEAD~1 HEAD -- supabase/functions | cut -d/ -f3 | sort -u | tr '\n' ' ')
+          fi
+          ok=""
+          for f in $zoz; do
+            case "$f" in *[!a-z0-9_-]*|"") echo "::warning::Preskakujem neplatný názov: $f"; continue;; esac
+            if [ -f "supabase/functions/$f/index.ts" ]; then ok="$ok $f"; else echo "::notice::$f už v repozitári nie je – preskakujem"; fi
+          done
+          echo "Nasadím:${ok:- nič}"
+          echo "zoz=$ok" >> "$GITHUB_OUTPUT"
+
+      - name: Nasadiť
+        if: env.MA_KLUC == 'true' && steps.ktore.outputs.zoz != ''
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJEKT: ${{ vars.SUPABASE_PROJEKT || 'uwxziqapghlyktwpipjd' }}
+        run: |
+          [ -f supabase/config.toml ] || printf 'project_id = "realitny-skener"\n' > supabase/config.toml
+          for f in ${{ steps.ktore.outputs.zoz }}; do
+            echo "::group::$f"
+            supabase functions deploy "$f" --project-ref "$PROJEKT" --no-verify-jwt --use-api
+            echo "::endgroup::"
+          done
