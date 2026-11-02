@@ -115,7 +115,7 @@ jobs:
         run: |
           set -eo pipefail
           z="$RUNNER_TEMP/z/databaza"; mkdir -p "$z"; cd "$RUNNER_TEMP"
-          # dočasná rola len na čítanie cez pooler (GitHub nemá IPv6, heslo databázy nepotrebujeme)
+          # dočasná rola CLI cez pooler (GitHub nemá IPv6, heslo databázy nepotrebujeme); pg_dump len číta
           python3 "$GITHUB_WORKSPACE/.github/zaloha.py" pripojenie
           DB_URL=$(grep '^DB_URL=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)
           supabase db dump --remote="$DB_URL" --role-only -f "$z/roles.sql"

@@ -3,7 +3,7 @@
 
   zaloha.py sql                       – SQL, ktoré spočíta riadky vo všetkých tabuľkách (aj pre lokálnu obnovu)
   zaloha.py pocty <subor.tsv>         – spočíta riadky v ostrej databáze (cez Supabase API) a uloží ich
-  zaloha.py pripojenie                – dočasná rola len na čítanie, adresa databázy do $GITHUB_ENV (DB_URL, skrytá v logoch)
+  zaloha.py pripojenie                – dočasná rola CLI, adresa databázy do $GITHUB_ENV (DB_URL, skrytá v logoch)
   zaloha.py buckety                   – vypíše priečinky úložiska súborov (storage.buckets)
   zaloha.py porovnaj <zive> <obnova>  – porovná počty riadkov ostrej databázy a obnovenej zálohy
 
@@ -49,9 +49,11 @@ def q(sql):
 
 
 def pripojenie():
-    """Dočasná rola len na čítanie (platí pár minút) + adresa cez pooler (GitHub nemá IPv6)."""
+    """Dočasná rola CLI (platí pár minút) + adresa cez pooler (GitHub nemá IPv6).
+    Rola len na čítanie nestačí – pg_dump od Supabase CLI sa prepína na rolu postgres (SET ROLE).
+    Záloha s ňou len číta (pg_dump), nič nemení."""
     from urllib.parse import quote
-    rola = api("POST", "/cli/login-role", {"read_only": True})
+    rola = api("POST", "/cli/login-role", {"read_only": False})
     print(f"::add-mask::{rola['password']}")
     print(f"::add-mask::{quote(rola['password'], safe='')}")
     # adresu poolera kľúč nemusí smieť čítať (database_pooling_config_read) – vtedy skúsime známe adresy v regióne
@@ -99,7 +101,7 @@ def main():
         url = pripojenie()
         with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
             f.write(f"DB_URL={url}\n")
-        print("Dočasné pripojenie len na čítanie je pripravené.")
+        print("Dočasné pripojenie je pripravené.")
     elif cmd == "buckety":
         for r in q("select id from storage.buckets order by id"):
             print(r["id"])
