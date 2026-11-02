@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Realitný skener Alpha Reality
-Sleduje Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality.sk v okresoch Spišská Nová Ves a Levoča,
-rozlišuje súkromných predajcov od RK, hľadá podhodnotené ponuky a posiela emailové upozornenia.
+Sleduje Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality.sk v okresoch kancelárií a zákazníkov (z databázy,
+vždy aspoň okresy z config.json), rozlišuje súkromných predajcov od RK, hľadá podhodnotené ponuky
+a posiela upozornenia do mobilu (maklérom kancelárií s daným okresom) a e-mail (len okresy z config.json).
 
 Spustenie:  python skener.py            (bežná kontrola – prvé strany výsledkov)
             python skener.py --rychly  (rýchla kontrola – len 1. strana, každých 10 min)
@@ -10,6 +11,7 @@ Spustenie:  python skener.py            (bežná kontrola – prvé strany výsl
             python skener.py --bez-emailu
 """
 import json
+import math
 import os
 import random
 import re
@@ -29,7 +31,7 @@ from zoneinfo import ZoneInfo
 import requests
 from bs4 import BeautifulSoup
 
-from obce import CASTI, OBCE
+from obce import CASTI, OBCE, OKRESY_SR, PSC_MESTA
 
 ROOT = Path(__file__).resolve().parent
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
@@ -44,7 +46,8 @@ SESSION.headers.update({"User-Agent": UA, "Accept-Language": "sk-SK,sk;q=0.9"})
 NOW = datetime.now(timezone.utc)
 NOW_ISO = NOW.isoformat(timespec="seconds")
 TYPY = set(CONFIG["typy"])
-OKRESY = CONFIG["okresy"]
+OKRESY_EMAIL = list(CONFIG["okresy"])   # e-mail so súhrnom chodí len za tieto okresy (Alpha Reality)
+OKRESY = list(CONFIG["okresy"])         # sledované okresy – na začiatku behu sa doplnia z databázy (kancelárie a zákazníci)
 PAUZA = float(CONFIG.get("pauza_medzi_poziadavkami_s", 1.0))
 
 LOG = []
@@ -63,19 +66,8 @@ def bez_diakritiky(s):
     return "".join(c for c in s if not unicodedata.combining(c)).lower()
 
 
-OBEC_NA_OKRES = {}
-for _okres, _obce in OBCE.items():
-    for _o in _obce:
-        OBEC_NA_OKRES[_o] = _okres
-for _cast, _obec in CASTI.items():
-    if _obec:
-        OBEC_NA_OKRES[_cast] = OBEC_NA_OKRES.get(_obec)
-# Vyhľadávanie obcí v texte: najdlhšie názvy najskôr, porovnanie bez diakritiky
-_OBCE_PATTERNS = sorted(
-    ((n, re.compile(r"\b" + re.escape(bez_diakritiky(n)).replace(r"\-", r"[\s-]*") + r"\b"))
-     for n in OBEC_NA_OKRES),
-    key=lambda x: -len(x[0]),
-)
+def _vzor(nazov):
+    return re.compile(r"\b" + re.escape(bez_diakritiky(nazov)).replace(r"\-", r"[\s-]*") + r"\b")
 
 
 def _kmen(nazov):
@@ -87,53 +79,71 @@ def _kmen(nazov):
     return re.compile(r"\b" + r"[\s-]+".join(casti) + r"\b")
 
 
-# druhé kolo: skloňované tvary („v Odoríne“, „v Spišských Vlachoch“)
-_OBCE_KMENE = [(n, _kmen(n)) for n, _ in _OBCE_PATTERNS]
+_VZORY = {}
 
 
-def normalizuj_obec(nazov):
-    """Vráti oficiálny názov obce, ak patrí do sledovaných okresov."""
-    if not nazov:
+def vzory_okresu(okres):
+    """(názov, presný vzor, vzor pre skloňované tvary – „v Odoríne“, „v Spišských Vlachoch“) pre obce a miestne názvy
+    okresu, porovnanie bez diakritiky, najdlhšie názvy najskôr. Obec sa hľadá len v okrese inzerátu – rovnaké názvy obcí
+    sú v rôznych okresoch."""
+    if okres not in _VZORY:
+        nazvy = list(OBCE.get(okres, [])) + list(CASTI.get(okres, {}))
+        _VZORY[okres] = sorted(((n, _vzor(n), _kmen(n)) for n in nazvy), key=lambda x: -len(x[0]))
+    return _VZORY[okres]
+
+
+def _oficialna(nazov, okres):
+    return CASTI.get(okres, {}).get(nazov, nazov)
+
+
+def normalizuj_obec(nazov, okres):
+    """Vráti oficiálny názov obce, ak patrí do okresu."""
+    if not nazov or okres not in OBCE:
         return None
     b = bez_diakritiky(nazov).strip()
-    for n, _ in _OBCE_PATTERNS:
+    for n, _, _ in vzory_okresu(okres):
         if bez_diakritiky(n) == b:
-            return CASTI.get(n, n) if n in CASTI else n
+            return _oficialna(n, okres)
     return None
 
 
 # sídliská a štvrte Spišskej Novej Vsi – v inzerátoch často namiesto názvu mesta
 SIDLISKA_SNV = re.compile(r"\b(sidl\w*\.?\s*)(mier\w*|zapad\w*|tarc\w*|vychod\w*|fabrik\w*|telep\w*|kozi vrch\w*)|"
                           r"\bza hornadom\b|\bzelene udolie\b|\bzelenom udoli\b|\bnovoveska huta\b|\bfercekov\w*|\bsidlisko mier\b")
+# skratky a tvary okresných miest, ktoré vzor obce nezachytí
+MESTO_INAK = {"Spišská Nová Ves": [re.compile(r"\bsnv\b"), re.compile(r"\bspisskej novej vsi\b")],
+              "Levoča": [re.compile(r"\blevoci\b|\blevoce\b")]}
 
 
-def najdi_obec_v_texte(text):
+def najdi_obec_v_texte(text, okres):
+    if okres not in OBCE:
+        return None
     b = bez_diakritiky(text)
+    vzory = vzory_okresu(okres)
+    mesto = OKRESY_SR[okres]["mesto"]
     # "Obec: X" má prednosť
     m = re.search(r"obec:\s*([^\n,]+)", b)
     if m:
-        for n, pat in _OBCE_PATTERNS:
+        for n, pat, _ in vzory:
             if pat.search(m.group(1)):
-                return CASTI.get(n, n) if n in CASTI else n
-    for zoznam in (_OBCE_PATTERNS, _OBCE_KMENE):
-        for n, pat in zoznam:
-            # "Spišská Nová Ves" sa často spomína len ako okres/orientačný bod – zvoľ ju až keď nič iné
-            if n in ("Spišská Nová Ves", "Levoča"):
+                return _oficialna(n, okres)
+    for i in (1, 2):
+        for n, pat, kmen in vzory:
+            # okresné mesto sa často spomína len ako okres/orientačný bod – zvoľ ho až keď nič iné
+            if n == mesto:
                 continue
-            if pat.search(b):
-                return CASTI.get(n, n) if n in CASTI else n
-    if SIDLISKA_SNV.search(b):
+            if (pat if i == 1 else kmen).search(b):
+                return _oficialna(n, okres)
+    if okres == "Spišská Nová Ves" and SIDLISKA_SNV.search(b):
         return "Spišská Nová Ves"
+    if mesto not in OBCE[okres]:
+        return None   # Košice-okolie – mesto nie je v okrese
     # mesto berieme len vtedy, keď nie je spomenuté ako okres alebo orientačný bod („10 km od SNV“)
-    pats = {"Spišská Nová Ves": [dict(_OBCE_PATTERNS)["Spišská Nová Ves"], re.compile(r"\bsnv\b"),
-                                 re.compile(r"\bspisskej novej vsi\b")],
-            "Levoča": [dict(_OBCE_PATTERNS)["Levoča"], re.compile(r"\blevoci\b|\blevoce\b")]}
-    for n, zoznam in pats.items():
-        for pat in zoznam:
-            for m in pat.finditer(b):
-                pred = b[max(0, m.start() - 28):m.start()]
-                if not re.search(r"okres\w*|\bod\b|\bpri\b|blizk|nedalek|smer|\bkm\b|minut", pred):
-                    return n
+    for pat in [_vzor(mesto)] + MESTO_INAK.get(okres, []):
+        for m in pat.finditer(b):
+            pred = b[max(0, m.start() - 28):m.start()]
+            if not re.search(r"okres\w*|\bod\b|\bpri\b|blizk|nedalek|smer|\bkm\b|minut", pred):
+                return mesto
     return None
 
 
@@ -271,6 +281,18 @@ MIMO = re.compile(r"\b(v |pri )?(poprad\w*|kezmar\w*|kosic\w*|presov\w*|gelnic\w
                   r"hranovnic\w*|vernar\w*|spissk\w* stiavnik\w*|kluknav\w*|richnav\w*|jaklov\w*|helcmanov\w*|smolnik\w*|mnisek\w*)\b")
 
 
+# ostatné okresy: „byt v Poprade“ v názve, hoci Bazoš inzerát zaradil inam (predajca zadal svoje PSČ)
+_MESTA_INDE = [(m, re.compile(r"\b(?:v|vo)\s+" + _kmen(m).pattern[2:])) for m in sorted({d["mesto"] for d in OKRESY_SR.values()}) if m != "Martin"]
+
+
+def mimo_okresu(nazov, okres):
+    b = bez_diakritiky(nazov)
+    if okres in ("Spišská Nová Ves", "Levoča"):
+        return bool(MIMO.search(b))
+    vlastne = set(OBCE.get(okres, []))
+    return any(m not in vlastne and vz.search(b) for m, vz in _MESTA_INDE)
+
+
 PRENAJOM = re.compile(r"\bprenaj\w*|\bnajom\b|\bpodnajom")
 
 
@@ -380,7 +402,40 @@ def klasifikuj_text(text):
 # ---------------------------------------------------------------- BAZOŠ
 
 BAZOS_KAT = {"byt": "byt", "dom": "dom", "pozemok": "pozemok", "chata": "chata", "garaz": "garaz"}
-BAZOS_HLADANIA = [("05201", 25), ("05401", 20)]  # PSČ SNV a Levoča s okruhom v km
+# okresy, ktoré stráži radar Bazoša v databáze (radar_tik: PSČ 05201, okruh 25 km) – pri rýchlej kontrole sa na Bazoši
+# prechádzajú len kategórie, kde radar videl nový inzerát; ostatné okresy sa prechádzajú vždy
+RADAR_OKRESY = {"Spišská Nová Ves", "Levoča"}
+# názov okresu v zozname Bazoša → okresy (Bratislava a Košice sú na Bazoši jeden okres)
+BAZOS_NA_OKRES = {}
+for _o, _d in OKRESY_SR.items():
+    BAZOS_NA_OKRES.setdefault(_d["bazos"], []).append(_o)
+
+
+def bazos_hladania():
+    """vyhľadávania na Bazoši (PSČ, okruh v km) → sledované okresy, ktoré pokrývajú"""
+    h = {}
+    for o in OKRESY:
+        d = OKRESY_SR.get(o)
+        if d:
+            h.setdefault((d["psc"], d["okruh"]), set()).add(o)
+    return h
+
+
+def bazos_okres(r):
+    """okres inzerátu podľa Bazoša; Bratislava a Košice podľa mestskej časti v texte, inak podľa PSČ"""
+    moznosti = BAZOS_NA_OKRES.get(r.get("okres_bazos")) or []
+    if len(moznosti) <= 1:
+        return moznosti[0] if moznosti else None
+    b = bez_diakritiky(r["nazov"] + "\n" + (r.get("popis") or ""))
+    for o in moznosti:
+        mesto = OKRESY_SR[o]["mesto"]
+        if any(n != mesto and pat.search(b) for n, pat, _ in vzory_okresu(o)):
+            return o
+    psc = re.sub(r"\D", "", r.get("psc") or "")
+    if psc in PSC_MESTA:
+        return PSC_MESTA[psc]
+    tri = {v for k, v in PSC_MESTA.items() if k[:3] == psc[:3]}
+    return tri.pop() if len(tri) == 1 else moznosti[0]
 
 
 def bazos_strana(kat, psc, okruh, offset):
@@ -405,7 +460,7 @@ def bazos_strana(kat, psc, okruh, offset):
             continue
         lok = blok.select_one(".inzeratylok")
         lok_txt = lok.get_text("\n", strip=True).split("\n") if lok else []
-        okres = lok_txt[0] if lok_txt else ""
+        okres_bazos = lok_txt[0] if lok_txt else ""
         psc_inz = lok_txt[1] if len(lok_txt) > 1 else ""
         popis = blok.select_one(".popis")
         cena = blok.select_one(".inzeratycena")
@@ -419,7 +474,7 @@ def bazos_strana(kat, psc, okruh, offset):
             "nazov": a.get_text(strip=True),
             "popis": popis.get_text("\n", strip=True) if popis else "",
             "cena_txt": cena.get_text(strip=True) if cena else "",
-            "okres": okres,
+            "okres_bazos": okres_bazos,
             "psc": psc_inz,
             "foto": img["src"] if img else None,
             "datum": f"{datum.group(3)}-{int(datum.group(2)):02d}-{int(datum.group(1)):02d}" if datum else None,
@@ -442,23 +497,30 @@ def bazos_detail(url):
 BAZOS_MAX_STRAN_KRATKA = 10  # poistka pri bežnej/rýchlej kontrole
 
 
-def skenuj_bazos(plny, max_stran, zname=frozenset(), typy=None):
+def skenuj_bazos(plny, max_stran, zname=frozenset(), typy_radar=None, plne=frozenset()):
     """Pri plnej kontrole prejde všetky strany. Pri kratšej kontrole listuje, kým nenarazí na netopovaný
-    inzerát, ktorý už pozná – Bazoš dáva topované inzeráty na prvé strany, nové súkromné bývajú až za nimi."""
+    inzerát, ktorý už pozná – Bazoš dáva topované inzeráty na prvé strany, nové súkromné bývajú až za nimi.
+    typy_radar: pri rýchlej kontrole len tieto kategórie v okresoch radaru (None = všetky);
+    plne: okresy, ktoré sa načítavajú prvýkrát – prejdú sa celé."""
     vysledky = {}
-    for typ in (typy if typy is not None else TYPY):
-        kat = BAZOS_KAT[typ]
-        for psc, okruh in BAZOS_HLADANIA:
+    for (psc, okruh), okresy in bazos_hladania().items():
+        plne_h = plny or bool(okresy & plne)
+        typy = typy_radar if (typy_radar is not None and okresy <= RADAR_OKRESY and not plne_h) else TYPY
+        for typ in typy:
+            if typ not in BAZOS_KAT:
+                continue
+            kat = BAZOS_KAT[typ]
             offset, strana = 0, 0
             while True:
                 riadky, celkom = bazos_strana(kat, psc, okruh, offset)
                 strana += 1
                 for r in riadky:
                     r["typ"] = typ
+                    r["okres"] = bazos_okres(r) or r["okres_bazos"]
                     vysledky.setdefault(r["pid"], r)
                 if not riadky or offset + 20 >= celkom or strana >= 40:
                     break
-                if not plny:
+                if not plne_h:
                     netop = [r for r in riadky if not r.get("top")]
                     dosiahol_zname = any(r["pid"] in zname for r in netop)
                     if (dosiahol_zname and strana >= max_stran) or strana >= BAZOS_MAX_STRAN_KRATKA or (not zname and strana >= max_stran):
@@ -470,7 +532,6 @@ def skenuj_bazos(plny, max_stran, zname=frozenset(), typy=None):
 
 # ---------------------------------------------------------------- NEHNUTEĽNOSTI.SK / REALITY.SK
 
-NEHN_OKRES = {"Spišská Nová Ves": "okres-spisska-nova-ves", "Levoča": "okres-levoca"}
 NEHN_TYP = {"APARTMENTS": "byt", "HOUSES": "dom", "LANDS": "pozemok", "COTTAGES_AND_CABINS": "chata"}
 
 
@@ -517,39 +578,38 @@ def nehn_strana(okres_slug, strana):
     return vysledky
 
 
-def skenuj_nehnutelnosti(plny, max_stran):
+def skenuj_nehnutelnosti(plny, max_stran, plne=frozenset()):
     vysledky = []
     for okres in OKRESY:
+        slug, cely = OKRESY_SR[okres]["slug"], plny or ("nehnutelnosti", okres) in plne
         strana = 1
         while True:
-            ads = nehn_strana(NEHN_OKRES[okres], strana)
-            if plny and len(ads) < 30:
-                ads = _znova_strana("Nehnuteľnosti.sk", strana, ads, lambda: nehn_strana(NEHN_OKRES[okres], strana))
+            ads = nehn_strana(slug, strana)
+            if cely and len(ads) < 30:
+                ads = _znova_strana("Nehnuteľnosti.sk", strana, ads, lambda: nehn_strana(slug, strana))
             for ad in ads:
                 ad["_okres"] = okres
             vysledky += ads
-            if len(ads) < 30 or (not plny and strana >= max_stran) or strana >= 40:
+            if len(ads) < 30 or (not cely and strana >= max_stran) or strana >= 40:
                 break
             strana += 1
     log(f"Nehnuteľnosti.sk: {len(vysledky)} inzerátov")
     return vysledky
 
 
-REALITY_OKRES = {"Spišská Nová Ves": "okres-spisska-nova-ves", "Levoča": "okres-levoca"}
-
-
-def skenuj_reality(plny, max_stran):
+def skenuj_reality(plny, max_stran, plne=frozenset()):
     vysledky = []
     for okres in OKRESY:
+        cely = plny or ("reality", okres) in plne
         strana = 1
         while True:
-            url = f"https://www.reality.sk/{REALITY_OKRES[okres]}/predaj/" + (f"?page={strana}" if strana > 1 else "")
+            url = f"https://www.reality.sk/{OKRESY_SR[okres]['slug']}/predaj/" + (f"?page={strana}" if strana > 1 else "")
 
             def nacitaj(url=url):
                 h = get(url)
                 return BeautifulSoup(h, "html.parser").select("div.offer[data-offer-id]") if h else []
             bloky = nacitaj()
-            if plny and len(bloky) < 24:
+            if cely and len(bloky) < 24:
                 bloky = _znova_strana("Reality.sk", strana, bloky, nacitaj)
             if not bloky:
                 break
@@ -575,7 +635,7 @@ def skenuj_reality(plny, max_stran):
                     "foto": img["data-lazy-src"] if img else None,
                     "okres": okres,
                 })
-            if len(bloky) < 24 or (not plny and strana >= max(1, max_stran - 1)) or strana >= 40:
+            if len(bloky) < 24 or (not cely and strana >= max(1, max_stran - 1)) or strana >= 40:
                 break
             strana += 1
     log(f"Reality.sk: {len(vysledky)} inzerátov")
@@ -584,13 +644,13 @@ def skenuj_reality(plny, max_stran):
 
 # ---------------------------------------------------------------- TOPREALITY.SK
 
-TOPR_OKRES = {"Spišská Nová Ves": ("810", "d810-Okres Spišská Nová Ves"), "Levoča": ("704", "d704-Okres Levoča")}
-
-
-def skenuj_topreality(plny, max_stran):
+def skenuj_topreality(plny, max_stran, plne=frozenset()):
     vysledky = []
     for okres in OKRESY:
-        reg, obec_param = TOPR_OKRES[okres]
+        # region = oficiálny kód okresu (810 Spišská Nová Ves, 704 Levoča…)
+        reg = OKRESY_SR[okres]["kod"]
+        obec_param = f"d{reg}-Okres {okres}"
+        cely = plny or ("topreality", okres) in plne
         q = (f"?form=1&obec={quote_plus(obec_param)}&region%5B0%5D={reg}&sort=id_desc"
              f"&n_search=search&searchType=string")
         strana = 1
@@ -603,7 +663,7 @@ def skenuj_topreality(plny, max_stran):
                 stav["h"] = h or ""
                 return BeautifulSoup(h, "html.parser").select("div.row.estate[data-idinz]") if h else []
             bloky = nacitaj()
-            if plny and len(bloky) < 15:
+            if cely and len(bloky) < 15:
                 bloky = _znova_strana("TopReality.sk", strana, bloky, nacitaj)
             h = stav["h"]
             if not bloky:
@@ -639,7 +699,7 @@ def skenuj_topreality(plny, max_stran):
                 })
             celkom = re.search(r"<strong>(\d+)</strong> inzerátov", h)
             celkom = int(celkom.group(1)) if celkom else 0
-            if not bloky or strana * 15 >= celkom or (not plny and strana >= max_stran) or strana >= 60:
+            if not bloky or strana * 15 >= celkom or (not cely and strana >= max_stran) or strana >= 60:
                 break
             strana += 1
     log(f"TopReality.sk: {len(vysledky)} inzerátov")
@@ -690,11 +750,9 @@ def norm_bazos(r, pocty_uzivatelov):
         return None
     if typ_z_textu(text) is None:
         return None  # nesúvisí s nehnuteľnosťou (napr. stavebný materiál)
-    obec = najdi_obec_v_texte(text)
-    if obec and OBEC_NA_OKRES.get(obec) != r["okres"]:
-        obec = None
-    if not obec and MIMO.search(bez_diakritiky(r["nazov"])):
-        return None  # Bazoš ho zaradil k nám, ale nehnuteľnosť je inde
+    obec = najdi_obec_v_texte(text, r["okres"])
+    if not obec and mimo_okresu(r["nazov"], r["okres"]):
+        return None  # Bazoš ho zaradil do okresu, ale nehnuteľnosť je inde
 
     meno = r.get("uzivatel") or ""
     druh, dovod = klasifikuj_text(text)
@@ -721,7 +779,7 @@ def norm_bazos(r, pocty_uzivatelov):
     )
 
 
-def gps_z_lokality(loc):
+def gps_z_lokality(loc, okres):
     """Presná poloha inzerátu, ak ju portál posiela (realitná mapa). Hľadá dvojicu súradníc v údajoch o lokalite."""
     def najdi(o, h=0):
         if h > 3 or not isinstance(o, dict):
@@ -736,8 +794,9 @@ def gps_z_lokality(loc):
                 return r
         return None
     r = najdi(loc or {})
-    # len body v našom regióne (okresy Spišská Nová Ves a Levoča s rezervou) – portál občas pošle polohu úplne inde
-    if r and 48.70 < r[0] < 49.20 and 20.15 < r[1] < 21.05:
+    # len body v okrese inzerátu (s rezervou) – portál občas pošle polohu úplne inde
+    b = OKRESY_SR.get(okres, {}).get("box") or (47.7, 49.65, 16.8, 22.6)
+    if r and b[0] < r[0] < b[1] and b[2] < r[1] < b[3]:
         return round(r[0], 6), round(r[1], 6)
     return None, None
 
@@ -775,8 +834,8 @@ def norm_nehn_novy(ad):
     if okres not in OKRESY:
         return None
     casti = [x for x in lok if not x.lower().startswith("okres ")]
-    obec = next((o for o in (normalizuj_obec(x) for x in reversed(casti)) if o), None)
-    ulica = casti[0] if len(casti) > 1 and normalizuj_obec(casti[0]) is None else None
+    obec = next((o for o in (normalizuj_obec(x, okres) for x in reversed(casti)) if o), None)
+    ulica = casti[0] if len(casti) > 1 and normalizuj_obec(casti[0], okres) is None else None
     agentura = ad.get("agency") if isinstance(ad.get("agency"), dict) else {}
     meno_rk = _nehn_text(agentura.get("nameOfAdvertiser"))
     profi = bool((ad.get("seller") or {}).get("isAgencyProfi")) if isinstance(ad.get("seller"), dict) else False
@@ -825,7 +884,7 @@ def norm_nehn(ad):
     okres = (loc.get("district") or "").replace("okres ", "") or ad["_okres"]
     if okres not in OKRESY:
         return None
-    obec = normalizuj_obec(loc.get("city"))
+    obec = normalizuj_obec(loc.get("city"), okres)
     adv = ad.get("advertiser") or {}
     if adv.get("type") == "PRIVATE_PERSON":
         druh, dovod = klasifikuj_text(ad.get("title", ""))
@@ -849,7 +908,7 @@ def norm_nehn(ad):
         predajca=meno, predajca_typ=ptyp, predajca_dovod=dovod, foto=fotky[0]["url"] if fotky else None,
         publikovane=(ad.get("createdAt") or "")[:10] or None,
         podtyp=podtyp_pozemku(ad.get("title", ""), par.get("area"), sub) if typ == "pozemok" else None,
-        lat=gps_z_lokality(loc)[0], lon=gps_z_lokality(loc)[1],
+        lat=gps_z_lokality(loc, okres)[0], lon=gps_z_lokality(loc, okres)[1],
         ulica=ulica_z_lokality(loc, obec),
     )
 
@@ -859,7 +918,7 @@ def norm_reality(r):
     typ = typ_z_textu(r["params"]) or typ_z_textu(r["nazov"])
     if typ not in TYPY or je_dopyt(r["nazov"]):
         return None
-    obec = normalizuj_obec(r["obec_txt"])
+    obec = normalizuj_obec(r["obec_txt"], r["okres"])
     plocha = None
     m = re.search(r"\|\s*([\d \.,]+)\s*m", unescape(r["params"]))
     if m:
@@ -880,7 +939,7 @@ def norm_topreality(r):
     lok = r["lokalita"]
     m = re.search(r"([^,()]+?)\s*\(([^)]+)\)\s*$", lok)
     obec_txt = m.group(1) if m else lok.split(",")[-1]
-    obec = normalizuj_obec(obec_txt.strip()) or najdi_obec_v_texte(r["nazov"])
+    obec = normalizuj_obec(obec_txt.strip(), r["okres"]) or najdi_obec_v_texte(r["nazov"], r["okres"])
     pl = r["plochy"]
     if typ == "pozemok":
         plocha = pl.get("area-plot") or pl.get("area-floor")
@@ -1066,6 +1125,25 @@ def velkost_pozemku(m2):
     return "nad 5 000 m²"
 
 
+SUSEDNE_KM = 35   # „okolie“ pri porovnaní cien: okresy, ktorých stred je do 35 km (Spišská Nová Ves – Levoča 11 km)
+_SUSEDNE = {}
+
+
+def susedne_okresy(okres):
+    if okres not in _SUSEDNE:
+        a = OKRESY_SR.get(okres)
+        if not a:
+            _SUSEDNE[okres] = {okres}
+        else:
+            p = math.pi / 180
+            def km(b):
+                x = (math.sin((b[0] - a["stred"][0]) * p / 2) ** 2
+                     + math.cos(a["stred"][0] * p) * math.cos(b[0] * p) * math.sin((b[1] - a["stred"][1]) * p / 2) ** 2)
+                return 12742 * math.asin(math.sqrt(x))
+            _SUSEDNE[okres] = {o for o, d in OKRESY_SR.items() if km(d["stred"]) <= SUSEDNE_KM} | {okres}
+    return _SUSEDNE[okres]
+
+
 def vyhodnot_ceny(inzeraty):
     """Pre každý aktívny inzerát porovná cenu za m² s mediánom podobných ponúk."""
     prah = CONFIG["podhodnotene_o_percent"]
@@ -1106,9 +1184,10 @@ def vyhodnot_ceny(inzeraty):
         else:
             nazov = {"dom": "domy", "chata": "chaty", "garaz": "garáže"}[t]
             rovnaky = lambda x: x["typ"] == t
+        okolie = susedne_okresy(z["okres"])
         return [(f"{nazov}, {z['obec']}", lambda x: rovnaky(x) and x["obec"] == z["obec"]),
                 (f"{nazov}, okres {z['okres']}", lambda x: rovnaky(x) and x["okres"] == z["okres"]),
-                (f"{nazov}, oba okresy", rovnaky)]
+                (f"{nazov}, okolie", lambda x: rovnaky(x) and x["okres"] in okolie)]
 
     zaklad = [z for z in aktivne if platne(z)]
     prahy = CONFIG.get("podhodnotene_o_percent_podla_typu", {})
@@ -1175,7 +1254,7 @@ def email_html(nove_sukr, podhodn, znizenia, dashboard_url):
             f"{sekcia('Nové súkromné inzeráty', nove_sukr)}"
             f"{sekcia('Podhodnotené ponuky', podhodn)}"
             f"{sekcia('Súkromní predajcovia znížili cenu', znizenia, riadok_zniz)}"
-            f"{link}<p style='color:#aaa;font-size:12px'>Okresy {', '.join(OKRESY)}. Odhad ceny je orientačný – porovnáva cenu za m² s mediánom podobných aktuálnych ponúk.</p></div>")
+            f"{link}<p style='color:#aaa;font-size:12px'>Okresy {', '.join(OKRESY_EMAIL)}. Odhad ceny je orientačný – porovnáva cenu za m² s mediánom podobných aktuálnych ponúk.</p></div>")
 
 
 def posli_email(predmet, html):
@@ -1590,11 +1669,35 @@ def main():
         except (TypeError, ValueError):
             pass
     portaly = set(CONFIG["portaly"])
-    log(f"Skener štart {NOW_ISO} | {'PLNÝ' if plny else 'rýchly' if rychly else 'bežný'} beh | v databáze {len(inzeraty)} inzerátov")
+    # sledované okresy: z config.json + okresy kancelárií a zákazníkov zo Správy zákazníkov (názvy sa do výpisu
+    # nepíšu – výpis behu na GitHube je verejný)
+    if POUZI_DB:
+        try:
+            z_db = [o for o in (_rpc("skener_okresy", p_kluc=SKENER_KLUC) or []) if o in OKRESY_SR and o not in OKRESY]
+            OKRESY.extend(sorted(z_db, key=lambda o: OKRESY_SR[o]["kod"]))
+        except Exception as e:  # noqa – bez zoznamu z databázy beží skener aspoň s okresmi z config.json
+            log(f"! okresy z databázy: {str(e)[:200]}")
+    # portál + okres, z ktorého ešte nemáme žiadny aktívny inzerát (nový okres): prejde sa celý a jeho inzeráty
+    # sa uložia bez upozornení – inak by makléri dostali stovky starých inzerátov ako nové
+    aktivne_po = {(p, z.get("okres")) for z in inzeraty.values() if z.get("aktivny") for p in (z.get("portaly") or [z.get("portal")])}
+    zaklad = set() if prvy_beh else {(p, o) for o in OKRESY for p in portaly if (p, o) not in aktivne_po}
+    nove_okresy = {o for p, o in zaklad}
+    log(f"Skener štart {NOW_ISO} | {'PLNÝ' if plny else 'rýchly' if rychly else 'bežný'} beh | v databáze {len(inzeraty)} inzerátov"
+        f" | sledovaných okresov {len(OKRESY)}" + (f", prvé načítanie {len(nove_okresy)}" if nove_okresy else ""))
 
     najdene = []
     chyby = []
     zlyhane = set()   # portály, ktoré sa v tomto behu nepodarilo prečítať – ich inzeráty sa nesmú označiť ako zmiznuté
+    kriticke = []     # portál vrátil inzeráty, ale ani jeden sa nedal spracovať (zmenený vzhľad stránky) – beh skončí chybou
+
+    def kontrola_spracovania(nazov, portal, surove, spracovanych):
+        v_okresoch = sum(1 for r in surove if (r.get("_okres") or r.get("okres")) in OKRESY)
+        if v_okresoch >= 20 and spracovanych == 0:
+            sprava = f"{nazov}: stiahnutých {v_okresoch} inzerátov, ale ani jeden sa nepodarilo spracovať – portál asi zmenil vzhľad stránky"
+            chyby.append(sprava)
+            zlyhane.add(portal)
+            kriticke.append(sprava)
+            log("! " + sprava)
 
     plne_pocty = dict(meta.get("plne_pocty") or {})   # koľko inzerátov vrátil portál pri poslednej plnej kontrole
 
@@ -1623,24 +1726,22 @@ def main():
                 zlyhane.add(portal)
             return []
 
-    if "nehnutelnosti" in portaly:
-        for ad in bezpecne("Nehnuteľnosti.sk", lambda: skenuj_nehnutelnosti(plny, max_stran), "nehnutelnosti"):
-            z = norm_nehn(ad)
+    for portal, nazov, skenuj, norm in (("nehnutelnosti", "Nehnuteľnosti.sk", skenuj_nehnutelnosti, norm_nehn),
+                                        ("reality", "Reality.sk", skenuj_reality, norm_reality),
+                                        ("topreality", "TopReality.sk", skenuj_topreality, norm_topreality)):
+        if portal not in portaly:
+            continue
+        surove_p = bezpecne(nazov, lambda: skenuj(plny, max_stran, zaklad), portal)
+        pred = len(najdene)
+        for r in surove_p:
+            z = norm(r)
             if z:
                 najdene.append(z)
-    if "reality" in portaly:
-        for r in bezpecne("Reality.sk", lambda: skenuj_reality(plny, max_stran), "reality"):
-            z = norm_reality(r)
-            if z:
-                najdene.append(z)
-    if "topreality" in portaly:
-        for r in bezpecne("TopReality.sk", lambda: skenuj_topreality(plny, max_stran), "topreality"):
-            z = norm_topreality(r)
-            if z:
-                najdene.append(z)
-    if "bazos" in portaly and bazos_typy != []:
+        kontrola_spracovania(nazov, portal, surove_p, len(najdene) - pred)
+    if "bazos" in portaly and (bazos_typy != [] or set(OKRESY) - RADAR_OKRESY or any(p == "bazos" for p, _ in zaklad)):
         zname_bazos = frozenset(k.split(":", 1)[1] for k in inzeraty if k.startswith("bazos:"))
-        surove = bezpecne("Bazoš", lambda: skenuj_bazos(plny, max_stran, zname_bazos, bazos_typy), "bazos")
+        surove = bezpecne("Bazoš", lambda: skenuj_bazos(plny, max_stran, zname_bazos, bazos_typy,
+                                                       frozenset(o for p, o in zaklad if p == "bazos")), "bazos")
         if surove and POUZI_DB:
             try:
                 _rpc("skener_radar_vybavene", p_kluc=SKENER_KLUC, p_kategorie=[BAZOS_KAT[t] for t in (bazos_typy or TYPY)], p_od=NOW_ISO)
@@ -1662,8 +1763,9 @@ def main():
         else:
             for k, v in (meta.get("bazos_pocty_nehn") or {}).items():
                 pocty[k] = max(pocty.get(k, 0), v)
-        # celý popis stiahneme len pri nových inzerátoch z našich okresov
+        # celý popis stiahneme len pri nových inzerátoch zo sledovaných okresov
         detailov = 0
+        pred = len(najdene)
         for r in surove:
             if r["okres"] not in OKRESY:
                 continue
@@ -1679,9 +1781,11 @@ def main():
             if z:
                 najdene.append(z)
         log(f"Bazoš: stiahnutých detailov {detailov}")
+        kontrola_spracovania("Bazoš", "bazos", surove, len(najdene) - pred)
 
     # --- zlúčenie do databázy
     nove, znizenia = [], []
+    zakladne = set()   # nové inzeráty z prvého načítania okresu – bez upozornení a e-mailu
     videne_teraz = set()
     for z in najdene:
         zid = z["id"]
@@ -1699,6 +1803,8 @@ def main():
                       "aktivny": True, "duplikat_z": None})
             inzeraty[zid] = z
             nove.append(z)
+            if (z["portal"], z["okres"]) in zaklad:
+                zakladne.add(zid)
         else:
             stara_cena = e.get("cena")
             ponechaj = {k: e[k] for k in ("prvy_krat", "historia_cien", "portaly") if k in e}
@@ -1757,7 +1863,7 @@ def main():
         else:
             podla_kluca.setdefault(k, []).append(e)
     # typ predajcu za celú skupinu: jasná realitka (portál, meno, text) > jasný súkromník > slabé znaky
-    nove_id = {z["id"] for z in nove}
+    nove_id = {z["id"] for z in nove if z["id"] not in zakladne}
     obnovene = []   # byty, ktoré predajca zverejnil znova (alebo pridal na ďalší portál) aspoň 3 dni po prvom zverejnení
     for pid, cleny in skupiny.items():
         povodny = inzeraty[pid]
@@ -1787,18 +1893,22 @@ def main():
 
     # --- email
     ec = CONFIG["email"]
-    nove_ok = [z for z in nove if not z.get("duplikat_z")]
-    nove_sukr = [z for z in nove_ok if ec["posielat_sukromne"] and z["predajca_typ"] in ("sukromny", "asi_sukromny")]
-    podhodn = [z for z in nove_ok if z.get("podhodnotene") and (ec["posielat_podhodnotene_aj_od_rk"] or z["predajca_typ"] != "rk")
+    if zakladne:
+        log(f"Prvé načítanie okresu: {len(zakladne)} inzerátov uložených bez upozornení")
+    nove_ok = [z for z in nove if not z.get("duplikat_z") and z["id"] not in zakladne]
+    nove_email = [z for z in nove_ok if z["okres"] in OKRESY_EMAIL]
+    nove_sukr = [z for z in nove_email if ec["posielat_sukromne"] and z["predajca_typ"] in ("sukromny", "asi_sukromny")]
+    podhodn = [z for z in nove_email if z.get("podhodnotene") and (ec["posielat_podhodnotene_aj_od_rk"] or z["predajca_typ"] != "rk")
                and z not in nove_sukr]
-    zniz = [z for z in znizenia if ec["posielat_znizenie_ceny_sukromnych"] and z["predajca_typ"] != "rk" and not z.get("duplikat_z")]
+    zniz = [z for z in znizenia if ec["posielat_znizenie_ceny_sukromnych"] and z["predajca_typ"] != "rk" and not z.get("duplikat_z")
+            and z["okres"] in OKRESY_EMAIL]
     log(f"Nové: {len(nove)} (z toho súkromné {len(nove_sukr)}, podhodnotené {len(podhodn)}), zníženia cien súkromných: {len(zniz)}"
         + (f", znova zverejnené: {len(obnovene)}" if obnovene else ""))
 
     meta.update({
         "posledna_kontrola": NOW_ISO,
         "posledny_plny": NOW_ISO if plny else meta.get("posledny_plny"),
-        "okresy": OKRESY,
+        "okresy": OKRESY_EMAIL,
         "pocet_aktivnych": sum(1 for z in inzeraty.values() if z.get("aktivny") and not z.get("duplikat_z")),
         "chyby": chyby + [f"{h} je nedostupný alebo obmedzil prístup – skener ho skúsi znova o {t.astimezone(ZoneInfo('Europe/Bratislava')).strftime('%H:%M')}"
                           for h, t in PAUZA_PORTALU.items() if t > datetime.now(timezone.utc)]
@@ -1810,7 +1920,7 @@ def main():
     if prvy_beh:
         meta["spusteny"] = NOW_ISO
     uloz_stav(stav)
-    if POUZI_DB:
+    if POUZI_DB and not kriticke:
         try:
             strazca_uspech()
         except Exception as e:  # noqa
@@ -1857,6 +1967,9 @@ def main():
     else:
         OUT_DIR.mkdir(exist_ok=True)
         (OUT_DIR / "posledny_email.html").write_text(html, encoding="utf-8")
+    if kriticke:
+        # inzeráty z ostatných portálov sú uložené; zlyhaný beh spustí strážcu (po 2. zlyhaní upozornenie adminovi)
+        raise SystemExit("! " + kriticke[0])
     log("Hotovo.")
 
 
