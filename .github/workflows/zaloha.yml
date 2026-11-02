@@ -1,0 +1,255 @@
+name: Záloha
+
+# Záloha databázy Supabase (všetky tabuľky, používatelia, pravidlá prístupu, funkcie) a súborov
+# (fotky ponúk, dokumenty, prílohy chatu, weby). Supabase na bezplatnom pláne nezálohuje nič – zálohujeme si sami.
+#
+# Kedy:   každú noc databáza (3:40 v zime / 4:40 v lete), v nedeľu aj súbory;
+#         pred zmenou databázy (databaza.yml) – ak posledná záloha nie je mladšia ako 2 hodiny;
+#         ručne: Actions → Záloha → Run workflow (dá sa zaškrtnúť aj súbory a skúška obnovy).
+#         Pri zmene tohto súboru alebo .github/zaloha.py sa spraví plná záloha aj skúška obnovy.
+# Kam:    hosting Websupport (rovnaký SFTP prístup ako nasadenie) do /realitnytypek.sk/zalohy – mimo webu,
+#         z internetu nedostupné. Ostáva 60 posledných záloh databázy a 4 zálohy súborov.
+#         Keď je v Settings → Secrets → Actions nastavené ZALOHA_HESLO, ide navyše kópia zašifrovaná
+#         týmto heslom (7z, AES-256) do GitHubu – beh v Actions → Artifacts, 90 dní.
+#         Nezašifrovaná záloha sa do GitHubu nikdy nenahráva (repozitár je verejný).
+# Obnova: postup je v README.txt v každej zálohe a v README.md (časť Záloha).
+# Do logov (sú verejné) nejdú žiadne údaje z databázy – len veľkosti súborov a súčty riadkov.
+
+on:
+  schedule:
+    - cron: "40 2 * * 1-6"
+    - cron: "40 2 * * 0"
+  push:
+    branches: [main]
+    paths: [".github/workflows/zaloha.yml", ".github/zaloha.py"]
+  workflow_dispatch:
+    inputs:
+      subory:
+        description: "Aj súbory (fotky ponúk, dokumenty, prílohy chatu)"
+        type: boolean
+        default: false
+      skuska:
+        description: "Aj skúška obnovy do prázdnej databázy"
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      dovod:
+        type: string
+        required: false
+        default: pred-zmenou
+
+permissions:
+  contents: read
+
+jobs:
+  zaloha:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJEKT: ${{ vars.SUPABASE_PROJEKT || 'uwxziqapghlyktwpipjd' }}
+      FTP_SERVER: ${{ secrets.FTP_SERVER }}
+      FTP_USER: ${{ secrets.FTP_USER }}
+      FTP_HESLO: ${{ secrets.FTP_HESLO }}
+      ZALOHA_HESLO: ${{ secrets.ZALOHA_HESLO }}
+      DIR: ${{ vars.FTP_DIR_ZALOHY || '/realitnytypek.sk/zalohy' }}
+      DOVOD: ${{ inputs.dovod || (github.event_name == 'schedule' && 'nocna') || (github.event_name == 'push' && 'skuska') || 'rucna' }}
+      PLAN: ${{ github.event.schedule }}
+      CHCEM_SUBORY: ${{ inputs.subory }}
+      CHCEM_SKUSKU: ${{ inputs.skuska }}
+      PONECHAT_DB: 60
+      PONECHAT_SUBORY: 4
+    steps:
+      - name: Čo a kam zálohovať
+        run: |
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "::error::Chýba SUPABASE_ACCESS_TOKEN – bez neho sa do databázy nedostanem."; exit 1; }
+          [ -n "$FTP_HESLO" ] && echo "NA_WEBSUPPORT=1" >> "$GITHUB_ENV"
+          [ -n "$ZALOHA_HESLO" ] && echo "DO_GITHUBU=1" >> "$GITHUB_ENV"
+          if [ -z "$FTP_HESLO" ] && [ -z "$ZALOHA_HESLO" ]; then
+            echo "::error::Nie je kam zálohu uložiť – chýba SFTP prístup na Websupport (FTP_HESLO) aj ZALOHA_HESLO."; exit 1
+          fi
+          [ -z "$ZALOHA_HESLO" ] && echo "::notice::ZALOHA_HESLO nie je nastavené – záloha ide len na Websupport (bez kópie v GitHube)."
+          subory=0; skuska=0
+          if [ "$CHCEM_SUBORY" = "true" ] || [ "$PLAN" = "40 2 * * 0" ] || [ "$DOVOD" = "skuska" ]; then subory=1; fi
+          if [ "$CHCEM_SKUSKU" = "true" ] || [ "$DOVOD" = "skuska" ]; then skuska=1; fi
+          echo "SUBORY=$subory" >> "$GITHUB_ENV"; echo "SKUSKA=$skuska" >> "$GITHUB_ENV"
+          echo "STAMP=$(TZ=Europe/Bratislava date +%Y-%m-%d-%H%M)" >> "$GITHUB_ENV"
+          echo "Dôvod: $DOVOD · súbory: $subory · skúška obnovy: $skuska"
+
+      - name: Nástroje
+        run: |
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq lftp >/dev/null
+          command -v 7z >/dev/null || sudo apt-get install -y -qq 7zip >/dev/null || sudo apt-get install -y -qq p7zip-full >/dev/null
+          cat > "$RUNNER_TEMP/ftp.lftp" <<EOF
+          set sftp:auto-confirm yes; set net:max-retries 3; set net:timeout 30; set net:reconnect-interval-base 5
+          EOF
+
+      - name: Je posledná záloha čerstvá?
+        if: env.DOVOD == 'pred-zmenou' && env.NA_WEBSUPPORT == '1'
+        run: |
+          posl=$(lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls -1 $DIR/databaza/; bye" 2>/dev/null \
+                 | xargs -r -n1 basename | grep '^typek-databaza-' | sort | tail -1 || true)
+          if [[ "$posl" =~ ^typek-databaza-([0-9]{4}-[0-9]{2}-[0-9]{2})-([0-9]{2})([0-9]{2}) ]]; then
+            t=$(TZ=Europe/Bratislava date -d "${BASH_REMATCH[1]} ${BASH_REMATCH[2]}:${BASH_REMATCH[3]}" +%s)
+            vek=$(( ($(date +%s) - t) / 60 ))
+            if [ "$vek" -lt 120 ]; then
+              echo "::notice::Posledná záloha ($posl) je stará $vek min – novú pred zmenou nerobím."
+              echo "PRESKOCIT=1" >> "$GITHUB_ENV"
+              echo "Záloha pred zmenou databázy: netreba, posledná je stará $vek min." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+      - uses: actions/checkout@v4
+        if: env.PRESKOCIT != '1'
+        with:
+          sparse-checkout: .github
+
+      - uses: supabase/setup-cli@v1
+        if: env.PRESKOCIT != '1'
+        with:
+          version: 3.0.0
+
+      - name: Záloha databázy
+        if: env.PRESKOCIT != '1'
+        run: |
+          set -eo pipefail
+          z="$RUNNER_TEMP/z/databaza"; mkdir -p "$z"; cd "$RUNNER_TEMP"
+          supabase db dump --remote="$SUPABASE_PROJEKT" --role-only -f "$z/roles.sql"
+          supabase db dump --remote="$SUPABASE_PROJEKT" -f "$z/schema.sql"
+          supabase db dump --remote="$SUPABASE_PROJEKT" --data-only --use-copy \
+            -x cron.job_run_details -x net._http_response -x net.http_request_queue -f "$z/data.sql"
+          python3 "$GITHUB_WORKSPACE/.github/zaloha.py" pocty "$z/pocty.tsv"
+          # kontrola: súbory nie sú prázdne a sú v nich hlavné tabuľky
+          for f in roles schema data; do [ -s "$z/$f.sql" ] || { echo "::error::$f.sql je prázdny"; exit 1; }; done
+          for t in makleri nehnutelnosti inzeraty zakaznici; do
+            grep -qE "^COPY \"?public\"?\.\"?$t\"? " "$z/data.sql" || { echo "::error::V zálohe chýbajú údaje tabuľky $t"; exit 1; }
+            grep -qE "CREATE TABLE (IF NOT EXISTS )?\"?public\"?\.\"?$t\"? " "$z/schema.sql" || { echo "::error::V zálohe chýba tabuľka $t"; exit 1; }
+          done
+          grep -qE '^COPY "?auth"?\."?users"? ' "$z/data.sql" || { echo "::error::V zálohe chýbajú používatelia (auth.users)"; exit 1; }
+          echo "Tabuliek s údajmi: $(grep -c '^COPY ' "$z/data.sql")"
+          ls -la "$z"
+          cat > "$z/README.txt" <<'EOF'
+          Záloha databázy Realitného týpka (Supabase, projekt uwxziqapghlyktwpipjd)
+
+          roles.sql   – roly databázy
+          schema.sql  – tabuľky, pravidlá prístupu (RLS), funkcie, triggery
+          data.sql    – všetky údaje vrátane používateľov (auth.users) a zoznamu súborov (storage.objects)
+          pocty.tsv   – počet riadkov v každej tabuľke v čase zálohy (na kontrolu po obnove)
+
+          Nie je tu: obsah súborov (fotky, dokumenty – sú v zálohe typek-subory-*.tar), tajomstvá funkcií a Vaultu,
+          heslá vlastných rolí. Kód aplikácie a migrácie sú v GitHube (Martin3927/realitny-skener).
+
+          Obnova do novej/prázdnej databázy Supabase (najprv vždy skúšobne, nikdy rovno do ostrej):
+            psql "<adresa databázy>" --single-transaction -v ON_ERROR_STOP=1 \
+              -f roles.sql -f schema.sql -c 'SET session_replication_role = replica' -f data.sql
+          Jednu tabuľku alebo pár riadkov sa dá vytiahnuť aj bez obnovy celej databázy – v data.sql pri COPY danej tabuľky.
+          EOF
+
+      - name: Záloha súborov
+        if: env.PRESKOCIT != '1' && env.SUBORY == '1'
+        run: |
+          s="$RUNNER_TEMP/z/subory"; mkdir -p "$s"; cd "$s"
+          ok=1
+          for b in $(python3 "$GITHUB_WORKSPACE/.github/zaloha.py" buckety); do
+            if ! supabase storage cp -r "ss:///$b" . --remote="$SUPABASE_PROJEKT" -j 8 > "$RUNNER_TEMP/storage-$b.log" 2>&1; then
+              ok=0; echo "::warning::Priečinok $b sa nepodarilo stiahnuť:"; tail -5 "$RUNNER_TEMP/storage-$b.log" | cut -c1-300 | sed 's/^/  /'
+            fi
+            [ -d "$b" ] && echo "$b: $(find "$b" -type f | wc -l) súborov, $(du -sh "$b" | cut -f1)"
+          done
+          ocak=$(awk -F'\t' '$1=="storage.objects"{print $2}' "$RUNNER_TEMP/z/databaza/pocty.tsv")
+          mam=$(find "$s" -type f | wc -l)
+          echo "Súborov v úložisku: $ocak, stiahnutých: $mam"
+          if [ "$ok" != 1 ] || [ "$mam" -lt "$((ocak * 98 / 100))" ]; then
+            echo "::warning::Záloha súborov nie je úplná ($mam z $ocak) – záloha databázy pokračuje."
+            echo "SUBORY_NEUPLNE=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Zbaliť
+        if: env.PRESKOCIT != '1'
+        run: |
+          cd "$RUNNER_TEMP"
+          DB_SUBOR="typek-databaza-$STAMP-$DOVOD.tar.gz"
+          tar -C z -czf "$DB_SUBOR" databaza
+          echo "DB_SUBOR=$DB_SUBOR" >> "$GITHUB_ENV"
+          if [ -d z/subory ] && [ "$(find z/subory -type f | wc -l)" -gt 0 ]; then
+            SUB_SUBOR="typek-subory-$STAMP.tar"
+            tar -C z -cf "$SUB_SUBOR" subory
+            echo "SUB_SUBOR=$SUB_SUBOR" >> "$GITHUB_ENV"
+          fi
+          ls -la typek-*
+
+      - name: Uložiť na Websupport
+        if: env.PRESKOCIT != '1' && env.NA_WEBSUPPORT == '1'
+        run: |
+          cd "$RUNNER_TEMP"
+          put="put -O $DIR/databaza $DB_SUBOR;"
+          [ -n "$SUB_SUBOR" ] && put="$put put -O $DIR/subory $SUB_SUBOR;"
+          lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; mkdir -p -f $DIR/databaza; mkdir -p -f $DIR/subory; $put bye"
+          # kontrola: na Websuporte je súbor celý
+          for f in "databaza/$DB_SUBOR" ${SUB_SUBOR:+"subory/$SUB_SUBOR"}; do
+            tam=$(lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls --size --block-size=1 $DIR/$f; bye" | awk '{print $1}')
+            tu=$(stat -c %s "$(basename "$f")")
+            [ "$tam" = "$tu" ] || { echo "::error::$f na Websuporte nesedí ($tam B, má byť $tu B)"; exit 1; }
+            echo "Uložené: $DIR/$f ($tu B)"
+          done
+          # staré zálohy preč (najnovšie ostávajú)
+          for d in databaza:$PONECHAT_DB subory:$PONECHAT_SUBORY; do
+            p=${d%%:*}; n=${d##*:}
+            lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls -1 $DIR/$p/; bye" \
+              | xargs -r -n1 basename | grep '^typek-' | sort | head -n -"$n" > stare.txt || true
+            if [ -s stare.txt ]; then
+              echo "Mažem $(wc -l < stare.txt) starých záloh v $p"
+              lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; $(sed "s#^#rm $DIR/$p/#; s#\$#;#" stare.txt) bye"
+            fi
+          done
+          echo "ULOZENE_WS=1" >> "$GITHUB_ENV"
+
+      - name: Zašifrovať pre GitHub
+        if: env.PRESKOCIT != '1' && env.DO_GITHUBU == '1'
+        run: |
+          cd "$RUNNER_TEMP"
+          7z a -t7z -mhe=on -mx=1 -p"$ZALOHA_HESLO" "typek-zaloha-$STAMP.7z" "$DB_SUBOR" ${SUB_SUBOR:+"$SUB_SUBOR"} >/dev/null
+          7z t -p"$ZALOHA_HESLO" "typek-zaloha-$STAMP.7z" >/dev/null && echo "Zašifrovaná kópia je v poriadku."
+          mkdir -p sifrovane && mv "typek-zaloha-$STAMP.7z" sifrovane/
+
+      - uses: actions/upload-artifact@v4
+        if: env.PRESKOCIT != '1' && env.DO_GITHUBU == '1'
+        with:
+          name: typek-zaloha-${{ env.STAMP }}-${{ env.DOVOD }}
+          path: ${{ runner.temp }}/sifrovane/*.7z
+          retention-days: 90
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Skúška obnovy do prázdnej databázy
+        if: env.PRESKOCIT != '1' && env.SKUSKA == '1'
+        run: |
+          set -o pipefail
+          o="$RUNNER_TEMP/obnova"; mkdir -p "$o"; cd "$o"
+          supabase init --yes >/dev/null 2>&1 || supabase init >/dev/null
+          supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,mailpit,postgres-meta > start.log 2>&1 \
+            || { tail -30 start.log; exit 1; }
+          DB=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          z="$RUNNER_TEMP/z/databaza"
+          if ! psql "$DB" --single-transaction -v ON_ERROR_STOP=1 -q -o /dev/null \
+                -f "$z/roles.sql" -f "$z/schema.sql" -c 'SET session_replication_role = replica' -f "$z/data.sql" 2> obnova.err; then
+            echo "::error::Obnova zlyhala:"; grep -m5 ERROR obnova.err | cut -c1-300; exit 1
+          fi
+          psql "$DB" -tA -F $'\t' -c "$(python3 "$GITHUB_WORKSPACE/.github/zaloha.py" sql)" > obnovene.tsv
+          python3 "$GITHUB_WORKSPACE/.github/zaloha.py" porovnaj "$z/pocty.tsv" obnovene.tsv | tee porovnanie.txt
+          echo "SKUSKA_OK=1" >> "$GITHUB_ENV"
+
+      - name: Súhrn
+        if: always() && env.PRESKOCIT != '1'
+        run: |
+          cd "$RUNNER_TEMP"
+          {
+            echo "### Záloha $STAMP ($DOVOD)"
+            [ -n "$DB_SUBOR" ] && echo "- Databáza: \`$DB_SUBOR\` – $(du -h "$DB_SUBOR" | cut -f1), $(awk -F'\t' '{n+=$2} END {print NR " tabuliek, " n " riadkov"}' z/databaza/pocty.tsv 2>/dev/null)"
+            [ -n "$SUB_SUBOR" ] && echo "- Súbory: \`$SUB_SUBOR\` – $(du -h "$SUB_SUBOR" | cut -f1), $(find z/subory -type f | wc -l) súborov${SUBORY_NEUPLNE:+ (neúplné)}"
+            [ "$ULOZENE_WS" = 1 ] && echo "- Uložené na Websupport: \`$DIR\`"
+            [ "$DO_GITHUBU" = 1 ] && echo "- Zašifrovaná kópia: Artifacts tohto behu (90 dní)"
+            [ "$SKUSKA_OK" = 1 ] && echo "- Skúška obnovy do prázdnej databázy: **v poriadku**"
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_STEP_SUMMARY"
