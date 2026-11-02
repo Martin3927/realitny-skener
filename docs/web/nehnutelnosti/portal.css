@@ -227,6 +227,7 @@ button{font:inherit;color:inherit}
 .tn-pata{border-top:1px solid var(--cream2);padding:30px 0 40px;font-size:14px;color:var(--slate)}
 .tn-pata .obal{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px}
 .tn-pata nav{display:flex;flex-wrap:wrap;gap:6px 18px}
+.tn-pata .soc{display:flex;align-items:center;gap:10px}.tn-pata .soc-t{color:var(--slate);margin-right:4px}.tn-pata .soc-a{width:40px;height:40px;flex:none;border-radius:999px;display:grid;place-items:center;background:var(--cream2);color:var(--ink);text-decoration:none;transition:background-color .2s,color .2s}.tn-pata .soc-a:hover{background:var(--ink);color:var(--cream)}.tn-pata .soc-a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}.tn-pata .soc-a svg{display:block}
 .tn-pata a{color:var(--slate);font-weight:600}
 
 /* ---------------------------------------------------------------- sekcie: makléri, pre vás, články, inzerovať */

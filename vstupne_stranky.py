@@ -86,7 +86,12 @@ PATA = '''<!-- FOOTER -->
 <img src="typek-head.png?v=202610251300" alt="" width="40" height="40" style="display: block; flex: none; width: 40px; height: 40px">
 <span><span class="wm" style="font-size: 15px"><span class="wm-a">Realitný</span> <span class="wm-b">týpek</span></span> – softvér od realitnej kancelárie <a href="https://www.alphareality.sk/">Alpha Reality</a></span>
 </div>
-<div style="display: flex; flex-wrap: wrap; gap: 20px">
+<div class="soc">
+<span class="soc-t">Sleduj nás</span>
+<a class="soc-a" href="https://www.instagram.com/realitnytypek/" target="_blank" rel="noopener" aria-label="Realitný týpek na Instagrame" title="Instagram"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"></rect><circle cx="12" cy="12" r="4.2"></circle><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"></circle></svg></a>
+<a class="soc-a" href="https://www.facebook.com/realitnytypek" target="_blank" rel="noopener" aria-label="Realitný týpek na Facebooku" title="Facebook"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 8.5V6.8c0-.8.5-1.3 1.4-1.3H17V2.2C16.6 2.1 15.4 2 14.2 2 11.6 2 10 3.6 10 6.4v2.1H7v3.7h3V22h4v-9.8h2.9l.5-3.7H14z"></path></svg></a>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px">
 <a href="./">Hlavná stránka</a>
 <a href="mailto:info@realitnytypek.sk">info@realitnytypek.sk</a>
 <a href="ochrana-udajov.html">Ochrana osobných údajov</a>
