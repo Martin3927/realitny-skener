@@ -173,6 +173,21 @@ FAJKA = '<svg width="%d" height="%d" viewBox="0 0 24 24" fill="none" stroke="cur
 ZVONCEK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"></path><path d="M10 20.5a2.2 2.2 0 0 0 4 0"></path></svg>'
 MONITOR = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>'
 LI = '<li><span class="pk-ck">' + (FAJKA % (12, 12, '3.2')) + '</span><span>%s</span></li>'
+STITOK = '<svg width="%d" height="%d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12l-8 8-9-9V3h8z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg>'
+SIPKA = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>'
+INFO = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 7.6v.2"></path></svg>'
+GLOBUS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"></path></svg>'
+# tlačidlo, ktoré otvorí okno „Osobný web makléra“ (#web-info)
+WI = 'type="button" data-web-info aria-haspopup="dialog" aria-controls="web-info"'
+
+
+def skener_hero():
+    # hneď v úvode: s osobným webom je skener za polovicu + tlačidlo s infom o webe
+    return nahrad(S['hero'], '14 dní zadarmo</span>\n</div>',
+                  '14 dní zadarmo</span>\n</div>\n'
+                  '<button ' + WI + ' class="hero-web rise d5"><span class="wi-ic">' + (STITOK % (19, 19)) + '</span>'
+                  '<span class="hero-web-t"><strong>S osobným webom makléra máš skener za polovicu</strong>'
+                  '<span>len 10,50 € mesačne s DPH<span class="hero-web-a">Čo je osobný web?' + SIPKA + '</span></span></span></button>')
 
 
 def skener_sekcia():
@@ -207,6 +222,12 @@ def skener_sekcia():
     s = nahrad(s, '<p style="margin: 22px 0 0; font-size: 13px; color: #8EA2B3; text-align: center">Skutočný skener a upozornenia v mobile. '
                   'Inzeráty a mená na ukážke sú vymyslené.</p>\n</div>\n</div>\n</section>',
                '</div>\n' + pc + '</div>\n</section>')
+    # pod cenou: s osobným webom za polovicu + tlačidlo s infom o webe
+    s = nahrad(s, '<p class="sk-dph">Konečná cena s DPH, s osobným webom polovičná. Pozor, konkurencia často uvádza ceny bez DPH.</p>',
+               '<button ' + WI + ' class="sk-web"><span class="wi-ic">' + (STITOK % (19, 19)) + '</span>'
+               '<span class="sk-web-t"><strong>S osobným webom makléra len 10,50 € mesačne</strong>'
+               '<span>Skener máš k webu za polovicu.<span class="sk-web-a">Čo je osobný web?' + SIPKA + '</span></span></span></button>\n'
+               '<p class="sk-dph">Konečná cena s DPH. Pozor, konkurencia často uvádza ceny bez DPH.</p>')
     assert 'koleg' not in s.lower(), 'v sekcii skenera ostali kolegovia'
     return s
 
@@ -231,6 +252,8 @@ def skener_cennik():
                '<span data-m><span data-okr-t>1 okres</span>, každý ďalší +2 € mesačne</span><span data-y><span data-okr-t>1 okres</span>, každý ďalší +22 € ročne</span>')
     c = nahrad(c, '<span data-m>Ročne 231 € – mesiac zdarma</span><span data-y>Ušetríš 21 € oproti mesačnej platbe</span></span></span></div>',
                '<span data-m>Ročne <span data-okr-c="y">231 €</span> – mesiac zdarma</span><span data-y>Ušetríš <span data-okr-c="m">21 €</span> oproti mesačnej platbe</span></span></span>'
+               '<button ' + WI + ' class="pk-wi"><span class="pk-sw"><span data-m>S osobným webom za polovicu: 10,50 €</span>'
+               '<span data-y>S osobným webom za polovicu: 115,50 €</span></span>' + INFO + '</button>'
                '<span class="okr-st"><span class="okr-st-l">Počet okresov<small>vyberieš ich v objednávke</small></span><span class="okr-st-c">'
                '<button type="button" data-okr-krok="-1" aria-label="Odobrať okres" disabled>−</button><output data-okr-pocet aria-live="polite">1</output>'
                '<button type="button" data-okr-krok="1" aria-label="Pridať okres">+</button></span></span></div>')
@@ -239,7 +262,7 @@ def skener_cennik():
     # balík s osobným webom makléra + odkaz na stránku osobného webu
     c = nahrad(c, '<h3>Jednotlivec</h3><p>Skener aj vlastný web pre makléra, ktorý chce všetko.</p>',
                '<h3>Jednotlivec</h3><p>Realitný skener spolu s osobným webom makléra. Skener máš k webu za polovicu.</p>'
-               '<a class="pk-link" href="osobny-web">Pozri, ako vyzerá osobný web →</a>')
+               '<button ' + WI + ' class="pk-link">Čo všetko má osobný web? →</button>')
     # správa celej realitnej kancelárie
     c = nahrad(c, '<h3>Realitná kancelária</h3><p>Celý softvér pre váš tím, pripravený na mieru.</p>',
                '<h3>Realitná kancelária</h3><p>Správa celej realitnej kancelárie v jednom softvéri, pripravená na mieru.</p>')
@@ -255,7 +278,7 @@ def skener_objednavka():
 <span class="obj-badge">14 DNÍ ZADARMO</span>
 <h2 style="margin: 16px 0 0; font-size: clamp(32px, 3.6vw, 48px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 800">Objednaj si skener.<br>Prvých 14 dní zadarmo.</h2>
 <p style="margin: 18px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A">Vyber si balík a okresy, ktoré ti má Týpek strážiť. Prvých 14 dní neplatíš nič, potom platíš mesačne len za to, čo používaš. Ozveme sa ti osobne.</p>
-<ul class="obj-plusy"><li>%(f)sVšetky kraje a okresy Slovenska</li><li>%(f)sĎalší okres len za 2 € mesačne</li><li>%(f)sZmena balíka kedykoľvek</li></ul>
+<ul class="obj-plusy"><li>%(f)sVšetky kraje a okresy Slovenska</li><li>%(f)sĎalší okres len za 2 € mesačne</li><li>%(f)sS osobným webom skener za polovicu</li><li>%(f)sZmena balíka kedykoľvek</li></ul>
 <div class="obj-typek"><img class="mfloat" src="typek.png?v=202610251300" alt="Maskot Realitný týpek" style="display: block; width: 100%%; height: auto; filter: drop-shadow(0 18px 22px rgba(30,42,53,.25))"></div>
 </div>
 <form id="rt-obj" class="obj" novalidate aria-label="Objednávka">
@@ -263,9 +286,10 @@ def skener_objednavka():
 <legend class="obj-k"><span class="obj-n">1</span>Balík</legend>
 <div class="obj-bal">
 <label class="obj-b"><input type="radio" name="bal" value="skener" checked><span><b>Realitný skener</b><small data-obj-bc="skener">21 € mesačne</small></span></label>
-<label class="obj-b"><input type="radio" name="bal" value="jednotlivec"><span><b>Skener + osobný web</b><small data-obj-bc="jednotlivec">67,50 € mesačne</small></span></label>
+<label class="obj-b"><input type="radio" name="bal" value="jednotlivec"><span><b>Skener + osobný web</b><small data-obj-bc="jednotlivec">67,50 € mesačne</small><em>SKENER −50 %%</em></span></label>
 <label class="obj-b"><input type="radio" name="bal" value="kancelaria"><span><b>Realitná kancelária</b><small>cena na mieru</small></span></label>
 </div>
+<p class="obj-web">%(st)s<span><strong>S osobným webom máš skener za polovicu</strong> – 10,50 € namiesto 21 € mesačne.</span><button %(wi)s class="obj-web-b">Čo je osobný web?</button></p>
 </fieldset>
 <fieldset class="obj-fs">
 <legend class="obj-k"><span class="obj-n">2</span>Okresy, ktoré ti Týpek stráži</legend>
@@ -296,7 +320,70 @@ def skener_objednavka():
 </div>
 </section>
 
-''' % {'m': moznosti, 'f': FAJKA % (16, 16, '2.6')}
+''' % {'m': moznosti, 'f': FAJKA % (16, 16, '2.6'), 'st': STITOK % (18, 18), 'wi': WI} + okno_web() + MOBIL_LISTA
+
+
+# okno s infom o osobnom webe – otvoria ho tlačidlá s data-web-info (úvod, karta skenera, cenník, objednávka, otázky)
+SABLONY = [('susedska-zlata', 'Susedská', 'Zlatá', '#DB9522'), ('galeria-more', 'Galéria', 'Morská', '#1D6F8F'),
+           ('vizitka-atrament', 'Vizitka', 'Atramentová', '#1E2A35'), ('luxus-sivomodra', 'Luxusná', 'Sivomodrá', '#4A6074'),
+           ('rodinna-smaragd', 'Rodinná', 'Smaragdová', '#1F6B57'), ('mestska-tehla', 'Mestská', 'Tehlová', '#A8482E')]
+for _k, *_ in SABLONY:
+    for _p in ('', '-m'):
+        assert os.path.exists(os.path.join(WEB, 'sablony', _k + _p + '.webp')), 'chýba šablóna ' + _k + _p
+
+
+def okno_web():
+    fajka = '<span class="wi-ck">' + (FAJKA % (12, 12, '3.2')) + '</span>'
+    vyhody = ['Vlastná doména s HTTPS a hosting 1 GB v cene', 'Ponuky upravíš v Týpkovi a na webe sú hneď',
+              'Dopyty z webu ti prídu rovno do mobilu', 'Recenzie spokojných klientov', 'AI na úpravu textov k ponukám',
+              'Príspevky na Facebook a Instagram', '1 realitný článok mesačne']
+    cipy = ''.join('<button type="button" class="wi-opt" aria-pressed="%s" data-wi-sab="%s" data-wi-f="%s"><i style="background: %s"></i>%s</button>'
+                   % ('true' if i == 0 else 'false', k, f, c, n) for i, (k, n, f, c) in enumerate(SABLONY))
+    return '''<!-- OKNO: OSOBNÝ WEB MAKLÉRA -->
+<dialog id="web-info" class="wi" aria-labelledby="wi-h">
+<button type="button" class="wi-x" data-wi-zavri aria-label="Zavrieť okno">×</button>
+<div class="wi-in">
+<div class="wi-hl">
+<span class="wi-ey">%(gl)sOSOBNÝ WEB MAKLÉRA</span>
+<h2 id="wi-h">Tvoj vlastný realitný web. Bez programátora.</h2>
+<p>Vyberieš si šablónu a farbu, pridáš fotku a pár viet o sebe. Ponuky, recenzie aj kontakt sa na webe naplnia samé z Týpka.</p>
+</div>
+<p class="wi-zl">%(st)s<span><strong>S osobným webom máš skener za polovicu</strong> – 10,50 € namiesto 21 € mesačne s DPH.</span></p>
+<div class="wi-nh">
+<div class="wi-pv">
+<div class="wi-okno">
+<div class="wi-lista" aria-hidden="true"><span class="wi-bodky"><i></i><i></i><i></i></span><span class="wi-adr">www.[tvojemeno].sk</span></div>
+<div class="wi-scr"><img data-wi-pc alt="Ukážka šablóny Susedská osobného webu makléra" width="1120" height="700"><span class="wi-nazov" data-wi-nazov aria-live="polite">Susedská · Zlatá</span></div>
+</div>
+<div class="wi-tel" aria-hidden="true"><img data-wi-m alt="" width="480" height="960"></div>
+</div>
+<div class="wi-sab" role="group" aria-label="Vyber šablónu">%(cipy)s</div>
+<p class="wi-pozn">6 šablón, 8 farieb a viac ako 20 sekcií, ktoré si zapneš jedným prepínačom. Skutočné šablóny z Týpka, meno a ponuky na ukážke sú vymyslené.</p>
+<a class="wi-viac wi-viac--m" href="osobny-web">Všetky šablóny a farby %(sp)s</a>
+</div>
+<ul class="wi-ul">%(ul)s</ul>
+<div class="wi-pata">
+<div class="wi-cena"><small>Skener + osobný web</small><span class="wi-cena-r"><b>67,50 €</b><span>mesačne s DPH</span></span>
+<span class="wi-cena-d">web 57 € + skener 10,50 € (−50 %%) · ročne 742,50 €, mesiac zdarma</span></div>
+<div class="wi-akc">
+<a class="btn btn-acc" href="#pristup" data-bal="jednotlivec" data-wi-objednat>Chcem skener + osobný web</a>
+<a class="wi-viac" href="osobny-web">Všetky šablóny a farby %(sp)s</a>
+</div>
+</div>
+</div>
+</dialog>
+
+''' % {'gl': GLOBUS, 'st': STITOK % (18, 18), 'sp': SIPKA, 'cipy': cipy,
+       'ul': ''.join('<li>%s<span>%s</span></li>' % (fajka, v) for v in vyhody)}
+
+
+# mobil: lišta s objednávkou dole, keď je úvod preč (skryje sa pri objednávke, v okne a pri lište cookies)
+MOBIL_LISTA = '''<div class="mcta" data-mcta>
+<span class="mcta-t"><b>Skener od 21 € mesačne</b><small>s DPH · 14 dní zadarmo</small></span>
+<a class="btn btn-acc" href="#pristup">Objednať</a>
+</div>
+
+'''
 
 
 SKENER_CSS = '''/* ===== /skener: pripomínač, náhľad na počítači, tri balíky, počítadlo okresov, objednávka */
@@ -385,6 +472,111 @@ select.obj-in{-webkit-appearance:none;appearance:none;padding-right:42px;cursor:
 .obj-note.obj-zle{color:#B4432F;font-weight:700}
 .obj-note.obj-ok{padding:12px 14px;border-radius:14px;background:#E3E9DF;color:#2E5A3A;font-weight:700}
 @media (max-width: 560px){.obj-bal,.obj-2{grid-template-columns:minmax(0,1fr)}.obj-sum .seg-wrap{flex:1 1 100%;min-width:0}.obj-obal{border-radius:28px}.obj{border-radius:22px}}
+@media (max-width: 560px){.obj-plus{border-radius:20px;padding:6px 16px 6px 6px}.obj-plus small{flex-basis:100%;padding:0 0 4px 44px;text-align:left}}
+@media (max-width: 480px){.rise.d1{font-size:13px !important;gap:8px !important}.rise.d1>span{white-space:nowrap}}
+@media (max-width: 440px){.obj-sum .seg{flex-direction:column;gap:2px;min-height:50px;padding:4px 6px}.obj-sum .seg small{font-size:10.5px}}
+/* ===== s osobným webom za polovicu – tlačidlá, ktoré otvoria okno #web-info */
+.wi-ic{flex:none;width:38px;height:38px;border-radius:12px;background:#DB9522;color:#1E2A35;display:grid;place-items:center}
+.hero-web,.sk-web{display:flex;align-items:center;gap:14px;border:0;font:inherit;text-align:left;cursor:pointer;transition:background .2s,box-shadow .2s}
+.hero-web{width:fit-content;max-width:100%;box-sizing:border-box;margin-top:26px;padding:10px 18px 10px 10px;border-radius:20px;background:#F2E4C6;color:#1E2A35;font-size:15px;line-height:1.4}
+.hero-web:hover{background:#EEDDB8;box-shadow:0 16px 30px -22px rgba(30,42,53,.55)}
+.hero-web-t,.sk-web-t{flex:1 1 200px;min-width:0;display:flex;flex-direction:column}
+.hero-web-t>span,.sk-web-t>span{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px}
+.hero-web strong{display:block;font-weight:800}
+.hero-web-a,.sk-web-a{display:inline-flex;align-items:center;gap:6px;font-weight:800;white-space:nowrap}
+.hero-web-a{color:#8A5A2B}
+.hero-web-a svg,.sk-web-a svg{transition:transform .2s}
+.hero-web:hover .hero-web-a svg,.sk-web:hover .sk-web-a svg{transform:translateX(3px)}
+.sk-web{padding:12px 16px 12px 12px;border-radius:18px;background:rgba(219,149,34,.13);box-shadow:inset 0 0 0 1.5px rgba(219,149,34,.42);color:#C9D4DD;font-size:14.5px;line-height:1.45}
+.sk-web:hover{background:rgba(219,149,34,.22)}
+.sk-web strong{display:block;font-size:16px;color:#F7F2E8}
+.sk-web-a{color:#DB9522}
+.pk-wi{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px 5px 12px;border:0;border-radius:999px;background:#F2E4C6;color:#8A5A2B;font:inherit;font-size:13.5px;font-weight:800;line-height:1.35;text-align:left;cursor:pointer;transition:background .2s}
+.pk-wi:hover{background:#EEDDB8}
+.pk-wi svg{flex:none}
+button.pk-link{padding:0;border:0;background:none;font:inherit;font-size:14.5px;font-weight:800;text-align:left;cursor:pointer}
+.obj-b em{align-self:flex-start;margin-top:4px;padding:2px 8px;border-radius:999px;background:#F2E4C6;color:#8A5A2B;font-size:11px;font-style:normal;font-weight:800;letter-spacing:.04em}
+.obj-b input:checked+span em{background:#DB9522;color:#1E2A35}
+.obj-web{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:2px 0 0;padding:10px 14px;border-radius:14px;background:#F2E4C6;color:#1E2A35;font-size:14px;line-height:1.45}
+.obj-web svg{flex:none;color:#8A5A2B}
+.obj-web>span{flex:1 1 220px;min-width:0}
+.obj-web-b,.faq-web{padding:0;border:0;background:none;font:inherit;font-weight:800;color:#8A5A2B;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.faq-web{margin-left:4px}
+.hero-web:focus-visible,.sk-web:focus-visible,.pk-wi:focus-visible,button.pk-link:focus-visible,.obj-web-b:focus-visible,.faq-web:focus-visible{outline:3px solid #DB9522;outline-offset:3px}
+/* ===== okno Osobný web makléra */
+html.wi-otv{overflow:hidden}
+.wi{width:min(1120px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);padding:0;border:0;border-radius:36px;background:#FFFDF8;color:#1E2A35;box-shadow:0 60px 120px -50px rgba(11,17,23,.85);overflow:hidden}
+.wi[open]{display:flex;flex-direction:column;animation:wi-in .4s cubic-bezier(.2,.7,.2,1)}
+.wi::backdrop{background:rgba(30,42,53,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.wi[open]::backdrop{animation:wi-bd .3s ease}
+@keyframes wi-in{from{opacity:0;transform:translateY(26px) scale(.98)}}
+@keyframes wi-bd{from{opacity:0}}
+@keyframes wi-fade{from{opacity:0}}
+@media (prefers-reduced-motion: reduce){html:not(.pohyb-vzdy) .wi[open]{animation:wi-fade .25s ease}}
+.wi-x{position:absolute;top:16px;right:16px;z-index:4;width:44px;height:44px;padding:0;border:0;border-radius:99px;background:#EEE6D6;color:#1E2A35;font:inherit;font-size:28px;line-height:1;cursor:pointer;display:grid;place-items:center;box-shadow:0 0 0 4px #FFFDF8;transition:background .2s,color .2s}
+.wi-x:hover{background:#1E2A35;color:#F7F2E8}
+.wi-x:focus-visible,.wi-opt:focus-visible,.wi-viac:focus-visible{outline:3px solid #DB9522;outline-offset:2px}
+.wi-in{min-height:0;overflow:auto;overscroll-behavior:contain;padding:clamp(22px,3.4vw,44px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);grid-template-areas:"hl nh" "zl nh" "ul nh" "pa pa";grid-template-rows:auto auto 1fr auto;gap:18px clamp(26px,3.4vw,48px);align-items:start}
+.wi-hl{grid-area:hl;padding-right:8px}
+.wi-ey{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:#1E2A35;color:#DB9522;font-size:12px;font-weight:700;letter-spacing:.1em}
+.wi-hl h2{margin:14px 0 0;font-family:'Bricolage Grotesque','Instrument Sans',sans-serif;font-size:clamp(27px,2.6vw,36px);line-height:1.05;letter-spacing:-.03em;font-weight:800;text-wrap:balance}
+.wi-hl p{margin:12px 0 0;font-size:16px;line-height:1.6;color:#3A4B5A}
+.wi-zl{grid-area:zl;display:flex;gap:10px;align-items:center;margin:0;padding:11px 14px;border-radius:14px;background:#DB9522;color:#1E2A35;font-size:15px;line-height:1.4}
+.wi-zl svg{flex:none}
+.wi-ul{grid-area:ul;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.wi-ul li{display:flex;gap:10px;align-items:flex-start;font-size:15px;line-height:1.4;color:#1E2A35}
+.wi-ck{flex:none;width:20px;height:20px;margin-top:1px;border-radius:99px;background:#F2E4C6;color:#8A5A2B;display:grid;place-items:center}
+.wi-nh{grid-area:nh;align-self:center;min-width:0;display:flex;flex-direction:column;gap:16px;padding-top:30px}
+.wi-pata{grid-area:pa;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 28px;padding:16px 16px 16px 22px;border-radius:24px;background:#1E2A35;color:#F7F2E8}
+.wi-cena{display:flex;flex-direction:column;gap:2px;min-width:0}
+.wi-cena small{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8EA2B3}
+.wi-cena-r{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px}
+.wi-cena-r b{font-family:'Bricolage Grotesque','Instrument Sans',sans-serif;font-size:32px;line-height:1.05;font-weight:800;letter-spacing:-.02em;color:#DB9522}
+.wi-cena-r span{font-size:14.5px;font-weight:700;color:#F7F2E8}
+.wi-cena-d{font-size:13px;line-height:1.4;color:#C9D4DD}
+.wi-akc{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px}
+.wi-akc .btn{min-height:54px;margin:0;padding:0 28px;font-size:16px;font-weight:800}
+.wi-viac{display:inline-flex;align-items:center;gap:6px;color:#F2E4C6;font-size:15px;font-weight:800;text-decoration:none}
+.wi-viac:hover{text-decoration:underline;text-underline-offset:3px}
+.wi-viac--m{display:none;align-self:flex-start;color:#8A5A2B}
+.wi-pv{position:relative;padding:0 30px 34px 0}
+.wi-okno{border-radius:18px;overflow:hidden;background:#1E2A35;box-shadow:0 40px 70px -40px rgba(30,42,53,.75)}
+.wi-lista{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#EEE6D6}
+.wi-bodky{display:flex;gap:5px}.wi-bodky i{width:9px;height:9px;border-radius:9px;background:#C9D4DD}
+.wi-adr{flex:1;min-width:0;padding:5px 12px;border-radius:8px;background:#FFFDF8;font-size:12px;color:#4A6074;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wi-scr{position:relative;aspect-ratio:1120/700;background:#F7F2E8}
+.wi-scr img,.wi-tel img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 0;transition:opacity .3s ease}
+.wi-nazov{position:absolute;left:12px;top:12px;padding:6px 12px;border-radius:999px;background:rgba(30,42,53,.84);color:#F7F2E8;font-size:12px;font-weight:700;pointer-events:none}
+.wi-tel{position:absolute;right:0;bottom:0;width:23%;min-width:84px;max-width:150px;aspect-ratio:480/960;padding:5px;box-sizing:border-box;border-radius:22px;background:#0B1117;box-shadow:0 30px 50px -24px rgba(11,17,23,.8)}
+.wi-tel img{border-radius:17px;background:#F7F2E8}
+.wi-mizne{opacity:.25}
+.wi-sab{display:flex;flex-wrap:wrap;gap:8px}
+.wi-opt{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 11px;border-radius:999px;border:1.5px solid #E2D8C4;background:#FFFDF8;color:#1E2A35;font:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s,border-color .2s,color .2s}
+.wi-opt i{flex:none;width:12px;height:12px;border-radius:99px;box-shadow:0 0 0 2px #FFFDF8}
+.wi-opt:hover{border-color:#4A6074}
+.wi-opt[aria-pressed="true"]{background:#1E2A35;border-color:#1E2A35;color:#F7F2E8}
+.wi-opt[aria-pressed="true"] i{box-shadow:0 0 0 2px #1E2A35,0 0 0 3.5px #F7F2E8}
+.wi-pozn{margin:0;font-size:13px;line-height:1.5;color:#4A6074}
+@media (max-width: 900px){
+.wi-in{grid-template-columns:minmax(0,1fr);grid-template-areas:"hl" "zl" "nh" "ul" "pa";grid-template-rows:none;padding-bottom:0}
+.wi-hl{padding-right:52px}.wi-nh{align-self:stretch;padding-top:6px}.wi-viac--m{display:inline-flex}
+.wi-pata{position:sticky;bottom:0;z-index:3;margin:4px calc(-1*clamp(22px,3.4vw,44px)) 0;padding:12px clamp(22px,3.4vw,44px) calc(14px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0;gap:10px 18px;box-shadow:0 -18px 34px -24px rgba(11,17,23,.7)}
+.wi-pata .wi-viac,.wi-cena small,.wi-cena-d{display:none}
+.wi-cena-r b{font-size:26px}
+}
+@media (max-width: 640px){.wi{width:100%;max-height:94dvh;margin:auto 0 0;border-radius:28px 28px 0 0}.wi-x{top:12px;right:12px}.wi-pv{padding:0 20px 26px 0}.wi-akc{flex:1 1 100%}.wi-akc .btn{width:100%;min-height:52px}.wi-opt{min-height:38px;padding:0 12px 0 10px;font-size:13.5px}}
+/* ===== mobil: lišta s objednávkou dole */
+.mcta{display:none}
+@media (max-width: 760px){
+.mcta{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:45;display:flex;align-items:center;gap:12px;padding:7px 7px 7px 18px;border-radius:999px;background:#1E2A35;color:#F7F2E8;box-shadow:0 24px 50px -18px rgba(11,17,23,.8);transform:translateY(160%);visibility:hidden;transition:transform .4s cubic-bezier(.2,.7,.2,1),visibility .4s}
+.mcta.mcta-on{transform:none;visibility:visible}
+.mcta-t{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.mcta-t b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcta-t small{font-size:12px;color:#C9D4DD}
+.mcta .btn{flex:none;width:auto;min-height:46px;margin:0;padding:0 22px;font-size:15px;font-weight:800}
+.rt>footer{padding-bottom:110px !important}
+}
+@media (max-width: 760px) and (prefers-reduced-motion: reduce){html:not(.pohyb-vzdy) .mcta{transition:opacity .25s,visibility .25s;transform:none;opacity:0}html:not(.pohyb-vzdy) .mcta.mcta-on{opacity:1}}
 '''
 
 
@@ -475,15 +667,60 @@ def skener_js():
     .then(function(){BUSY=false;btn.disabled=false;});
   });
 })();
+
+/* OKNO „Osobný web makléra“: otvoria ho tlačidlá data-web-info, šablóny sa načítajú až pri prvom otvorení */
+(function(){
+  var d=document,dl=d.getElementById('web-info'),H=d.documentElement;
+  var bb=[].slice.call(d.querySelectorAll('[data-web-info]'));
+  if(!dl||typeof dl.showModal!=='function'){bb.forEach(function(b){b.addEventListener('click',function(){location.href='osobny-web';});});return;}
+  var pc=dl.querySelector('[data-wi-pc]'),mo=dl.querySelector('[data-wi-m]'),naz=dl.querySelector('[data-wi-nazov]'),
+      cc=[].slice.call(dl.querySelectorAll('[data-wi-sab]')),idx=-1,T=null,spat=null,dole=false,
+      pohyb=H.classList.contains('pohyb-vzdy')||!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function img(el,src){if(el.getAttribute('src')===src)return;el.classList.add('wi-mizne');el.onload=function(){el.classList.remove('wi-mizne');};el.src=src;}
+  function ukaz(i){
+    idx=(i+cc.length)%%cc.length;var c=cc[idx],k=c.getAttribute('data-wi-sab'),n=c.textContent,f=c.getAttribute('data-wi-f');
+    cc.forEach(function(x){x.setAttribute('aria-pressed',x===c?'true':'false');});
+    img(pc,'sablony/'+k+'.webp');img(mo,'sablony/'+k+'-m.webp');
+    pc.alt='Ukážka šablóny '+n+' osobného webu makléra';naz.textContent=n+' · '+f;
+    var nx=cc[(idx+1)%%cc.length].getAttribute('data-wi-sab');(new Image()).src='sablony/'+nx+'.webp';
+  }
+  function stop(){if(T){clearInterval(T);T=null;}}
+  function auto(){stop();if(pohyb)T=setInterval(function(){ukaz(idx+1);},3200);}
+  function zavri(){stop();H.classList.remove('wi-otv');if(dl.open)dl.close();}
+  function otvor(){spat=d.activeElement;if(idx<0)ukaz(0);dl.showModal();H.classList.add('wi-otv');dl.querySelector('.wi-in').scrollTop=0;auto();}
+  bb.forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();otvor();});});
+  cc.forEach(function(c,i){c.addEventListener('click',function(){stop();ukaz(i);});});
+  dl.querySelector('[data-wi-zavri]').addEventListener('click',zavri);
+  // klik na tmavé pozadie okno zavrie (len keď klik začal aj skončil mimo okna)
+  dl.addEventListener('pointerdown',function(e){dole=e.target===dl;});
+  dl.addEventListener('click',function(e){if(e.target===dl&&dole)zavri();dole=false;});
+  dl.addEventListener('close',function(){stop();H.classList.remove('wi-otv');if(spat&&spat.focus&&!dl._skok)spat.focus();dl._skok=false;});
+  // „Chcem skener + osobný web“: vyberie balík v objednávke (rieši to skript objednávky) a zroluje k nej
+  dl.querySelector('[data-wi-objednat]').addEventListener('click',function(){dl._skok=true;zavri();});
+})();
+
+/* MOBIL: lišta s objednávkou dole – ukáže sa po úvode, skryje sa pri objednávke, v okne a kým svieti lišta cookies */
+(function(){
+  var d=document,li=d.querySelector('[data-mcta]'),obj=d.getElementById('pristup'),dl=d.getElementById('web-info'),
+      ck=d.querySelector('[data-ck="banner"]'),vObj=false,cak=false;
+  if(!li||!obj)return;
+  function upd(){cak=false;var on=(window.scrollY||0)>560&&!vObj&&!(dl&&dl.open)&&!(ck&&!ck.hidden);li.classList.toggle('mcta-on',on);}
+  function plan(){if(!cak){cak=true;requestAnimationFrame(upd);}}
+  if('IntersectionObserver' in window)new IntersectionObserver(function(e){vObj=e[0].isIntersecting;plan();},{rootMargin:'0px 0px -12%% 0px'}).observe(obj);
+  addEventListener('scroll',plan,{passive:true});addEventListener('resize',plan);
+  if(dl)dl.addEventListener('close',plan);
+  d.addEventListener('click',function(){setTimeout(plan,60);});
+  plan();
+})();
 </script>
 ''' % (m.group(1), m.group(2))
 
 
 stranka('skener.html', 'skener',
         'Realitný skener – nové inzeráty súkromníkov ako prvý | Realitný týpek',
-        'Týpek cez deň každých 10 minút prejde Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality a nový inzerát súkromníka ti hneď pošle do mobilu. 21 € mesačne s DPH, 14 dní zadarmo.',
+        'Týpek cez deň každých 10 minút prejde Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality a nový inzerát súkromníka ti hneď pošle do mobilu. 21 € mesačne s DPH, s osobným webom za polovicu, 14 dní zadarmo.',
         'https://realitnytypek.sk/skener',
-        S['hero'] + skener_sekcia() + skener_zadarmo() + skener_cennik() + otazky([
+        skener_hero() + skener_sekcia() + skener_zadarmo() + skener_cennik() + otazky([
             ('Z ktorých portálov skener berie inzeráty?',
              'Z Bazoša, Nehnuteľností.sk, Reality.sk a TopReality. Cez deň ich Týpek prejde každých 10 minút v okresoch, ktoré si vyberieš.'),
             ('Ako sa dozviem, že pribudol nový inzerát?',
@@ -492,6 +729,9 @@ stranka('skener.html', 'skener',
              'Pri inzeráte si nastavíš pripomienku. Keď ti povie „zavolajte podvečer“, Týpek ti v ten čas pripomenie, že máš volať, aj upozornením v mobile.'),
             ('Koľko okresov môžem sledovať?',
              'Koľko chceš, z celého Slovenska. V objednávke si vyberieš hlavný okres za 21 € mesačne s DPH a ďalšie pridáš tlačidlom +, každý za 2 € mesačne.'),
+            ('Je skener lacnejší, keď mám aj osobný web?',
+             'Áno. S osobným webom makléra máš Realitný skener za polovicu – 10,50 € namiesto 21 € mesačne s DPH. '
+             'Spolu je to balík Jednotlivec za 67,50 € mesačne. <button ' + WI + ' class="faq-web">Čo je osobný web makléra?</button>'),
             ('Musím niečo inštalovať?',
              'Nie. Týpek je webová aplikácia, funguje na počítači aj v mobile. Do mobilu si ho pridáš ako ikonu a upozornenia ti budú chodiť ako správy.'),
             ('Môžem to najprv vyskúšať?',
