@@ -181,6 +181,17 @@
   }
 
   // ---------------------------------------------------------------- detail / nový zákazník
+  // všetkých 79 okresov SR podľa krajov (názvy presne ako v tabuľke lokality aj v objednávke na webe)
+  var KRAJE = [
+    ["Bratislavský kraj", ["Bratislava I", "Bratislava II", "Bratislava III", "Bratislava IV", "Bratislava V", "Malacky", "Pezinok", "Senec"]],
+    ["Trnavský kraj", ["Dunajská Streda", "Galanta", "Hlohovec", "Piešťany", "Senica", "Skalica", "Trnava"]],
+    ["Trenčiansky kraj", ["Bánovce nad Bebravou", "Ilava", "Myjava", "Nové Mesto nad Váhom", "Partizánske", "Považská Bystrica", "Prievidza", "Púchov", "Trenčín"]],
+    ["Nitriansky kraj", ["Komárno", "Levice", "Nitra", "Nové Zámky", "Šaľa", "Topoľčany", "Zlaté Moravce"]],
+    ["Žilinský kraj", ["Bytča", "Čadca", "Dolný Kubín", "Kysucké Nové Mesto", "Liptovský Mikuláš", "Martin", "Námestovo", "Ružomberok", "Turčianske Teplice", "Tvrdošín", "Žilina"]],
+    ["Banskobystrický kraj", ["Banská Bystrica", "Banská Štiavnica", "Brezno", "Detva", "Krupina", "Lučenec", "Poltár", "Revúca", "Rimavská Sobota", "Veľký Krtíš", "Zvolen", "Žarnovica", "Žiar nad Hronom"]],
+    ["Prešovský kraj", ["Bardejov", "Humenné", "Kežmarok", "Levoča", "Medzilaborce", "Poprad", "Prešov", "Sabinov", "Snina", "Stará Ľubovňa", "Stropkov", "Svidník", "Vranov nad Topľou"]],
+    ["Košický kraj", ["Gelnica", "Košice I", "Košice II", "Košice III", "Košice IV", "Košice-okolie", "Michalovce", "Rožňava", "Sobrance", "Spišská Nová Ves", "Trebišov"]]
+  ];
   function pole(id, n, val, typ, extra) {
     return '<label class="field"><span>' + n + '</span><input type="' + (typ || "text") + '" id="' + id + '" value="' + esc(val == null ? "" : val) + '"' + (extra || "") + "></label>";
   }
@@ -216,8 +227,10 @@
           '<div class="sp-moduly">' + MODULY.map(function (m) {
             return '<label class="chk"><input type="checkbox" name="mod" value="' + m[0] + '"' + ((z.moduly || []).indexOf(m[0]) >= 0 ? " checked" : "") + ">" + m[1] + "</label>";
           }).join("") + '</div><p class="sp-pozn">Kataster a mapa, Kalendár a Chat sú zadarmo pre každého.</p>' +
+          '<div class="sp-okresy"><span class="sp-okresy-l">Okresy pre skener</span><div id="z-okresy" class="sp-okr-zoz"></div>' +
+            '<button type="button" class="btn ghost sp-okr-plus" id="z-okr-plus"><b aria-hidden="true">+</b> Pridať ďalší okres</button>' +
+            '<p class="sp-pozn">Prvý je hlavný okres, každý ďalší je +2 € mesačne.</p></div>' +
           '<div class="form-grid">' +
-            pole("z-okresy", "Okresy pre skener (oddeľ čiarkou)", (z.okresy || []).join(", "), "text", ' placeholder="napr. Poprad, Kežmarok"') +
             pole("z-pocet", "Počet maklérov", z.pocet_maklerov, "number", ' min="0" step="1"') +
             '<label class="field"><span>Platí</span><select id="z-obdobie"><option value="mesacne">mesačne</option><option value="rocne">ročne (11 mesiacov)</option></select></label>' +
           "</div>" +
@@ -241,6 +254,7 @@
       "</form>" +
       (novy ? "" : platbyHtml(z, platby) + pristupHtml());
 
+    okresyNaplnit(z.okresy || []);
     $("#z-obdobie").value = z.platba_obdobie || "mesacne";
     $("#z-stav").value = z.stav;
     var form = $("#sp-form");
@@ -269,8 +283,49 @@
     }
     window.scrollTo(0, 0);
   }
+  // okresy: jedna roleta na okres, „+ Pridať ďalší okres“ pridá ďalšiu; ten istý okres sa nedá vybrať dvakrát
+  function okresMoznosti(navyse) {
+    return '<option value="">Vyber okres</option>' + (navyse ? '<option value="' + esc(navyse) + '">' + esc(navyse) + " (mimo zoznamu)</option>" : "") +
+      KRAJE.map(function (k) { return '<optgroup label="' + esc(k[0]) + '">' + k[1].map(function (o) { return '<option value="' + esc(o) + '">' + esc(o) + "</option>"; }).join("") + "</optgroup>"; }).join("");
+  }
+  function okresVZozname(o) { return KRAJE.some(function (k) { return k[1].indexOf(o) >= 0; }); }
+  function okresRiadok(hodnota) {
+    var zoz = $("#z-okresy"), w = document.createElement("div"), n = zoz.children.length + 1;
+    w.className = "sp-okr-r";
+    w.innerHTML = '<div class="field"><select aria-label="Okres ' + n + '">' +
+      okresMoznosti(hodnota && !okresVZozname(hodnota) ? hodnota : "") + "</select></div>" +
+      '<button type="button" class="btn ghost sp-okr-x" aria-label="Odobrať okres" title="Odobrať okres">×</button>';
+    zoz.appendChild(w);
+    var sel = w.querySelector("select");
+    sel.value = hodnota || "";
+    sel.addEventListener("change", okresyObnov);
+    w.querySelector(".sp-okr-x").addEventListener("click", function () {
+      zoz.removeChild(w);
+      if (!zoz.children.length) okresRiadok("");
+      okresyObnov();
+    });
+    return sel;
+  }
+  function okresyObnov() {
+    var ss = Array.from(document.querySelectorAll("#z-okresy select")), vyb = ss.map(function (x) { return x.value; });
+    ss.forEach(function (x, i) {
+      Array.from(x.options).forEach(function (o) { if (o.value) o.disabled = o.value !== x.value && vyb.indexOf(o.value) >= 0; });
+      x.closest(".sp-okr-r").classList.toggle("hlavny", i === 0);
+      x.setAttribute("aria-label", i === 0 ? "Hlavný okres" : "Okres " + (i + 1));
+    });
+    var plus = $("#z-okr-plus"); if (plus) plus.disabled = ss.length >= 79;
+  }
+  function okresyNaplnit(okresy) {
+    $("#z-okresy").innerHTML = "";
+    var zoz = (okresy || []).filter(function (o, i, a) { return o && a.indexOf(o) === i; });
+    if (!zoz.length) zoz = [""];
+    zoz.forEach(function (o) { okresRiadok(o); });
+    okresyObnov();
+    $("#z-okr-plus").addEventListener("click", function () { var s = okresRiadok(""); okresyObnov(); s.focus(); });
+  }
   function okresyZPola() {
-    return $("#z-okresy").value.split(/[,;\n]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    return Array.from(document.querySelectorAll("#z-okresy select")).map(function (x) { return x.value; })
+      .filter(function (o, i, a) { return o && a.indexOf(o) === i; });
   }
   function hodnota(id) { var v = $(id).value.trim(); return v === "" ? null : v; }
 
