@@ -115,10 +115,14 @@ jobs:
         run: |
           set -eo pipefail
           z="$RUNNER_TEMP/z/databaza"; mkdir -p "$z"; cd "$RUNNER_TEMP"
-          supabase db dump --remote="$SUPABASE_PROJEKT" --role-only -f "$z/roles.sql"
-          supabase db dump --remote="$SUPABASE_PROJEKT" -f "$z/schema.sql"
-          supabase db dump --remote="$SUPABASE_PROJEKT" --data-only --use-copy \
-            -x cron.job_run_details -x net._http_response -x net.http_request_queue -f "$z/data.sql"
+          # dočasná rola len na čítanie cez pooler (GitHub nemá IPv6, heslo databázy nepotrebujeme)
+          python3 "$GITHUB_WORKSPACE/.github/zaloha.py" pripojenie
+          DB_URL=$(grep '^DB_URL=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)
+          supabase db dump --remote="$DB_URL" --role-only -f "$z/roles.sql"
+          supabase db dump --remote="$DB_URL" -f "$z/schema.sql"
+          supabase db dump --remote="$DB_URL" --data-only --use-copy \
+            -x cron.job_run_details -x net._http_response -x net.http_request_queue \
+            -x storage.buckets_vectors -x storage.vector_indexes -f "$z/data.sql"
           python3 "$GITHUB_WORKSPACE/.github/zaloha.py" pocty "$z/pocty.tsv"
           # kontrola: súbory nie sú prázdne a sú v nich hlavné tabuľky
           for f in roles schema data; do [ -s "$z/$f.sql" ] || { echo "::error::$f.sql je prázdny"; exit 1; }; done
