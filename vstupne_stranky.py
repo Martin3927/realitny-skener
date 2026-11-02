@@ -28,9 +28,9 @@ S = {
     'hero': medzi('<!-- HERO -->', '<!-- SKENER -->'),
     'skener': medzi('<!-- SKENER -->', '<!-- OSOBNY WEB -->'),
     'web': medzi('<!-- OSOBNY WEB -->', '<!-- SPRÁVA PONÚK A SOCIÁLNE SIETE -->'),
-    'funkcie': medzi('<!-- SPRÁVA PONÚK A SOCIÁLNE SIETE -->', '<!-- PRIBEH -->'),
+    'funkcie': medzi('<!-- SPRÁVA PONÚK A SOCIÁLNE SIETE -->', '<!-- ZVONČEK -->'),
     'cennik': medzi('<!-- CENNÍK: BALÍKY -->', '<!-- OD ZACIATKU -->'),
-    'zadarmo': medzi('<!-- K SKENERU ZADARMO -->', '<!-- PRIPRAVUJEME -->'),
+    'zadarmo': medzi('<!-- K SKENERU ZADARMO -->', '<!-- CTA -->'),
     'cta': medzi('<!-- CTA -->', '<!-- NA WEBE PRACUJEME -->'),
 }
 i = t.index('<!-- SÚHLAS S COOKIES -->')
@@ -131,8 +131,9 @@ def nahrad(text, stare, nove, pocet=1):
 
 def zadarmo_bez_viac():
     z = S['zadarmo']
-    i = z.index('<div style="margin-top: 20px; border-radius: 26px; background: #EEE6D6')
-    z = z[:i].rstrip('\n') + '\n</section>\n\n'
+    i = z.find('<div style="margin-top: 20px; border-radius: 26px; background: #EEE6D6')
+    if i >= 0:  # pás „A mnoho ďalšieho“ (na hlavnej stránke už nie je)
+        z = z[:i].rstrip('\n') + '\n</section>\n\n'
     return z.replace('padding: 110px 24px 0">', 'padding: 0 24px 0">', 1)
 
 
@@ -214,7 +215,7 @@ def skener_sekcia():
           '<div class="pc-lista" aria-hidden="true"><span class="pc-bodky"><i></i><i></i><i></i></span>'
           '<span class="pc-adr">app.realitnytypek.sk · Realitný skener</span>'
           '<span class="pc-skut">' + (FAJKA % (14, 14, '2.6')) + 'Skutočný softvér</span></div>\n'
-          '<a class="pc-shot" href="soft-skener.webp?v=202611021500" target="_blank" rel="noopener" title="Otvoriť náhľad vo veľkom"><img src="soft-skener.webp?v=202611021500" alt="Realitný skener na počítači: nové inzeráty súkromníkov s tlačidlami Prevziať, '
+          '<a class="pc-shot" href="soft-skener.webp?v=202611021700" target="_blank" rel="noopener" title="Otvoriť náhľad vo veľkom"><img src="soft-skener.webp?v=202611021700" alt="Realitný skener na počítači: nové inzeráty súkromníkov s tlačidlami Prevziať, '
           'Zapísať hovor, SMS poslaná a Pripomenúť" width="1800" height="1125" loading="lazy"></a>\n'
           '</div>\n'
           '<p class="pc-pozn">Skutočný skener na počítači aj v mobile. Inzeráty na ukážke sú vymyslené.</p>\n'
