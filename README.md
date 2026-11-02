@@ -24,6 +24,23 @@ Sleduje Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality.sk v okresoch **Spiš
 
 Práva kontroluje databáza (nie stránka), takže maklér bez povolenia sa k podhodnoteným ponukám nedostane ani technicky.
 
+## Záloha
+Supabase na bezplatnom pláne nezálohuje nič, preto beží vlastná záloha (`.github/workflows/zaloha.yml`):
+- **databáza** (všetky tabuľky, používatelia, pravidlá prístupu, funkcie) – každú noc a pred každou zmenou databázy
+  (ak posledná záloha nie je mladšia ako 2 h; keď záloha zlyhá, zmena sa nespustí),
+- **súbory** (fotky ponúk, archív skenera, weby) – každú nedeľu,
+- uložené na hosting Websupport do `/realitnytypek.sk/zalohy` (mimo webu, z internetu nedostupné):
+  60 posledných záloh databázy, 4 zálohy súborov. Stiahnuť sa dajú cez SFTP prístup k hostingu (ten istý ako pri nasadení).
+- Voliteľne zašifrovaná kópia v GitHube: v *Settings → Secrets and variables → Actions* pridať `ZALOHA_HESLO`
+  (heslo si treba uložiť aj inde – bez neho sa kópia neotvorí). Otvára sa 7-Zipom.
+- Súkromné priečinky (prílohy chatu, dokumenty ponúk) sa zálohujú, až keď kľúč `SUPABASE_ACCESS_TOKEN`
+  dostane právo *API gateway keys: read*.
+- Ručne: *Actions → Záloha → Run workflow* (dá sa zaškrtnúť aj súbory a skúška obnovy).
+
+**Obnova** – nikdy rovno do ostrej databázy. Záloha sa najprv obnoví do prázdnej databázy
+(postup v `README.txt` v každej zálohe), skontroluje sa a až potom sa vrátia potrebné údaje.
+Pri zmene `zaloha.yml` sa spraví plná záloha aj skúšobná obnova do prázdnej databázy s porovnaním počtu riadkov.
+
 ## Nastavenia
 - `config.json` – sledované okresy, typy, portály, od koľkých % je ponuka podhodnotená, kto dostáva emaily.
 - Emailové upozornenia: v repozitári *Settings → Secrets and variables → Actions* doplniť
