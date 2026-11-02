@@ -851,7 +851,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
     el.hidden=false;
   }
   document.querySelectorAll('[data-calc]').forEach(function(b){b.addEventListener('click',function(){PAY=b.getAttribute('data-key');ceny();});});
-  document.querySelectorAll('[data-bal]').forEach(function(b){b.addEventListener('click',function(){BAL=b.getAttribute('data-bal');balInfo();});});
+  document.querySelectorAll('a[data-bal],button[data-bal]').forEach(function(b){b.addEventListener('click',function(){BAL=b.getAttribute('data-bal');balInfo();});});
   var balX=document.querySelector('[data-bal-zrus]');if(balX)balX.addEventListener('click',function(){BAL=null;balInfo();});
   ceny();
   document.querySelectorAll('.mnav-p a').forEach(function(a){a.addEventListener('click',function(){var d=a.closest('details');if(d)d.open=false;});});
