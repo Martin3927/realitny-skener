@@ -751,7 +751,68 @@ def ulica_z_lokality(loc, obec):
     return u.strip() if isinstance(u, str) and u.strip() else None
 
 
+NEHN_KATEGORIA = {"byty": "byt", "domy": "dom", "pozemky": "pozemok", "chaty a chalupy": "chata"}
+
+
+def _nehn_text(v):
+    """Next.js posiela chýbajúce hodnoty ako „$undefined“"""
+    return v if isinstance(v, str) and v and v != "$undefined" else None
+
+
+def norm_nehn_novy(ad):
+    """Formát Nehnuteľnosti.sk od 1. 11. 2026: category/subcategory ako text, address.location, agency.nameOfAdvertiser."""
+    kat = (_nehn_text(ad.get("category")) or "").lower()
+    sub = _nehn_text(ad.get("subcategory")) or ""
+    subb = bez_diakritiky(sub)
+    typ = NEHN_KATEGORIA.get(kat)
+    if kat == "objekty" and "garaz" in subb:
+        typ = "garaz"
+    if typ not in TYPY or (ad.get("transaction") and ad.get("transaction") != "Predaj") or je_dopyt(ad.get("title")):
+        return None
+    lok = [x.strip() for x in (_nehn_text((ad.get("address") or {}).get("location")) or "").split(",") if x.strip()]
+    okres = next((x[6:].strip() for x in reversed(lok) if x.lower().startswith("okres ")), None)
+    okres = re.sub(r"\s*-\s*", "-", okres) if okres else ad["_okres"]   # „Košice - okolie“
+    if okres not in OKRESY:
+        return None
+    casti = [x for x in lok if not x.lower().startswith("okres ")]
+    obec = next((o for o in (normalizuj_obec(x) for x in reversed(casti)) if o), None)
+    ulica = casti[0] if len(casti) > 1 and normalizuj_obec(casti[0]) is None else None
+    agentura = ad.get("agency") if isinstance(ad.get("agency"), dict) else {}
+    meno_rk = _nehn_text(agentura.get("nameOfAdvertiser"))
+    profi = bool((ad.get("seller") or {}).get("isAgencyProfi")) if isinstance(ad.get("seller"), dict) else False
+    if meno_rk or profi:
+        ptyp, meno, dovod = "rk", meno_rk, "portál: realitná kancelária"
+    else:
+        druh, dovod = klasifikuj_text(ad.get("title", ""))
+        ptyp = "asi_sukromny" if druh in ("rk", "slabe") else "sukromny"
+        meno, dovod = None, "portál: súkromná osoba" + (f" (ale {dovod})" if druh in ("rk", "slabe") else "")
+    izby = None
+    if typ == "byt":
+        m = re.search(r"([1-6])\s*izbov", subb)
+        izby = int(m.group(1)) if m else (1 if "garson" in subb else None)
+    cena = cena_z_textu(_nehn_text((ad.get("price") or {}).get("price")))
+    plocha = ad.get("area") if isinstance(ad.get("area"), (int, float)) else None
+    podtyp = None
+    if typ == "pozemok":
+        if re.search(r"orna|luka|pasien|les|sad|vinic|polnohosp|chmel", subb):
+            podtyp = "poda"
+        elif re.search(r"zahrad|rekreacn", subb):
+            podtyp = "zahrada"
+        else:
+            podtyp = podtyp_pozemku(ad.get("title", ""), plocha)
+    foto = _nehn_text((ad.get("photos") or {}).get("previewPhotoUrl")) if isinstance(ad.get("photos"), dict) else None
+    return zaznam(
+        id=f"un:{ad['id']}", portal="nehnutelnosti", portaly=["nehnutelnosti"],
+        url=f"https://www.nehnutelnosti.sk/detail/{ad['id']}/{_nehn_text(ad.get('slug')) or ''}", nazov=ad.get("title", ""), typ=typ,
+        izby=izby, cena=cena, plocha=plocha, obec=obec, okres=okres,
+        predajca=meno, predajca_typ=ptyp, predajca_dovod=dovod, foto=foto, podtyp=podtyp, ulica=ulica,
+        popis=(_nehn_text(ad.get("description")) or "")[:1500],
+    )
+
+
 def norm_nehn(ad):
+    if "parameters" not in ad and isinstance(ad.get("category"), str):
+        return norm_nehn_novy(ad)
     par = ad.get("parameters", {})
     cat = par.get("category", {})
     main, sub = cat.get("mainValue"), cat.get("subValue", "")
