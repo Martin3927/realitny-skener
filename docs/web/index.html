@@ -1140,7 +1140,8 @@ Kataster pri každom inzeráte
 <span><span class="wm" style="font-size: 15px"><span class="wm-a">Realitný</span> <span class="wm-b">týpek</span></span> – softvér od realitnej kancelárie <a href="https://www.alphareality.sk/">Alpha Reality</a></span>
 </div>
 <div style="display: flex; flex-wrap: wrap; gap: 20px">
-<a href="#osobny-web">Osobný web</a>
+<a href="skener">Realitný skener</a>
+<a href="osobny-web">Osobný web makléra</a>
 <a href="#nahlad">Náhľad</a>
 <a href="#pribeh">Prečo vznikol</a>
 <a href="nehnutelnosti/">Týpkove nehnuteľnosti</a>
@@ -1234,7 +1235,7 @@ Kataster pri každom inzeráte
   if(shuf)shuf.addEventListener('click',function(){setAuto(false);mix();});
   // cenník: ceny s DPH, ročne = 11 mesiacov (mesiac zdarma); s osobným webom je Realitný skener za polovicu.
   // Mesačné aj ročné sumy sú v HTML naraz, prepínač len prelína medzi nimi (výška kariet sa nemení).
-  var PAY='m',BAL=null,CEN={sk:21,web:57},pkObal=document.querySelector('.pk-obal');
+  var PAY='m',BAL=document.body.getAttribute('data-bal')||null,CEN={sk:21,web:57},pkObal=document.querySelector('.pk-obal');
   function eur(n){var r=Math.round(n*100)/100;var p=r.toFixed(2).split('.');var i=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,' ');return (p[1]==='00'?i:i+','+p[1])+' €';}
   function ceny(){
     if(pkObal)pkObal.setAttribute('data-pay',PAY);
