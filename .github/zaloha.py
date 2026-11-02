@@ -4,6 +4,7 @@
   zaloha.py sql                       – SQL, ktoré spočíta riadky vo všetkých tabuľkách (aj pre lokálnu obnovu)
   zaloha.py pocty <subor.tsv>         – spočíta riadky v ostrej databáze (cez Supabase API) a uloží ich
   zaloha.py pripojenie                – dočasná rola CLI, adresa databázy do $GITHUB_ENV (DB_URL, skrytá v logoch)
+  zaloha.py subory <priečinok>        – stiahne súbory z verejných priečinkov úložiska
   zaloha.py buckety                   – vypíše priečinky úložiska súborov (storage.buckets)
   zaloha.py porovnaj <zive> <obnova>  – porovná počty riadkov ostrej databázy a obnovenej zálohy
 
@@ -76,6 +77,54 @@ def pripojenie():
     raise SystemExit("K databáze sa nedá pripojiť cez pooler.")
 
 
+def stiahni_verejne(ciel):
+    """Súbory z verejných priečinkov úložiska cez verejnú adresu (kľúč na to netreba).
+    Súkromné priečinky (prílohy chatu, dokumenty) zapíše do $GITHUB_ENV ako SUKROMNE – tie skúsi workflow cez CLI."""
+    from concurrent.futures import ThreadPoolExecutor
+    from urllib.parse import quote
+    rows = q("""select o.bucket_id as b, o.name as n, coalesce((o.metadata->>'size')::bigint, -1) as s, k.public as p
+                from storage.objects o join storage.buckets k on k.id = o.bucket_id order by 1, 2""")
+    verejne = [r for r in rows if r["p"]]
+    sukromne = sorted({r["b"] for r in rows if not r["p"]})
+    if os.environ.get("GITHUB_ENV"):
+        with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+            f.write(f"SUKROMNE={' '.join(sukromne)}\n")
+
+    def jeden(r):
+        cast = [x for x in r["n"].split("/") if x]
+        if not cast or any(x in (".", "..") for x in cast):
+            return r["b"], "zlý názov"
+        cesta = os.path.join(ciel, r["b"], *cast)
+        os.makedirs(os.path.dirname(cesta), exist_ok=True)
+        url = f"https://{REF}.supabase.co/storage/v1/object/public/{r['b']}/" + "/".join(quote(x) for x in cast)
+        for pokus in range(3):
+            try:
+                with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "realitny-typek-zaloha"}),
+                                            timeout=120) as resp, open(cesta, "wb") as f:
+                    while True:
+                        kus = resp.read(1 << 16)
+                        if not kus:
+                            break
+                        f.write(kus)
+                if r["s"] in (-1, os.path.getsize(cesta)):
+                    return r["b"], None
+                chyba = "nesedí veľkosť"
+            except Exception as e:  # noqa: BLE001 – stačí zapísať a skúsiť znova
+                chyba = type(e).__name__
+        return r["b"], chyba
+
+    with ThreadPoolExecutor(8) as ex:
+        vysledky = list(ex.map(jeden, verejne))
+    zle = [v for v in vysledky if v[1]]
+    for b in sorted({r["b"] for r in verejne}):
+        n = sum(1 for v in vysledky if v[0] == b)
+        print(f"{b}: {n - sum(1 for v in zle if v[0] == b)} z {n} súborov")
+    if zle:
+        print(f"::warning::Nepodarilo sa stiahnuť {len(zle)} súborov ({', '.join(sorted({c for _, c in zle}))})")
+    if len(zle) > max(3, len(verejne) // 50):
+        sys.exit(1)
+
+
 def nacitaj(cesta):
     out = {}
     for riadok in open(cesta, encoding="utf-8"):
@@ -102,6 +151,8 @@ def main():
         with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
             f.write(f"DB_URL={url}\n")
         print("Dočasné pripojenie je pripravené.")
+    elif cmd == "subory":
+        stiahni_verejne(sys.argv[2])
     elif cmd == "buckety":
         for r in q("select id from storage.buckets order by id"):
             print(r["id"])

@@ -154,20 +154,23 @@ jobs:
         if: env.PRESKOCIT != '1' && env.SUBORY == '1'
         run: |
           s="$RUNNER_TEMP/z/subory"; mkdir -p "$s"; cd "$s"
-          ok=1
-          for b in $(python3 "$GITHUB_WORKSPACE/.github/zaloha.py" buckety); do
-            if ! supabase storage cp -r "ss:///$b" . --remote="$SUPABASE_PROJEKT" -j 8 --experimental > "$RUNNER_TEMP/storage-$b.log" 2>&1; then
-              ok=0; echo "::warning::Priečinok $b sa nepodarilo stiahnuť:"; tail -5 "$RUNNER_TEMP/storage-$b.log" | cut -c1-300 | sed 's/^/  /'
+          # verejné priečinky (fotky ponúk, archív skenera, weby) cez verejnú adresu – kľúč netreba
+          python3 "$GITHUB_WORKSPACE/.github/zaloha.py" subory "$s" || echo "SUBORY_NEUPLNE=1" >> "$GITHUB_ENV"
+          # súkromné priečinky (prílohy chatu, dokumenty) cez Supabase CLI – kľúč SUPABASE_ACCESS_TOKEN
+          # musí mať právo „API gateway keys: read“ (api_gateway_keys_read + api_gateway_keys_secret_read)
+          SUKROMNE=$(grep '^SUKROMNE=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)
+          for b in $SUKROMNE; do
+            if supabase storage cp -r "ss:///$b" . --remote="$SUPABASE_PROJEKT" -j 4 --experimental > "$RUNNER_TEMP/storage-$b.log" 2>&1; then
+              echo "$b: $(find "$b" -type f 2>/dev/null | wc -l) súborov (súkromný priečinok)"
+            elif grep -q "api_gateway_keys" "$RUNNER_TEMP/storage-$b.log"; then
+              echo "::warning::Súkromný priečinok $b sa nezálohuje – kľúču SUPABASE_ACCESS_TOKEN chýba právo API gateway keys: read."
+              echo "SUKROMNE_CHYBA=1" >> "$GITHUB_ENV"
+            else
+              echo "::warning::Súkromný priečinok $b sa nepodarilo stiahnuť:"; tail -3 "$RUNNER_TEMP/storage-$b.log" | cut -c1-300 | sed 's/^/  /'
+              echo "SUKROMNE_CHYBA=1" >> "$GITHUB_ENV"
             fi
-            [ -d "$b" ] && echo "$b: $(find "$b" -type f | wc -l) súborov, $(du -sh "$b" | cut -f1)"
           done
-          ocak=$(awk -F'\t' '$1=="storage.objects"{print $2}' "$RUNNER_TEMP/z/databaza/pocty.tsv")
-          mam=$(find "$s" -type f | wc -l)
-          echo "Súborov v úložisku: $ocak, stiahnutých: $mam"
-          if [ "$ok" != 1 ] || [ "$mam" -lt "$((ocak * 98 / 100))" ]; then
-            echo "::warning::Záloha súborov nie je úplná ($mam z $ocak) – záloha databázy pokračuje."
-            echo "SUBORY_NEUPLNE=1" >> "$GITHUB_ENV"
-          fi
+          echo "Spolu stiahnutých súborov: $(find "$s" -type f | wc -l) ($(du -sh "$s" | cut -f1))"
 
       - name: Zbaliť
         if: env.PRESKOCIT != '1'
@@ -251,7 +254,7 @@ jobs:
           {
             echo "### Záloha $STAMP ($DOVOD)"
             [ -n "$DB_SUBOR" ] && echo "- Databáza: \`$DB_SUBOR\` – $(du -h "$DB_SUBOR" | cut -f1), $(awk -F'\t' '{n+=$2} END {print NR " tabuliek, " n " riadkov"}' z/databaza/pocty.tsv 2>/dev/null)"
-            [ -n "$SUB_SUBOR" ] && echo "- Súbory: \`$SUB_SUBOR\` – $(du -h "$SUB_SUBOR" | cut -f1), $(find z/subory -type f | wc -l) súborov${SUBORY_NEUPLNE:+ (neúplné)}"
+            [ -n "$SUB_SUBOR" ] && echo "- Súbory: \`$SUB_SUBOR\` – $(du -h "$SUB_SUBOR" | cut -f1), $(find z/subory -type f | wc -l) súborov${SUBORY_NEUPLNE:+ (neúplné)}${SUKROMNE_CHYBA:+ – bez súkromných priečinkov (chýba právo kľúča)}"
             [ "$ULOZENE_WS" = 1 ] && echo "- Uložené na Websupport: \`$DIR\`"
             [ "$DO_GITHUBU" = 1 ] && echo "- Zašifrovaná kópia: Artifacts tohto behu (90 dní)"
             [ "$SKUSKA_OK" = 1 ] && echo "- Skúška obnovy do prázdnej databázy: **v poriadku**"
