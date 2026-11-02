@@ -10,7 +10,7 @@
 Do výpisu (verejný log GitHubu) nikdy nejdú údaje z tabuliek – len názvy tabuliek a rozdiely v počtoch.
 Prostredie: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJEKT.
 """
-import json, os, sys, urllib.request, urllib.error
+import json, os, subprocess, sys, urllib.request, urllib.error
 
 POCTY_SQL = """
 select format('%s.%s', table_schema, table_name) as t,
@@ -28,9 +28,10 @@ ZIVE = ("inzeraty", "archiv", "odhady", "aktivity", "cas_", "web_", "zobrazenia"
 
 
 REF = os.environ.get("SUPABASE_PROJEKT") or "uwxziqapghlyktwpipjd"
+REGION = os.environ.get("SUPABASE_REGION") or "eu-central-1"
 
 
-def api(method, cesta, telo=None):
+def api(method, cesta, telo=None, ticho=False):
     req = urllib.request.Request(
         f"https://api.supabase.com/v1/projects/{REF}{cesta}",
         data=None if telo is None else json.dumps(telo).encode(), method=method,
@@ -40,7 +41,7 @@ def api(method, cesta, telo=None):
         with urllib.request.urlopen(req, timeout=120) as r:
             return json.loads(r.read() or b"null")
     except urllib.error.HTTPError as e:
-        raise SystemExit(f"Supabase API {method} {cesta}: HTTP {e.code}: {e.read().decode(errors='replace')[:500]}")
+        raise SystemExit("" if ticho else f"Supabase API {method} {cesta}: HTTP {e.code}: {e.read().decode(errors='replace')[:500]}")
 
 
 def q(sql):
@@ -53,11 +54,24 @@ def pripojenie():
     rola = api("POST", "/cli/login-role", {"read_only": True})
     print(f"::add-mask::{rola['password']}")
     print(f"::add-mask::{quote(rola['password'], safe='')}")
-    pool = api("GET", "/config/database/pooler") or []
-    p = next((x for x in pool if x.get("database_type") == "PRIMARY"), pool[0] if pool else {})
-    host = p.get("db_host") or "aws-0-eu-central-1.pooler.supabase.com"
-    # 5432 = režim relácie (pg_dump potrebuje celé spojenie, nie transakčný režim na 6543)
-    return f"postgresql://{rola['role']}.{REF}:{quote(rola['password'], safe='')}@{host}:5432/postgres"
+    # adresu poolera kľúč nemusí smieť čítať (database_pooling_config_read) – vtedy skúsime známe adresy v regióne
+    hosty = []
+    try:
+        pool = api("GET", "/config/database/pooler", ticho=True) or []
+        hosty = [x["db_host"] for x in pool if x.get("database_type") == "PRIMARY" and x.get("db_host")]
+    except SystemExit:
+        pass
+    hosty += [f"aws-{i}-{REGION}.pooler.supabase.com" for i in (1, 0)]
+    for host in dict.fromkeys(hosty):
+        # 5432 = režim relácie (pg_dump potrebuje celé spojenie, nie transakčný režim na 6543)
+        url = f"postgresql://{rola['role']}.{REF}:{quote(rola['password'], safe='')}@{host}:5432/postgres?sslmode=require"
+        r = subprocess.run(["psql", url, "-tAc", "select 1"], capture_output=True, text=True, timeout=60,
+                           env={**os.environ, "PGCONNECT_TIMEOUT": "15"})
+        if r.stdout.strip() == "1":
+            print(f"Databáza cez {host}")
+            return url
+        print(f"{host}: {(r.stderr.strip().splitlines() or ['?'])[-1][:200]}")
+    raise SystemExit("K databáze sa nedá pripojiť cez pooler.")
 
 
 def nacitaj(cesta):
