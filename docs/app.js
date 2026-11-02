@@ -9801,13 +9801,15 @@
         }
       }
       if (p.druh === "web" && !p.web_kontakt_id && /^(Žiadosť o adresu|Pripojiť doménu)/.test(p.poznamka || "")) ciel = '<a href="#" data-prip-web>🌐 Otvoriť Osobný web</a>';
+      // nová objednávka z predajného webu → zákazník v Správe zákazníkov
+      if (p.zakaznik_id) ciel = '<a href="sprava.html#z/' + encodeURIComponent(p.zakaznik_id) + '" data-prip-zak>👥 Otvoriť v Správe zákazníkov</a>';
       var splatna = new Date(p.cas).getTime() <= t;
       return '<div class="prip' + (splatna ? " due" : "") + (ciel ? " ma-ciel" : "") + '" data-prip="' + p.id + '">' +
         '<div class="prip-cas">' + datum(p.cas, true) + "</div>" +
         '<div class="prip-text">' + (cudzia ? avatar(p.makler_id, 20) + " <b>" + esc(meno(p.makler_id)) + "</b> · " : "") + (p.druh && p.druh !== "pripomienka" ? DRUH_IKONA[p.druh] + " " : "") + esc(p.poznamka || "Pripomienka") +
         (ciel ? '<div class="meta">' + ciel + "</div>" : "") + odp +
         (p.vytvoril && p.vytvoril !== p.makler_id ? '<div class="meta">Nastavil: ' + esc(meno(p.vytvoril)) + "</div>" : "") +
-        (p.email_chyba ? '<div class="error">Email sa nepodarilo odoslať: ' + esc(p.email_chyba) + "</div>" : p.email_odoslany && p.druh !== "volat" ? '<div class="meta">✓ Email odoslaný</div>' : "") + "</div>" +
+        (p.email_chyba ? '<div class="error">Email sa nepodarilo odoslať: ' + esc(p.email_chyba) + "</div>" : p.email_odoslany && p.druh !== "volat" && !p.zakaznik_id ? '<div class="meta">✓ Email odoslaný</div>' : "") + "</div>" +
         '<div class="prip-akcie">' + (p.druh === "volat" && !cudzia && S.tel[p.inzerat_id] ? '<a class="btn primary" href="tel:' + esc(String(S.tel[p.inzerat_id].telefon).replace(/[^\d+]/g, "")) + '">📞 Zavolať</a>' : "") +
         '<button class="btn" type="button" data-prip-act="hotovo">✓ Hotovo</button>' +
         (!p.druh || p.druh === "pripomienka" ? '<button class="btn ghost" type="button" data-prip-act="upravit">Upraviť</button>' : "") +
@@ -9883,7 +9885,7 @@
     // ťuknutie na text pripomienky otvorí to, čoho sa týka (inzerát, ponuku, udalosť, schránkovanie)
     var pt = e.target.closest("#zvon .prip-text");
     if (pt && !e.target.closest("a, button, input, select, textarea, .prip-odp")) {
-      var cl = pt.querySelector("[data-prip-inz], [data-prip-nehn], [data-prip-udalost], [data-prip-sch], [data-prip-web]");
+      var cl = pt.querySelector("[data-prip-inz], [data-prip-nehn], [data-prip-udalost], [data-prip-sch], [data-prip-web], [data-prip-zak]");
       if (cl) { e.preventDefault(); cl.click(); return; }
     }
     var li = e.target.closest("[data-prip-inz]");

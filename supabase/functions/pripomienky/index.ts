@@ -2,7 +2,8 @@
 // e-maily strážcu ponúk klientom z webu makléra aj z Týpkových nehnuteľností
 // a v pondelok ráno týždenný prehľad výkonu maklérov administrátorom.
 // Volá ju databáza každú minútu (pg_cron); chránená tajným kľúčom v hlavičke x-kluc.
-// Email: Brevo (BREVO_API_KEY) alebo SMTP cez port 465 (SMTP_HOST, SMTP_USER, SMTP_PASS).
+// Email: Brevo (BREVO_API_KEY) alebo SMTP cez port 465 (SMTP_HOST, SMTP_USER, SMTP_PASS, EMAIL_FROM) – napr. vlastná schránka vo Websupporte.
+// Porty 25 a 587 Supabase nepustí, preto SMTP len cez 465 (SSL).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import nodemailer from "npm:nodemailer@6.9.16";
 
@@ -144,13 +145,24 @@ async function tyzdennyPrehlad(db: any) {
   return { ok: chyby.length === 0, odoslane, chyby };
 }
 
-// nové žiadosti o bezplatnú verziu z predajného webu → e-mail hlavnému správcovi
+// nové objednávky a žiadosti o bezplatnú verziu z predajného webu → e-mail hlavnému správcovi (ku každej zvlášť)
+// a potvrdenie tomu, kto formulár vyplnil. Do zvončeka a mobilu ich hneď dáva databáza (093_objednavka_upozornenie.sql).
+const ODPOVED_TYPEK = "info@realitnytypek.sk";
+// deno-lint-ignore no-explicit-any
+function balikZakaznika(m: any) {
+  const x: string[] = Array.isArray(m) ? m : [];
+  if (x.includes("kancelaria")) return "Realitná kancelária";
+  if (x.includes("skener") && x.includes("web")) return "Skener + osobný web";
+  if (x.includes("skener")) return "Realitný skener";
+  if (x.includes("web")) return "Osobný web";
+  return "";
+}
 // deno-lint-ignore no-explicit-any
 async function webZiadosti(db: any) {
   const { data: rows, error } = await db.from("zakaznici")
     .update({ web_oznamene: new Date().toISOString() })
     .eq("zdroj", "web").is("web_oznamene", null)
-    .select("id, email, poznamky");
+    .select("id, email, poznamky, kontakt_meno, telefon, moduly");
   if (error || !rows?.length) return 0;
   const komu: string[] = [];
   const { data: sp } = await db.from("hlavni_spravcovia").select("user_id");
@@ -158,34 +170,43 @@ async function webZiadosti(db: any) {
     const { data: u } = await db.auth.admin.getUserById(s.user_id);
     if (u?.user?.email) komu.push(u.user.email);
   }
-  if (!komu.length) return 0;
-  // deno-lint-ignore no-explicit-any
-  const zoz = (rows as any[]).map((z) =>
-    `<li style="margin:0 0 10px"><b>${esc(z.email)}</b><br><span style="font-size:13px;color:#555">${esc(String(z.poznamky || "").split("\n").pop())}</span></li>`).join("");
-  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35">
-    <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Nová žiadosť o bezplatnú verziu</b></div>
-    <p style="margin:16px 0 8px">Z webu realitnytypek.sk ${rows.length === 1 ? "prišla nová žiadosť" : "prišlo " + rows.length + " nových žiadostí"}:</p>
-    <ul style="padding-left:18px;margin:0">${zoz}</ul>
-    <p style="margin:22px 0"><a href="${esc(WEB_URL + "sprava.html")}" style="background:#db9522;color:#1e2a35;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700">Otvoriť Správu zákazníkov</a></p>
-    <p style="color:#999;font-size:12px">Realitný týpek · posiela sa len hlavnému správcovi</p></div>`;
   let odoslane = 0;
-  for (const e of komu) {
-    try { await posli(e, "Nová žiadosť o bezplatnú verziu: " + rows[0].email + (rows.length > 1 ? " a ďalší" : ""), html); odoslane++; }
-    catch { /* žiadosť ostáva v Správe zákazníkov */ }
-  }
-  // potvrdenie tomu, kto formulár vyplnil
-  const potvrdenie = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35;line-height:1.55">
-    <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Realitný týpek</b></div>
-    <p style="font-size:16px;margin:16px 0 0">Ahoj,</p>
-    <p style="margin:10px 0 0">ďakujeme za záujem o Realitného týpka. Tvoju žiadosť o bezplatnú verziu na 14 dní máme.</p>
-    <p style="margin:10px 0 0">Ozveme sa ti osobne, vyskladáme moduly podľa toho, čo potrebuješ, a pomôžeme ti so začiatkom.</p>
-    <p style="margin:10px 0 0">Ak máš otázku, stačí odpísať na tento e-mail.</p>
-    <p style="margin:18px 0 0">Tím Realitného týpka<br><a href="https://realitnytypek.sk/" style="color:#8a5a2b">realitnytypek.sk</a></p>
-    <p style="color:#999;font-size:12px;margin-top:20px">Tento e-mail ti prišiel, lebo si na webe realitnytypek.sk požiadal o bezplatnú verziu. Ak si to nebol ty, správu pokojne ignoruj.</p></div>`;
   // deno-lint-ignore no-explicit-any
   for (const z of rows as any[]) {
+    const riadok = String(z.poznamky || "").trim().split("\n").pop() || "";
+    const obj = /^Objednávka/.test(riadok);
+    const bal = balikZakaznika(z.moduly);
+    const meno = String(z.kontakt_meno || "").trim();
+    const tel = String(z.telefon || "").trim();
+    const detail = ((riadok.match(/\d{2}:\d{2}\.\s*(.*)$/) || [])[1] || "").replace(/\s*Kontakt: .*$/, "");
+    const r = (k: string, v: string) => v ? `<tr><td style="padding:5px 14px 5px 0;color:#4a6074;vertical-align:top">${k}</td><td style="padding:5px 0"><b>${v}</b></td></tr>` : "";
+    const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35">
+      <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>${obj ? "Nová objednávka z webu" : "Nová žiadosť o bezplatnú verziu"}</b></div>
+      <table style="border-collapse:collapse;font-size:15px;margin:14px 0 0">
+        ${r("Balík", esc(bal))}${r("Meno", esc(meno))}
+        ${r("Telefón", tel ? `<a href="tel:${esc(tel.replace(/[^\d+]/g, ""))}" style="color:#1e2a35">${esc(tel)}</a>` : "")}
+        ${r("E-mail", `<a href="mailto:${esc(z.email)}" style="color:#1e2a35">${esc(z.email)}</a>`)}</table>
+      ${detail ? `<p style="margin:12px 0 0;font-size:14px;color:#3a4b5a">${esc(detail)}</p>` : ""}
+      <p style="margin:22px 0"><a href="${esc(WEB_URL + "sprava.html#z/" + z.id)}" style="background:#db9522;color:#1e2a35;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700">Otvoriť v Správe zákazníkov</a></p>
+      <p style="color:#999;font-size:12px">Realitný týpek · posiela sa len hlavnému správcovi · odpoveď na tento e-mail ide záujemcovi</p></div>`;
+    const predmet = (obj ? "Nová objednávka z webu: " : "Nová žiadosť o bezplatnú verziu: ") + [bal, meno || z.email].filter(Boolean).join(" – ");
+    for (const e of komu) {
+      try { await posli(e, predmet.slice(0, 140), html, { odMeno: "Realitný týpek", odpovedat: z.email }); odoslane++; }
+      catch { /* objednávka ostáva v Správe zákazníkov aj v zvončeku */ }
+    }
+    // potvrdenie tomu, kto formulár vyplnil
     if (!z.email) continue;
-    try { await posli(z.email, "Tvoja žiadosť o Realitného týpka", potvrdenie); }
+    const potvrdenie = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35;line-height:1.55">
+      <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Realitný týpek</b></div>
+      <p style="font-size:16px;margin:16px 0 0">Ahoj${meno ? " " + esc(meno.split(" ")[0]) : ""},</p>
+      <p style="margin:10px 0 0">ďakujeme za záujem o Realitného týpka. ${obj
+        ? "Tvoju objednávku" + (bal ? " (" + esc(bal) + ")" : "") + " máme. Prvých 14 dní je zadarmo."
+        : "Tvoju žiadosť o bezplatnú verziu na 14 dní máme."}</p>
+      <p style="margin:10px 0 0">Ozveme sa ti osobne, nastavíme ti všetko, čo potrebuješ, a pomôžeme ti so začiatkom.</p>
+      <p style="margin:10px 0 0">Ak máš otázku, stačí odpísať na tento e-mail.</p>
+      <p style="margin:18px 0 0">Tím Realitného týpka<br><a href="https://realitnytypek.sk/" style="color:#8a5a2b">realitnytypek.sk</a></p>
+      <p style="color:#999;font-size:12px;margin-top:20px">Tento e-mail ti prišiel, lebo si na webe realitnytypek.sk ${obj ? "objednal Realitného týpka" : "požiadal o bezplatnú verziu"}. Ak si to nebol ty, správu pokojne ignoruj.</p></div>`;
+    try { await posli(z.email, obj ? "Tvoja objednávka Realitného týpka" : "Tvoja žiadosť o Realitného týpka", potvrdenie, { odMeno: "Realitný týpek", odpovedat: ODPOVED_TYPEK }); }
     catch { /* potvrdenie nie je nutné */ }
   }
   return odoslane;
