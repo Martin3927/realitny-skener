@@ -199,7 +199,7 @@ def skener_sekcia():
           '<div class="pc-lista" aria-hidden="true"><span class="pc-bodky"><i></i><i></i><i></i></span>'
           '<span class="pc-adr">app.realitnytypek.sk · Realitný skener</span>'
           '<span class="pc-skut">' + (FAJKA % (14, 14, '2.6')) + 'Skutočný softvér</span></div>\n'
-          '<a class="pc-shot" href="soft-skener.webp" target="_blank" rel="noopener" title="Otvoriť náhľad vo veľkom"><img src="soft-skener.webp" alt="Realitný skener na počítači: nové inzeráty súkromníkov s tlačidlami Prevziať, '
+          '<a class="pc-shot" href="soft-skener.webp?v=202611021500" target="_blank" rel="noopener" title="Otvoriť náhľad vo veľkom"><img src="soft-skener.webp?v=202611021500" alt="Realitný skener na počítači: nové inzeráty súkromníkov s tlačidlami Prevziať, '
           'Zapísať hovor, SMS poslaná a Pripomenúť" width="1800" height="1125" loading="lazy"></a>\n'
           '</div>\n'
           '<p class="pc-pozn">Skutočný skener na počítači aj v mobile. Inzeráty na ukážke sú vymyslené.</p>\n'
