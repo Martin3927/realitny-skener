@@ -11,6 +11,11 @@ on:
     branches: [main]
     paths: ["supabase/migrations/**", ".github/workflows/databaza.yml", ".github/nasad_databazu.py"]
   workflow_dispatch:
+    inputs:
+      bez_zalohy:
+        description: "Bez zálohy pred zmenou (len v núdzi, keď záloha nejde)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,7 +25,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Pred zmenou databázy záloha (zaloha.yml; ak posledná nie je staršia ako 2 h, novú nerobí).
+  # Keď záloha zlyhá, zmeny sa nespustia. V núdzi: Run workflow → „Bez zálohy pred zmenou“.
+  zaloha:
+    if: ${{ !inputs.bez_zalohy }}
+    uses: ./.github/workflows/zaloha.yml
+    secrets: inherit
+    with:
+      dovod: pred-zmenou
+
   migracie:
+    needs: zaloha
+    if: ${{ !cancelled() && (needs.zaloha.result == 'success' || needs.zaloha.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
