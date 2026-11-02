@@ -71,6 +71,6 @@ jobs:
           [ -f supabase/config.toml ] || printf 'project_id = "realitny-skener"\n' > supabase/config.toml
           for f in ${{ steps.ktore.outputs.zoz }}; do
             echo "::group::$f"
-            supabase functions deploy "$f" --project-ref "$PROJEKT" --no-verify-jwt --use-api
+            supabase functions deploy "$f" --project-ref "$PROJEKT" --no-verify-jwt --use-api --yes
             echo "::endgroup::"
           done
