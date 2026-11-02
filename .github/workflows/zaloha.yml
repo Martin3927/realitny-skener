@@ -156,7 +156,7 @@ jobs:
           s="$RUNNER_TEMP/z/subory"; mkdir -p "$s"; cd "$s"
           ok=1
           for b in $(python3 "$GITHUB_WORKSPACE/.github/zaloha.py" buckety); do
-            if ! supabase storage cp -r "ss:///$b" . --remote="$SUPABASE_PROJEKT" -j 8 > "$RUNNER_TEMP/storage-$b.log" 2>&1; then
+            if ! supabase storage cp -r "ss:///$b" . --remote="$SUPABASE_PROJEKT" -j 8 --experimental > "$RUNNER_TEMP/storage-$b.log" 2>&1; then
               ok=0; echo "::warning::Priečinok $b sa nepodarilo stiahnuť:"; tail -5 "$RUNNER_TEMP/storage-$b.log" | cut -c1-300 | sed 's/^/  /'
             fi
             [ -d "$b" ] && echo "$b: $(find "$b" -type f | wc -l) súborov, $(du -sh "$b" | cut -f1)"
