@@ -296,7 +296,10 @@ jobs:
           if ! psql "$DB" --single-transaction -v ON_ERROR_STOP=1 -q -o /dev/null \
                 -f "$z/roles.sql" -f "$z/schema.sql" -c 'SET session_replication_role = replica' -f "$z/data.sql" \
                 -c "do \$\$ begin if to_regclass('cron.job') is not null then update cron.job set active = false; end if; end \$\$" 2> obnova.err; then
-            echo "::error::Obnova zlyhala:"; grep -m8 -iE "error|fatal|could not" obnova.err | cut -c1-300; tail -5 start.log | cut -c1-200; exit 1
+            kod=$?; echo "::error::Obnova zlyhala (psql $kod, chybový výstup $(wc -l < obnova.err) riadkov):"
+            # bez riadkov DETAIL/CONTEXT – tie môžu obsahovať údaje a log je verejný
+            grep -vE "^(DETAIL|CONTEXT|HINT|LINE|psql:.*(DETAIL|CONTEXT|HINT|LINE))|^\s" obnova.err | head -8 | cut -c1-200
+            psql "$DB" -tAc "select 'spojenie ok'" 2>&1 | head -2; exit 1
           fi
           psql "$DB" -v ON_ERROR_STOP=1 -q -o /dev/null -f "$RUNNER_TEMP/z/nastavenia/nastavenia.sql" 2> nastavenia.err \
             || { echo "::error::Nastavenia sa nedali obnoviť:"; grep -m8 -iE "error|fatal" nastavenia.err | cut -c1-300; exit 1; }
