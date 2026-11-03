@@ -94,6 +94,7 @@ PATA = '''<!-- FOOTER -->
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px">
 <a href="./">Hlavná stránka</a>
 <a href="mailto:info@realitnytypek.sk">info@realitnytypek.sk</a>
+<a href="podmienky.html">Podmienky používania</a>
 <a href="ochrana-udajov.html">Ochrana osobných údajov</a>
 <button type="button" class="linkbtn" data-ck-act="reopen">Nastavenia cookies</button>
 <span>© 2026 Realitný týpek</span>

@@ -67,7 +67,7 @@
           '<p class="reg-pozn">' + (D.platiaci ? "Najviac " + MAX + " okresy. Ďalšie ti pridáme podľa objednávky." : "Počas skúšobnej doby najviac " + MAX + " okresy. Ďalšie si pridáš po objednaní.") + "</p></div>" : "") +
         '<label class="field"><span>Heslo (aspoň 8 znakov)</span><input id="r-heslo" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label>' +
         '<label class="field"><span>Heslo ešte raz</span><input id="r-heslo2" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label>' +
-        '<label class="reg-suhlas"><input type="checkbox" id="r-suhlas" required><span>Súhlasím so <a href="https://realitnytypek.sk/ochrana-udajov.html" target="_blank" rel="noopener">spracovaním osobných údajov</a> na účely používania Realitného týpka.</span></label>' +
+        '<label class="reg-suhlas"><input type="checkbox" id="r-suhlas" required><span>Súhlasím s <a href="https://realitnytypek.sk/podmienky.html" target="_blank" rel="noopener">podmienkami používania</a> a beriem na vedomie <a href="https://realitnytypek.sk/ochrana-udajov.html" target="_blank" rel="noopener">ochranu osobných údajov</a>.</span></label>' +
         '<div class="error" id="r-err" role="alert"></div>' +
         '<button class="btn primary wide" type="submit">Dokončiť registráciu a začať</button>' +
       "</form>");
@@ -118,7 +118,7 @@
     if (D.skener && !okresy.length) return chyba("Vyber aspoň jeden okres pre skener.", document.querySelector("#r-okresy-zoz select"));
     if (h.length < 8) return chyba("Heslo musí mať aspoň 8 znakov.", $("#r-heslo"));
     if (h !== h2) return chyba("Heslá sa nezhodujú.", $("#r-heslo2"));
-    if (!$("#r-suhlas").checked) return chyba("Potvrď súhlas so spracovaním osobných údajov.", $("#r-suhlas"));
+    if (!$("#r-suhlas").checked) return chyba("Potvrď súhlas s podmienkami používania.", $("#r-suhlas"));
     btn.disabled = true; btn.textContent = "Vytváram účet…";
     var r = await volaj({ akcia: "dokoncit", meno: meno, telefon: tel, nazov: nazov, okresy: okresy, heslo: h }).catch(function () { return { chyba: "Nepodarilo sa spojiť so serverom. Skontroluj internet a skús znova." }; });
     if (!r.ok) {
