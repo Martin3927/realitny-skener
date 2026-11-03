@@ -10,7 +10,7 @@
     ["klienti_aml", "Klienti a AML"], ["dokumenty", "Dokumenty"], ["emailing", "Emailing"], ["ai", "AI"], ["pracovny_email", "Pracovný e-mail"],
   ];
   var MOD_N = {}; MODULY.forEach(function (m) { MOD_N[m[0]] = m[1]; });
-  var STAVY = [["zaujemca", "Záujemca"], ["skusobna", "Skúšobná doba"], ["aktivny", "Platiaci"], ["pozastaveny", "Pozastavený"], ["zruseny", "Zrušený"], ["vlastna", "Vlastná kancelária Týpka"]];
+  var STAVY = [["zaujemca", "Záujemca"], ["skusobna", "Skúšobná doba"], ["aktivny", "Platiaci"], ["pozastaveny", "Pozastavený"], ["zruseny", "Zrušený"], ["vlastna", "Vlastná kancelária Týpka (neplatí)"]];
   var TYP = { kancelaria: "Realitná kancelária", makler: "Samostatný maklér" };
 
   var S = { zak: [], platby: [], filter: { q: "", typ: "", produkt: "", stav: "pozornost_vsetci" } };
@@ -61,7 +61,7 @@
 
   // ---------------------------------------------------------------- stav zákazníka
   function stav(z) {
-    if (z.stav === "vlastna") return { t: "Vlastná kancelária Týpka", c: "dobry", poradie: 8 };
+    if (z.stav === "vlastna") return { t: z.typ === "makler" ? "Z vlastnej kancelárie · neplatí" : "Vlastná kancelária Týpka", c: "dobry", poradie: 8 };
     if (z.stav === "zruseny") return { t: "Zrušený", c: "sivy", poradie: 9 };
     if (z.stav === "pozastaveny") return { t: "Pozastavený", c: "zly", poradie: 3, pozor: true };
     if (z.stav === "zaujemca") return { t: "Záujemca", c: "info", poradie: 5 };
@@ -290,7 +290,7 @@
           '<label class="field"><span>Poznámky pre mňa</span><textarea id="z-pozn" rows="4" placeholder="dohody, sľuby, s kým som hovoril…">' + esc(z.poznamky || "") + "</textarea></label></section>" +
 
         '<div class="sp-uloz"><button type="submit" class="btn primary">' + (novy ? "Uložiť zákazníka" : "Uložiť zmeny") + '</button><a class="btn ghost" href="#">Zrušiť</a>' +
-          (novy || z.stav === "vlastna" ? "" : '<button type="button" class="btn danger sp-zmaz" id="z-zmaz">Zmazať zákazníka</button>') + "</div>" +
+          (novy || (z.stav === "vlastna" && z.typ === "kancelaria") ? "" : '<button type="button" class="btn danger sp-zmaz" id="z-zmaz">Zmazať zákazníka</button>') + "</div>" +
       "</form>" +
       (novy ? "" : platbyHtml(z, platby) + pristupHtml());
 
@@ -429,7 +429,7 @@
     if (z.stav === "aktivny") b.push(["pozastavit", "Pozastaviť"]);
     if (z.stav === "pozastaveny") b.push(["aktivny", "Obnoviť"]);
     if (z.stav === "zruseny") b.push(["obnovit_zaujemca", "Vrátiť medzi záujemcov"]);
-    else if (z.stav !== "vlastna") b.push(["zrusit", "Zrušiť spoluprácu"]);
+    else if (z.stav !== "vlastna" || z.typ === "makler") b.push(["zrusit", "Zrušiť spoluprácu"]);
     return '<div class="sp-akcie">' + b.map(function (x) { return '<button type="button" class="btn' + (x[0] === "zrusit" ? " ghost danger" : "") + '" data-akcia="' + x[0] + '">' + x[1] + "</button>"; }).join("") +
       (z.telefon ? '<a class="btn ghost" href="tel:' + esc(z.telefon.replace(/\s/g, "")) + '">📞 ' + esc(z.telefon) + "</a>" : "") +
       (z.email ? '<a class="btn ghost" href="mailto:' + esc(z.email) + '">✉ ' + esc(z.email) + "</a>" : "") + "</div>";
