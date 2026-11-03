@@ -28,7 +28,8 @@ Práva kontroluje databáza (nie stránka), takže maklér bez povolenia sa k po
 Supabase na bezplatnom pláne nezálohuje nič, preto beží vlastná záloha (`.github/workflows/zaloha.yml`):
 - **databáza** (všetky tabuľky, používatelia, pravidlá prístupu, funkcie) – každú noc a pred každou zmenou databázy
   (ak posledná záloha nie je mladšia ako 2 h; keď záloha zlyhá, zmena sa nespustí),
-- **súbory** (fotky ponúk, archív skenera, weby) – každú nedeľu,
+- **nastavenia** (plánovač, pravidlá prístupu k súborom, rozšírenia, zoznam funkcií, DNS) – spolu s databázou,
+- **súbory** (fotky ponúk, archív skenera, weby) a **kód** (celý repozitár s históriou) – každú nedeľu,
 - uložené na hosting Websupport do `/realitnytypek.sk/zalohy` (mimo webu, z internetu nedostupné):
   60 posledných záloh databázy, 4 zálohy súborov. Stiahnuť sa dajú cez SFTP prístup k hostingu (ten istý ako pri nasadení).
 - Voliteľne zašifrovaná kópia v GitHube: v *Settings → Secrets and variables → Actions* pridať `ZALOHA_HESLO`
@@ -37,7 +38,9 @@ Supabase na bezplatnom pláne nezálohuje nič, preto beží vlastná záloha (`
   dostane právo *API gateway keys: read*.
 - Ručne: *Actions → Záloha → Run workflow* (dá sa zaškrtnúť aj súbory a skúška obnovy).
 
-**Obnova** – nikdy rovno do ostrej databázy. Záloha sa najprv obnoví do prázdnej databázy
+- Export pre majiteľa na stiahnutie: *Run workflow* s verejným kľúčom age (`pre_kluc`) – navyše s kľúčmi z Vaultu.
+
+**Obnova** – plán podľa toho, čo sa pokazilo, je v `.github/OBNOVA.txt` (je aj v každej zálohe). Nikdy rovno do ostrej databázy. Záloha sa najprv obnoví do prázdnej databázy
 (postup v `README.txt` v každej zálohe), skontroluje sa a až potom sa vrátia potrebné údaje.
 Pri zmene `zaloha.yml` sa spraví plná záloha aj skúšobná obnova do prázdnej databázy s porovnaním počtu riadkov.
 
