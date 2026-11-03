@@ -49,6 +49,8 @@ TYPY = set(CONFIG["typy"])
 OKRESY_EMAIL = list(CONFIG["okresy"])   # e-mail so súhrnom chodí len za tieto okresy (Alpha Reality)
 OKRESY = list(CONFIG["okresy"])         # sledované okresy – na začiatku behu sa doplnia z databázy (kancelárie a zákazníci)
 PAUZA = float(CONFIG.get("pauza_medzi_poziadavkami_s", 1.0))
+# Bazoš obmedzí prístup (429), keď dostane veľa požiadaviek za sebou (3. 11. 2026 pri prvom načítaní dvoch okresov)
+PAUZA_HOSTA = {"reality.bazos.sk": max(PAUZA, 1.8)}
 
 LOG = []
 
@@ -183,7 +185,8 @@ def _get(url, **kw):
         try:
             r = SESSION.get(url, timeout=(10, 30), **kw)
             _VYPADKY.pop(host, None)
-            time.sleep(PAUZA + random.uniform(0, PAUZA))  # nepravidelná pauza ako u človeka
+            p = PAUZA_HOSTA.get(host, PAUZA)
+            time.sleep(p + random.uniform(0, p))  # nepravidelná pauza ako u človeka
             if r.status_code == 200:
                 return r.text
             log(f"  ! {r.status_code} {url}")
@@ -498,6 +501,8 @@ def bazos_detail(url):
 
 
 BAZOS_MAX_STRAN_KRATKA = 10  # poistka pri bežnej/rýchlej kontrole
+BAZOS_STRAN_PRVE = 8         # nový okres mimo nočnej kontroly: najnovších 8 strán v kategórii, zvyšok dočíta nočná plná kontrola
+BAZOS_DETAILOV_PRVE = 120    # nový okres: celé popisy najviac 120 inzerátov za beh (ostatné majú popis zo zoznamu)
 
 
 def skenuj_bazos(plny, max_stran, zname=frozenset(), typy_radar=None, plne=frozenset()):
@@ -522,6 +527,8 @@ def skenuj_bazos(plny, max_stran, zname=frozenset(), typy_radar=None, plne=froze
                     r["okres"] = bazos_okres(r) or r["okres_bazos"]
                     vysledky.setdefault(r["pid"], r)
                 if not riadky or offset + 20 >= celkom or strana >= 40:
+                    break
+                if plne_h and not plny and strana >= BAZOS_STRAN_PRVE:
                     break
                 if not plne_h:
                     netop = [r for r in riadky if not r.get("top")]
@@ -1767,7 +1774,8 @@ def main():
             for k, v in (meta.get("bazos_pocty_nehn") or {}).items():
                 pocty[k] = max(pocty.get(k, 0), v)
         # celý popis stiahneme len pri nových inzerátoch zo sledovaných okresov
-        detailov = 0
+        detailov = detailov_prve = 0
+        prve_bazos = {o for p, o in zaklad if p == "bazos"}
         pred = len(najdene)
         for r in surove:
             if r["okres"] not in OKRESY:
@@ -1775,9 +1783,10 @@ def main():
             existujuci = inzeraty.get(f"bazos:{r['pid']}")
             if existujuci and existujuci.get("popis"):
                 r["popis_plny"] = existujuci["popis"]
-            elif detailov < 700:
+            elif detailov < 700 and (r["okres"] not in prve_bazos or detailov_prve < BAZOS_DETAILOV_PRVE):
                 d = bezpecne("Bazoš detail", lambda: bazos_detail(r["url"]))
                 detailov += 1
+                detailov_prve += r["okres"] in prve_bazos
                 if d:
                     r["popis_plny"] = d
             z = norm_bazos(r, pocty)
