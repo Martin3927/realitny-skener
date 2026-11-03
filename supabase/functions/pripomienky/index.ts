@@ -1,4 +1,4 @@
-// Odošle emaily k pripomienkam, ktorým nastal čas (aj automatické uvoľnenie a zníženú cenu),
+// Odošle emaily k pripomienkam, ktorým nastal čas (aj automatické uvoľnenie a zníženú cenu), e-maily o konci skúšobnej doby,
 // e-maily strážcu ponúk klientom z webu makléra aj z Týpkových nehnuteľností
 // a v pondelok ráno týždenný prehľad výkonu maklérov administrátorom.
 // Volá ju databáza každú minútu (pg_cron); chránená tajným kľúčom v hlavičke x-kluc.
@@ -290,6 +290,54 @@ async function registracneEmaily(db: any) {
       chyby.push(String((e as Error).message || e).slice(0, 200));
       // vrátime do fronty – skúsi sa pri ďalšom behu (do 3 dní od žiadosti)
       await db.from("zakaznici").update({ registracia_poslat: z.registracia_poslat }).eq("id", z.id).is("registrovany", null);
+    }
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
+}
+
+// koniec skúšobnej doby: 3 dni pred koncom „končí“ a deň po konci „skončila“ – frontu plní databáza (_skusobna_koniec, ráno o 8:00)
+// deno-lint-ignore no-explicit-any
+async function skusobnaEmaily(db: any) {
+  const { data: rows, error } = await db.from("zakaznici")
+    .select("id, email, kontakt_meno, typ, nazov, moduly, skusobna_do, skusobna_email, platba_obdobie")
+    .not("skusobna_email", "is", null).not("registrovany", "is", null).limit(20);
+  if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const z of (rows as any[]) ?? []) {
+    const { data: zab } = await db.from("zakaznici").update({ skusobna_email: null })
+      .eq("id", z.id).eq("skusobna_email", z.skusobna_email).select("id");
+    if (!zab?.length) continue;
+    try {
+      if (!z.email) throw new Error("zákazník nemá e-mail");
+      const meno = String(z.kontakt_meno || "").trim();
+      const bal = balikZakaznika(z.moduly);
+      const konci = z.skusobna_email === "konci";
+      const do_ = z.skusobna_do ? new Date(z.skusobna_do + "T12:00:00").toLocaleDateString("sk-SK", { day: "numeric", month: "numeric", year: "numeric" }) : "";
+      const cennik = "https://realitnytypek.sk/#cennik";
+      const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35;line-height:1.55">
+        <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Realitný týpek</b></div>
+        <p style="font-size:16px;margin:16px 0 0">Ahoj${meno ? " " + esc(meno.split(" ")[0]) : ""},</p>
+        ${konci
+          ? `<p style="margin:10px 0 0">tvoja skúšobná doba Realitného týpka${bal ? " (" + esc(bal) + ")" : ""} <b>končí ${esc(do_)}</b>.
+               Ak chceš pokračovať, stačí odpísať na tento e-mail alebo zavolať – pošleme ti údaje na platbu a nič sa nepreruší.
+               Platíš mesačne, pri platbe na rok dopredu máš mesiac zdarma. Ceny sú vždy konečné, s DPH.</p>
+             <p style="margin:10px 0 0">Ak sa neozveš, prístup sa po tomto dni pozastaví. Všetko, čo si si v Týpkovi uložil, ti ostáva – po zaplatení pokračuješ tam, kde si skončil.</p>`
+          : `<p style="margin:10px 0 0">tvoja skúšobná doba Realitného týpka${bal ? " (" + esc(bal) + ")" : ""} <b>skončila ${esc(do_)}</b> a prístup je pozastavený.
+               Všetko, čo si si uložil, ti ostáva.</p>
+             <p style="margin:10px 0 0">Ak chceš pokračovať, odpíš na tento e-mail alebo zavolaj – pošleme ti údaje na platbu a hneď po nej pokračuješ tam, kde si skončil.
+               Platíš mesačne, pri platbe na rok dopredu máš mesiac zdarma. Ceny sú vždy konečné, s DPH.</p>
+             <p style="margin:10px 0 0">Ak ti niečo v Týpkovi chýbalo alebo nesedelo, napíš nám to – robíme ho pre maklérov a každá pripomienka nám pomôže.</p>`}
+        <p style="margin:22px 0"><a href="${cennik}" style="background:#db9522;color:#1e2a35;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Pozrieť cenník</a></p>
+        <p style="margin:18px 0 0">Tím Realitného týpka<br><a href="https://realitnytypek.sk/" style="color:#8a5a2b">realitnytypek.sk</a> · <a href="mailto:${ODPOVED_TYPEK}" style="color:#8a5a2b">${ODPOVED_TYPEK}</a></p>
+        <p style="color:#999;font-size:12px;margin-top:20px">Tento e-mail ti prišiel, lebo máš v Realitnom týpkovi skúšobnú dobu na 14 dní zadarmo.</p></div>`;
+      await posli(z.email, konci ? `Skúšobná doba Realitného týpka ti končí ${do_}` : "Skúšobná doba Realitného týpka skončila – chceš pokračovať?", html,
+        { odMeno: "Realitný týpek", odpovedat: ODPOVED_TYPEK });
+      odoslane++;
+    } catch (e) {
+      chyby.push(String((e as Error).message || e).slice(0, 200));
+      await db.from("zakaznici").update({ skusobna_email: z.skusobna_email }).eq("id", z.id).is("skusobna_email", null);
     }
   }
   return { ok: chyby.length === 0, odoslane, chyby };
@@ -596,11 +644,12 @@ Deno.serve(async (req) => {
   }
   const web = await webZiadosti(db).catch(() => 0);
   const registracie = await registracneEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
+  const skusobna = await skusobnaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
   const potvrdenia = await strazcaPotvrdenia(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
   const strazca = await strazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
   const portal = {
     potvrdenia: await portalStrazcaPotvrdenia(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) })),
     strazca: await portalStrazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) })),
   };
-  return Response.json({ ok: true, odoslane, web, registracie, potvrdenia, strazca, portal });
+  return Response.json({ ok: true, odoslane, web, registracie, skusobna, potvrdenia, strazca, portal });
 });

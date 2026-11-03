@@ -712,7 +712,7 @@
     for (var i = 0; i < r.length; i++) o[i] = r.charCodeAt(i);
     return o;
   }
-  var DRUHY_UPOZ = [["spravy", "✉️ Správy v chate"], ["inzeraty", "🔎 Nové inzeráty v skeneri"], ["kontakty", "💬 Nové kontakty z webu"], ["pripomienky", "📞 Znova zavolať (predajca nedvíhal)"]];
+  var DRUHY_UPOZ = [["spravy", "✉️ Správy v chate"], ["inzeraty", "🔎 Nové inzeráty v skeneri"], ["kontakty", "💬 Nové kontakty z webu"], ["pripomienky", "🔔 Pripomienky, obhliadky a znova zavolať"]];
   // chce maklér tento druh upozornení? (admin ich zapína a vypína každému zvlášť; predvolene zapnuté)
   function chceUpoz(druh, m) { var u = (m || S.me || {}).upozornenia; return !u || u[druh] !== false; }
   function textZariadeni(m) {
@@ -730,12 +730,12 @@
   }
   function boxUpozornenia() {
     var obce = S.me.obce || [], zap = [], vyp = [];
-    var dostupne = DRUHY_UPOZ.filter(function (x) { return x[0] === "spravy" ? maSekciu("chat") : x[0] === "inzeraty" || x[0] === "pripomienky" ? maSekciu("inzeraty") : true; });
+    var dostupne = DRUHY_UPOZ.filter(function (x) { return x[0] === "spravy" ? maSekciu("chat") : x[0] === "inzeraty" ? maSekciu("inzeraty") : true; });
     dostupne.forEach(function (x) { (chceUpoz(x[0]) ? zap : vyp).push(x); });
     var co = zap.map(function (x) {
       if (x[0] === "spravy") return "<li>✉️ nová správa v chate</li>";
       if (x[0] === "kontakty") return "<li>💬 nový kontakt z vášho webu</li>";
-      if (x[0] === "pripomienky") return "<li>📞 je čas znova zavolať predajcovi, ktorý nedvíhal</li>";
+      if (x[0] === "pripomienky") return "<li>🔔 vlastná pripomienka, obhliadka, udalosť z kalendára alebo končiaca zmluva v pravý čas" + (maSekciu("inzeraty") ? " (aj 📞 znova zavolať predajcovi, ktorý nedvíhal)" : "") + "</li>";
       return "<li>🔎 nový súkromný inzerát – " + (obce.length ? "z Vašich obcí (" + obce.length + ": " + esc(obce.slice(0, 4).join(", ")) + (obce.length > 4 ? "…" : "") + ")" : "z oboch okresov, obmedzíte ich nižšie v Mojich obciach") + "</li>";
     }).join("");
     return '<div class="box" id="box-push"><h3>🔔 Upozornenia do mobilu</h3>' +
