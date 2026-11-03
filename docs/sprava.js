@@ -10,7 +10,7 @@
     ["klienti_aml", "Klienti a AML"], ["dokumenty", "Dokumenty"], ["emailing", "Emailing"], ["ai", "AI"], ["pracovny_email", "Pracovný e-mail"],
   ];
   var MOD_N = {}; MODULY.forEach(function (m) { MOD_N[m[0]] = m[1]; });
-  var STAVY = [["zaujemca", "Záujemca"], ["skusobna", "Skúšobná doba"], ["aktivny", "Platiaci"], ["pozastaveny", "Pozastavený"], ["zruseny", "Zrušený"]];
+  var STAVY = [["zaujemca", "Záujemca"], ["skusobna", "Skúšobná doba"], ["aktivny", "Platiaci"], ["pozastaveny", "Pozastavený"], ["zruseny", "Zrušený"], ["vlastna", "Vlastná kancelária Týpka"]];
   var TYP = { kancelaria: "Realitná kancelária", makler: "Samostatný maklér" };
 
   var S = { zak: [], platby: [], filter: { q: "", typ: "", stav: "pozornost_vsetci" } };
@@ -50,6 +50,7 @@
 
   // ---------------------------------------------------------------- stav zákazníka
   function stav(z) {
+    if (z.stav === "vlastna") return { t: "Vlastná kancelária Týpka", c: "dobry", poradie: 8 };
     if (z.stav === "zruseny") return { t: "Zrušený", c: "sivy", poradie: 9 };
     if (z.stav === "pozastaveny") return { t: "Pozastavený", c: "zly", poradie: 3, pozor: true };
     if (z.stav === "zaujemca") return { t: "Záujemca", c: "info", poradie: 5 };
@@ -110,7 +111,7 @@
 
   // ---------------------------------------------------------------- prehľad
   function prehlad() {
-    var aktivni = S.zak.filter(function (z) { return z.stav !== "zruseny"; });
+    var aktivni = S.zak.filter(function (z) { return z.stav !== "zruseny" && z.stav !== "vlastna"; });
     var skusobna = S.zak.filter(function (z) { return z.stav === "skusobna"; });
     var platiaci = S.zak.filter(function (z) { return z.stav === "aktivny"; });
     var pozor = S.zak.filter(function (z) { return stav(z).pozor; });
@@ -123,7 +124,7 @@
       '<div class="sp-uvod"><div><h1>Zákazníci</h1><p>Kancelárie a samostatní makléri, ktorí používajú Realitný týpek.</p></div>' +
         '<a class="btn primary sp-novy" href="#novy">+ Nový zákazník</a></div>' +
       '<div class="sp-dlazdice">' +
-        dlazdica("Zákazníci", aktivni.length, "bez zrušených") +
+        dlazdica("Zákazníci", aktivni.length, "bez zrušených a vlastnej kancelárie") +
         dlazdica("Na skúšku", skusobna.length, skusobna.filter(function (z) { return z.skusobna_do && rozdielDni(z.skusobna_do) <= 7; }).length + " končí do 7 dní") +
         dlazdica("Platiaci", platiaci.length, eur(mesacne) + " mesačne") +
         dlazdica("Treba riešiť", pozor.length, "po splatnosti, koniec skúšky", pozor.length ? "pozor" : "") +
@@ -229,7 +230,7 @@
           }).join("") + '</div><p class="sp-pozn">Kataster a mapa, Kalendár a Chat sú zadarmo pre každého.</p>' +
           '<div class="sp-okresy"><span class="sp-okresy-l">Okresy pre skener</span><div id="z-okresy" class="sp-okr-zoz"></div>' +
             '<button type="button" class="btn ghost sp-okr-plus" id="z-okr-plus"><b aria-hidden="true">+</b> Pridať ďalší okres</button>' +
-            '<p class="sp-pozn">Prvý je hlavný okres, každý ďalší je +2 € mesačne.</p></div>' +
+            '<p class="sp-pozn">' + (z.stav === "vlastna" ? "Okresy určujú, ktoré inzeráty kancelária vidí v skeneri." : "Prvý je hlavný okres, každý ďalší je +2 € mesačne.") + "</p></div>" +
           '<div class="form-grid">' +
             pole("z-pocet", "Počet maklérov", z.pocet_maklerov, "number", ' min="0" step="1"') +
             '<label class="field"><span>Platí</span><select id="z-obdobie"><option value="mesacne">mesačne</option><option value="rocne">ročne (11 mesiacov)</option></select></label>' +
@@ -250,7 +251,7 @@
           '<label class="field"><span>Poznámky pre mňa</span><textarea id="z-pozn" rows="4" placeholder="dohody, sľuby, s kým som hovoril…">' + esc(z.poznamky || "") + "</textarea></label></section>" +
 
         '<div class="sp-uloz"><button type="submit" class="btn primary">' + (novy ? "Uložiť zákazníka" : "Uložiť zmeny") + '</button><a class="btn ghost" href="#">Zrušiť</a>' +
-          (novy ? "" : '<button type="button" class="btn danger sp-zmaz" id="z-zmaz">Zmazať zákazníka</button>') + "</div>" +
+          (novy || z.stav === "vlastna" ? "" : '<button type="button" class="btn danger sp-zmaz" id="z-zmaz">Zmazať zákazníka</button>') + "</div>" +
       "</form>" +
       (novy ? "" : platbyHtml(z, platby) + pristupHtml());
 
@@ -275,7 +276,7 @@
     });
     form.addEventListener("submit", function (e) { e.preventDefault(); ulozZakaznika(novy ? null : z); });
     if (!novy) {
-      $("#z-zmaz").addEventListener("click", function () { zmazZakaznika(z); });
+      if ($("#z-zmaz")) $("#z-zmaz").addEventListener("click", function () { zmazZakaznika(z); });
       document.querySelectorAll("[data-akcia]").forEach(function (b) { b.addEventListener("click", function () { rychlaAkcia(z, b.dataset.akcia); }); });
       platbyUdalosti(z);
     } else {
@@ -374,7 +375,8 @@
     if (z.stav === "skusobna") b.push(["predlz14", "Predĺžiť skúšku o 14 dní"], ["aktivny", "Prešiel na platenú verziu"]);
     if (z.stav === "aktivny") b.push(["pozastavit", "Pozastaviť"]);
     if (z.stav === "pozastaveny") b.push(["aktivny", "Obnoviť"]);
-    if (z.stav !== "zruseny") b.push(["zrusit", "Zrušiť spoluprácu"]); else b.push(["obnovit_zaujemca", "Vrátiť medzi záujemcov"]);
+    if (z.stav === "zruseny") b.push(["obnovit_zaujemca", "Vrátiť medzi záujemcov"]);
+    else if (z.stav !== "vlastna") b.push(["zrusit", "Zrušiť spoluprácu"]);
     return '<div class="sp-akcie">' + b.map(function (x) { return '<button type="button" class="btn' + (x[0] === "zrusit" ? " ghost danger" : "") + '" data-akcia="' + x[0] + '">' + x[1] + "</button>"; }).join("") +
       (z.telefon ? '<a class="btn ghost" href="tel:' + esc(z.telefon.replace(/\s/g, "")) + '">📞 ' + esc(z.telefon) + "</a>" : "") +
       (z.email ? '<a class="btn ghost" href="mailto:' + esc(z.email) + '">✉ ' + esc(z.email) + "</a>" : "") + "</div>";
