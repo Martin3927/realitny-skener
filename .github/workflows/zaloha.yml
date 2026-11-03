@@ -294,17 +294,16 @@ jobs:
           DB=postgresql://postgres:postgres@127.0.0.1:54322/postgres
           z="$RUNNER_TEMP/z/databaza"
           if ! psql "$DB" --single-transaction -v ON_ERROR_STOP=1 -q -o /dev/null \
-                -f "$z/roles.sql" -f "$z/schema.sql" -c 'SET session_replication_role = replica' -f "$z/data.sql" \
-                -c "do \$\$ begin if to_regclass('cron.job') is not null then update cron.job set active = false; end if; end \$\$" 2> obnova.err; then
-            kod=$?; echo "::error::Obnova zlyhala (psql $kod, chybový výstup $(wc -l < obnova.err) riadkov):"
-            # bez riadkov DETAIL/CONTEXT – tie môžu obsahovať údaje a log je verejný
-            grep -vE "^(DETAIL|CONTEXT|HINT|LINE|psql:.*(DETAIL|CONTEXT|HINT|LINE))|^\s" obnova.err | head -8 | cut -c1-200
-            psql "$DB" -tAc "select 'spojenie ok'" 2>&1 | head -2; exit 1
+                -f "$z/roles.sql" -f "$z/schema.sql" -c 'SET session_replication_role = replica' -f "$z/data.sql" 2> obnova.err; then
+            echo "::error::Obnova zlyhala:"
+            # len riadky ERROR/FATAL (DETAIL a CONTEXT môžu obsahovať údaje a log je verejný)
+            grep -E "ERROR|FATAL" obnova.err | sed -E 's/^psql:[^ ]+ //' | head -5 | cut -c1-200; exit 1
           fi
+          psql "$DB" -q -o /dev/null -c "select cron.alter_job(jobid, active := false) from cron.job" 2>/dev/null || true
           psql "$DB" -v ON_ERROR_STOP=1 -q -o /dev/null -f "$RUNNER_TEMP/z/nastavenia/nastavenia.sql" 2> nastavenia.err \
-            || { echo "::error::Nastavenia sa nedali obnoviť:"; grep -m8 -iE "error|fatal" nastavenia.err | cut -c1-300; exit 1; }
+            || { echo "::error::Nastavenia sa nedali obnoviť:"; grep -E "ERROR|FATAL" nastavenia.err | sed -E 's/^psql:[^ ]+ //' | head -5 | cut -c1-200; exit 1; }
           # skúšobná databáza nesmie nič spúšťať (plánovač by volal skutočné funkcie)
-          psql "$DB" -q -c "update cron.job set active = false" >/dev/null
+          psql "$DB" -q -o /dev/null -c "select cron.alter_job(jobid, active := false) from cron.job" || true
           ocak=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['pocty'][0]['cron'])" "$RUNNER_TEMP/z/nastavenia/nastavenia.json")
           mam=$(psql "$DB" -tAc "select count(*) from cron.job")
           echo "Plánovač po obnove: $mam úloh (v ostrej $ocak)"
