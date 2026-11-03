@@ -404,11 +404,11 @@ jobs:
           if [ "$LEN_MIESTO" = "true" ]; then
             # podrobne: každá záloha s veľkosťou a dátumom (názvy obsahujú len dátum a dôvod zálohy)
             for p in databaza subory kod; do
-              echo "== $p"; ws "cls -l --block-size=1048576 --sort=name $DIR/$p/" | awk '{n=$NF; sub(".*/", "", n); printf "  %5s MB  %s\n", $5, n}' || true
+              echo "== $p"; ws "cls --size --block-size=1 --sort=name $DIR/$p/" | awk '{n=$NF; sub(".*/", "", n); printf "  %7.1f MB  %s\n", $1/1048576, n}' || true
             done | tee -a podrobne.txt
-            # celý hosting po priečinkoch (bez archívu skenera, ten je vyššie)
-            echo "== hosting" | tee -a podrobne.txt
-            ws "du -m --max-depth=1 --exclude=archiv /" | sort -rn | head -20 | tee -a podrobne.txt || true
+            # celý hosting po priečinkoch (bez archívu skenera, ten je vyššie) – čo zaberá najviac
+            echo "== hosting (MB, priečinky do 3. úrovne)" | tee -a podrobne.txt
+            ws "du -m --max-depth=3 --exclude=archiv /" | sort -rn | awk '$1 >= 5' | head -30 | tee -a podrobne.txt || true
             # koľko miesta zostáva (ak to server povie – nie každý SFTP server to vie)
             sudo apt-get install -y -qq sshpass >/dev/null 2>&1 || true
             host=${FTP_SERVER%%:*}; port=22; [[ "$FTP_SERVER" == *:* ]] && port=${FTP_SERVER##*:}
