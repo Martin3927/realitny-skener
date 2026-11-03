@@ -13,7 +13,15 @@
   var STAVY = [["zaujemca", "Záujemca"], ["skusobna", "Skúšobná doba"], ["aktivny", "Platiaci"], ["pozastaveny", "Pozastavený"], ["zruseny", "Zrušený"], ["vlastna", "Vlastná kancelária Týpka"]];
   var TYP = { kancelaria: "Realitná kancelária", makler: "Samostatný maklér" };
 
-  var S = { zak: [], platby: [], filter: { q: "", typ: "", stav: "pozornost_vsetci" } };
+  var S = { zak: [], platby: [], filter: { q: "", typ: "", produkt: "", stav: "pozornost_vsetci" } };
+  // prepínače v zozname zákazníkov (typ zákazníka a objednaný produkt) – pamätajú si poslednú voľbu
+  var F_TYP = [["", "Všetci"], ["kancelaria", "Realitné kancelárie"], ["makler", "Samostatní makléri"]];
+  var F_PRODUKT = [["", "Všetko"], ["skener", "Skener"], ["web", "Web makléra"], ["oboje", "Skener aj web"]];
+  try {
+    var ulozeny = JSON.parse(localStorage.getItem("sprava-filter") || "{}");
+    if (F_TYP.some(function (o) { return o[0] === ulozeny.typ; })) S.filter.typ = ulozeny.typ;
+    if (F_PRODUKT.some(function (o) { return o[0] === ulozeny.produkt; })) S.filter.produkt = ulozeny.produkt;
+  } catch (e) { /* bez pamäte */ }
   var $ = function (s, r) { return (r || document).querySelector(s); };
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -138,31 +146,54 @@
         dlazdica("Uhradené tento mesiac", eur(mesiac), "spolu od začiatku " + eur(spolu)) +
       "</div>" +
       '<div class="sp-filtre">' +
-        '<input type="search" id="f-q" placeholder="Hľadať názov, IČO, kontakt…" value="' + esc(S.filter.q) + '">' +
-        '<select id="f-typ"><option value="">Všetky typy</option><option value="kancelaria">Realitné kancelárie</option><option value="makler">Samostatní makléri</option></select>' +
+        '<input type="search" id="f-q" placeholder="Hľadať názov, IČO, kontakt, okres…" value="' + esc(S.filter.q) + '">' +
         '<select id="f-stav"><option value="pozornost_vsetci">Všetci okrem zrušených</option><option value="pozor">Treba riešiť</option>' +
           STAVY.map(function (s) { return '<option value="' + s[0] + '">' + s[1] + "</option>"; }).join("") + '<option value="">Úplne všetci</option></select>' +
       "</div>" +
+      '<div class="sp-prepinace" id="sp-prepinace"></div>' +
       '<div id="sp-zoznam"></div>';
-    $("#f-typ").value = S.filter.typ; $("#f-stav").value = S.filter.stav;
+    $("#f-stav").value = S.filter.stav;
     $("#f-q").addEventListener("input", function (e) { S.filter.q = e.target.value; zoznam(); });
-    $("#f-typ").addEventListener("change", function (e) { S.filter.typ = e.target.value; zoznam(); });
     $("#f-stav").addEventListener("change", function (e) { S.filter.stav = e.target.value; zoznam(); });
+    $("#sp-prepinace").addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-f]");
+      if (!b) return;
+      S.filter[b.dataset.f] = b.dataset.v;
+      try { localStorage.setItem("sprava-filter", JSON.stringify({ typ: S.filter.typ, produkt: S.filter.produkt })); } catch (er) { /* bez pamäte */ }
+      zoznam();
+    });
     zoznam();
+  }
+  function maProdukt(z, p) {
+    var m = z.moduly || [], sk = m.indexOf("skener") >= 0, web = m.indexOf("web") >= 0;
+    return p === "skener" ? sk : p === "web" ? web : p === "oboje" ? sk && web : true;
+  }
+  // zákazník prejde filtrom; „okrem“ = prepínač, pre ktorý práve rátame počty
+  function prejdeFiltrom(z, okrem) {
+    var f = S.filter, q = f.q.trim().toLowerCase();
+    if (okrem !== "typ" && f.typ && z.typ !== f.typ) return false;
+    if (okrem !== "produkt" && !maProdukt(z, f.produkt)) return false;
+    if (f.stav === "pozornost_vsetci" && z.stav === "zruseny") return false;
+    if (f.stav === "pozor" && !stav(z).pozor) return false;
+    if (f.stav && f.stav !== "pozor" && f.stav !== "pozornost_vsetci" && z.stav !== f.stav) return false;
+    if (q && [z.nazov, z.ico, z.kontakt_meno, z.email, z.telefon, (z.okresy || []).join(" ")].join(" ").toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  }
+  function prepinac(kluc, nazov, moznosti) {
+    return '<div class="sp-filt" role="group" aria-label="' + esc(nazov) + '"><span class="sp-filt-n">' + esc(nazov) + "</span>" +
+      moznosti.map(function (o) {
+        var pocet = S.zak.filter(function (z) { return prejdeFiltrom(z, kluc) && (kluc === "typ" ? !o[0] || z.typ === o[0] : maProdukt(z, o[0])); }).length;
+        var akt = S.filter[kluc] === o[0];
+        return '<button type="button" data-f="' + kluc + '" data-v="' + o[0] + '" aria-pressed="' + akt + '"' + (akt ? ' class="akt"' : "") + ">" +
+          esc(o[1]) + " <small>" + pocet + "</small></button>";
+      }).join("") + "</div>";
   }
   function dlazdica(n, v, pod, trieda) {
     return '<div class="sp-dl ' + (trieda || "") + '"><span>' + esc(n) + "</span><b>" + esc(v) + "</b><small>" + esc(pod) + "</small></div>";
   }
   function zoznam() {
-    var q = S.filter.q.trim().toLowerCase(), f = S.filter;
-    var rows = S.zak.filter(function (z) {
-      if (f.typ && z.typ !== f.typ) return false;
-      if (f.stav === "pozornost_vsetci" && z.stav === "zruseny") return false;
-      if (f.stav === "pozor" && !stav(z).pozor) return false;
-      if (f.stav && f.stav !== "pozor" && f.stav !== "pozornost_vsetci" && z.stav !== f.stav) return false;
-      if (q && [z.nazov, z.ico, z.kontakt_meno, z.email, z.telefon, (z.okresy || []).join(" ")].join(" ").toLowerCase().indexOf(q) < 0) return false;
-      return true;
-    }).sort(function (a, b) { return stav(a).poradie - stav(b).poradie || a.nazov.localeCompare(b.nazov, "sk"); });
+    if ($("#sp-prepinace")) $("#sp-prepinace").innerHTML = S.zak.length ? prepinac("typ", "Zobraziť", F_TYP) + prepinac("produkt", "Produkt", F_PRODUKT) : "";
+    var rows = S.zak.filter(function (z) { return prejdeFiltrom(z); }).sort(function (a, b) { return stav(a).poradie - stav(b).poradie || a.nazov.localeCompare(b.nazov, "sk"); });
 
     if (!S.zak.length) {
       $("#sp-zoznam").innerHTML = '<div class="sp-prazdne"><img src="typek-postava.png" alt="" width="110" height="124"><h3>Zatiaľ žiadni zákazníci</h3>' +

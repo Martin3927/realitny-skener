@@ -37,6 +37,16 @@ body.sz-stranka { min-height: 100vh; padding-bottom: 60px }
 
 .sp-filtre { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px }
 .sp-filtre select { flex: 0 1 220px }
+/* prepínače v zozname: typ zákazníka a produkt */
+.sp-prepinace { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 14px }
+.sp-filt { display: flex; flex-wrap: wrap; align-items: center; gap: 6px }
+.sp-filt-n { font-size: 12.5px; font-weight: 700; color: var(--muted); margin-right: 2px }
+.sp-filt button { font: inherit; font-size: 13.5px; font-weight: 600; padding: 7px 13px; border-radius: 999px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); cursor: pointer; white-space: nowrap }
+.sp-filt button:hover { border-color: var(--muted) }
+.sp-filt button small { font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 3px; font-variant-numeric: tabular-nums }
+.sp-filt button.akt { background: var(--ink); color: var(--surface); border-color: var(--ink) }
+.sp-filt button.akt small { color: inherit; opacity: .75 }
+.sp-filt button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px }
 
 /* zoznam */
 .sp-tab { background: var(--surface); border-radius: 12px; overflow: hidden; box-shadow: 0 6px 20px rgb(30 42 53 / .06) }
