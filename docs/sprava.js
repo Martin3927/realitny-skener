@@ -34,14 +34,17 @@
   function eur(n) { if (n == null || n === "") return "–"; return Number(n).toLocaleString("sk-SK", { minimumFractionDigits: Number(n) % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " €"; }
   function dni(n) { n = Math.abs(n); return n === 1 ? "1 deň" : n < 5 ? n + " dni" : n + " dní"; }
 
-  // cenník (s DPH, od 1. 11. 2026): skener 21 € + 2 € za každý ďalší okres, osobný web 57 €;
+  // cenník (s DPH, od 1. 11. 2026): skener 21 € + 2 € za každý ďalší okres, osobný web 57 €
+  // (od 3. 11. 2026 pre kancelárie podľa počtu webov: 2–4 po 45 €, 5–9 po 35 €, od 10 po 29 € za web);
   // s osobným webom je skener za polovicu (balík Jednotlivec = web + skener + pracovný e-mail, správa ponúk a AI v cene)
   function cenaSkenera(pocetOkresov, sWebom) { return (21 + 2 * (Math.max(1, pocetOkresov) - 1)) * (sWebom ? 0.5 : 1); }
-  function cenaPodlaCennika(moduly, pocetOkresov) {
+  function cenaZaWeb(pocet) { return pocet >= 10 ? 29 : pocet >= 5 ? 35 : pocet >= 2 ? 45 : 57; }
+  function cenaWebov(pocet) { pocet = Math.max(1, pocet || 1); return pocet * cenaZaWeb(pocet); }
+  function cenaPodlaCennika(moduly, pocetOkresov, pocetWebov) {
     var c = 0, nezname = [], web = moduly.indexOf("web") >= 0, sk = moduly.indexOf("skener") >= 0;
     moduly.forEach(function (m) {
       if (m === "skener") c += cenaSkenera(pocetOkresov, web);
-      else if (m === "web") c += 57;
+      else if (m === "web") c += cenaWebov(pocetWebov);
       else if (web && (m === "ponuky" || m === "ai" || (m === "pracovny_email" && sk))) { /* v cene webu / balíka */ }
       else nezname.push(MOD_N[m] || m);
     });
@@ -69,7 +72,11 @@
   }
   function uhradene(id) { return S.platby.filter(function (p) { return p.zakaznik_id === id; }).reduce(function (s, p) { return s + Number(p.suma); }, 0); }
   function objednane(z) {
-    var m = (z.moduly || []).map(function (k) { return k === "skener" && (z.okresy || []).length ? "Skener (" + z.okresy.length + " " + (z.okresy.length === 1 ? "okres" : z.okresy.length < 5 ? "okresy" : "okresov") + ")" : MOD_N[k] || k; });
+    var m = (z.moduly || []).map(function (k) {
+      if (k === "skener" && (z.okresy || []).length) return "Skener (" + z.okresy.length + " " + (z.okresy.length === 1 ? "okres" : z.okresy.length < 5 ? "okresy" : "okresov") + ")";
+      if (k === "web" && z.typ === "kancelaria" && z.pocet_webov > 1) return "Osobné weby (" + z.pocet_webov + ")";
+      return MOD_N[k] || k;
+    });
     return m.length ? m.join(", ") : "nič zatiaľ";
   }
 
@@ -233,6 +240,7 @@
             '<p class="sp-pozn">' + (z.stav === "vlastna" ? "Okresy určujú, ktoré inzeráty kancelária vidí v skeneri." : "Prvý je hlavný okres, každý ďalší je +2 € mesačne.") + "</p></div>" +
           '<div class="form-grid">' +
             pole("z-pocet", "Počet maklérov", z.pocet_maklerov, "number", ' min="0" step="1"') +
+            '<label class="field" id="z-weby-pole"><span>Počet osobných webov maklérov</span><input type="number" id="z-weby" min="1" step="1" value="' + esc(z.pocet_webov || 1) + '"></label>' +
             '<label class="field"><span>Platí</span><select id="z-obdobie"><option value="mesacne">mesačne</option><option value="rocne">ročne (11 mesiacov)</option></select></label>' +
           "</div>" +
           '<div class="form-grid sp-cena">' +
@@ -256,6 +264,8 @@
       (novy ? "" : platbyHtml(z, platby) + pristupHtml());
 
     okresyNaplnit(z.okresy || []);
+    zobrazPoleWebov();
+    document.querySelectorAll('[name="typ"], [name="mod"]').forEach(function (x) { x.addEventListener("change", zobrazPoleWebov); });
     $("#z-obdobie").value = z.platba_obdobie || "mesacne";
     $("#z-stav").value = z.stav;
     var form = $("#sp-form");
@@ -263,11 +273,12 @@
     $("#z-cennik").addEventListener("click", function () {
       var moduly = Array.from(form.querySelectorAll('[name="mod"]:checked')).map(function (x) { return x.value; });
       var okr = okresyZPola();
-      var c = cenaPodlaCennika(moduly, okr.length);
+      var weby = pocetWebovZPola();
+      var c = cenaPodlaCennika(moduly, okr.length, weby);
       $("#z-cena").value = c.cena || "";
       var sWebom = moduly.indexOf("web") >= 0;
       $("#z-cennik-info").textContent = (moduly.indexOf("skener") >= 0 ? "Skener: " + Math.max(1, okr.length) + " okr. = " + eur(cenaSkenera(okr.length, sWebom)) + (sWebom ? " (s webom za polovicu)" : "") + ". " : "") +
-        (sWebom ? "Osobný web 57 €. " : "") + (c.nezname.length ? "Bez ceny v cenníku: " + c.nezname.join(", ") + " – dopíš ručne." : "") +
+        (sWebom ? (weby > 1 ? "Osobné weby: " + weby + " × " + eur(cenaZaWeb(weby)) + " = " + eur(cenaWebov(weby)) + ". " : "Osobný web 57 €. ") : "") + (c.nezname.length ? "Bez ceny v cenníku: " + c.nezname.join(", ") + " – dopíš ručne." : "") +
         ($("#z-obdobie").value === "rocne" && c.cena ? " Ročne: " + eur(c.cena * 11) + "." : "");
     });
     form.querySelector("[data-predlz]").addEventListener("click", function () {
@@ -324,6 +335,16 @@
     okresyObnov();
     $("#z-okr-plus").addEventListener("click", function () { var s = okresRiadok(""); okresyObnov(); s.focus(); });
   }
+  // počet webov má zmysel len pri kancelárii s objednaným osobným webom (samostatný maklér má vždy 1)
+  function pocetWebovZPola() {
+    var kanc = (document.querySelector('[name="typ"]:checked') || {}).value === "kancelaria";
+    return kanc ? Math.max(1, parseInt($("#z-weby").value, 10) || 1) : 1;
+  }
+  function zobrazPoleWebov() {
+    var kanc = (document.querySelector('[name="typ"]:checked') || {}).value === "kancelaria";
+    var web = !!document.querySelector('[name="mod"][value="web"]:checked');
+    $("#z-weby-pole").hidden = !(kanc && web);
+  }
   function okresyZPola() {
     return Array.from(document.querySelectorAll("#z-okresy select")).map(function (x) { return x.value; })
       .filter(function (o, i, a) { return o && a.indexOf(o) === i; });
@@ -343,6 +364,7 @@
       moduly: Array.from(form.querySelectorAll('[name="mod"]:checked')).map(function (x) { return x.value; }),
       okresy: okresyZPola(),
       pocet_maklerov: Math.max(0, parseInt($("#z-pocet").value, 10) || 0),
+      pocet_webov: pocetWebovZPola(),
       platba_obdobie: $("#z-obdobie").value,
       mesacna_cena: hodnota("#z-cena") == null ? null : Number(hodnota("#z-cena")),
       cena_zamrazena_do: hodnota("#z-zamraz"),
