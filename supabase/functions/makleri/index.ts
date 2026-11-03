@@ -1,5 +1,7 @@
 // Správa účtov maklérov (vytvorenie účtu, zmena hesla).
 // Beží v Supabase s administrátorským kľúčom; volajúceho overuje sama.
+// Kancelárie: administrátor pracuje len s maklérmi svojej (aktívnej) kancelárie; nový maklér dostane jeho kanceláriu.
+// Hlavný správca Týpka môže založiť účet aj do inej kancelárie (telo.kancelaria – prvý správca novej kancelárie).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const PRVY_ADMIN = "augustinak@alphareality.sk";
@@ -34,18 +36,27 @@ Deno.serve(async (req) => {
   // pri akejkoľvek chybe sa NEberie ako prvé spustenie (bezpečná predvoľba)
   const { data: prve, error: ePrve } = await admin.rpc("je_prve_spustenie");
   const prveSpustenie = !ePrve && prve === true;
-  let volajuciJeAdmin = false;
+  let volajuciJeAdmin = false, hlavnySpravca = false;
+  let kancelaria: number | null = null;   // aktívna kancelária volajúceho (v režime podpory zvolená)
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   if (token && !prveSpustenie) {
     const { data } = await admin.auth.getUser(token);
     if (data?.user) {
-      const { data: m } = await admin.from("makleri").select("rola, aktivny").eq("id", data.user.id).maybeSingle();
+      const { data: m } = await admin.from("makleri").select("rola, aktivny, kancelaria_id").eq("id", data.user.id).maybeSingle();
       volajuciJeAdmin = !!m && m.aktivny && m.rola === "admin";
+      kancelaria = m?.kancelaria_id ?? null;
+      const { data: h } = await admin.from("hlavni_spravcovia").select("user_id").eq("user_id", data.user.id).maybeSingle();
+      hlavnySpravca = !!h && volajuciJeAdmin;
+      if (hlavnySpravca) {
+        const { data: pod } = await admin.from("spravca_podpora").select("kancelaria_id").eq("user_id", data.user.id).maybeSingle();
+        if (pod?.kancelaria_id) kancelaria = pod.kancelaria_id;
+      }
     }
   }
 
   if (telo.akcia === "vytvorit") {
     if (!prveSpustenie && !volajuciJeAdmin) return odpoved(403, { chyba: "Účty maklérov môže vytvárať len administrátor." });
+    if (!prveSpustenie && !kancelaria) return odpoved(403, { chyba: "Váš účet nemá kanceláriu." });
     const email = String(telo.email || "").trim().toLowerCase();
     const heslo = String(telo.heslo || "");
     const meno = String(telo.meno || "").trim();
@@ -65,8 +76,9 @@ Deno.serve(async (req) => {
       return odpoved(400, { chyba: msg });
     }
     const rola = prveSpustenie ? "admin" : (telo.rola === "admin" ? "admin" : "makler");
+    const doKancelarie = prveSpustenie ? 1 : (hlavnySpravca && Number(telo.kancelaria) > 0 ? Number(telo.kancelaria) : kancelaria);
     const { error: e2 } = await admin.from("makleri").insert({
-      id: data.user!.id, meno, email, rola, aktivny: true, vidi_podhodnotene: rola === "admin",
+      id: data.user!.id, meno, email, rola, aktivny: true, vidi_podhodnotene: rola === "admin", kancelaria_id: doKancelarie,
     });
     if (e2) {
       await admin.auth.admin.deleteUser(data.user!.id);
@@ -77,6 +89,8 @@ Deno.serve(async (req) => {
 
   if (telo.akcia === "heslo") {
     if (!volajuciJeAdmin) return odpoved(403, { chyba: "Heslo môže zmeniť len administrátor." });
+    const { data: ciel } = await admin.from("makleri").select("kancelaria_id").eq("id", String(telo.id)).maybeSingle();
+    if (!ciel || ciel.kancelaria_id !== kancelaria) return odpoved(403, { chyba: "Heslo môžete zmeniť len maklérovi svojej kancelárie." });
     const heslo = String(telo.heslo || "");
     if (heslo.length < 8) return odpoved(400, { chyba: "Heslo musí mať aspoň 8 znakov." });
     const { error } = await admin.auth.admin.updateUserById(String(telo.id), { password: heslo });
