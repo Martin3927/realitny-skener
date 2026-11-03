@@ -736,7 +736,7 @@
       if (x[0] === "spravy") return "<li>✉️ nová správa v chate</li>";
       if (x[0] === "kontakty") return "<li>💬 nový kontakt z vášho webu</li>";
       if (x[0] === "pripomienky") return "<li>🔔 vlastná pripomienka, obhliadka, udalosť z kalendára alebo končiaca zmluva v pravý čas" + (maSekciu("inzeraty") ? " (aj 📞 znova zavolať predajcovi, ktorý nedvíhal)" : "") + "</li>";
-      return "<li>🔎 nový súkromný inzerát – " + (obce.length ? "z Vašich obcí (" + obce.length + ": " + esc(obce.slice(0, 4).join(", ")) + (obce.length > 4 ? "…" : "") + ")" : "z oboch okresov, obmedzíte ich nižšie v Mojich obciach") + "</li>";
+      return "<li>🔎 nový súkromný inzerát – " + (obce.length ? "z Vašich obcí (" + obce.length + ": " + esc(obce.slice(0, 4).join(", ")) + (obce.length > 4 ? "…" : "") + ")" : "zo sledovaných okresov, obmedzíte ich nižšie v Mojich obciach") + "</li>";
     }).join("");
     return '<div class="box" id="box-push"><h3>🔔 Upozornenia do mobilu</h3>' +
       (zap.length ? '<p class="meta">Telefón vám pípne, aj keď je aplikácia zatvorená, keď príde:</p><ul class="push-druhy">' + co + "</ul>" :
@@ -2278,12 +2278,12 @@
   function vekText(h) { return h >= 48 ? Math.floor(h / 24) + " dni" : h >= 24 ? "viac ako deň" : Math.round(h) + " h"; }
   // strážca skenera (vidí len admin): koľko kontrol po sebe zlyhalo a posledná chyba
   function nacitajStrazcu() {
-    if (!admin()) { S.strazca = null; return Promise.resolve(); }
+    if (!admin() || !S.hlavny) { S.strazca = null; return Promise.resolve(); }
     return sb.from("skener_strazca").select("zlyhania, prve_zlyhanie, posledna_chyba").maybeSingle()
       .then(function (r) { S.strazca = r.error ? null : r.data; }, function () { S.strazca = null; });
   }
   function bannerSkenera() {
-    var m = S.meta || {}, vek = skenerStoji(), chyby = m.chyby || [], st = admin() && S.strazca && S.strazca.zlyhania >= 2 ? S.strazca : null;
+    var m = S.meta || {}, vek = skenerStoji(), chyby = m.chyby || [], hl = admin() && S.hlavny, st = hl && S.strazca && S.strazca.zlyhania >= 2 ? S.strazca : null;
     if (!vek && !chyby.length && !S.skOprava && !st) return "";
     var h = "";
     if (st && !vek) h += '<div class="sk-stav zle" role="status"><span>⚠️ <b>Posledné ' + st.zlyhania + " kontroly skenera zlyhali</b>" +
@@ -2291,10 +2291,10 @@
       (st.posledna_chyba ? '<br><span class="meta">Chyba: ' + esc(st.posledna_chyba) + "</span>" : "") + "</span>" +
       '<button class="btn" type="button" data-sk="oprav">🔧 Opraviť skener</button></div>';
     if (vek || chyby.length) h += '<div class="sk-stav' + (vek ? " zle" : "") + '" role="status"><span>' + (vek ?
-      "⚠️ <b>Skener " + vekText(vek) + " nekontroloval portály</b> – nové inzeráty sa teraz neobjavujú. Posledná kontrola " + datum(m.posledna_kontrola, true) + "." + (admin() ? "" : " Dajte vedieť administrátorovi.") :
+      "⚠️ <b>Skener " + vekText(vek) + " nekontroloval portály</b> – nové inzeráty sa teraz neobjavujú. Posledná kontrola " + datum(m.posledna_kontrola, true) + "." + (hl ? "" : " Už o tom vieme a pracujeme na tom.") :
       "⚠️ Pri poslednej kontrole sa nepodarilo načítať: " + esc(chyby.join("; ")) + ". Ostatné portály bežia normálne.") + "</span>" +
-      (admin() ? '<button class="btn" type="button" data-sk="oprav">🔧 Opraviť skener</button>' : "") + "</div>";
-    if (S.skOprava && admin()) h += '<div class="box sk-oprava"><div class="vykon-hlava"><h3>🔧 Oprava skenera</h3><button class="btn ghost" type="button" data-sk="zavri">Zavrieť</button></div>' +
+      (hl ? '<button class="btn" type="button" data-sk="oprav">🔧 Opraviť skener</button>' : "") + "</div>";
+    if (S.skOprava && hl) h += '<div class="box sk-oprava"><div class="vykon-hlava"><h3>🔧 Oprava skenera</h3><button class="btn ghost" type="button" data-sk="zavri">Zavrieť</button></div>' +
       '<p class="meta">Skener beží na GitHube cez deň každých 30 minút (v noci plná kontrola) a do databázy sa prihlasuje tajným kľúčom. Keď kľúč na GitHube nesedí s databázou, každá kontrola zlyhá. Oprava trvá 2 minúty:</p>' +
       '<ol class="sk-kroky"><li><b>Vytvorte nový kľúč</b> a skopírujte ho.<div class="pd-odkaz">' +
         (S.skKluc ? '<input type="text" readonly value="' + esc(S.skKluc) + '" aria-label="Nový kľúč skenera"><button class="btn primary" type="button" data-sk="kopiruj">Kopírovať kľúč</button>' :
