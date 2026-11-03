@@ -12,6 +12,8 @@ name: Záloha
 #         Keď je v Settings → Secrets → Actions nastavené ZALOHA_HESLO, ide navyše kópia zašifrovaná
 #         týmto heslom (7z, AES-256) do GitHubu – beh v Actions → Artifacts, 90 dní.
 #         Nezašifrovaná záloha sa do GitHubu nikdy nenahráva (repozitár je verejný).
+# Export:  Run workflow s „pre_kluc“ (verejný kľúč age) – záloha zašifrovaná týmto kľúčom ide na 1 deň do Artifacts
+#         (na stiahnutie do počítača; otvorí ju len držiteľ súkromného kľúča).
 # Obnova: postup je v README.txt v každej zálohe a v README.md (časť Záloha).
 # Do logov (sú verejné) nejdú žiadne údaje z databázy – len veľkosti súborov a súčty riadkov.
 
@@ -32,6 +34,10 @@ on:
         description: "Aj skúška obnovy do prázdnej databázy"
         type: boolean
         default: false
+      pre_kluc:
+        description: "Export na stiahnutie: verejný kľúč age (age1…) – záloha sa ním zašifruje a bude 1 deň v Artifacts"
+        type: string
+        default: ""
   workflow_call:
     inputs:
       dovod:
@@ -58,6 +64,7 @@ jobs:
       PLAN: ${{ github.event.schedule }}
       CHCEM_SUBORY: ${{ inputs.subory }}
       CHCEM_SKUSKU: ${{ inputs.skuska }}
+      PRE_KLUC: ${{ inputs.pre_kluc }}
       PONECHAT_DB: 60
       PONECHAT_SUBORY: 4
     steps:
@@ -73,6 +80,10 @@ jobs:
           subory=0; skuska=0
           if [ "$CHCEM_SUBORY" = "true" ] || [ "$PLAN" = "40 2 * * 0" ] || [ "$DOVOD" = "skuska" ]; then subory=1; fi
           if [ "$CHCEM_SKUSKU" = "true" ] || [ "$DOVOD" = "skuska" ]; then skuska=1; fi
+          if [ -n "$PRE_KLUC" ]; then
+            [[ "$PRE_KLUC" =~ ^age1[0-9a-z]{58}$ ]] || { echo "::error::pre_kluc nie je verejný kľúč age (age1…)"; exit 1; }
+            echo "EXPORT=1" >> "$GITHUB_ENV"
+          fi
           echo "SUBORY=$subory" >> "$GITHUB_ENV"; echo "SKUSKA=$skuska" >> "$GITHUB_ENV"
           echo "STAMP=$(TZ=Europe/Bratislava date +%Y-%m-%d-%H%M)" >> "$GITHUB_ENV"
           echo "Dôvod: $DOVOD · súbory: $subory · skúška obnovy: $skuska"
@@ -226,6 +237,25 @@ jobs:
           name: typek-zaloha-${{ env.STAMP }}-${{ env.DOVOD }}
           path: ${{ runner.temp }}/sifrovane/*.7z
           retention-days: 90
+          compression-level: 0
+          if-no-files-found: error
+
+      # export na stiahnutie: zašifrovaný verejným kľúčom toho, kto o export požiadal (súkromný kľúč nikdy nie je v GitHube)
+      - name: Export na stiahnutie (zašifrovaný kľúčom age)
+        if: env.PRESKOCIT != '1' && env.EXPORT == '1'
+        run: |
+          cd "$RUNNER_TEMP"
+          command -v age >/dev/null || sudo apt-get install -y -qq age >/dev/null
+          mkdir -p export
+          tar -cf - "$DB_SUBOR" ${SUB_SUBOR:+"$SUB_SUBOR"} | age -r "$PRE_KLUC" -o "export/typek-export-$STAMP.tar.age"
+          ls -la export
+
+      - uses: actions/upload-artifact@v4
+        if: env.PRESKOCIT != '1' && env.EXPORT == '1'
+        with:
+          name: typek-export-${{ env.STAMP }}
+          path: ${{ runner.temp }}/export/*.age
+          retention-days: 1
           compression-level: 0
           if-no-files-found: error
 
