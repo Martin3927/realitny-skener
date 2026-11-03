@@ -4,6 +4,8 @@
   zaloha.py sql                       – SQL, ktoré spočíta riadky vo všetkých tabuľkách (aj pre lokálnu obnovu)
   zaloha.py pocty <subor.tsv>         – spočíta riadky v ostrej databáze (cez Supabase API) a uloží ich
   zaloha.py pripojenie                – dočasná rola CLI, adresa databázy do $GITHUB_ENV (DB_URL, skrytá v logoch)
+  zaloha.py nastavenia <priečinok>    – nastavenia mimo výpisu: plánovač, pravidlá súborov, rozšírenia, nastavenia projektu
+  zaloha.py tajne <priečinok>         – kľúče z Vaultu (len do exportu zašifrovaného kľúčom používateľa)
   zaloha.py subory <priečinok>        – stiahne súbory z verejných priečinkov úložiska
   zaloha.py buckety                   – vypíše priečinky úložiska súborov (storage.buckets)
   zaloha.py porovnaj <zive> <obnova>  – porovná počty riadkov ostrej databázy a obnovenej zálohy
@@ -11,7 +13,7 @@
 Do výpisu (verejný log GitHubu) nikdy nejdú údaje z tabuliek – len názvy tabuliek a rozdiely v počtoch.
 Prostredie: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJEKT.
 """
-import json, os, subprocess, sys, time, urllib.request, urllib.error
+import json, os, re, subprocess, sys, time, urllib.request, urllib.error
 
 POCTY_SQL = """
 select format('%s.%s', table_schema, table_name) as t,
@@ -134,6 +136,92 @@ def stiahni_verejne(ciel):
         sys.exit(1)
 
 
+NASTAVENIA_SQL = r"""
+select 1 as p, 0 as z, '-- rozšírenia' as s
+union all select 1, 1, format('create extension if not exists %I with schema %I;', e.extname, n.nspname)
+  from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname <> 'plpgsql'
+union all select 2, 0, '-- pravidlá prístupu k súborom a realtime (CLI ich do schema.sql nedáva)'
+union all select 2, 1, format(E'drop policy if exists %I on %I.%I;\ncreate policy %I on %I.%I as %s for %s to %s%s%s;',
+    policyname, schemaname, tablename, policyname, schemaname, tablename, permissive, cmd,
+    (select string_agg(case when r = 'public' then 'public' else quote_ident(r) end, ', ') from unnest(roles) r),
+    coalesce(' using (' || qual || ')', ''), coalesce(' with check (' || with_check || ')', ''))
+  from pg_policies where schemaname in ('storage', 'realtime')
+union all select 3, 0, '-- vlastné triggery na tabuľkách auth a storage'
+union all select 3, 1, pg_get_triggerdef(t.oid) || ';'
+  from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_proc p on p.oid = t.tgfoid
+  where c.relnamespace in ('auth'::regnamespace, 'storage'::regnamespace) and p.pronamespace = 'public'::regnamespace and not t.tgisinternal
+union all select 4, 0, '-- realtime'
+union all select 4, 1, format('do $x$ begin alter publication %I add table %I.%I; exception when duplicate_object then null; end $x$;',
+    pubname, schemaname, tablename)
+  from pg_publication_tables where pubname = 'supabase_realtime'
+union all select 5, 0, '-- plánovač (pg_cron): ' || (select count(*) from cron.job) || ' úloh'
+union all select 5, 1 + jobid::int, case when jobname is null then format('select cron.schedule(%L, %L);', schedule, command)
+    else format('select cron.schedule(%L, %L, %L);', jobname, schedule, command) end
+    || case when not active then format(' select cron.alter_job(job_id := (select max(jobid) from cron.job where command = %L), active := false);', command) else '' end
+  from cron.job
+order by 1, 2, 3
+"""
+
+VAULT_SQL = "select name, description, decrypted_secret from vault.decrypted_secrets order by name"
+
+
+def redigovat(o):
+    """V nastaveniach z API skryje heslá a kľúče (do zálohy nepatria)."""
+    if isinstance(o, dict):
+        return {k: ("***" if isinstance(v, str) and v and re.search(r"secret|pass|key|token|private", k, re.I)
+                    else redigovat(v)) for k, v in o.items()}
+    if isinstance(o, list):
+        return [redigovat(x) for x in o]
+    return o
+
+
+def nastavenia(ciel):
+    os.makedirs(ciel, exist_ok=True)
+    riadky = [r["s"] for r in q(NASTAVENIA_SQL)]
+    with open(os.path.join(ciel, "nastavenia.sql"), "w", encoding="utf-8") as f:
+        f.write("-- Nastavenia databázy mimo schema.sql – spustiť po obnove roles/schema/data.\n")
+        f.write("\n".join(riadky) + "\n")
+    info = {
+        "vault_mena": [r["name"] for r in q("select name from vault.secrets order by name")],
+        "pocty": q("""select (select count(*) from cron.job) as cron,
+                             (select count(*) from pg_policies where schemaname in ('storage','realtime')) as pravidla_suborov,
+                             (select count(*) from storage.buckets) as priecinky"""),
+        "vlastne_domeny": [r["domena"] for r in q("select distinct domena from public.weby where coalesce(domena, '') <> '' order by 1")],
+    }
+    # nastavenia projektu v Supabase cez Management API – čo kľúč smie čítať
+    nedostupne = []
+    for meno, cesta in [("auth", "/config/auth"), ("funkcie", "/functions"), ("tajomstva_funkcii", "/secrets"),
+                        ("postgrest", "/postgrest"), ("uloziste", "/config/storage"), ("projekt", "")]:
+        try:
+            data = api("GET", cesta, ticho=True)
+        except SystemExit:
+            nedostupne.append(meno)
+            continue
+        if meno == "tajomstva_funkcii":  # hodnoty nie, len mená
+            data = sorted(x.get("name") for x in data or [])
+        info[meno] = redigovat(data)
+    info["nedostupne_cez_api"] = nedostupne
+    with open(os.path.join(ciel, "nastavenia.json"), "w", encoding="utf-8") as f:
+        json.dump(info, f, ensure_ascii=False, indent=2, default=str)
+    print(f"Nastavenia: {len(riadky)} riadkov SQL, cron {info['pocty'][0]['cron']}, pravidlá súborov "
+          f"{info['pocty'][0]['pravidla_suborov']}; z API nedostupné: {', '.join(nedostupne) or 'nič'}")
+    return info
+
+
+def tajne(ciel):
+    """Hodnoty z Vaultu (napr. kľúč pre upozornenia v mobile) – len do exportu zašifrovaného kľúčom používateľa."""
+    os.makedirs(ciel, exist_ok=True)
+    with open(os.path.join(ciel, "vault.sql"), "w", encoding="utf-8") as f:
+        f.write("-- TAJNÉ: kľúče z Vaultu Supabase. Po obnove spustiť v novej databáze.\n")
+        for r in q(VAULT_SQL):
+            f.write("select vault.create_secret(%s, %s, %s);\n" % (lit(r["decrypted_secret"] or ""), lit(r["name"]), lit(r["description"] or "")))
+    print("Kľúče z Vaultu uložené (len do zašifrovaného exportu).")
+
+
+def lit(s):
+    return "'" + str(s).replace("'", "''") + "'"
+
+
 def nacitaj(cesta):
     out = {}
     for riadok in open(cesta, encoding="utf-8"):
@@ -160,6 +248,10 @@ def main():
         with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
             f.write(f"DB_URL={url}\n")
         print("Dočasné pripojenie je pripravené.")
+    elif cmd == "nastavenia":
+        nastavenia(sys.argv[2])
+    elif cmd == "tajne":
+        tajne(sys.argv[2])
     elif cmd == "subory":
         stiahni_verejne(sys.argv[2])
     elif cmd == "buckety":

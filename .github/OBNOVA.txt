@@ -1,0 +1,79 @@
+OBNOVA REALITNÉHO TÝPKA – AK BY NIEČO KĽAKLO
+============================================
+
+V núdzi stačí Claudovi napísať „obnov Týpka zo zálohy“ a dať mu zálohu (alebo povedať, kde je).
+Tento návod je pre neho aj pre teba – čo kde je a v akom poradí sa to vracia.
+
+
+ČO JE V ZÁLOHE
+--------------
+databaza\      roles.sql, schema.sql, data.sql – celá databáza: tabuľky, pravidlá prístupu, funkcie,
+               všetky údaje aj účty maklérov (heslá sú zašifrované, makléri sa prihlásia tými istými)
+               pocty.tsv – koľko riadkov mala každá tabuľka (na kontrolu po obnove)
+nastavenia\    nastavenia.sql – plánovač (skener každých 10 min, pripomienky…), pravidlá prístupu
+               k súborom, rozšírenia databázy
+               nastavenia.json – nastavenia projektu Supabase (prihlasovanie, funkcie, mená tajomstiev),
+               vlastné domény maklérov
+               dns.txt – DNS záznamy domén (kam smeruje web, aplikácia, e-mail)
+kod\           realitny-skener.bundle – celý kód z GitHubu aj s históriou (aplikácia, predajný web,
+               portál, skener, funkcie, zmeny databázy, automatické nasadenie)
+tajne\         (len v exporte, ktorý si sťahuješ ty) kľúče z trezoru databázy – napr. kľúč pre
+               upozornenia v mobile, aby po obnove fungovali bez nového povolenia v telefónoch
+typek-subory-* fotky ponúk, weby maklérov, archív skenera (samostatný archív)
+
+
+ČO V ZÁLOHE NIE JE (TREBA MAŤ V TREZORE HESIEL)
+-----------------------------------------------
+Heslá a prístupové kľúče sa zo služieb vytiahnuť nedajú – to je zámer. Ulož si ich do správcu hesiel:
+
+GitHub (repozitár → Settings → Secrets and variables → Actions):
+  SUPABASE_ACCESS_TOKEN   supabase.com → Account → Access Tokens (nový sa dá kedykoľvek vytvoriť)
+  SKENER_KLUC             kľúč skenera do databázy
+  FTP_SERVER, FTP_USER, FTP_HESLO   SFTP prístup k hostingu Websupport
+  SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM, EMAIL_TO   schránka typek@realitnytypek.sk
+  GH_SPUSTANIE_TOKEN      GitHub → Settings → Developer settings → token (spúšťanie skenera)
+  ZALOHA_HESLO            heslo k zašifrovanej kópii zálohy v GitHube (ak ho používaš)
+Funkcie Supabase (Edge Functions → Secrets):
+  ANTHROPIC_API_KEY (AI), GOOGLE_PLACES_KEY (recenzie), SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS,
+  SMTP_SECURE, EMAIL_FROM, APP_URL, AI_MODEL, AI_DENNY_LIMIT, prípadne BREVO_API_KEY
+Websupport: prihlásenie do WebAdminu, heslá schránok info@ a typek@.
+
+
+AKO OBNOVIŤ – PODĽA TOHO, ČO SA POKAZILO
+----------------------------------------
+A) Pokazené alebo zmazané údaje (najčastejšie – zlá zmena, omylom zmazaná ponuka…)
+   Celú ostrú databázu sa NEPREPISUJE. Záloha sa obnoví do prázdnej skúšobnej databázy, porovná sa
+   a do ostrej sa vrátia len dotknuté tabuľky alebo riadky. Ostatná práca od zálohy sa nestratí.
+
+B) Prišli sme o celý projekt Supabase
+   1. Nový projekt na supabase.com (región Frankfurt), nový SUPABASE_ACCESS_TOKEN do GitHubu.
+   2. Databáza: psql "<adresa novej databázy>" --single-transaction -v ON_ERROR_STOP=1 \
+        -f databaza/roles.sql -f databaza/schema.sql \
+        -c 'SET session_replication_role = replica' -f databaza/data.sql
+      potom nastavenia/nastavenia.sql a tajne/vault.sql; skontrolovať počty s databaza/pocty.tsv.
+   3. Súbory: najprv vymazať riadky storage.objects (prišli z data.sql bez obsahu), potom nahrať
+      priečinky z typek-subory-* do rovnomenných priečinkov úložiska (priečinky už existujú z data.sql).
+   4. Funkcie: Actions → Funkcie (Supabase) → Run workflow pre každú funkciu (kód je v GitHube)
+      a vložiť ich tajomstvá (zoznam vyššie, mená sú aj v nastavenia.json).
+   5. Prihlasovanie (Authentication): adresa aplikácie, povolené adresy presmerovania, e-mail (SMTP)
+      a šablóny e-mailov podľa nastavenia.json („auth“, ak tam je – inak ručne).
+   6. Nový projekt má novú adresu a verejný kľúč – Claude ich vymení v celom kóde (aplikácia, web,
+      portál, skener, workflowy) a v premennej SUPABASE_PROJEKT, nasadí sa to samo.
+   7. Makléri sa prihlásia svojimi starými heslami (raz znova, staré prihlásenie neplatí).
+
+C) Prišli sme o hosting Websupport (web, aplikácia)
+   Nový hosting → FTP prístup do GitHubu (FTP_SERVER, FTP_USER, FTP_HESLO) → Actions → Nasadenie
+   → Run workflow. Web aj aplikácia sa nahrajú z GitHubu celé. DNS nastaviť podľa nastavenia/dns.txt,
+   schránky info@ a typek@ založiť znova. Na hostingu nie sú žiadne údaje, ktoré by neboli v GitHube
+   alebo v databáze (len dočasná vyrovnávacia pamäť).
+
+D) Prišli sme o GitHub
+   git clone kod/realitny-skener.bundle realitny-skener → nový repozitár na GitHube → git push
+   → vložiť tajomstvá (zoznam vyššie) → Actions sa rozbehnú samé (skener, nasadenie, záloha).
+
+
+AUTOMATICKÉ ZÁLOHY
+------------------
+Databáza a nastavenia každú noc a pred každou zmenou databázy, súbory a kód každú nedeľu – na hosting
+Websupport do /realitnytypek.sk/zalohy (mimo webu). Obnova databázy do prázdnej databázy sa skúša
+pri každej zmene zálohovania (počty riadkov sa porovnávajú).

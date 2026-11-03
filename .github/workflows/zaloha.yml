@@ -84,9 +84,11 @@ jobs:
             [[ "$PRE_KLUC" =~ ^age1[0-9a-z]{58}$ ]] || { echo "::error::pre_kluc nie je verejný kľúč age (age1…)"; exit 1; }
             echo "EXPORT=1" >> "$GITHUB_ENV"
           fi
-          echo "SUBORY=$subory" >> "$GITHUB_ENV"; echo "SKUSKA=$skuska" >> "$GITHUB_ENV"
+          # kód (celý repozitár s históriou) – v nedeľu so súbormi, pri ručnej zálohe a exporte; v noci netreba
+          kod=0; if [ "$subory" = 1 ] || [ -n "$PRE_KLUC" ] || [ "$DOVOD" = rucna ] || [ "$DOVOD" = skuska ]; then kod=1; fi
+          echo "SUBORY=$subory" >> "$GITHUB_ENV"; echo "SKUSKA=$skuska" >> "$GITHUB_ENV"; echo "KOD=$kod" >> "$GITHUB_ENV"
           echo "STAMP=$(TZ=Europe/Bratislava date +%Y-%m-%d-%H%M)" >> "$GITHUB_ENV"
-          echo "Dôvod: $DOVOD · súbory: $subory · skúška obnovy: $skuska"
+          echo "Dôvod: $DOVOD · súbory: $subory · kód: $kod · skúška obnovy: $skuska"
 
       - name: Nástroje
         run: |
@@ -114,7 +116,7 @@ jobs:
       - uses: actions/checkout@v4
         if: env.PRESKOCIT != '1'
         with:
-          sparse-checkout: .github
+          fetch-depth: 0
 
       - uses: supabase/setup-cli@v1
         if: env.PRESKOCIT != '1'
@@ -161,6 +163,27 @@ jobs:
           Jednu tabuľku alebo pár riadkov sa dá vytiahnuť aj bez obnovy celej databázy – v data.sql pri COPY danej tabuľky.
           EOF
 
+      - name: Nastavenia a kód
+        if: env.PRESKOCIT != '1'
+        run: |
+          set -eo pipefail
+          z="$RUNNER_TEMP/z"; n="$z/nastavenia"
+          python3 "$GITHUB_WORKSPACE/.github/zaloha.py" nastavenia "$n"
+          # DNS záznamy (kam smeruje web, aplikácia, e-mail, vlastné domény maklérov)
+          domeny=$(python3 -c "import json,sys; print(' '.join(json.load(open(sys.argv[1])).get('vlastne_domeny') or []))" "$n/nastavenia.json")
+          for d in realitnytypek.sk www.realitnytypek.sk app.realitnytypek.sk _dmarc.realitnytypek.sk skener.alphareality.sk $domeny; do
+            for t in A AAAA CNAME MX TXT NS CAA; do dig +time=3 +tries=2 +noall +answer "$d" "$t" || true; done
+          done | sort -u > "$n/dns.txt"
+          echo "DNS: $(wc -l < "$n/dns.txt") záznamov"
+          cp "$GITHUB_WORKSPACE/.github/OBNOVA.txt" "$z/OBNOVA.txt"
+          if [ "$KOD" = 1 ]; then
+            mkdir -p "$z/kod"
+            git -C "$GITHUB_WORKSPACE" bundle create "$z/kod/realitny-skener.bundle" --all
+            git -C "$GITHUB_WORKSPACE" log -1 --format='%H %ci %s' > "$z/kod/commit.txt"
+            git bundle verify "$z/kod/realitny-skener.bundle" >/dev/null 2>&1 && echo "Kód: $(du -h "$z/kod/realitny-skener.bundle" | cut -f1), $(git -C "$GITHUB_WORKSPACE" rev-list --count HEAD) zmien"
+          fi
+          if [ -n "$PRE_KLUC" ]; then python3 "$GITHUB_WORKSPACE/.github/zaloha.py" tajne "$z/tajne"; fi
+
       - name: Záloha súborov
         if: env.PRESKOCIT != '1' && env.SUBORY == '1'
         run: |
@@ -188,7 +211,7 @@ jobs:
         run: |
           cd "$RUNNER_TEMP"
           DB_SUBOR="typek-databaza-$STAMP-$DOVOD.tar.gz"
-          tar -C z -czf "$DB_SUBOR" databaza
+          tar -C z -czf "$DB_SUBOR" OBNOVA.txt databaza nastavenia $( [ -d z/kod ] && echo kod )
           echo "DB_SUBOR=$DB_SUBOR" >> "$GITHUB_ENV"
           if [ -d z/subory ] && [ "$(find z/subory -type f | wc -l)" -gt 0 ]; then
             SUB_SUBOR="typek-subory-$STAMP.tar"
@@ -247,7 +270,8 @@ jobs:
           cd "$RUNNER_TEMP"
           command -v age >/dev/null || sudo apt-get install -y -qq age >/dev/null
           mkdir -p export
-          tar -cf - "$DB_SUBOR" ${SUB_SUBOR:+"$SUB_SUBOR"} | age -r "$PRE_KLUC" -o "export/typek-export-$STAMP.tar.age"
+          # kľúče z Vaultu idú len sem (zašifrované kľúčom toho, kto export chcel), nie na Websupport
+          tar -cf - "$DB_SUBOR" ${SUB_SUBOR:+"$SUB_SUBOR"} -C z tajne | age -r "$PRE_KLUC" -o "export/typek-export-$STAMP.tar.age"
           ls -la export
 
       - uses: actions/upload-artifact@v4
@@ -270,9 +294,18 @@ jobs:
           DB=postgresql://postgres:postgres@127.0.0.1:54322/postgres
           z="$RUNNER_TEMP/z/databaza"
           if ! psql "$DB" --single-transaction -v ON_ERROR_STOP=1 -q -o /dev/null \
-                -f "$z/roles.sql" -f "$z/schema.sql" -c 'SET session_replication_role = replica' -f "$z/data.sql" 2> obnova.err; then
+                -f "$z/roles.sql" -f "$z/schema.sql" -c 'SET session_replication_role = replica' -f "$z/data.sql" \
+                -c "do \$\$ begin if to_regclass('cron.job') is not null then update cron.job set active = false; end if; end \$\$" 2> obnova.err; then
             echo "::error::Obnova zlyhala:"; grep -m5 ERROR obnova.err | cut -c1-300; exit 1
           fi
+          psql "$DB" -v ON_ERROR_STOP=1 -q -o /dev/null -f "$RUNNER_TEMP/z/nastavenia/nastavenia.sql" 2> nastavenia.err \
+            || { echo "::error::Nastavenia sa nedali obnoviť:"; grep -m5 ERROR nastavenia.err | cut -c1-300; exit 1; }
+          # skúšobná databáza nesmie nič spúšťať (plánovač by volal skutočné funkcie)
+          psql "$DB" -q -c "update cron.job set active = false" >/dev/null
+          ocak=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['pocty'][0]['cron'])" "$RUNNER_TEMP/z/nastavenia/nastavenia.json")
+          mam=$(psql "$DB" -tAc "select count(*) from cron.job")
+          echo "Plánovač po obnove: $mam úloh (v ostrej $ocak)"
+          [ "$mam" -ge "$ocak" ] || { echo "::error::Po obnove chýbajú úlohy plánovača"; exit 1; }
           psql "$DB" -tA -F $'\t' -c "$(python3 "$GITHUB_WORKSPACE/.github/zaloha.py" sql)" > obnovene.tsv
           python3 "$GITHUB_WORKSPACE/.github/zaloha.py" porovnaj "$z/pocty.tsv" obnovene.tsv | tee porovnanie.txt
           echo "SKUSKA_OK=1" >> "$GITHUB_ENV"
@@ -285,6 +318,7 @@ jobs:
             echo "### Záloha $STAMP ($DOVOD)"
             [ -n "$DB_SUBOR" ] && echo "- Databáza: \`$DB_SUBOR\` – $(du -h "$DB_SUBOR" | cut -f1), $(awk -F'\t' '{n+=$2} END {print NR " tabuliek, " n " riadkov"}' z/databaza/pocty.tsv 2>/dev/null)"
             [ -n "$SUB_SUBOR" ] && echo "- Súbory: \`$SUB_SUBOR\` – $(du -h "$SUB_SUBOR" | cut -f1), $(find z/subory -type f | wc -l) súborov${SUBORY_NEUPLNE:+ (neúplné)}${SUKROMNE_CHYBA:+ – bez súkromných priečinkov (chýba právo kľúča)}"
+            [ -f z/nastavenia/nastavenia.sql ] && echo "- Nastavenia: plánovač, pravidlá súborov, rozšírenia, DNS$( [ -d z/kod ] && echo ', kód s históriou' )"
             [ "$ULOZENE_WS" = 1 ] && echo "- Uložené na Websupport: \`$DIR\`"
             [ "$DO_GITHUBU" = 1 ] && echo "- Zašifrovaná kópia: Artifacts tohto behu (90 dní)"
             [ "$SKUSKA_OK" = 1 ] && echo "- Skúška obnovy do prázdnej databázy: **v poriadku**"
