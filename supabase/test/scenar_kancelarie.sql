@@ -15,8 +15,8 @@ set role authenticated; set request.jwt.claim.sub = :'A';
 select 'A pripomienka' t, ulozit_pripomienku(null, :'A', 't1', null, now() + interval '1 day', 'Zavolať predajcovi') is not null ok;
 select 'A sprava' t, poslat_spravu('Ahoj tím') is not null ok;
 select 'A prevziat' t, (prevziat('t1')) is not null ok;
-select 'A hovor' t, (zapisat_hovor('t1', 'Nedvíha', 'skúsiť poobede')) is null or true ok;
-select 'A telefon' t, (ulozit_telefon('t1', '0900 111 222')) is null or true ok;
+select 'A hovor' t, coalesce((zapisat_hovor('t1', 'Nedvíha', 'skúsiť poobede'))::text, '') = '' ok;
+select 'A telefon' t, coalesce((ulozit_telefon('t1', '0900 111 222'))::text, '') = '' ok;
 select 'A vidi' t, (select count(*) from pripomienky) prip, (select count(*) from prevzatia) prev, (select count(*) from telefony) tel, (select count(*) from spravy) spr, (select count(*) from makleri) mak;
 reset role;
 -- ako konkurent B (admin inej kancelárie)
@@ -53,8 +53,8 @@ select 'makler A2 po pokuse' t, meno, aktivny from makleri where id = :'A2';
 \echo '--- Martin v podpore kancelárie 2: zápis času a pripomienky pre seba nesmie padnúť'
 set role authenticated; set request.jwt.claim.sub = :'A';
 select prepnut_kancelariu(2);
-select 'cas v podpore' t, pripocitaj_cas('{"inzeraty": 30}'::jsonb) is null or true ok;
-select 'som_tu v podpore' t, som_tu() is null or true ok;
+select 'cas v podpore' t, coalesce(pripocitaj_cas('{"inzeraty": 30}'::jsonb)::text, '') = '' ok;
+select 'som_tu v podpore' t, coalesce(som_tu()::text, '') = '' ok;
 select prepnut_kancelariu(null);
 reset role;
 \echo '--- web: návštevník pošle kontakt maklérovi B (bez prihlásenia)'

@@ -1219,6 +1219,16 @@
     var obce = {};
     S.inz.forEach(function (z) { if (z.obec && z.aktivny) obce[z.obec] = (obce[z.obec] || 0) + 1; });
     S.obce = Object.keys(obce).sort(function (a, b) { return a.localeCompare(b, "sk"); }).map(function (o) { return [o, obce[o]]; });
+    // okresy kancelárie = okresy jej inzerátov (databáza posiela len inzeráty z okresov kancelárie), najväčší prvý
+    var okr = {};
+    S.inz.forEach(function (z) { if (z.okres) okr[z.okres] = (okr[z.okres] || 0) + 1; });
+    S.okresy = Object.keys(okr).sort(function (a, b) { return okr[b] - okr[a] || a.localeCompare(b, "sk"); });
+  }
+  function textOkresov() {
+    var o = S.okresy || [];
+    if (!o.length) return "vo vašich okresoch";
+    if (o.length === 1) return "v okrese " + o[0];
+    return "v okresoch " + o.slice(0, -1).join(", ") + " a " + o[o.length - 1];
   }
   // zoznam inzerátov bez popisov – popisy (takmer polovica údajov) prídu hneď po zobrazení zoznamu.
   // Kým databáza funkciu inzeraty_zoznam nemá, načíta sa všetko naraz ako doteraz.
@@ -1656,7 +1666,7 @@
     var m = S.meta || {};
     $("#foot").innerHTML = '<p class="foot-info"></p>' + PRAVA;
     $("#foot .foot-info").textContent = (m.posledna_kontrola ? "Posledná kontrola portálov " + datum(m.posledna_kontrola, true) + ". " : "") +
-      "Sleduje Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality.sk v okresoch Spišská Nová Ves a Levoča." +
+      "Sleduje Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality.sk " + textOkresov() + "." +
       (m.chyby && m.chyby.length ? " Pri poslednej kontrole sa nepodarilo načítať: " + m.chyby.join("; ") : "");
   }
 
@@ -2022,8 +2032,9 @@
         return '<option value="' + m.id + '">' + esc(m.meno || m.email) + (m.id === S.me.id ? " (ja)" : "") + "</option>"; }).join("") + "</select>" +
       seg("predajca", [["vsetci", "Všetci", 1], ["sukr", "Súkromní", 1], ["rk", "RK", 1]]) +
       seg("typ", [["", "Všetko"], ["byt", "Byty"], ["dom", "Domy"], ["pozemok", "Pozemky"], ["chata", "Chaty"], ["garaz", "Garáže"]]) +
-      '<select id="f-okres" aria-label="Okres alebo obec"><option value="">Oba okresy</option>' +
-      '<option value="o:Spišská Nová Ves">Okres Spišská Nová Ves</option><option value="o:Levoča">Okres Levoča</option>' +
+      '<select id="f-okres" aria-label="Okres alebo obec"><option value="">' +
+        ((S.okresy || []).length === 2 ? "Oba okresy" : (S.okresy || []).length > 2 ? "Všetky okresy" : "Všetky obce") + "</option>" +
+      ((S.okresy || []).length > 1 ? S.okresy.map(function (o) { return '<option value="o:' + esc(o) + '">Okres ' + esc(o) + "</option>"; }).join("") : "") +
       ((S.me.obce || []).length ? '<option value="moje">📍 Moje obce (' + S.me.obce.length + ")</option>" : "") +
       '<optgroup label="Obec">' + S.obce.map(function (o) { return '<option value="' + esc(o[0]) + '">' + esc(o[0]) + " (" + o[1] + ")</option>"; }).join("") + "</optgroup></select>" +
       '<select id="f-stav" aria-label="Stav inzerátu"><option value="aktivne">Aktívne na portáloch</option><option value="zmiznute">Zmiznuté z portálov (archív)</option><option value="vsetky">Aktívne aj zmiznuté</option></select>' +
