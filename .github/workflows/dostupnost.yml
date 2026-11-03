@@ -1,0 +1,43 @@
+name: Strážca dostupnosti
+
+# Každých 10 minút skúsi predajný web, aplikáciu, portál, databázu a funkcie Supabase (.github/dostupnost.py).
+# Po 2. zlyhaní po sebe dostane hlavný správca upozornenie do mobilu a zvončeka (databáza, dostupnost_hlasenie)
+# a e-mail (SMTP tajomstvá ako skener). Po oprave správu „opäť funguje“. Beh skončí chybou, keď niečo nefunguje –
+# aj v zozname behov na GitHube je tak hneď vidno, kedy bol výpadok.
+
+on:
+  schedule:
+    - cron: "4,14,24,34,44,54 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dostupnost
+  cancel-in-progress: false
+
+jobs:
+  skontroluj:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Kontrola služieb
+        env:
+          SUPABASE_URL: https://uwxziqapghlyktwpipjd.supabase.co
+          SUPABASE_KEY: sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf
+          SKENER_KLUC: ${{ secrets.SKENER_KLUC }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: python .github/dostupnost.py
