@@ -101,6 +101,9 @@ def normalizuj_obec(nazov, okres):
     if not nazov or okres not in OBCE:
         return None
     b = bez_diakritiky(nazov).strip()
+    mesto = bez_diakritiky(OKRESY_SR[okres]["mesto"])
+    if okres != "Košice-okolie" and mesto in ("bratislava", "kosice"):
+        b = re.sub(r"^" + mesto + r"\s*-\s*", "", b)   # „Bratislava-Ružinov“ → mestská časť Ružinov
     for n, _, _ in vzory_okresu(okres):
         if bez_diakritiky(n) == b:
             return _oficialna(n, okres)
