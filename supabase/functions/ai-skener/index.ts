@@ -82,16 +82,24 @@ Deno.serve(async (req) => {
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     const { data: u } = await db.auth.getUser(token);
     if (!u?.user) return json({ chyba: "Prihláste sa znova." }, 401);
-    const { data: m } = await db.from("makleri").select("id, meno, telefon, aktivny, rola, pristup").eq("id", u.user.id).maybeSingle();
+    const { data: m } = await db.from("makleri").select("id, meno, telefon, aktivny, rola, pristup, kancelaria_id").eq("id", u.user.id).maybeSingle();
     if (!m?.aktivny || (m.rola !== "admin" && !(m.pristup || []).includes("inzeraty"))) return json({ chyba: "Nemáte prístup k Realitnému skeneru." }, 403);
     if (m.rola !== "admin" && !(m.pristup || []).includes("asistent")) return json({ chyba: "AI vám administrátor zatiaľ nezapol." }, 403);
     const { data: z } = await db.from("inzeraty").select("*").eq("id", String(telo.hovor)).maybeSingle();
-    if (!z) return json({ chyba: "Inzerát sa nenašiel." }, 404);
+    // len inzeráty z okresov kancelárie volajúceho (hlavný správca v režime podpory – zvolená kancelária)
+    let kancId = Number(m.kancelaria_id);
+    const { data: hs } = await db.from("hlavni_spravcovia").select("user_id").eq("user_id", m.id).maybeSingle();
+    if (hs) {
+      const { data: pod } = await db.from("spravca_podpora").select("kancelaria_id").eq("user_id", m.id).maybeSingle();
+      if (pod?.kancelaria_id) kancId = Number(pod.kancelaria_id);
+    }
+    const { data: kn } = await db.from("kancelarie").select("nazov, okresy").eq("id", kancId).maybeSingle();
+    if (!z || !(kn?.okresy || []).includes(z.okres)) return json({ chyba: "Inzerát sa nenašiel." }, 404);
     const limit = Math.max(1, Math.floor(Number(Deno.env.get("AI_DENNY_LIMIT"))) || 50);
     const { data: vLimite, error: chybaLimitu } = await db.rpc("asistent_pocitaj", { p_makler: m.id, p_limit: limit });
     if (!chybaLimitu && vLimite === false) return json({ chyba: "Dnes ste už AI použili " + limit + "-krát, čo je denný limit. Zajtra môžete pokračovať." }, 429);
     const o = await claude(kluc, SYSTEM_HOVOR, [{ type: "text", text:
-      "MAKLÉR: " + (m.meno || "") + (m.telefon ? ", tel. " + m.telefon : "") + "\nKANCELÁRIA: Alpha Reality\n\nINZERÁT\n" + opisInzeratu(z) }], 1200, "medium");
+      "MAKLÉR: " + (m.meno || "") + (m.telefon ? ", tel. " + m.telefon : "") + "\nKANCELÁRIA: " + (kn?.nazov || "") + "\n\nINZERÁT\n" + opisInzeratu(z) }], 1200, "medium");
     console.log("ai-skener hovor", JSON.stringify({ model: o.model, status: o.status, stop: o.stop, vstup: o.vstup, vystup: o.vystup }));
     if (!o.ok) return json({ chyba: "AI teraz neodpovedá (" + o.status + "). Skúste to o chvíľu." }, 502);
     const hovor = String(o.v?.hovor || "").trim().slice(0, 1200), sms = String(o.v?.sms || "").replace(/\s+/g, " ").trim().slice(0, 400);

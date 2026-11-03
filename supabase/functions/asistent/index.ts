@@ -3,13 +3,23 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
-const SYSTEM = `Si AI asistent realitnej kancelárie Alpha Reality (okresy Spišská Nová Ves a Levoča, Slovensko).
+const SYSTEM = `Si AI asistent realitnej kancelárie {KANCELARIA}.
 Pomáhaš maklérom: popisy nehnuteľností, príspevky na sociálne siete, emaily a SMS klientom a majiteľom, odpovede na námietky, rady k predaju.
 Píš po slovensky, priateľsky a profesionálne, bez zbytočných anglicizmov a bez prehnane formálnych fráz.
 Nepoužívaj markdown – žiadne hviezdičky, mriežky ani čiary (---). Odseky oddeľ prázdnym riadkom, body začni znakom •.
 Keď píšeš text na použitie (popis, príspevok, SMS, e-mail, odpoveď klientovi), odpovedz LEN samotným textom – bez nadpisu, bez úvodu typu „Tu je návrh“ a bez tipov na konci, aby sa dal celý skopírovať.
 Nevymýšľaj fakty o nehnuteľnosti, ktoré nemáš – ak chýbajú, nechaj [doplniť]. Pri právnych a daňových otázkach upozorni, že nejde o právnu radu.
 Odpovedaj stručne a prakticky.`;
+
+// kancelária volajúceho: hlavný správca v režime podpory pracuje v kancelárii, do ktorej je prepnutý
+// deno-lint-ignore no-explicit-any
+async function kancelariaVolajuceho(db: any, userId: string, vlastna: number) {
+  const { data: hs } = await db.from("hlavni_spravcovia").select("user_id").eq("user_id", userId).maybeSingle();
+  if (!hs) return vlastna;
+  const { data: pod } = await db.from("spravca_podpora").select("kancelaria_id").eq("user_id", userId).maybeSingle();
+  return Number(pod?.kancelaria_id || vlastna);
+}
+const zoznamSk = (a: string[]) => a.length > 1 ? a.slice(0, -1).join(", ") + " a " + a[a.length - 1] : (a[0] || "");
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
@@ -20,8 +30,11 @@ Deno.serve(async (req) => {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: u } = await db.auth.getUser(token);
   if (!u?.user) return json({ chyba: "Prihláste sa znova." }, 401);
-  const { data: m } = await db.from("makleri").select("meno, aktivny, rola, pristup").eq("id", u.user.id).maybeSingle();
+  const { data: m } = await db.from("makleri").select("meno, aktivny, rola, pristup, kancelaria_id").eq("id", u.user.id).maybeSingle();
   if (!m?.aktivny || (m.rola !== "admin" && !(m.pristup || []).includes("asistent"))) return json({ chyba: "Nemáte prístup k AI asistentovi." }, 403);
+  const { data: kn } = await db.from("kancelarie").select("nazov, okresy").eq("id", await kancelariaVolajuceho(db, u.user.id, m.kancelaria_id)).maybeSingle();
+  const okresy: string[] = kn?.okresy || [];
+  const kancelaria = String(kn?.nazov || "Realitná kancelária") + " (" + (okresy.length ? (okresy.length > 1 ? "okresy " : "okres ") + zoznamSk(okresy) + ", " : "") + "Slovensko)";
   let telo: { spravy?: { role: string; content: string }[]; kontext?: string } = {};
   try { telo = await req.json(); } catch { /* nič */ }
   const spravy = (telo.spravy || []).filter((x) => (x.role === "user" || x.role === "assistant") && typeof x.content === "string")
@@ -40,7 +53,7 @@ Deno.serve(async (req) => {
     headers: { "x-api-key": kluc, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model, max_tokens: 4000, ...bezPremyslania,
-      system: SYSTEM + "\nPíšeš pre makléra: " + m.meno + "." + (telo.kontext ? "\n\nPodklady (údaje z Realitného týpka):\n" + String(telo.kontext).slice(0, 6000) : ""),
+      system: SYSTEM.replace("{KANCELARIA}", kancelaria) + "\nPíšeš pre makléra: " + m.meno + "." + (telo.kontext ? "\n\nPodklady (údaje z Realitného týpka):\n" + String(telo.kontext).slice(0, 6000) : ""),
       messages: spravy,
     }),
   });

@@ -22,7 +22,7 @@ function casSk(iso: string) {
 type Moznosti = { odMeno?: string; odpovedat?: string; hlavicky?: Record<string, string> };
 async function posli(komu: string, predmet: string, html: string, o: Moznosti = {}) {
   const od = Deno.env.get("EMAIL_FROM") || Deno.env.get("SMTP_USER") || "";
-  const odMeno = (o.odMeno || "Realitný týpek · Alpha Reality").replace(/["<>\r\n]/g, "").slice(0, 70);
+  const odMeno = (o.odMeno || "Realitný týpek").replace(/["<>\r\n]/g, "").slice(0, 70);
   const odpovedat = o.odpovedat && /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(o.odpovedat) ? o.odpovedat : "";
   const brevo = Deno.env.get("BREVO_API_KEY");
   if (brevo) {
@@ -57,6 +57,15 @@ const DRUH: Record<string, [string, string]> = {
 };
 const WEB_URL = APP_URL.replace(/\/?$/, "/");
 
+// názvy kancelárií (podpis v emailoch); kancelária 1 = Alpha Reality
+// deno-lint-ignore no-explicit-any
+async function nazvyKancelarii(db: any): Promise<Map<number, string>> {
+  const { data } = await db.from("kancelarie").select("id, nazov");
+  // deno-lint-ignore no-explicit-any
+  return new Map(((data as any[]) ?? []).map((k) => [Number(k.id), String(k.nazov || "").trim()]));
+}
+const nazovK = (mapa: Map<number, string>, id: unknown) => mapa.get(Number(id ?? 1)) || "Realitná kancelária";
+
 // týždenný report majiteľom (len ponuky so zapnutým reportom a emailom majiteľa)
 // deno-lint-ignore no-explicit-any
 async function reportyMajitelom(db: any) {
@@ -64,12 +73,14 @@ async function reportyMajitelom(db: any) {
   if (error) return { ok: false, chyba: error.message };
   let odoslane = 0;
   const chyby: string[] = [];
+  const kancelarie = await nazvyKancelarii(db);
   // deno-lint-ignore no-explicit-any
   for (const r of (zoz as any[]) ?? []) {
     try {
       const { data: rep } = await db.rpc("report_majitela", { p_token: r.token });
       if (!rep) continue;
-      const { data: m } = await db.from("makleri").select("meno, email, telefon").eq("id", r.makler_id).maybeSingle();
+      const { data: m } = await db.from("makleri").select("meno, email, telefon, kancelaria_id").eq("id", r.makler_id).maybeSingle();
+      const kn = nazovK(kancelarie, rep.kancelaria_id ?? m?.kancelaria_id);
       // deno-lint-ignore no-explicit-any
       const obh = (rep.obhliadky as any[]) || [];
       const tyzden = obh.filter((o) => new Date(o.cas).getTime() > Date.now() - 7 * 864e5 && new Date(o.cas).getTime() <= Date.now()).length;
@@ -84,9 +95,9 @@ async function reportyMajitelom(db: any) {
           ${riadok("Zobrazenia ponuky za týždeň", rep.zobrazenia_7)}${riadok("Klienti, ktorí hľadajú podobnú nehnuteľnosť", rep.zaujemcovia)}
           ${riadok("Dní v ponuke", rep.dni_v_ponuke)}</table>
         <p style="margin:22px 0"><a href="${esc(odkaz)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Zobraziť celý report</a></p>
-        <p style="margin:0">${m ? "S pozdravom<br><b>" + esc(m.meno) + "</b>, Alpha Reality" + (m.telefon ? "<br>" + esc(m.telefon) : "") + (m.email ? "<br>" + esc(m.email) : "") : ""}</p>
-        <p style="color:#999;font-size:12px;margin-top:20px">Tento email dostávate, pretože predávate nehnuteľnosť cez Alpha Reality. Ak ho nechcete dostávať, dajte vedieť svojmu maklérovi.</p></div>`;
-      await posli(r.email, "📊 Report k ponuke: " + String(r.nazov).slice(0, 80), html);
+        <p style="margin:0">${m ? "S pozdravom<br><b>" + esc(m.meno) + "</b>, " + esc(kn) + (m.telefon ? "<br>" + esc(m.telefon) : "") + (m.email ? "<br>" + esc(m.email) : "") : ""}</p>
+        <p style="color:#999;font-size:12px;margin-top:20px">Tento email dostávate, pretože predávate nehnuteľnosť cez ${esc(kn)}. Ak ho nechcete dostávať, dajte vedieť svojmu maklérovi.</p></div>`;
+      await posli(r.email, "📊 Report k ponuke: " + String(r.nazov).slice(0, 80), html, { odMeno: "Realitný týpek · " + kn });
       await db.from("nehnutelnosti_interne").update({ report_odoslany: new Date().toISOString() }).eq("nehnutelnost_id", r.id);
       odoslane++;
     } catch (e) { chyby.push(String((e as Error).message || e)); }
@@ -101,11 +112,26 @@ function datumSk(iso: string) {
   return new Date(iso).toLocaleDateString("sk-SK", { timeZone: "Europe/Bratislava", day: "numeric", month: "numeric", year: "numeric" });
 }
 
-// týždenný prehľad výkonu maklérov – posiela sa aktívnym administrátorom
+// týždenný prehľad výkonu maklérov – každá aktívna kancelária dostane svoj, len jej administrátorom
 // deno-lint-ignore no-explicit-any
 async function tyzdennyPrehlad(db: any) {
-  const { data: v, error } = await db.rpc("_vykon_minuly_tyzden");
+  const { data: kanc, error } = await db.from("kancelarie").select("id, nazov").eq("aktivna", true).order("id");
   if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const k of (kanc as any[]) ?? []) {
+    const r = await prehladKancelarie(db, Number(k.id), String(k.nazov || "").trim() || "Realitná kancelária");
+    odoslane += r.odoslane;
+    chyby.push(...r.chyby);
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
+}
+
+// deno-lint-ignore no-explicit-any
+async function prehladKancelarie(db: any, kancId: number, kancNazov: string) {
+  const { data: v, error } = await db.rpc("_vykon_minuly_tyzden", { p_kancelaria: kancId });
+  if (error) return { odoslane: 0, chyby: [kancNazov + ": " + error.message] };
   // deno-lint-ignore no-explicit-any
   const riadky = (v.makleri as any[]).filter((m) => m.aktivny || m.hovory || m.prevzate || m.sms || m.emaily);
   const sum = (k: string) => riadky.reduce((a, m) => a + Number(m[k] || 0), 0);
@@ -133,16 +159,16 @@ async function tyzdennyPrehlad(db: any) {
     <p style="margin:14px 0">Nových súkromných inzerátov za týždeň: <b>${v.nove_sukromne}</b></p>${tab}
     ${vysledky ? `<h3 style="font-size:15px;margin:22px 0 0">Výsledky hovorov</h3>${vysledky}` : ""}
     <p style="margin:22px 0"><a href="${esc(APP_URL)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Otvoriť skener</a></p>
-    <p style="color:#999;font-size:12px">Realitný týpek · Alpha Reality · posiela sa každý pondelok ráno len administrátorom</p></div>`;
-  const { data: admini } = await db.from("makleri").select("email").eq("rola", "admin").eq("aktivny", true);
+    <p style="color:#999;font-size:12px">Realitný týpek · ${esc(kancNazov)} · posiela sa každý pondelok ráno len administrátorom</p></div>`;
+  const { data: admini } = await db.from("makleri").select("email").eq("kancelaria_id", kancId).eq("rola", "admin").eq("aktivny", true);
   let odoslane = 0;
   const chyby: string[] = [];
   for (const a of admini ?? []) {
     if (!a.email) continue;
-    try { await posli(a.email, "📊 Týždenný prehľad maklérov · " + obdobie, html); odoslane++; }
+    try { await posli(a.email, "📊 Týždenný prehľad maklérov · " + obdobie, html, { odMeno: "Realitný týpek · " + kancNazov }); odoslane++; }
     catch (e) { chyby.push(String((e as Error).message || e)); }
   }
-  return { ok: chyby.length === 0, odoslane, chyby };
+  return { odoslane, chyby };
 }
 
 // nové objednávky a žiadosti o bezplatnú verziu z predajného webu → e-mail hlavnému správcovi (ku každej zvlášť)
@@ -471,9 +497,11 @@ Deno.serve(async (req) => {
   if (error) return Response.json({ ok: false, chyba: error.message }, { status: 500 });
 
   let odoslane = 0;
+  const kancelarie = (rows ?? []).length ? await nazvyKancelarii(db) : new Map<number, string>();
   for (const p of rows ?? []) {
     try {
-      const { data: m } = await db.from("makleri").select("meno, email, aktivny").eq("id", p.makler_id).maybeSingle();
+      const { data: m } = await db.from("makleri").select("meno, email, aktivny, kancelaria_id").eq("id", p.makler_id).maybeSingle();
+      const kn = nazovK(kancelarie, m?.kancelaria_id);
       if (!m?.email || !m.aktivny) throw new Error("maklér nemá email alebo je neaktívny");
       let suvis = "";
       if (p.inzerat_id) {
@@ -500,9 +528,9 @@ Deno.serve(async (req) => {
         <span style="color:#888;font-size:14px"> · ${esc(casSk(p.cas))}</span></div>
         <p style="font-size:16px;margin:16px 0 0">${esc(p.poznamka || "Pripomienka bez poznámky")}</p>${suvis}
         <p style="margin:22px 0"><a href="${esc(APP_URL)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Otvoriť Realitného týpka</a></p>
-        <p style="color:#999;font-size:12px">Realitný týpek · Alpha Reality</p></div>`;
+        <p style="color:#999;font-size:12px">Realitný týpek · ${esc(kn)}</p></div>`;
       const predmet = p.druh && p.druh !== "pripomienka" ? ikona + " " + String(p.poznamka).slice(0, 110) : ikona + " " + nazov + ": " + (p.poznamka || "skener").slice(0, 80);
-      await posli(m.email, predmet, html);
+      await posli(m.email, predmet, html, { odMeno: "Realitný týpek · " + kn });
       odoslane++;
     } catch (e) {
       await db.from("pripomienky").update({ email_chyba: String((e as Error).message || e).slice(0, 300) }).eq("id", p.id);

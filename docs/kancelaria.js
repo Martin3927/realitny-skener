@@ -137,7 +137,7 @@
     if (!d.nahlad) { try { if (!sessionStorage.getItem("typek-web-" + adresa)) { sessionStorage.setItem("typek-web-" + adresa, "1"); sb.rpc("zaznamenat_navstevu_webu", { p_adresa: adresa, p_zdroj: ZDROJ }).then(function () {}); } } catch (e) { /* nič */ } }
     // Google recenzie: raz za deň ich server obnoví (staré údaje sa zatiaľ ukážu)
     var g = d.google; if (!d.nahlad && g && g.kedy && Date.now() - Date.parse(g.kedy) > 20 * 3600e3) {
-      sb.functions.invoke("google-recenzie", { body: { akcia: "obnovit" } }).then(function (x) { if (x && x.data && x.data.google) { K.D.google = x.data.google; KC.render(); } }, function () { /* nič */ });
+      sb.functions.invoke("google-recenzie", { body: { akcia: "obnovit", kancelaria: d.kancelaria_id } }).then(function (x) { if (x && x.data && x.data.google) { K.D.google = x.data.google; KC.render(); } }, function () { /* nič */ });
     }
   }).catch(function () { chyba("Stránku sa nepodarilo načítať. Skúste to o chvíľu znova."); });
 })();

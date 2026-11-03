@@ -1330,11 +1330,19 @@
     rows.forEach(function (x) { o[x.inzerat_id] = x; });
     S.odh = o;
   }
-  // AI kontrola súkromných inzerátov (verdikt, dôvod, návrh hovoru); bez databázovej zmeny 079 jednoducho nič
+  // AI kontrola súkromných inzerátov (verdikt, dôvod) je spoločná; návrh hovoru a SMS vidí len maklér, ktorý si ho vytvoril
   async function nacitajAi() {
     if (!maSekciu("inzeraty")) { S.ai = {}; return; }
-    var rows = await vsetkyRiadky("inzeraty_ai", "*", "inzerat_id").catch(function () { return []; });
-    var o = {}; rows.forEach(function (x) { o[x.inzerat_id] = x; }); S.ai = o;
+    var vysl = await Promise.all([
+      vsetkyRiadky("inzeraty_ai", "inzerat_id,verdikt,istota,dovod,model,skontrolovane", "inzerat_id").catch(function () { return []; }),
+      sb.rpc("moje_ai_navrhy").then(function (r) { return r.error ? [] : (r.data || []); }, function () { return []; })
+    ]);
+    var o = {}; vysl[0].forEach(function (x) { o[x.inzerat_id] = x; });
+    vysl[1].forEach(function (x) {
+      o[x.inzerat_id] = Object.assign(o[x.inzerat_id] || { inzerat_id: x.inzerat_id },
+        { hovor: x.hovor, sms: x.sms, hovor_vytvoril: S.me.id, hovor_vytvorene: x.hovor_vytvorene });
+    });
+    S.ai = o;
   }
   async function nacitajOznacenia() {
     var rows = await vsetkyRiadky("oznacenia", "*", "inzerat_id");
@@ -8485,7 +8493,7 @@
   function odtienMena(id) { var h = 0; String(id || "").split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) % 360; }); return h; }
   var IKONA_KOS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   // ---------- PRÍLOHY V CHATE: fotky, Word, Excel, PDF…
-  // Súbory sú v súkromnom úložisku chat-prilohy: tim/… vidí celý tím, dm/<od>/<komu>/… len títo dvaja.
+  // Súbory sú v súkromnom úložisku chat-prilohy: tim/k<kancelária>/… vidí tím kancelárie, dm/<od>/<komu>/… len títo dvaja.
   // Fotka sa pred odoslaním zmenší (najviac 2560 px) a dostane malý náhľad, aby sa chat v mobile načítal rýchlo.
   var PRIL_B = "chat-prilohy", PRIL_MAX = 25 * 1024 * 1024, PRIL_FOTO_MAX = 60 * 1024 * 1024, PRIL_POCET = 10;
   var PRIL_TYPY = {
@@ -8919,7 +8927,8 @@
   // nahrá vybrané súbory a pošle správu (komu = null → celý tím)
   async function odosliSPrilohami(komu, text) {
     var k = komu || "", zoz = prilohyKonv(k).slice(), nahrate = [], prilohy = [];
-    var predpona = komu ? "dm/" + S.me.id + "/" + komu + "/" : "tim/";
+    // tímové prílohy v priečinku kancelárie (tim/k<id>/…); staršie tim/… sú prílohy Alpha Reality
+    var predpona = komu ? "dm/" + S.me.id + "/" + komu + "/" : "tim/k" + (S.me.kancelaria_id || 1) + "/";
     S.chatOdosiela = S.chatOdosiela || {};
     try {
       for (var i = 0; i < zoz.length; i++) {

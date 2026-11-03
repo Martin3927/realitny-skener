@@ -48,11 +48,13 @@ async function vsetko(db: any, tab: string, stlpce: string, filter?: (q: any) =>
   return out;
 }
 
-async function zostav(db: any, urlDb: string) {
-  const { data: kn } = await db.from("nastavenia").select("hodnota").eq("kluc", "kancelaria").maybeSingle();
+// každá kancelária má vlastný export: údaje kancelárie, ponuky aj makléri len z nej
+async function zostav(db: any, urlDb: string, kanc: number) {
+  const { data: kn } = await db.from("nastavenia_kancelarie").select("hodnota").eq("kancelaria_id", kanc).eq("kluc", "kancelaria").maybeSingle();
   const K = kn?.hodnota ? JSON.parse(kn.hodnota) : {};
-  const ponuky = await vsetko(db, "nehnutelnosti", "*", (q) => q.in("stav", ["aktivne", "rezervovane"]).eq("uc_export", true));
-  const makleri = await vsetko(db, "makleri", "id, meno, email, telefon, aktivny");
+  const { data: kr } = await db.from("kancelarie").select("slug").eq("id", kanc).maybeSingle();
+  const ponuky = await vsetko(db, "nehnutelnosti", "*", (q) => q.eq("kancelaria_id", kanc).in("stav", ["aktivne", "rezervovane"]).eq("uc_export", true));
+  const makleri = await vsetko(db, "makleri", "id, meno, email, telefon, aktivny", (q) => q.eq("kancelaria_id", kanc));
   const okresy = await vsetko(db, "uc_okres", "district_id, county_id, nazov");
   const okresPodla = new Map(okresy.map((o: any) => [norm(o.nazov), o]));
   // obce, časti a ulice len pre okresy, kde máme ponuky
@@ -68,7 +70,7 @@ async function zostav(db: any, urlDb: string) {
     if (!K[k]) problemyKancelarie.push("Chýba " + n + " kancelárie.");
   }
   const office = {
-    source_id: "alpha", name: K.nazov || "", phone: K.telefon || "", email: K.email || "", city: K.mesto || "", zip: K.psc || "",
+    source_id: kr?.slug || "k" + kanc, name: K.nazov || "", phone: K.telefon || "", email: K.email || "", city: K.mesto || "", zip: K.psc || "",
     street: K.ulica || "", street_number: K.cislo || "", contact_person: K.kontakt || null,
   };
 
@@ -191,16 +193,22 @@ Deno.serve(async (req) => {
   try {
     if (req.method === "GET") {
       const t = new URL(req.url).searchParams.get("t") || "";
-      const { data: tok } = await db.from("nastavenia").select("hodnota").eq("kluc", "uc_token").maybeSingle();
-      if (!tok?.hodnota || t.length < 20 || t !== tok.hodnota) return json({ chyba: "Neplatný odkaz." }, 403);
-      const z = await zostav(db, urlDb);
+      if (t.length < 20) return json({ chyba: "Neplatný odkaz." }, 403);
+      // odkaz s tokenom patrí jednej kancelárii
+      const { data: tok } = await db.from("nastavenia_kancelarie").select("kancelaria_id, hodnota").eq("kluc", "uc_token").eq("hodnota", t).limit(1).maybeSingle();
+      if (!tok?.kancelaria_id || t !== tok.hodnota) return json({ chyba: "Neplatný odkaz." }, 403);
+      const z = await zostav(db, urlDb, tok.kancelaria_id);
       return json(z.data);
     }
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     const { data: u } = await db.auth.getUser(token);
-    const { data: m } = u?.user ? await db.from("makleri").select("rola, aktivny").eq("id", u.user.id).maybeSingle() : { data: null };
+    const { data: m } = u?.user ? await db.from("makleri").select("rola, aktivny, kancelaria_id").eq("id", u.user.id).maybeSingle() : { data: null };
     if (!m?.aktivny || m.rola !== "admin") return json({ chyba: "Export môže kontrolovať len administrátor." }, 403);
-    const z = await zostav(db, urlDb);
+    // hlavný správca v režime podpory kontroluje kanceláriu, do ktorej je prepnutý
+    const { data: pod } = await db.from("spravca_podpora").select("kancelaria_id").eq("user_id", u!.user!.id).maybeSingle();
+    const { data: hs } = await db.from("hlavni_spravcovia").select("user_id").eq("user_id", u!.user!.id).maybeSingle();
+    const kanc = (hs && pod?.kancelaria_id) ? pod.kancelaria_id : m.kancelaria_id;
+    const z = await zostav(db, urlDb, kanc);
     let overenie: any = null;
     const pocet = z.data[0].user_data.reduce((a: number, x: any) => a + x.advertisements.length, 0);
     if (pocet && !z.problemyKancelarie.length) {

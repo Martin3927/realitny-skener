@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: u } = await db.auth.getUser(token);
   if (!u?.user) return json({ chyba: "Prihláste sa znova." }, 401);
-  const { data: m } = await db.from("makleri").select("id, aktivny, rola, pristup").eq("id", u.user.id).maybeSingle();
+  const { data: m } = await db.from("makleri").select("id, aktivny, rola, pristup, kancelaria_id").eq("id", u.user.id).maybeSingle();
   if (!m?.aktivny) return json({ chyba: "Účet nie je aktívny." }, 403);
   // na FB a IG kancelárie zverejňuje administrátor alebo maklér, ktorému to administrátor povolil (Makléri → Môže)
   if (m.rola !== "admin" && !(m.pristup || []).includes("siete")) return json({ chyba: "Na Facebook a Instagram kancelárie zverejňuje administrátor alebo maklér, ktorému to povolí." }, 403);
@@ -39,8 +39,9 @@ Deno.serve(async (req) => {
   if (!text) return json({ chyba: "Napíšte text príspevku." }, 400);
   if (text.length > 2200) return json({ chyba: "Text je dlhší ako 2 200 znakov (limit Instagramu)." }, 400);
 
-  const { data: p } = await db.from("nehnutelnosti").select("id, makler_id, stav, fotky").eq("id", Number(telo.ponuka_id)).maybeSingle();
-  if (!p) return json({ chyba: "Ponuka neexistuje." }, 404);
+  const { data: p } = await db.from("nehnutelnosti").select("id, makler_id, stav, fotky, kancelaria_id").eq("id", Number(telo.ponuka_id)).maybeSingle();
+  // ponuka inej kancelárie sa tvári ako neexistujúca
+  if (!p || p.kancelaria_id !== m.kancelaria_id) return json({ chyba: "Ponuka neexistuje." }, 404);
   // zverejniť môže len maklér, ktorému ponuka patrí, alebo administrátor
   if (p.makler_id !== m.id && m.rola !== "admin") return json({ chyba: "Zverejniť môžete len svoju ponuku." }, 403);
   if (!["aktivne", "rezervovane"].includes(p.stav)) return json({ chyba: "Zverejniť sa dá len aktívna alebo rezervovaná ponuka." }, 400);
@@ -58,7 +59,8 @@ Deno.serve(async (req) => {
   const { data: zaz, error } = await db.from("prispevky_siete").insert({ nehnutelnost_id: p.id, siete, text, makler_id: m.id, kluc, stav: "odoslane" }).select("id").single();
   if (error) return json({ chyba: error.message }, 500);
 
-  const { data: wh } = await db.from("nastavenia").select("hodnota").eq("kluc", "make_siete_webhook").maybeSingle();
+  // prepojenie so sociálnymi sieťami (Make) má každá kancelária vlastné
+  const { data: wh } = await db.from("nastavenia_kancelarie").select("hodnota").eq("kancelaria_id", p.kancelaria_id).eq("kluc", "make_siete_webhook").maybeSingle();
   if (!wh?.hodnota) return json({ chyba: "Prepojenie so sociálnymi sieťami nie je nastavené." }, 503);
   const ig = siete.includes("ig") ? igFotky : [];
   const r = await fetch(wh.hodnota, {

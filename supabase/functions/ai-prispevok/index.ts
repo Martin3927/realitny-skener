@@ -8,7 +8,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const MAX_FOTIEK = 30, MAX_NAHLAD = 400_000;
 
-const SYSTEM = `Si skúsený realitný maklér a textár kancelárie Alpha Reality (Spiš, Slovensko). Pripravuješ podklady pre príspevok ponuky na Facebook a Instagram.
+const SYSTEM = `Si skúsený realitný maklér a textár kancelárie {KANCELARIA}. Pripravuješ podklady pre príspevok ponuky na Facebook a Instagram.
 Dostaneš údaje o nehnuteľnosti, popis od makléra a prípadne náhľady fotiek (každá má číslo).
 Vráť IBA jeden JSON objekt, bez ďalšieho textu a bez \`\`\`, v tvare:
 {"vyhody": ["🚗 parkovanie pred domom"], "uvod": "…", "fotky": [3, 0, 7], "miestnosti": {"3": "exteriér", "0": "obývačka", "7": "kuchyňa"}}
@@ -33,6 +33,16 @@ Pravidlá pre "fotky" (len ak dostaneš náhľady, inak vráť prázdne pole):
 - Prednosť majú fotky na šírku – Instagram neberie úzke fotky na výšku.
 - "miestnosti": ku každej vybranej fotke krátky názov miestnosti po slovensky (napr. „kuchyňa“, „spálňa“, „kúpeľňa“, „exteriér“).`;
 
+// kancelária volajúceho: hlavný správca v režime podpory pracuje v kancelárii, do ktorej je prepnutý
+// deno-lint-ignore no-explicit-any
+async function kancelariaVolajuceho(db: any, userId: string, vlastna: number) {
+  const { data: hs } = await db.from("hlavni_spravcovia").select("user_id").eq("user_id", userId).maybeSingle();
+  if (!hs) return vlastna;
+  const { data: pod } = await db.from("spravca_podpora").select("kancelaria_id").eq("user_id", userId).maybeSingle();
+  return Number(pod?.kancelaria_id || vlastna);
+}
+const zoznamSk = (a: string[]) => a.length > 1 ? a.slice(0, -1).join(", ") + " a " + a[a.length - 1] : (a[0] || "");
+
 const RIADKY: [string, string][] = [
   ["kategoria", "Kategória"], ["typ", "Typ"], ["transakcia", "Transakcia"], ["nazov", "Názov"], ["obec", "Obec"], ["cast_obce", "Časť obce"],
   ["plocha_uzitkova", "Úžitková plocha m²"], ["plocha_zastavana", "Zastavaná plocha m²"], ["plocha_pozemku", "Pozemok m²"], ["izby", "Počet izieb"],
@@ -49,7 +59,7 @@ Deno.serve(async (req) => {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: u } = await db.auth.getUser(token);
   if (!u?.user) return json({ chyba: "Prihláste sa znova." }, 401);
-  const { data: m } = await db.from("makleri").select("id, aktivny, rola, pristup").eq("id", u.user.id).maybeSingle();
+  const { data: m } = await db.from("makleri").select("id, aktivny, rola, pristup, kancelaria_id").eq("id", u.user.id).maybeSingle();
   if (!m?.aktivny || (m.rola !== "admin" && !(m.pristup || []).includes("asistent"))) return json({ chyba: "Nemáte prístup k AI." }, 403);
 
   // deno-lint-ignore no-explicit-any
@@ -58,6 +68,11 @@ Deno.serve(async (req) => {
   const { data: p } = await db.from("nehnutelnosti").select("*").eq("id", Number(telo.ponuka_id)).maybeSingle();
   if (!p) return json({ chyba: "Ponuka neexistuje." }, 404);
   if (p.makler_id !== m.id && m.rola !== "admin") return json({ chyba: "AI môžete použiť len pri svojej ponuke." }, 403);
+  // administrátor len pri ponukách svojej kancelárie
+  const kancId = await kancelariaVolajuceho(db, m.id, m.kancelaria_id);
+  if (p.makler_id !== m.id && p.kancelaria_id !== kancId) return json({ chyba: "Ponuka neexistuje." }, 404);
+  const { data: kn } = await db.from("kancelarie").select("nazov, okresy").eq("id", p.kancelaria_id).maybeSingle();
+  const kancelaria = String(kn?.nazov || "Realitná kancelária") + " (" + ((kn?.okresy || []).length ? zoznamSk(kn.okresy) + ", " : "") + "Slovensko)";
 
   // náhľady fotiek z aplikácie (JPEG, zmenšené v prehliadači); číslo = poradie fotky v ponuke
   const pocetFotiek = Array.isArray(p.fotky) ? p.fotky.length : 0;
@@ -92,7 +107,7 @@ Deno.serve(async (req) => {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": kluc, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model, max_tokens: 2000, ...bezPremyslania, system: SYSTEM, messages: [{ role: "user", content: obsah }] }),
+    body: JSON.stringify({ model, max_tokens: 2000, ...bezPremyslania, system: SYSTEM.replace("{KANCELARIA}", kancelaria), messages: [{ role: "user", content: obsah }] }),
   });
   // deno-lint-ignore no-explicit-any
   const d: any = await r.json().catch(() => ({}));

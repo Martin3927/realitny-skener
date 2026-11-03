@@ -1,7 +1,7 @@
 // Verejný feed aktívnych ponúk kancelárie – pre web RK, osobné weby maklérov a napojenie na portály.
 //   GET /functions/v1/feed               → XML
 //   GET /functions/v1/feed?format=json   → JSON
-//   voliteľne &makler=<id makléra>
+//   voliteľne &makler=<id makléra>, &k=<skratka kancelárie> (bez nej Alpha Reality)
 // Obsahuje len údaje, ktoré sa zverejňujú (bez majiteľa, zmluvy, provízie, internej adresy).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -18,7 +18,10 @@ Deno.serve(async (req) => {
   const u = new URL(req.url);
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
   const makler = u.searchParams.get("makler");
-  const { data, error } = await db.rpc("verejne_ponuky", { p_kancelaria: "alpha", p_makler: makler && /^[0-9a-f-]{36}$/.test(makler) ? makler : null });
+  const slug = /^[a-z0-9-]{1,40}$/.test(u.searchParams.get("k") || "") ? u.searchParams.get("k")! : "alpha";
+  const { data: kn } = await db.from("kancelarie").select("nazov").eq("slug", slug).eq("aktivna", true).maybeSingle();
+  const nazovK = String(kn?.nazov || (slug === "alpha" ? "Alpha Reality" : ""));
+  const { data, error } = await db.rpc("verejne_ponuky", { p_kancelaria: slug, p_makler: makler && /^[0-9a-f-]{36}$/.test(makler) ? makler : null });
   const hl = { "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=300" };
   if (error) return new Response("Chyba: " + error.message, { status: 500, headers: hl });
   const base = Deno.env.get("SUPABASE_URL") + "/storage/v1/object/public/ponuky/";
@@ -33,10 +36,10 @@ Deno.serve(async (req) => {
   }));
   for (const p of ponuky) p.video = p.videa[0] || null;
   if (u.searchParams.get("format") === "json") {
-    return Response.json({ kancelaria: "Alpha Reality", vygenerovane: new Date().toISOString(), pocet: ponuky.length, ponuky }, { headers: hl });
+    return Response.json({ kancelaria: nazovK, vygenerovane: new Date().toISOString(), pocet: ponuky.length, ponuky }, { headers: hl });
   }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<ponuky kancelaria="Alpha Reality" vygenerovane="${new Date().toISOString()}" pocet="${ponuky.length}">
+<ponuky kancelaria="${x(nazovK)}" vygenerovane="${new Date().toISOString()}" pocet="${ponuky.length}">
 ${ponuky.map((p) => `  <ponuka id="${p.id}">
     ${el("cislo", p.cislo)}${el("stav", p.stav)}${el("transakcia", p.transakcia)}${el("kategoria", p.kategoria)}${el("typ", p.typ)}
     ${el("nazov", p.nazov)}${el("intro", p.intro)}${el("popis", p.popis)}

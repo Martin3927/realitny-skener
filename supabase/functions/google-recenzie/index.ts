@@ -79,11 +79,31 @@ Deno.serve(async (req) => {
   try { telo = await req.json(); } catch { /* prázdne */ }
   const akcia = String(telo.akcia || "");
   const kluc = (Deno.env.get("GOOGLE_PLACES_KEY") || "").trim();
-  const { data: riadok } = await db.from("nastavenia").select("hodnota").eq("kluc", "google_recenzie").maybeSingle();
+  // Google recenzie má každá kancelária vlastné (nastavenia_kancelarie). Verejný web posiela kanceláriu webu,
+  // nastavenie robí administrátor – jeho aktívna kancelária (hlavný správca v režime podpory zvolená).
+  let kanc = Number(telo.kancelaria) > 0 ? Number(telo.kancelaria) : 1;
+  let jaAdmin = false, prihlaseny = false;
+  if (akcia === "nacitat" || akcia === "zrusit") {
+    const jwt = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+    const { data: u } = jwt ? await db.auth.getUser(jwt) : { data: null };
+    const id = u?.user?.id;
+    if (id) {
+      prihlaseny = true;
+      const { data: ja } = await db.from("makleri").select("rola, aktivny, kancelaria_id").eq("id", id).maybeSingle();
+      jaAdmin = !!ja?.aktivny && ja.rola === "admin";
+      kanc = ja?.kancelaria_id || 1;
+      const { data: h } = await db.from("hlavni_spravcovia").select("user_id").eq("user_id", id).maybeSingle();
+      if (h) {
+        const { data: pod } = await db.from("spravca_podpora").select("kancelaria_id").eq("user_id", id).maybeSingle();
+        if (pod?.kancelaria_id) kanc = pod.kancelaria_id;
+      }
+    }
+  }
+  const { data: riadok } = await db.from("nastavenia_kancelarie").select("hodnota").eq("kancelaria_id", kanc).eq("kluc", "google_recenzie").maybeSingle();
   // deno-lint-ignore no-explicit-any
   let ulozene: any = null;
   try { ulozene = riadok?.hodnota ? JSON.parse(riadok.hodnota) : null; } catch { ulozene = null; }
-  const uloz = (o: unknown) => db.from("nastavenia").upsert({ kluc: "google_recenzie", hodnota: JSON.stringify(o) });
+  const uloz = (o: unknown) => db.from("nastavenia_kancelarie").upsert({ kancelaria_id: kanc, kluc: "google_recenzie", hodnota: JSON.stringify(o) }, { onConflict: "kancelaria_id,kluc" });
   const verejne = (o: Record<string, unknown> | null) => { if (!o) return null; const { place_id: _p, ...x } = o; return x; };
 
   if (akcia === "obnovit") {
@@ -104,13 +124,9 @@ Deno.serve(async (req) => {
   }
 
   if (akcia === "nacitat" || akcia === "zrusit") {
-    const jwt = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-    const { data: u } = jwt ? await db.auth.getUser(jwt) : { data: null };
-    const id = u?.user?.id;
-    if (!id) return json({ chyba: "Prihlás sa v Realitnom týpkovi." }, 401);
-    const { data: ja } = await db.from("makleri").select("rola, aktivny").eq("id", id).maybeSingle();
-    if (!ja?.aktivny || ja.rola !== "admin") return json({ chyba: "Google recenzie nastavuje administrátor." }, 403);
-    if (akcia === "zrusit") { await db.from("nastavenia").delete().eq("kluc", "google_recenzie"); return json({ ok: true, google: null }); }
+    if (!prihlaseny) return json({ chyba: "Prihlás sa v Realitnom týpkovi." }, 401);
+    if (!jaAdmin) return json({ chyba: "Google recenzie nastavuje administrátor." }, 403);
+    if (akcia === "zrusit") { await db.from("nastavenia_kancelarie").delete().eq("kancelaria_id", kanc).eq("kluc", "google_recenzie"); return json({ ok: true, google: null }); }
     if (!kluc) return json({ chyba: "Google recenzie ešte nie sú zapnuté. Treba doplniť kľúč GOOGLE_PLACES_KEY v Supabase (Edge Functions → Secrets).", kluc: false }, 503);
     const odkaz = String(telo.odkaz || "").slice(0, 500);
     const text = String(telo.text || "").replace(/\s+/g, " ").trim().slice(0, 200);

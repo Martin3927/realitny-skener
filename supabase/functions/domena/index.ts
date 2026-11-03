@@ -167,8 +167,15 @@ Deno.serve(async (req) => {
   const { data: u } = jwt ? await db.auth.getUser(jwt) : { data: null };
   const id = u?.user?.id;
   if (!id) return json({ chyba: "Prihlás sa v Realitnom týpkovi." }, 401);
-  const { data: ja } = await db.from("makleri").select("id, rola, aktivny").eq("id", id).maybeSingle();
+  const { data: ja } = await db.from("makleri").select("id, rola, aktivny, kancelaria_id").eq("id", id).maybeSingle();
   if (!ja?.aktivny) return json({ chyba: "Účet nie je aktívny." }, 403);
+  // kancelária volajúceho (hlavný správca v režime podpory – zvolená kancelária)
+  let kancId = Number(ja.kancelaria_id);
+  const { data: hs } = await db.from("hlavni_spravcovia").select("user_id").eq("user_id", id).maybeSingle();
+  if (hs) {
+    const { data: pod } = await db.from("spravca_podpora").select("kancelaria_id").eq("user_id", id).maybeSingle();
+    if (pod?.kancelaria_id) kancId = Number(pod.kancelaria_id);
+  }
 
   // deno-lint-ignore no-explicit-any
   let telo: any = {};
@@ -196,8 +203,8 @@ Deno.serve(async (req) => {
       const ciel = telo.makler && telo.makler !== id ? String(telo.makler) : id;
       if (!kanc && ciel !== id && ja.rola !== "admin") return json({ chyba: "Web iného makléra môže kontrolovať len administrátor." }, 403);
       const { data: w } = kanc
-        ? await db.from("weby").select("id, domena, domena_token").eq("kancelaria", true).maybeSingle()
-        : await db.from("weby").select("id, domena, domena_token").eq("makler_id", ciel).eq("kancelaria", false).maybeSingle();
+        ? await db.from("weby").select("id, domena, domena_token").eq("kancelaria", true).eq("kancelaria_id", kancId).maybeSingle()
+        : await db.from("weby").select("id, domena, domena_token").eq("makler_id", ciel).eq("kancelaria", false).eq("kancelaria_id", kancId).maybeSingle();
       if (!w?.domena || !w.domena_token) return json({ chyba: "Najprv ulož doménu." }, 400);
       const v = await overit(w.domena, w.domena_token);
       const { data: zapis, error } = await db.rpc("_zapis_kontrolu_domeny", { p_web: w.id, p_domena: w.domena, p_txt: v.vlastnictvo, p_smeruje: v.smeruje });

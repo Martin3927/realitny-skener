@@ -95,8 +95,11 @@ function zmensi(file, max, png) {
     r.readAsDataURL(file);
   });
 }
+// súbory webu kancelárie sú v priečinku kancelárie: kancelaria/k<id>/… (aktívna kancelária – v režime podpory zvolená)
+var KANC_ID = null;
 function nahraj(blob, nazov, typ) {
-  var cesta = "kancelaria/" + Date.now().toString(36) + "-" + (KC.slug(nazov.replace(/\.[^.]+$/, "")) || "subor").slice(0, 40) + (nazov.match(/\.[a-z0-9]+$/i) || [""])[0].toLowerCase();
+  if (!KANC_ID) return rpc("aktivna_kancelaria").then(function (k) { KANC_ID = k || 1; return nahraj(blob, nazov, typ); });
+  var cesta = "kancelaria/k" + KANC_ID + "/" + Date.now().toString(36) + "-" + (KC.slug(nazov.replace(/\.[^.]+$/, "")) || "subor").slice(0, 40) + (nazov.match(/\.[a-z0-9]+$/i) || [""])[0].toLowerCase();
   return sb.storage.from("weby").upload(cesta, blob, { contentType: typ || blob.type, upsert: false }).then(function (r) {
     if (r.error) throw r.error;
     return sb.storage.from("weby").getPublicUrl(cesta).data.publicUrl;
