@@ -33,7 +33,7 @@
 @media (max-width: 640px) { .r-staty { grid-template-columns: repeat(2, minmax(0, 1fr)) } .r-hl img.r-f { width: 96px } .r-obh li { grid-template-columns: minmax(0, 1fr); gap: 2px } }
 </style>
 </head>
-<body>
+<body data-kanc-caka>
 <header class="v-top"><div class="v-wrap">
   <a href="https://www.alphareality.sk/" data-kanc-web><img src="logo.png" alt="Alpha Reality"></a>
   <div class="v-top-t">Report pre majiteľa</div>
@@ -41,7 +41,7 @@
 <main class="r-wrap" id="obsah"><div class="v-nic">Načítavam report…</div></main>
 <footer class="v-wrap v-pata">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span hidden data-kanc="nazov">Alpha Reality</span> · Tento odkaz je určený len pre majiteľa nehnuteľnosti – nezdieľajte ho, prosím.</footer>
 <script src="config.js?v=202610182100"></script>
-<script src="verejne.js?v=202610281600"></script>
+<script src="verejne.js?v=202611031900"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, tok = T.param("t");
@@ -82,7 +82,7 @@
   if (!tok) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Neplatný odkaz</b>Odkaz na report nie je úplný.</div>'; return; }
   T.rpc("report_majitela", { p_token: tok }).then(function (R) {
     if (!R) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Report nie je dostupný</b>Odkaz je neplatný alebo už neaktívny. Kontaktujte svojho makléra.</div>'; return; }
-    if (R.kanc) T.aplikujKancelariu(R.kanc);
+    T.kancelaria(R.kancelaria_id, R.kanc);
     vykresli(R);
   }).catch(function (e) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Report sa nepodarilo načítať</b>' + esc(e.message || e) + "</div>"; });
 })();

@@ -77,18 +77,47 @@
   function zmiesaj(a, b, t) { var x = hexRgb(a), y = hexRgb(b); return "#" + x.map(function (v, i) { return Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0"); }).join(""); }
   var SCH = { zlata: ["#dab967", "#a8862f"], typek: ["#db9522", "#8a5a2b"], modra: ["#4c8df6", "#2560c4"], smaragd: ["#2fb380", "#16845a"], vinova: ["#c4566a", "#9a2d42"],
     oranzova: ["#f08a2c", "#b85c0c"], fialova: ["#8d73ee", "#6247cc"], grafit: ["#a3adbb", "#566170"] };
+  // VZ = použitý vzhľad, VZ_ID = jeho kancelária (null = predvolená, Alpha Reality); HTML stránok je predvolene v podobe Alpha Reality
+  var VZ = null, VZ_ID = null, VZ_STYL = null;
+  function inaKancelaria() { return VZ_ID !== null && VZ_ID !== 1; }
   function aplikujVzhlad(v) {
     if (!v) return;
+    VZ = v;
     var f = v.schema === "vlastna" && /^#[0-9a-f]{6}$/i.test(v.farba || "") ? [v.farba, zmiesaj(v.farba, "#000000", 0.3)] : SCH[v.schema];
-    if (f && v.schema !== "typek") {
-      var st = document.createElement("style");
-      st.textContent = ":root{--gold:" + f[1] + ";--gold-strong:" + f[0] + ";--gold-soft:" + zmiesaj(f[0], "#ffffff", 0.84) + "}" +
-        '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--gold:' + f[0] + ";--gold-soft:" + zmiesaj("#1f2228", f[0], 0.18) + "}}";
-      document.head.appendChild(st);
-    }
-    if (v.logo) document.querySelectorAll('img[src^="logo.png"]').forEach(function (i) { i.src = v.logo; if (v.nazov) i.alt = v.nazov; });
+    if (!VZ_STYL) { VZ_STYL = document.createElement("style"); document.head.appendChild(VZ_STYL); }
+    var css = f && v.schema !== "typek" ? ":root{--gold:" + f[1] + ";--gold-strong:" + f[0] + ";--gold-soft:" + zmiesaj(f[0], "#ffffff", 0.84) + "}" +
+      '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--gold:' + f[0] + ";--gold-soft:" + zmiesaj("#1f2228", f[0], 0.18) + "}}" : "";
+    if (VZ_STYL.textContent !== css) VZ_STYL.textContent = css;
+    aplikujLogo();
     aplikujKancelariu(v);
     nastavMeranie(v.meranie);
+  }
+  // logo kancelárie; iná kancelária bez loga → jej názov textom (nie logo Alpha Reality)
+  function aplikujLogo() {
+    var v = VZ || {}, ina = inaKancelaria();
+    document.querySelectorAll('img[src^="logo.png"], img[data-kanc-logo-img]').forEach(function (i) {
+      if (!i.hasAttribute("data-kanc-logo-img")) i.setAttribute("data-kanc-logo-img", "");
+      var txt = i.nextElementSibling && i.nextElementSibling.classList.contains("v-logo-text") ? i.nextElementSibling : null;
+      if (v.logo) {
+        if (i.getAttribute("src") !== v.logo) i.src = v.logo;
+        if (i.hidden) i.hidden = false;
+        if (v.nazov && i.alt !== v.nazov) i.alt = v.nazov;
+        if (txt) txt.remove();
+      } else if (ina) {
+        if (!i.hidden) i.hidden = true;
+        var n = v.nazov || KANC.nazov || "";
+        if (!txt) {
+          txt = document.createElement("span"); txt.className = "v-logo-text";
+          txt.style.cssText = "font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.01em;color:var(--gold-strong);white-space:nowrap";
+          i.parentNode.insertBefore(txt, i.nextSibling);
+        }
+        if (txt.textContent !== n) txt.textContent = n;
+      } else {
+        if (i.getAttribute("src") !== "logo.png") i.src = "logo.png";
+        if (i.hidden) i.hidden = false;
+        if (txt) txt.remove();
+      }
+    });
   }
 
   // ---------------------------------------------------------------- meranie návštevnosti (Google Analytics, Meta Pixel)
@@ -176,6 +205,7 @@
       if (a.getAttribute("href") !== w) a.setAttribute("href", w);
       if (a.hasAttribute("data-kanc-web-text") && a.textContent !== webText(w)) a.textContent = webText(w);
     });
+    else if (inaKancelaria()) document.querySelectorAll("[data-kanc-web][href]").forEach(function (a) { a.removeAttribute("href"); });
     if (KANC.nazov) document.querySelectorAll('img[src^="logo.png"], img[data-kanc-logo]').forEach(function (i) { if (i.alt !== KANC.nazov) i.alt = KANC.nazov; });
   }
   // aktuálne údaje kancelárie pre texty skladané v JavaScripte (titulok, „Váš maklér · …“)
@@ -184,19 +214,44 @@
     return { nazov: KANC.nazov || (el && el.textContent.trim()) || "Realitná kancelária", firma: KANC.firma || KANC.nazov || "",
       web: webAdresa(KANC.web), webText: webText(webAdresa(KANC.web)), region: KANC.region || "" };
   }
-  try { aplikujVzhlad(JSON.parse(localStorage.getItem("typek-vzhlad") || "null")); } catch (e) { /* bez úložiska */ }
-  function vzhladZoServera() {
-    rpc("vzhlad_kancelarie", {}).then(function (v) {
-      try { localStorage.setItem("typek-vzhlad", JSON.stringify(v || {})); } catch (e) { /* nič */ }
-      aplikujVzhlad(v);
+  // vzhľad kancelárie zo servera (bez kancelárie = Alpha Reality); uložený v prehliadači, aby sa pri ďalšej návšteve ukázal hneď
+  function kluVzhladu(id) { return !id || id === 1 ? "typek-vzhlad" : "typek-vzhlad-" + id; }
+  function vzhladZoServera(id) {
+    rpc("vzhlad_kancelarie", id ? { p_kancelaria: id } : {}).then(function (v) {
+      try { localStorage.setItem(kluVzhladu(id), JSON.stringify(v || {})); } catch (e) { /* nič */ }
+      var aktualny = id ? VZ_ID === id : VZ_ID === null || VZ_ID === 1;
+      if (aktualny) aplikujVzhlad(v || {});
     }).catch(function () {});
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", vzhladZoServera); else vzhladZoServera();
-  // logá vložené neskôr (napr. leták) sa prepnú tiež
+  // stránka s ponukou, reportom alebo maklérom povie, ktorej kancelárie je (kancelaria_id a jej verejné údaje)
+  function kancelaria(id, k) {
+    id = Number(id) > 0 ? Number(id) : 1;
+    if (VZ_ID === id) { if (k) aplikujKancelariu(k); return; }
+    VZ_ID = id;
+    if (id !== 1) {
+      KANC = { nazov: "", firma: "", web: "", region: "" }; KANC_NACITANE = false;
+      VZ = {};
+    }
+    if (k) aplikujKancelariu(k);
+    var ulozeny = null; try { ulozeny = JSON.parse(localStorage.getItem(kluVzhladu(id)) || "null"); } catch (e) { /* nič */ }
+    aplikujVzhlad(ulozeny || (id === 1 ? VZ || {} : {}));
+    if (id !== 1 && KANC.nazov) document.title = document.title.replace(/Alpha Reality/g, KANC.nazov);
+    vzhladZoServera(id);
+  }
+  // stránky s <body data-kanc-caka> počkajú na kanceláriu z údajov (najviac 4 s, potom Alpha Reality)
+  function start() {
+    if (document.body && document.body.hasAttribute("data-kanc-caka")) {
+      setTimeout(function () { if (VZ_ID === null) kancelaria(1); }, 4000);
+      return;
+    }
+    try { aplikujVzhlad(JSON.parse(localStorage.getItem("typek-vzhlad") || "null")); } catch (e) { /* bez úložiska */ }
+    vzhladZoServera(null);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  // logá a texty kancelárie vložené neskôr (napr. leták) sa prepnú tiež
   new MutationObserver(function () {
-    var v = null; try { v = JSON.parse(localStorage.getItem("typek-vzhlad") || "null"); } catch (e) { /* nič */ }
-    if (v && v.logo) document.querySelectorAll('img[src^="logo.png"]').forEach(function (i) { i.src = v.logo; });
-    aplikujKancelariu(null);   // texty s údajmi kancelárie vložené neskôr
+    aplikujLogo();
+    aplikujKancelariu(null);
   }).observe(document.documentElement, { childList: true, subtree: true });
 
   // ochrana formulárov proti robotom (rovnaká ako na webe makléra): prehliadač nájde číslo, pri ktorom
@@ -285,5 +340,5 @@
 
   window.TYPEK = { CFG: CFG, normKarta: normKarta, aplikujFarbyKarty: aplikujFarbyKarty, sb: sb, nf: nf, esc: esc, eur: eur, rpc: rpc, fotkaUrl: fotkaUrl, nazov: nazov, lokalita: lokalita, cena: cena, cenaM2: cenaM2,
     parametre: parametre, telOdkaz: telOdkaz, waOdkaz: waOdkaz, avatar: avatar, param: param, datum: datum, verejnyOdkaz: verejnyOdkaz,
-    overenie: overenie, overeniePouzite: overeniePouzite, kanc: kanc, aplikujKancelariu: aplikujKancelariu, udalost: udalost };
+    overenie: overenie, overeniePouzite: overeniePouzite, kanc: kanc, aplikujKancelariu: aplikujKancelariu, kancelaria: kancelaria, udalost: udalost };
 })();

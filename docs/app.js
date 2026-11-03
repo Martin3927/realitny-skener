@@ -18,7 +18,7 @@
     "Záujem – stretnutie dohodnuté": "won", "Získaný do ponuky": "won",
     "Nemá záujem o RK": "lost", "Predáva cez inú RK": "lost", "Už predané": "lost",
   };
-  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️", udalost: "📅", web: "🌐", volat: "📞" };
+  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️", udalost: "📅", web: "🌐", volat: "📞", zakaznik: "🆕" };
   // výsledky hovoru, pri ktorých sa inzerát automaticky neuvoľní
   var CHRANENE_VYSLEDKY = ["Záujem – stretnutie dohodnuté", "Získaný do ponuky"];
   var SMS_ZAKLAD = "Dobrý deň, volám sa {makler} z realitnej kancelárie Alpha Reality. {Všimol|Všimla} som si Váš inzerát – {nehnutelnost}, {lokalita}. " +
@@ -356,7 +356,9 @@
     var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", f[4]);
     if (S.logoUrlPred !== logoUrl()) { S.logoUrlPred = logoUrl(); S.logoP = null; }
   }
-  function logoUrl() { return (S.vzhlad && S.vzhlad.logo) || LOGO_PREDV; }
+  // bez vlastného loga: Alpha Reality má svoje (logo.png), ostatné kancelárie hlavičku Týpka
+  function logoPredv() { return S.me && S.me.kancelaria_id > 1 ? "typek-hlavicka.png?v=202610251320" : LOGO_PREDV; }
+  function logoUrl() { return (S.vzhlad && S.vzhlad.logo) || logoPredv(); }
   function nazovKancelarie() { return (S.vzhlad && S.vzhlad.nazov) || "Alpha Reality"; }
   function vodoznakNast() { return Object.assign({}, VODOZNAK_PREDV, (S.vzhlad && S.vzhlad.vodoznak) || {}); }
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#dab967"; }
@@ -408,7 +410,7 @@
   // ---------- okamžitý štart: údaje z posledného otvorenia uložené v zariadení (IndexedDB)
   // Pri spustení sa ukážu hneď (ešte pred spojením so serverom) a čerstvé sa doplnia o chvíľu.
   // Ukážu sa len prihlásenému maklérovi, len ak neplatí odhlásenie pre nečinnosť, a pri odhlásení sa zmažú.
-  var SNIMKA_KLUCE = ["me", "makleri", "hlavny", "odhlPc", "odhlMobil", "odkaz", "novinkyOkno", "meta", "strazca", "inz", "obce", "prev", "canUnder", "odh",
+  var SNIMKA_KLUCE = ["me", "makleri", "hlavny", "lic", "odhlPc", "odhlMobil", "odkaz", "novinkyOkno", "meta", "strazca", "inz", "obce", "prev", "canUnder", "odh",
     "sch", "sidliska", "akcie", "sidPozn", "prip", "ozn", "tel", "chat", "dm", "prihl", "osobne", "oslavy", "mesiac", "pochvaly", "reakcie",
     "ponuky", "ponukyInt", "obhliadky", "zobrazenia", "dopyty", "dopytyK", "udalosti", "pred", "predTel", "predInz", "predNedostupne", "mp"];
   // reakcie v chate (odložené, ignorované) sa neukladajú: pri načítaní sa len dopĺňajú, vybavené by ostali visieť;
@@ -559,6 +561,33 @@
     });
   }
 
+  function nacitajLicenciu() {
+    return sb.rpc("moja_licencia").then(function (x) { if (!x.error && x.data) S.lic = x.data; }, function () { /* posledná známa */ });
+  }
+  function zamknuta() { return !S.hlavny && !!S.lic && S.lic.platna === false; }
+  // kancelária nemá platný prístup (koniec skúšobnej doby, pozastavené, zrušené) – Týpek sa zamkne s výzvou ozvať sa
+  function obrazovkaZamknuta(lic) {
+    var d = lic.skusobna_do ? datumSk(lic.skusobna_do) : "";
+    var nadpis = lic.stav === "skusobna" ? "Skúšobná doba sa skončila" : lic.stav === "pozastaveny" ? "Prístup je pozastavený" : "Prístup do Týpka je vypnutý";
+    var text = (lic.stav === "skusobna" ? "Tvoja skúšobná doba na Realitného týpka sa skončila" + (d ? " " + d : "") + ". " : "") +
+      "Ak chceš Realitného týpka používať ďalej, ozvi sa nám – všetko, čo si si uložil, ostáva.";
+    $("#app").innerHTML = '<div class="login"><div class="login-box">' +
+      '<span class="lesk lesk-typek"><img class="login-logo login-logo-typek" src="typek-hlavicka.png?v=202610251320" alt="Realitný týpek" width="239" height="240"></span>' +
+      '<h1 class="login-nazov">' + esc(nadpis) + "</h1><p>" + esc(text) + "</p>" +
+      '<a class="btn primary wide" style="text-decoration:none;text-align:center" href="mailto:info@realitnytypek.sk?subject=' + encodeURIComponent("Pokračovanie v Realitnom týpkovi – " + ((S.me && S.me.meno) || "")) + '">Napísať na info@realitnytypek.sk</a>' +
+      '<button class="btn wide" type="button" id="b-zamk-odhl">Odhlásiť sa</button>' + PRAVA + "</div></div>";
+    $("#b-zamk-odhl").addEventListener("click", async function () { await sb.auth.signOut({ scope: "local" }); location.reload(); });
+  }
+  function datumSk(s) { var p = String(s || "").slice(0, 10).split("-"); return p.length === 3 ? +p[2] + ". " + +p[1] + ". " + p[0] : ""; }
+  // pruh na prehľade počas skúšobnej doby
+  function pruhSkusobna() {
+    if (S.hlavny || !S.lic || S.lic.stav !== "skusobna" || !S.lic.skusobna_do) return "";
+    var p = String(S.lic.skusobna_do).split("-"), koniec = new Date(+p[0], +p[1] - 1, +p[2]), dnes = new Date(); dnes.setHours(0, 0, 0, 0);
+    var dni = Math.max(1, Math.round((koniec - dnes) / 864e5) + 1);
+    return '<div class="sk-stav"><span>🎁 <b>Skúšobná doba do ' + esc(datumSk(S.lic.skusobna_do)) + "</b> – ešte " + dni + (dni === 1 ? " deň" : dni < 5 ? " dni" : " dní") +
+      ". Chceš pokračovať aj potom? Ozvi sa nám.</span>" + '<a class="btn" href="mailto:info@realitnytypek.sk?subject=' + encodeURIComponent("Chcem pokračovať v Realitnom týpkovi") + '">Napísať nám</a></div>';
+  }
+
   function bezSpojenia(user) {
     $("#app").innerHTML = uvodnaObrazovka("Nepodarilo sa spojiť so serverom. Skontrolujte internet.", "Skúsiť znova");
     var hotovo = false;
@@ -617,6 +646,8 @@
     var dotazMaklerov = sb.from("makleri").select("*").order("meno").then(function (x) { return x; });
     // hlavný správca Realitného týpka – vidí prepínač do správy zákazníkov
     var hlavny = sb.rpc("je_hlavny_spravca").then(function (hs) { return !hs.error && hs.data === true; }, function () { return false; });
+    // licencia kancelárie (sekcie, skúšobná doba); bez odpovede ostáva posledná známa
+    var licencia = nacitajLicenciu();
     var nastavenia = nacitajNastavenia().catch(function () { /* predvolené */ });
     var r = await sb.from("makleri").select("*").eq("id", user.id).maybeSingle();
     // bez internetu (alebo slabý signál) makléra neodhlasujeme – ponúkneme skúsiť znova
@@ -630,6 +661,8 @@
     S.me = r.data;
     obnovMojeFarby(); aplikujVzhlad(vzhladPreMna());
     S.hlavny = await hlavny;
+    await licencia;
+    if (zamknuta()) { zrusSnimku(); await zmazSnimku(); return obrazovkaZamknuta(S.lic); }
     await nastavenia;
     // aplikácia bola zatvorená dlhšie, ako je čas odhlásenia → odhlásime
     var posl = aktivita !== undefined ? aktivita : poslednaAktivita();
@@ -641,7 +674,7 @@
     if (bolaSnimka) {
       // čerstvé údaje namiesto uložených – prekreslí sa len obsah (otvorené okná a písanie ostanú)
       S.zoSnimky = 0; stavPruh("");
-      var pr = JSON.stringify(S.me.pristup || null) + S.me.rola;
+      var pr = JSON.stringify(S.me.pristup || null) + S.me.rola + JSON.stringify((S.lic || {}).sekcie || null);
       if (S.pristupPred !== pr || !$("#obsah")) { S.pristupPred = pr; vykresli(); }
       else { prekresliObsah(); ohlasSplatne(); if (S.zvonOpen && !S.pripForm) vykresliZvoncek(); }
     } else vykresli();
@@ -1114,13 +1147,17 @@
   var SEKCIE = [["inzeraty", "Realitný skener", "skener"], ["schrankovanie", "Schránkovanie", "sch"], ["nehnutelnosti", "Nehnuteľnosti", "nehn"], ["klienti", "Klienti", "klienti"],
     ["kalendar", "Kalendár", "kal"], ["chat", "Chat", "chat"], ["matterport", "Matterport", "matterport"], ["mapa", "Realitná mapa", "mapa"], ["kataster", "Kataster", "kataster"], ["asistent", "AI asistent", "ai"], ["web", "Osobný web", "web"], ["recenzie", "Recenzie", "hviezda"], ["provizie", "Provízie", "euro"]];
   var HLAVNE_SEKCIE = ["inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat"];
-  function maSekciu(t) { return admin() || (S.me && (S.me.pristup || SEKCIE.map(function (x) { return x[0]; })).indexOf(t) >= 0); }
+  // licencia kancelárie (moja_licencia): sekcie, ktoré má objednané (null = všetky); hlavný správca bez obmedzenia
+  function licDovoli(t) { return S.hlavny || !S.lic || !S.lic.sekcie || S.lic.sekcie.indexOf(t) >= 0; }
+  function samostatny() { return !S.hlavny && !!S.lic && S.lic.typ === "makler"; }
+  function maSekciu(t) { return licDovoli(t) && (admin() || (S.me && (S.me.pristup || SEKCIE.map(function (x) { return x[0]; })).indexOf(t) >= 0)); }
   // právo zverejňovať na FB a IG kancelárie – admin vždy, ostatní len ak im ho admin zapne (nikdy predvolene)
   function smieSiete() { return admin() || !!(S.me && (S.me.pristup || []).indexOf("siete") >= 0); }
   function tabPovoleny(t) {
     if (TABY.indexOf(t) < 0) return false;
     if (t === "domov") return true;
-    if (t === "vykon" || t === "makleri" || t === "vzhlad" || t === "historia") return admin();
+    if (t === "makleri") return admin() && !samostatny();   // samostatný maklér nemá tím
+    if (t === "vykon" || t === "vzhlad" || t === "historia") return admin();
     return maSekciu(t);
   }
   function tabZAdresy() {
@@ -1489,7 +1526,7 @@
     if (obnovuje || !S.me) return;
     obnovuje = true;
     try {
-      var uloha = [nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), chatNove(), inzeratyNoveNacitaj().catch(function () {})];
+      var uloha = [nacitajLicenciu(), nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), chatNove(), inzeratyNoveNacitaj().catch(function () {})];
       // celý zoznam inzerátov raz za hodinu, medzitým len zmenené (bez databázovej zmeny 075 ako doteraz každých 10 min)
       if (Date.now() - S.lastInzLoad > (S.zmenyOd ? 60 : 10) * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
       else if (S.zmenyOd) uloha.push(nacitajZmeny().catch(function () {}));
@@ -1501,7 +1538,8 @@
       somTu();
       await Promise.all(uloha);
       if (!S.me.aktivny) return odhlasit();
-      var pr = JSON.stringify(S.me.pristup || null) + S.me.rola;
+      if (zamknuta()) { obnovuje = false; return obrazovkaZamknuta(S.lic); }
+      var pr = JSON.stringify(S.me.pristup || null) + S.me.rola + JSON.stringify((S.lic || {}).sekcie || null);
       if (S.pristupPred && S.pristupPred !== pr) { S.pristupPred = pr; vykresli(); obnovuje = false; return; }
       S.pristupPred = pr;
       prekresliObsah();
@@ -1522,7 +1560,9 @@
     S.vykreslenaSekcia = S.tab;
     if (S.tab !== "vzhlad" && S.vzhladDraft) { S.vzhladDraft = null; aplikujVzhlad(vzhladPreMna()); }
     var tabs = SEKCIE.filter(function (x) { return maSekciu(x[0]); }).map(function (x) { return x[0] === "provizie" && !admin() ? ["provizie", "Moje provízie", "euro"] : x; });
-    if (admin()) tabs.push(["vykon", "Výkon", "vykon"], ["makleri", "Makléri", "makleri"], ["vzhlad", "Vzhľad", "farby"], ["historia", "História zmien", "historia"]);
+    if (admin()) tabs.push(["vykon", "Výkon", "vykon"]);
+    if (admin() && !samostatny()) tabs.push(["makleri", "Makléri", "makleri"]);
+    if (admin()) tabs.push(["vzhlad", "Vzhľad", "farby"], ["historia", "História zmien", "historia"]);
     var aktualna = tabs.find(function (t) { return t[0] === S.tab; }) || ["domov", "Prehľad", "domov"];
     var menuHtml = menuDlazdice(tabs);
     document.body.classList.add("ma-bocne");
@@ -1603,8 +1643,8 @@
           "<span>" + esc(t[1]) + "</span>" + (t[0] === "chat" ? '<span class="tab-n" data-chat-n hidden></span>' : "") + "</button>";
       }).join("") +
         // web kancelárie (skladačka na samostatnej stránke) – len administrátor
-        (g[0] === "Správa" && admin() ? '<a class="dl-menu" href="web-kancelarie.html"><span class="dl-menu-ik">' + ikona("web") + "</span><span>Web kancelárie</span></a>" +
-          '<a class="dl-menu" href="karta-ponuky.html"><span class="dl-menu-ik">' + ikona("nehn") + "</span><span>Karta nehnuteľnosti</span></a>" : "") + "</div></div>";
+        (g[0] === "Správa" && admin() && licDovoli("web") && !samostatny() ? '<a class="dl-menu" href="web-kancelarie.html"><span class="dl-menu-ik">' + ikona("web") + "</span><span>Web kancelárie</span></a>" : "") +
+        (g[0] === "Správa" && admin() && licDovoli("nehnutelnosti") ? '<a class="dl-menu" href="karta-ponuky.html"><span class="dl-menu-ik">' + ikona("nehn") + "</span><span>Karta nehnuteľnosti</span></a>" : "") + "</div></div>";
     }).join("") + '<div class="menu-skup menu-farby"><span class="menu-skup-n">Vzhľad</span><div class="menu-dl">' +
       '<button type="button" class="dl-menu dl-farby" data-pomoc="farby"><span class="dl-menu-ik dl-farby-ik" aria-hidden="true"><i></i><i></i><i></i></span><span>Farebný režim</span></button></div></div>' +
       '<div class="menu-skup menu-pomoc"><span class="menu-skup-n">Pomoc</span><div class="menu-dl">' +
@@ -3520,10 +3560,10 @@
     dlazdice = dlazdice.filter(function (d) { return ["zvon", "profil"].indexOf(d[0]) >= 0 || maSekciu(d[0]); });
     if (admin()) {
       dlazdice.push(["vykon", "vykon", "Výkon maklérov", "Hovory, SMS, výsledky a grafy – len pre vás", "", "", ""]);
-      dlazdice.push(["makleri", "makleri", "Makléri", "Účty, práva, heslá a texty SMS", S.makleri.filter(function (m) { return m.aktivny; }).length + " aktívnych", "", ""]);
+      if (!samostatny()) dlazdice.push(["makleri", "makleri", "Makléri", "Účty, práva, heslá a texty SMS", S.makleri.filter(function (m) { return m.aktivny; }).length + " aktívnych", "", ""]);
     }
     el.innerHTML = '<div class="domov">' + (admin() && skenerStoji() ? '<div class="sk-stav zle"><span>⚠️ <b>Skener ' + vekText(skenerStoji()) + " nekontroloval portály</b> – nové inzeráty sa neobjavujú.</span>" +
-      '<a class="btn" href="#inzeraty">Pozrieť a opraviť</a></div>' : "") + vyzvaProfil() +
+      '<a class="btn" href="#inzeraty">Pozrieť a opraviť</a></div>' : "") + pruhSkusobna() + vyzvaProfil() +
       '<section class="hero' + (mojeO.length ? " oslava" : "") + '"><div class="hero-hlava"><span class="hero-foto">' + avatar(S.me.id, 76) + "</span>" +
       '<div class="hero-text"><div class="hero-dnes">' + esc(dnes.charAt(0).toUpperCase() + dnes.slice(1)) + (meninyDnes.length ? ' · meniny má <b>' + esc(meninyDnes.join(", ")) + "</b>" : "") + "</div>" +
       "<h2>Ahoj" + (krstne ? ", " + esc(krstne) : "") + ' <span class="mava" aria-hidden="true">👋</span></h2>' +
@@ -6458,8 +6498,8 @@
       '<label class="vz-schema vlastna' + (D.schema === "vlastna" ? " vybrana" : "") + '"><span class="vz-nahlad" style="--g:' + esc(D.farba || "#7a5cff") + ";--gr:" + farbySchemy({ schema: "vlastna", farba: D.farba || "#7a5cff" })[4] +
         ";--soft:" + zmiesaj(D.farba || "#7a5cff", "#ffffff", 0.84) + '"><i class="vz-hl"></i><i class="vz-bod"></i><i class="vz-pas"></i></span><b>Vlastná farba</b>' +
         '<input type="color" id="vz-farba" value="' + esc(D.farba || "#7a5cff") + '" aria-label="Vlastná farba"></label></div></section>' +
-      '<section class="vz-sekcia"><h4>Logo kancelárie</h4><div class="vz-logo"><div class="vz-logo-nahlad"><span class="tmave"><img src="' + esc(D.logo || LOGO_PREDV) + '" alt="Logo"></span>' +
-        '<span class="svetle"><img src="' + esc(D.logo || LOGO_PREDV) + '" alt=""></span></div><div class="vz-logo-akcie">' +
+      '<section class="vz-sekcia"><h4>Logo kancelárie</h4><div class="vz-logo"><div class="vz-logo-nahlad"><span class="tmave"><img src="' + esc(D.logo || logoPredv()) + '" alt="Logo"></span>' +
+        '<span class="svetle"><img src="' + esc(D.logo || logoPredv()) + '" alt=""></span></div><div class="vz-logo-akcie">' +
         '<label class="btn primary">📤 Nahrať logo<input type="file" id="vz-logo-subor" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden></label>' +
         (D.logo ? '<button class="btn ghost" type="button" data-vz="logo-predv">Vrátiť pôvodné logo</button>' : "") +
         '<span class="meta">Najlepšie PNG s priehľadným pozadím, na šírku. Použije sa aj na vodotlač.</span>' +
@@ -6494,7 +6534,7 @@
     var c = $("#vz-canvas"); if (!c) return;
     var g = c.getContext("2d"), W = c.width, H = c.height, D = S.vzhladDraft;
     if (!S.vzNahladFoto) S.vzNahladFoto = nacitajObr("vodotlac-nahlad.jpg?v=202610211700");
-    var logoSrc = D.logo || LOGO_PREDV;
+    var logoSrc = D.logo || logoPredv();
     if (!S.vzNahladLogo || S.vzNahladLogo.src !== logoSrc) S.vzNahladLogo = { src: logoSrc, p: nacitajObr(logoSrc) };
     var foto = await S.vzNahladFoto, logo = await S.vzNahladLogo.p;
     if (!$("#vz-canvas") || S.vzhladDraft !== D) return;

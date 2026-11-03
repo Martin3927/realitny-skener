@@ -1157,7 +1157,7 @@ Kataster pri každom inzeráte
 <div style="flex: 1 1 460px; min-width: 0">
 <span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: #1E2A35; color: #DB9522; font-size: 13px; font-weight: 800; letter-spacing: 0.08em">14 DNÍ ZADARMO</span>
 <h2 style="margin: 16px 0 0; font-size: clamp(36px, 4.8vw, 64px); line-height: 1; letter-spacing: -0.035em; font-weight: 800">Vyskúšaj Týpka.<br>Bezplatne na 14 dní.</h2>
-<p style="margin: 20px 0 0; font-size: 19px; line-height: 1.55; color: #3A4B5A; max-width: 520px">Požiadaj o bezplatnú verziu, vyber si balík a zisti, koľko času ti ráno ušetrí. Po 14 dňoch platíš mesačne len za to, čo používaš. Ozveme sa ti osobne.</p>
+<p style="margin: 20px 0 0; font-size: 19px; line-height: 1.55; color: #3A4B5A; max-width: 520px">Požiadaj o bezplatnú verziu, vyber si balík a zisti, koľko času ti ráno ušetrí. Po 14 dňoch platíš mesačne len za to, čo používaš. Registráciu dokončíš sám za minútu.</p>
 <p id="rt-bal" class="rt-bal" aria-live="polite" hidden>Vybraté: <b></b><span data-bal-c></span><button type="button" data-bal-zrus>zrušiť výber</button></p>
 <form id="rt-form" style="margin-top: 30px; display: flex; flex-wrap: wrap; gap: 12px; max-width: 560px">
 <label for="rt-email" class="sr">Tvoj e-mail</label>
@@ -1350,7 +1350,7 @@ Kataster pri každom inzeráte
     fetch(SB+'/rest/v1/rpc/web_ziadost',{method:'POST',headers:{'apikey':SBK,'Content-Type':'application/json'},
       body:JSON.stringify({p_email:i.value.trim(),p_moduly:mods,p_okresy:1,p_platba:PAY==='y'?'rocne':'mesacne'})})
     .then(function(r){if(!r.ok)throw new Error(r.status);
-      n.textContent=BAL?'Ďakujeme! Žiadosť máme aj s balíkom, ktorý si si vybral v cenníku. Ozveme sa ti osobne.':'Ďakujeme! Žiadosť máme. Ozveme sa ti osobne.';i.value='';})
+      n.textContent=(BAL?'Ďakujeme! Žiadosť máme aj s balíkom, ktorý si si vybral v cenníku. ':'Ďakujeme! Žiadosť máme. ')+'Na tvoj e-mail sme poslali odkaz – registráciu dokončíš za minútu a 14 dní máš zadarmo. Ak e-mail nevidíš, pozri aj nevyžiadanú poštu.';i.value='';})
     .catch(function(){n.textContent='Žiadosť sa nepodarilo odoslať. Skús to prosím znova alebo nám napíš na info@realitnytypek.sk.';})
     .then(function(){BUSY=false;btn.disabled=false;});
   });}

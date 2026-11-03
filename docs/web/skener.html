@@ -983,7 +983,7 @@ Kataster pri každom inzeráte
 <div class="obj-uvod">
 <span class="obj-badge">14 DNÍ ZADARMO</span>
 <h2 style="margin: 16px 0 0; font-size: clamp(32px, 3.6vw, 48px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 800">Objednaj si skener.<br>Prvých 14 dní zadarmo.</h2>
-<p style="margin: 18px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A">Vyber si balík a okresy, ktoré ti má Týpek strážiť. Prvých 14 dní neplatíš nič, potom platíš mesačne len za to, čo používaš. Ozveme sa ti osobne.</p>
+<p style="margin: 18px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A">Vyber si balík a okresy, ktoré ti má Týpek strážiť. Prvých 14 dní neplatíš nič, potom platíš mesačne len za to, čo používaš. Registráciu dokončíš sám za minútu.</p>
 <ul class="obj-plusy"><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Všetky kraje a okresy Slovenska</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Ďalší okres len za 2 € mesačne</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>S osobným webom skener za polovicu</li><li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Zmena balíka kedykoľvek</li></ul>
 <div class="obj-typek"><img class="mfloat" src="typek.png?v=202610251300" alt="Maskot Realitný týpek" style="display: block; width: 100%; height: auto; filter: drop-shadow(0 18px 22px rgba(30,42,53,.25))"></div>
 </div>
@@ -1225,7 +1225,7 @@ Kataster pri každom inzeráte
     fetch(SB+'/rest/v1/rpc/web_ziadost',{method:'POST',headers:{'apikey':SBK,'Content-Type':'application/json'},
       body:JSON.stringify({p_email:i.value.trim(),p_moduly:mods,p_okresy:1,p_platba:PAY==='y'?'rocne':'mesacne'})})
     .then(function(r){if(!r.ok)throw new Error(r.status);
-      n.textContent=BAL?'Ďakujeme! Žiadosť máme aj s balíkom, ktorý si si vybral v cenníku. Ozveme sa ti osobne.':'Ďakujeme! Žiadosť máme. Ozveme sa ti osobne.';i.value='';})
+      n.textContent=(BAL?'Ďakujeme! Žiadosť máme aj s balíkom, ktorý si si vybral v cenníku. ':'Ďakujeme! Žiadosť máme. ')+'Na tvoj e-mail sme poslali odkaz – registráciu dokončíš za minútu a 14 dní máš zadarmo. Ak e-mail nevidíš, pozri aj nevyžiadanú poštu.';i.value='';})
     .catch(function(){n.textContent='Žiadosť sa nepodarilo odoslať. Skús to prosím znova alebo nám napíš na info@realitnytypek.sk.';})
     .then(function(){BUSY=false;btn.disabled=false;});
   });}
@@ -1464,7 +1464,7 @@ Kataster pri každom inzeráte
         p_kancelaria:b==='kancelaria'?kanc:null,p_pocet_maklerov:b==='kancelaria'&&pm>0?pm:null})})
     .then(function(r){if(!r.ok)return r.json().catch(function(){return {};}).then(function(j){throw new Error((j&&j.message)||r.status);});
       note.classList.add('obj-ok');
-      note.textContent='Ďakujeme, objednávku máme! '+BN[b]+', '+okresy(ok.length)+': '+ok.join(', ')+'. Prvých 14 dní je zadarmo, ozveme sa ti osobne.';
+      note.textContent='Ďakujeme, objednávku máme! '+BN[b]+', '+okresy(ok.length)+': '+ok.join(', ')+'. Na tvoj e-mail sme poslali odkaz na dokončenie registrácie – prvých 14 dní je zadarmo. Ak e-mail nevidíš, pozri aj nevyžiadanú poštu.';
       E.meno.value=E.telefon.value=E.email.value=E.kancelaria.value=E.pocet.value='';})
     .catch(function(err){note.classList.remove('obj-ok');note.classList.add('obj-zle');
       note.textContent=/prilis_vela/.test(err&&err.message)?'Z tohto zariadenia prišlo veľa objednávok naraz. Skús to prosím o hodinu alebo nám napíš na info@realitnytypek.sk.'

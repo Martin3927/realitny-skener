@@ -54,6 +54,7 @@ const DRUH: Record<string, [string, string]> = {
   zhoda: ["🎯", "Ponuka pre vášho klienta"],
   obhliadka: ["🗝️", "Obhliadka"],
   web: ["💬", "Kontakt z vášho webu"],
+  zakaznik: ["🆕", "Nový zákazník"],
 };
 const WEB_URL = APP_URL.replace(/\/?$/, "/");
 
@@ -188,7 +189,7 @@ async function webZiadosti(db: any) {
   const { data: rows, error } = await db.from("zakaznici")
     .update({ web_oznamene: new Date().toISOString() })
     .eq("zdroj", "web").is("web_oznamene", null)
-    .select("id, email, poznamky, kontakt_meno, telefon, moduly");
+    .select("id, email, poznamky, kontakt_meno, telefon, moduly, registracia_poslat");
   if (error || !rows?.length) return 0;
   const komu: string[] = [];
   const { data: sp } = await db.from("hlavni_spravcovia").select("user_id");
@@ -220,8 +221,8 @@ async function webZiadosti(db: any) {
       try { await posli(e, predmet.slice(0, 140), html, { odMeno: "Realitný týpek", odpovedat: z.email }); odoslane++; }
       catch { /* objednávka ostáva v Správe zákazníkov aj v zvončeku */ }
     }
-    // potvrdenie tomu, kto formulár vyplnil
-    if (!z.email) continue;
+    // potvrdenie tomu, kto formulár vyplnil – ak čaká e-mail s odkazom na registráciu, potvrdením je ten (registracneEmaily)
+    if (!z.email || z.registracia_poslat) continue;
     const potvrdenie = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35;line-height:1.55">
       <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Realitný týpek</b></div>
       <p style="font-size:16px;margin:16px 0 0">Ahoj${meno ? " " + esc(meno.split(" ")[0]) : ""},</p>
@@ -236,6 +237,61 @@ async function webZiadosti(db: any) {
     catch { /* potvrdenie nie je nutné */ }
   }
   return odoslane;
+}
+
+// e-mail s odkazom na dokončenie registrácie (skúšobná doba 14 dní) – nový záujemca z webu alebo „Poslať odkaz znova“ v Správe zákazníkov.
+// Každý pokus vytvorí nový odkaz (v databáze je len jeho odtlačok), starý tým prestane platiť. Pri chybe sa skúša znova 3 dni.
+function nahodnyKluc() {
+  const b = new Uint8Array(32);
+  crypto.getRandomValues(b);
+  return Array.from(b).map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+// deno-lint-ignore no-explicit-any
+async function registracneEmaily(db: any) {
+  const { data: rows, error } = await db.from("zakaznici")
+    .select("id, email, kontakt_meno, typ, moduly, registracia_poslat")
+    .not("registracia_poslat", "is", null).gt("registracia_poslat", new Date(Date.now() - 3 * 864e5).toISOString())
+    .is("registrovany", null).limit(20);
+  if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const z of (rows as any[]) ?? []) {
+    // zaberieme (aby ten istý e-mail neodišiel dvakrát, keď bežia dve volania naraz)
+    const { data: zab } = await db.from("zakaznici").update({ registracia_poslat: null })
+      .eq("id", z.id).eq("registracia_poslat", z.registracia_poslat).select("id");
+    if (!zab?.length) continue;
+    try {
+      if (!z.email) throw new Error("zákazník nemá e-mail");
+      const kluc = nahodnyKluc();
+      const { error: eU } = await db.from("zakaznici").update({
+        registracia_hash: await sha256(kluc), registracia_do: new Date(Date.now() + 7 * 864e5).toISOString(),
+      }).eq("id", z.id);
+      if (eU) throw new Error(eU.message);
+      const meno = String(z.kontakt_meno || "").trim();
+      const bal = balikZakaznika(z.moduly);
+      const sk = Array.isArray(z.moduly) && z.moduly.includes("skener");
+      const odkaz = WEB_URL + "registracia.html#t=" + kluc;
+      const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35;line-height:1.55">
+        <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Realitný týpek</b></div>
+        <p style="font-size:16px;margin:16px 0 0">Ahoj${meno ? " " + esc(meno.split(" ")[0]) : ""},</p>
+        <p style="margin:10px 0 0">ďakujeme za záujem o Realitného týpka${bal ? " (" + esc(bal) + ")" : ""}. Registráciu dokončíš za minútu:
+          nastavíš si heslo, telefón${sk ? " a okresy pre skener" : ""}. Hneď potom sa ti spustí skúšobná doba na <b>14 dní zadarmo</b>.</p>
+        <p style="margin:22px 0"><a href="${esc(odkaz)}" style="background:#db9522;color:#1e2a35;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Dokončiť registráciu</a></p>
+        <p style="margin:0;font-size:14px;color:#3a4b5a">Odkaz platí 7 dní. Ak máš otázku, stačí odpísať na tento e-mail.</p>
+        <p style="margin:18px 0 0">Tím Realitného týpka<br><a href="https://realitnytypek.sk/" style="color:#8a5a2b">realitnytypek.sk</a></p>
+        <p style="color:#999;font-size:12px;margin-top:20px">Tento e-mail ti prišiel, lebo si na webe realitnytypek.sk požiadal o skúšobnú verziu Realitného týpka.
+          Ak si to nebol ty, správu pokojne ignoruj – bez dokončenia registrácie sa nič nevytvorí.</p></div>`;
+      await posli(z.email, "Dokonči registráciu – Realitný týpek na 14 dní zadarmo", html, { odMeno: "Realitný týpek", odpovedat: ODPOVED_TYPEK });
+      await db.from("zakaznici").update({ registracia_email: new Date().toISOString() }).eq("id", z.id);
+      odoslane++;
+    } catch (e) {
+      chyby.push(String((e as Error).message || e).slice(0, 200));
+      // vrátime do fronty – skúsi sa pri ďalšom behu (do 3 dní od žiadosti)
+      await db.from("zakaznici").update({ registracia_poslat: z.registracia_poslat }).eq("id", z.id).is("registrovany", null);
+    }
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
 }
 
 // strážca ponúk z webu makléra: klientovi príde e-mail s novými alebo zlacnenými ponukami, ktoré zodpovedajú tomu, čo hľadá
@@ -493,7 +549,7 @@ Deno.serve(async (req) => {
     .update({ email_odoslany: new Date().toISOString() })
     .is("hotovo", null).is("zrusena", null).is("email_odoslany", null)
     .lte("cas", new Date().toISOString())
-    .select("id, makler_id, inzerat_id, schrankovanie_id, nehnutelnost_id, cas, poznamka, druh");
+    .select("id, makler_id, inzerat_id, schrankovanie_id, nehnutelnost_id, zakaznik_id, cas, poznamka, druh");
   if (error) return Response.json({ ok: false, chyba: error.message }, { status: 500 });
 
   let odoslane = 0;
@@ -523,11 +579,12 @@ Deno.serve(async (req) => {
         }
       }
       const [ikona, nazov] = DRUH[p.druh as string] || DRUH.pripomienka;
+      const ciel = p.zakaznik_id ? WEB_URL + "sprava.html#z/" + p.zakaznik_id : APP_URL;
       const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#23272e">
         <div style="border-bottom:3px solid #dab967;padding-bottom:8px;font-size:18px"><b>${ikona} ${nazov}</b>
         <span style="color:#888;font-size:14px"> · ${esc(casSk(p.cas))}</span></div>
         <p style="font-size:16px;margin:16px 0 0">${esc(p.poznamka || "Pripomienka bez poznámky")}</p>${suvis}
-        <p style="margin:22px 0"><a href="${esc(APP_URL)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Otvoriť Realitného týpka</a></p>
+        <p style="margin:22px 0"><a href="${esc(ciel)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">${p.zakaznik_id ? "Otvoriť v Správe zákazníkov" : "Otvoriť Realitného týpka"}</a></p>
         <p style="color:#999;font-size:12px">Realitný týpek · ${esc(kn)}</p></div>`;
       const predmet = p.druh && p.druh !== "pripomienka" ? ikona + " " + String(p.poznamka).slice(0, 110) : ikona + " " + nazov + ": " + (p.poznamka || "skener").slice(0, 80);
       await posli(m.email, predmet, html, { odMeno: "Realitný týpek · " + kn });
@@ -537,11 +594,12 @@ Deno.serve(async (req) => {
     }
   }
   const web = await webZiadosti(db).catch(() => 0);
+  const registracie = await registracneEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
   const potvrdenia = await strazcaPotvrdenia(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
   const strazca = await strazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
   const portal = {
     potvrdenia: await portalStrazcaPotvrdenia(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) })),
     strazca: await portalStrazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) })),
   };
-  return Response.json({ ok: true, odoslane, web, potvrdenia, strazca, portal });
+  return Response.json({ ok: true, odoslane, web, registracie, potvrdenia, strazca, portal });
 });

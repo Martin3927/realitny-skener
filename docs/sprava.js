@@ -148,6 +148,7 @@
       '<div class="sp-filtre">' +
         '<input type="search" id="f-q" placeholder="Hľadať názov, IČO, kontakt, okres…" value="' + esc(S.filter.q) + '">' +
         '<select id="f-stav"><option value="pozornost_vsetci">Všetci okrem zrušených</option><option value="pozor">Treba riešiť</option>' +
+          '<option value="nekontaktovani">Na skúšku – nekontaktovaní</option>' +
           STAVY.map(function (s) { return '<option value="' + s[0] + '">' + s[1] + "</option>"; }).join("") + '<option value="">Úplne všetci</option></select>' +
       "</div>" +
       '<div class="sp-prepinace" id="sp-prepinace"></div>' +
@@ -175,7 +176,8 @@
     if (okrem !== "produkt" && !maProdukt(z, f.produkt)) return false;
     if (f.stav === "pozornost_vsetci" && z.stav === "zruseny") return false;
     if (f.stav === "pozor" && !stav(z).pozor) return false;
-    if (f.stav && f.stav !== "pozor" && f.stav !== "pozornost_vsetci" && z.stav !== f.stav) return false;
+    if (f.stav === "nekontaktovani" && (z.stav !== "skusobna" || z.kontaktovany)) return false;
+    if (f.stav && f.stav !== "pozor" && f.stav !== "pozornost_vsetci" && f.stav !== "nekontaktovani" && z.stav !== f.stav) return false;
     if (q && [z.nazov, z.ico, z.kontakt_meno, z.email, z.telefon, (z.okresy || []).join(" ")].join(" ").toLowerCase().indexOf(q) < 0) return false;
     return true;
   }
@@ -211,7 +213,9 @@
           '<span class="sp-meno"><b>' + esc(z.nazov) + '</b><small>' + TYP[z.typ] + (z.typ === "kancelaria" ? " · " + z.pocet_maklerov + " " + (z.pocet_maklerov === 1 ? "maklér" : z.pocet_maklerov < 5 ? "makléri" : "maklérov") : "") +
             (z.kontakt_meno ? " · " + esc(z.kontakt_meno) : "") + "</small></span>" +
           '<span data-n="Objednané">' + esc(objednane(z)) + "</span>" +
-          '<span data-n="Stav"><i class="sp-stav ' + st.c + '">' + esc(st.t) + "</i></span>" +
+          '<span data-n="Stav"><i class="sp-stav ' + st.c + '">' + esc(st.t) + "</i>" +
+            (z.kontaktovany ? '<small class="sp-zn">✓ kontaktovaný ' + dat(z.kontaktovany) + "</small>" :
+              z.registrovany && z.stav === "skusobna" ? '<small class="sp-zn sp-zn-nie">zaregistrovaný ' + dat(z.registrovany) + " · nekontaktovaný</small>" : "") + "</span>" +
           '<span data-n="Skúšobná do">' + dat(z.skusobna_do) + "</span>" +
           '<span data-n="Zaplatené do">' + dat(z.zaplatene_do) + "</span>" +
           '<span data-n="Mesačne" class="r">' + eur(z.mesacna_cena) + (z.mesacna_cena != null && z.cena_zamrazena_do && rozdielDni(z.cena_zamrazena_do) >= 0 ? ' <i class="sp-zamraz" title="Cena zamrazená do ' + dat(z.cena_zamrazena_do) + '">❄</i>' : "") + "</span>" +
@@ -292,7 +296,7 @@
         '<div class="sp-uloz"><button type="submit" class="btn primary">' + (novy ? "Uložiť zákazníka" : "Uložiť zmeny") + '</button><a class="btn ghost" href="#">Zrušiť</a>' +
           (novy || (z.stav === "vlastna" && z.typ === "kancelaria") ? "" : '<button type="button" class="btn danger sp-zmaz" id="z-zmaz">Zmazať zákazníka</button>') + "</div>" +
       "</form>" +
-      (novy ? "" : platbyHtml(z, platby) + pristupHtml());
+      (novy ? "" : kontaktHtml(z) + pristupHtml(z) + platbyHtml(z, platby));
 
     okresyNaplnit(z.okresy || []);
     zobrazPoleWebov();
@@ -321,6 +325,7 @@
       if ($("#z-zmaz")) $("#z-zmaz").addEventListener("click", function () { zmazZakaznika(z); });
       document.querySelectorAll("[data-akcia]").forEach(function (b) { b.addEventListener("click", function () { rychlaAkcia(z, b.dataset.akcia); }); });
       platbyUdalosti(z);
+      kontaktUdalosti(z);
     } else {
       $("#z-nazov").focus();
     }
@@ -502,10 +507,50 @@
       });
     });
   }
-  function pristupHtml() {
-    return '<section class="sp-box sp-pristup"><h3>Prístup do aplikácie</h3>' +
-      "<p>Vlastný účet pre túto kanceláriu a pozvánky pre jej maklérov pribudnú v ďalšom kroku, keď budú kancelárie v databáze od seba oddelené. " +
-      "Dovtedy zákazníkovi ukazuj aplikáciu iba osobne.</p></section>";
+  // prístup: zákazník sa registruje sám cez odkaz z e-mailu (101_samoregistracia.sql)
+  function pristupHtml(z) {
+    var h = '<section class="sp-box sp-pristup"><h3>Prístup do aplikácie</h3>';
+    if (z.stav === "vlastna") return h + "<p>Vlastná kancelária Týpka – prístup bez obmedzenia.</p></section>";
+    if (z.registrovany) return h + "<p>✓ Zaregistrovaný " + dat(z.registrovany) + ". Prihlasuje sa e-mailom " + esc(z.email || "") + ".</p></section>";
+    var st = z.registracia_poslat ? "E-mail s odkazom na registráciu čaká na odoslanie (odíde do pár minút)." :
+      z.registracia_email ? "E-mail s odkazom na registráciu odišiel " + dat(z.registracia_email) + (z.registracia_do ? ", odkaz platí do " + dat(z.registracia_do) : "") + "." :
+      "E-mail s odkazom na registráciu zatiaľ neodišiel.";
+    return h + "<p>" + st + " Cez odkaz si zákazník sám nastaví heslo, telefón a najviac 3 okresy a hneď mu začne 14-dňová skúšobná doba.</p>" +
+      (z.email && z.stav !== "zruseny" ? '<div class="sp-akcie" style="margin:0"><button type="button" class="btn" id="z-reg">' +
+        (z.registracia_email || z.registracia_poslat ? "Poslať odkaz znova" : "Poslať odkaz na registráciu") + "</button></div>" :
+        "<p>" + (z.stav === "zruseny" ? "Zákazník je zrušený." : "Na poslanie odkazu treba vyplniť e-mail.") + "</p>") + "</section>";
+  }
+  // kontakt kvôli predĺženiu / platenej verzii
+  function kontaktHtml(z) {
+    if (z.stav === "vlastna") return "";
+    return '<section class="sp-box sp-kontakt"><h3>Kontakt kvôli predĺženiu</h3>' +
+      (z.kontaktovany ? '<p class="sp-kont-ok">✓ Kontaktovaný ' + dat(z.kontaktovany) + "</p>" : '<p class="sp-kont-nie">Zatiaľ nekontaktovaný.</p>') +
+      '<label class="field"><span>Poznámka ku kontaktu</span><textarea id="z-kont-pozn" rows="2" maxlength="1000" placeholder="napr. volal som, rozmýšľa do piatku">' + esc(z.kontakt_poznamka || "") + "</textarea></label>" +
+      '<div class="sp-akcie" style="margin:0"><button type="button" class="btn primary" id="z-kont">' + (z.kontaktovany ? "Uložiť a označiť dnešným dátumom" : "Označiť ako kontaktovaný") + "</button>" +
+      (z.kontaktovany ? '<button type="button" class="btn ghost" id="z-kont-zrus">Zrušiť označenie</button>' : "") + "</div></section>";
+  }
+  function kontaktUdalosti(z) {
+    async function uloz(zmena, sprava) {
+      var r = await sb.from("zakaznici").update(zmena).eq("id", z.id).select().single();
+      if (r.error) return toast(chybaText(r.error), true);
+      await nacitaj(); toast(sprava); detail(S.zak.find(function (x) { return x.id === z.id; }));
+    }
+    var k = $("#z-kont");
+    if (k) k.addEventListener("click", function () {
+      uloz({ kontaktovany: new Date().toISOString(), kontakt_poznamka: $("#z-kont-pozn").value.trim() || null }, "Označené ako kontaktovaný.");
+    });
+    var kz = $("#z-kont-zrus");
+    if (kz) kz.addEventListener("click", function () { uloz({ kontaktovany: null }, "Označenie je zrušené."); });
+    var rg = $("#z-reg");
+    if (rg) rg.addEventListener("click", async function () {
+      if ((z.registracia_email || z.registracia_poslat) && !confirm("Poslať nový odkaz na " + z.email + "? Starý odkaz prestane platiť.")) return;
+      rg.disabled = true;
+      var r = await sb.rpc("poslat_registraciu", { p_zakaznik: z.id });
+      rg.disabled = false;
+      if (r.error) return toast(chybaText(r.error), true);
+      await nacitaj(); toast("Odkaz na registráciu odíde na " + z.email + " do pár minút.");
+      detail(S.zak.find(function (x) { return x.id === z.id; }));
+    });
   }
 
   // ---------------------------------------------------------------- články na portáli (Týpkove nehnuteľnosti)

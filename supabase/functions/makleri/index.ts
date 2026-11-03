@@ -57,6 +57,11 @@ Deno.serve(async (req) => {
   if (telo.akcia === "vytvorit") {
     if (!prveSpustenie && !volajuciJeAdmin) return odpoved(403, { chyba: "Účty maklérov môže vytvárať len administrátor." });
     if (!prveSpustenie && !kancelaria) return odpoved(403, { chyba: "Váš účet nemá kanceláriu." });
+    // samostatný maklér (kancelária typu „makler“) si kolegov nepridáva – len hlavný správca Týpka
+    if (!prveSpustenie && !hlavnySpravca) {
+      const { data: k } = await admin.from("kancelarie").select("typ").eq("id", kancelaria).maybeSingle();
+      if (k?.typ === "makler") return odpoved(403, { chyba: "Samostatný maklér si kolegov nepridáva. Pre tím si objednajte balík pre realitnú kanceláriu." });
+    }
     const email = String(telo.email || "").trim().toLowerCase();
     const heslo = String(telo.heslo || "");
     const meno = String(telo.meno || "").trim();

@@ -106,7 +106,12 @@ a.sp-riadok:hover { background: var(--surface-2) }
 .sp-uloz a { text-decoration: none }
 .sp-zmaz { margin-left: auto }
 
-.sp-platby, .sp-pristup { margin-top: 12px }
+.sp-platby, .sp-pristup, .sp-kontakt { margin-top: 12px }
+.sp-kontakt p { margin: 0; font-size: 13.5px }
+.sp-kont-ok { color: var(--good, #1b7a4b); font-weight: 700 }
+.sp-kont-nie { color: var(--muted) }
+.sp-zn { display: block; margin-top: 4px; font-size: 11.5px; font-weight: 600; color: var(--good, #1b7a4b) }
+.sp-zn-nie { color: var(--warn, #a15c00) }
 .sp-pl-form { display: grid; gap: 10px; background: var(--surface-2); border-radius: 10px; padding: 12px }
 .sp-pl-rychle { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); font-weight: 600 }
 .sp-pl-zoznam { display: grid }

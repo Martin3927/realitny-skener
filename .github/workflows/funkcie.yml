@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
         if: env.MA_KLUC == 'true'
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - uses: supabase/setup-cli@v1
         if: env.MA_KLUC == 'true'
@@ -48,11 +48,15 @@ jobs:
         if: env.MA_KLUC == 'true'
         env:
           RUCNE: ${{ github.event.inputs.funkcia }}
+          PRED: ${{ github.event.before }}
         run: |
           if [ -n "$RUCNE" ]; then
             zoz="$RUCNE"
           else
-            zoz=$(git diff --name-only HEAD~1 HEAD -- supabase/functions | cut -d/ -f3 | sort -u | tr '\n' ' ')
+            # všetky commity z pushu (nie len posledný) – inak by sa funkcia zmenená v skoršom commite nenasadila
+            od="HEAD~1"
+            if [ -n "$PRED" ] && [ "$PRED" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$PRED^{commit}" 2>/dev/null; then od="$PRED"; fi
+            zoz=$(git diff --name-only "$od" HEAD -- supabase/functions | cut -d/ -f3 | sort -u | tr '\n' ' ')
           fi
           ok=""
           for f in $zoz; do

@@ -29,7 +29,7 @@ input:focus, textarea:focus { outline: 2px solid var(--gold-strong); border-colo
 .chyba { color: var(--bad); font-weight: 600 }
 </style>
 </head>
-<body>
+<body data-kanc-caka>
 <header class="v-top"><div class="v-wrap"><a href="https://www.alphareality.sk/" data-kanc-web><img src="logo.png" alt="Alpha Reality"></a><div class="v-top-t">Ďakujeme za vašu dôveru</div></div></header>
 <main class="r-wrap" id="obsah">
   <div class="v-box r-hl" id="mk"></div>
@@ -46,7 +46,7 @@ input:focus, textarea:focus { outline: 2px solid var(--gold-strong); border-colo
 </main>
 <footer class="v-wrap v-pata">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span data-kanc-cast="web"> · <a href="https://www.alphareality.sk/" data-kanc-web data-kanc-web-text>www.alphareality.sk</a></span></footer>
 <script src="config.js?v=202610182100"></script>
-<script src="verejne.js?v=202610281600"></script>
+<script src="verejne.js?v=202611031900"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, m = T.param("m"), n = 0;
@@ -60,6 +60,7 @@ input:focus, textarea:focus { outline: 2px solid var(--gold-strong); border-colo
   kresli();
   // meno a fotka makléra z jeho verejných ponúk / profilu
   T.rpc("verejny_makler", { p_id: m }).then(function (x) {
+    T.kancelaria(x && x.kancelaria_id, x && x.kanc);
     if (!x) { document.getElementById("mk").innerHTML = '<div><h1 data-kanc="nazov">' + esc(T.kanc().nazov) + '</h1><span class="v-lok">Realitná kancelária</span></div>'; return; }
     document.getElementById("mk").innerHTML = T.avatar(x, 58) + "<div><h1>" + esc(x.meno_cele || x.meno) + '</h1><span class="v-lok">' + (x.pohlavie === "zena" ? "maklérka" : "maklér") + ' · <span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span></span></div>";
   }).catch(function () { document.getElementById("mk").innerHTML = '<div><h1 data-kanc="nazov">' + esc(T.kanc().nazov) + "</h1></div>"; });

@@ -29,7 +29,7 @@
 @media (max-width: 760px) { .m-hero .v-wrap { grid-template-columns: auto minmax(0, 1fr) } .m-kont { grid-column: 1 / -1 } }
 </style>
 </head>
-<body>
+<body data-kanc-caka>
 <header class="v-top"><div class="v-wrap"><a href="https://www.alphareality.sk/" data-kanc-web><img src="logo.png" alt="Alpha Reality"></a><div class="v-top-t">Realitná kancelária<span data-kanc-cast="web"><br><a href="https://www.alphareality.sk/" data-kanc-web data-kanc-web-text>www.alphareality.sk</a></span></div></div></header>
 <section class="m-hero"><div class="v-wrap" id="hero"><div class="v-nic" style="padding:20px;color:#c9c5bb">Načítavam…</div></div></section>
 <main class="v-wrap">
@@ -39,13 +39,14 @@
 </main>
 <footer class="v-wrap v-pata" style="margin-top:32px">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span data-kanc-cast="region"> · <span data-kanc="region">Spišská Nová Ves a Levoča</span></span><span data-kanc-cast="web"> · <a href="https://www.alphareality.sk/" data-kanc-web data-kanc-web-text>www.alphareality.sk</a></span><span hidden data-kanc="nazov">Alpha Reality</span></footer>
 <script src="config.js?v=202610182100"></script>
-<script src="verejne.js?v=202610281600"></script>
+<script src="verejne.js?v=202611031900"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, id = T.param("id");
   document.getElementById("napisat").href = "recenzia.html?m=" + encodeURIComponent(id || "");
   T.rpc("verejny_makler", { p_id: id }).then(function (m) {
     if (!m) { document.getElementById("hero").innerHTML = '<div><h1>Stránka nie je dostupná</h1></div>'; return; }
+    T.kancelaria(m.kancelaria_id, m.kanc);
     document.title = (m.meno_cele || m.meno) + " · " + T.kanc().nazov;
     var tel = T.telOdkaz(m.telefon), zena = m.pohlavie === "zena";
     document.getElementById("napisat").parentNode.querySelector(".v-lok").textContent = "Budem " + (zena ? "rada" : "rád") + " za vašu recenziu – pomôže ďalším klientom.";
