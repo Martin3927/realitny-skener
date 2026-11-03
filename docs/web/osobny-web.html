@@ -917,6 +917,14 @@ a{color:#4A6074}a:hover{color:#1E2A35}
   var f=document.getElementById('rt-form'),n=document.getElementById('rt-note');
   // žiadosť ide rovno do Správy zákazníkov v Týpkovi (aj s balíkom vybraným v cenníku)
   var SB='https://uwxziqapghlyktwpipjd.supabase.co',SBK='sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf',BUSY=false;
+  // odkiaľ záujemca prišiel (reklamy): utm_source / utm_medium / utm_campaign, prípadne fbclid alebo gclid; drží sa počas návštevy (sessionStorage),
+  // aby ostalo aj po prechode na /skener či /osobny-web – ide do Správy zákazníkov ako „Odkiaľ“
+  window.TYPEK_ODKIAL=(function(){try{var q=new URLSearchParams(location.search),v=['utm_source','utm_medium','utm_campaign','utm_content'].map(function(k){return (q.get(k)||'').trim();}).filter(Boolean).join(' / ');
+    if(!v&&q.get('fbclid'))v='facebook (fbclid)';if(!v&&q.get('gclid'))v='google (gclid)';
+    if(v){sessionStorage.setItem('typek-odkial',v);return v;}
+    v=sessionStorage.getItem('typek-odkial');if(v)return v;
+    var r=document.referrer||'';if(r&&!/realitnytypek\.sk/.test(r)){v='odkaz z '+r.replace(/^https?:\/\/([^\/]+).*$/,'$1');sessionStorage.setItem('typek-odkial',v);return v;}
+    return '';}catch(e){return '';}})();
   if(f){f.addEventListener('submit',function(e){e.preventDefault();
     var i=document.getElementById('rt-email'),btn=f.querySelector('button[type="submit"]');
     if(BUSY)return;
@@ -924,7 +932,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
     var mods=BAL?BALM[BAL]:['skener'];
     BUSY=true;btn.disabled=true;n.textContent='Odosielam…';
     fetch(SB+'/rest/v1/rpc/web_ziadost',{method:'POST',headers:{'apikey':SBK,'Content-Type':'application/json'},
-      body:JSON.stringify({p_email:i.value.trim(),p_moduly:mods,p_okresy:1,p_platba:PAY==='y'?'rocne':'mesacne'})})
+      body:JSON.stringify({p_email:i.value.trim(),p_moduly:mods,p_okresy:1,p_platba:PAY==='y'?'rocne':'mesacne',p_odkial:window.TYPEK_ODKIAL||null})})
     .then(function(r){if(!r.ok)throw new Error(r.status);
       n.textContent=(BAL?'Ďakujeme! Žiadosť máme aj s balíkom, ktorý si si vybral v cenníku. ':'Ďakujeme! Žiadosť máme. ')+'Na tvoj e-mail sme poslali odkaz – registráciu dokončíš za minútu a 14 dní máš zadarmo. Ak e-mail nevidíš, pozri aj nevyžiadanú poštu.';i.value='';})
     .catch(function(){n.textContent='Žiadosť sa nepodarilo odoslať. Skús to prosím znova alebo nám napíš na info@realitnytypek.sk.';})

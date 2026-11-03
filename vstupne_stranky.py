@@ -662,10 +662,10 @@ def skener_js():
     note.classList.remove('obj-zle','obj-ok');note.textContent='Odosielam objednávku…';
     fetch(SB+'/rest/v1/rpc/web_ziadost',{method:'POST',headers:{'apikey':SBK,'Content-Type':'application/json'},
       body:JSON.stringify({p_email:em,p_moduly:MOD[b],p_okresy:ok.length,p_platba:rocne()?'rocne':'mesacne',p_okresy_zoznam:ok,p_meno:meno,p_telefon:tel,
-        p_kancelaria:b==='kancelaria'?kanc:null,p_pocet_maklerov:b==='kancelaria'&&pm>0?pm:null})})
+        p_kancelaria:b==='kancelaria'?kanc:null,p_pocet_maklerov:b==='kancelaria'&&pm>0?pm:null,p_odkial:window.TYPEK_ODKIAL||null})})
     .then(function(r){if(!r.ok)return r.json().catch(function(){return {};}).then(function(j){throw new Error((j&&j.message)||r.status);});
       note.classList.add('obj-ok');
-      note.textContent='Ďakujeme, objednávku máme! '+BN[b]+', '+okresy(ok.length)+': '+ok.join(', ')+'. Prvých 14 dní je zadarmo, ozveme sa ti osobne.';
+      note.textContent='Ďakujeme, objednávku máme! '+BN[b]+', '+okresy(ok.length)+': '+ok.join(', ')+'. Na tvoj e-mail sme poslali odkaz – registráciu dokončíš za minútu a prvých 14 dní máš zadarmo. Ak e-mail nevidíš, pozri aj nevyžiadanú poštu.';
       E.meno.value=E.telefon.value=E.email.value=E.kancelaria.value=E.pocet.value='';})
     .catch(function(err){note.classList.remove('obj-ok');note.classList.add('obj-zle');
       note.textContent=/prilis_vela/.test(err&&err.message)?'Z tohto zariadenia prišlo veľa objednávok naraz. Skús to prosím o hodinu alebo nám napíš na info@realitnytypek.sk.'
