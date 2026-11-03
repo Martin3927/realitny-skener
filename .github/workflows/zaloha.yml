@@ -391,7 +391,8 @@ jobs:
           cd "$RUNNER_TEMP"
           ws() { lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; $1; bye" 2>/dev/null; }
           # zálohy po priečinkoch (archív podľa zoznamu – prechádzať tisíce fotiek cez SFTP by trvalo dlho)
-          ws "du -s -m $DIR/databaza $DIR/subory $DIR/kod" | sed "s#$DIR/##" > miesto.txt || true
+          # du -b = presne v bajtoch (du -m zaokrúhľuje každý súbor nahor na celý MB)
+          ws "du -s -b $DIR/databaza $DIR/subory $DIR/kod" | awk '{printf "%d\t%s\n", $1/1048576+0.5, $2}' | sed "s#$DIR/##" > miesto.txt || true
           [ -f archiv-zoznam.tsv.novy ] && cp archiv-zoznam.tsv.novy archiv-zoznam-teraz.tsv \
             || ws "get $DIR/archiv-zoznam.tsv -o archiv-zoznam-teraz.tsv" >/dev/null || true
           [ -s archiv-zoznam-teraz.tsv ] && awk -F'\t' '{s+=$2} END {printf "%d\tarchiv (%d fotiek)\n", s/1048576, NR}' archiv-zoznam-teraz.tsv >> miesto.txt
@@ -408,7 +409,7 @@ jobs:
             done | tee -a podrobne.txt
             # celý hosting po priečinkoch (bez archívu skenera, ten je vyššie) – čo zaberá najviac
             echo "== hosting (MB, priečinky do 3. úrovne)" | tee -a podrobne.txt
-            ws "du -m --max-depth=3 --exclude=archiv /" | sort -rn | awk '$1 >= 5' | head -30 | tee -a podrobne.txt || true
+            ws "du -b --max-depth=3 --exclude=archiv /" | awk '{printf "%d\t%s\n", $1/1048576+0.5, $2}' | sort -rn | awk '$1 >= 1' | head -30 | tee -a podrobne.txt || true
             # koľko miesta zostáva (ak to server povie – nie každý SFTP server to vie)
             sudo apt-get install -y -qq sshpass >/dev/null 2>&1 || true
             host=${FTP_SERVER%%:*}; port=22; [[ "$FTP_SERVER" == *:* ]] && port=${FTP_SERVER##*:}
