@@ -6,7 +6,10 @@
   zaloha.py pripojenie                – dočasná rola CLI, adresa databázy do $GITHUB_ENV (DB_URL, skrytá v logoch)
   zaloha.py nastavenia <priečinok>    – nastavenia mimo výpisu: plánovač, pravidlá súborov, rozšírenia, nastavenia projektu
   zaloha.py tajne <priečinok>         – kľúče z Vaultu (len do exportu zašifrovaného kľúčom používateľa)
-  zaloha.py subory <priečinok>        – stiahne súbory z verejných priečinkov úložiska
+  zaloha.py subory <priečinok> [--archiv <zoznam.tsv> <nove> [--cely]]
+                                      – stiahne súbory z verejných priečinkov úložiska; s --archiv z archívu skenera
+                                        len to, čo v zozname ešte nie je (nové fotky idú do <nove>, nový zoznam
+                                        do <zoznam.tsv>.novy); --cely stiahne celý archív a nové ešte prepojí do <nove>
   zaloha.py buckety                   – vypíše priečinky úložiska súborov (storage.buckets)
   zaloha.py porovnaj <zive> <obnova>  – porovná počty riadkov ostrej databázy a obnovenej zálohy
 
@@ -79,9 +82,27 @@ def pripojenie():
     raise SystemExit("K databáze sa nedá pripojiť cez pooler.")
 
 
-def stiahni_verejne(ciel):
+# Archív skenera: fotky súkromných inzerátov. Pribúdajú, nemenia sa – na hostingu je preto jedna kópia
+# (zalohy/archiv), do ktorej sa dohrávajú len nové fotky. Zoznam toho, čo na hostingu už je, je v archiv-zoznam.tsv.
+ARCHIV = "archiv"
+
+
+def nacitaj_zoznam(cesta):
+    """archiv-zoznam.tsv: cesta v archíve <TAB> veľkosť v bajtoch."""
+    out = {}
+    if cesta and os.path.exists(cesta):
+        for riadok in open(cesta, encoding="utf-8"):
+            if "\t" in riadok:
+                n, s = riadok.rstrip("\n").rsplit("\t", 1)
+                out[n] = int(s or -1)
+    return out
+
+
+def stiahni_verejne(ciel, zoznam=None, nove=None, cely=False):
     """Súbory z verejných priečinkov úložiska cez verejnú adresu (kľúč na to netreba).
-    Súkromné priečinky (prílohy chatu, dokumenty) zapíše do $GITHUB_ENV ako SUKROMNE – tie skúsi workflow cez CLI."""
+    Súkromné priečinky (prílohy chatu, dokumenty) zapíše do $GITHUB_ENV ako SUKROMNE – tie skúsi workflow cez CLI.
+    So zoznamom (archív na hostingu) stiahne z archívu skenera len fotky, ktoré na hostingu ešte nie sú, do <nove>;
+    s cely=True stiahne celý archív do <ciel>/archiv (export) a nové fotky do <nove> len prepojí."""
     from concurrent.futures import ThreadPoolExecutor
     from urllib.parse import quote
     rows = q("""select o.bucket_id as b, o.name as n, coalesce((o.metadata->>'size')::bigint, -1) as s, k.public as p
@@ -92,11 +113,24 @@ def stiahni_verejne(ciel):
         with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
             f.write(f"SUKROMNE={' '.join(sukromne)}\n")
 
+    prirastkovo = nove is not None
+    na_hostingu = nacitaj_zoznam(zoznam) if prirastkovo else {}
+
+    def je_nova(r):
+        return r["b"] == ARCHIV and (r["n"] not in na_hostingu or (r["s"] != -1 and na_hostingu[r["n"]] != r["s"]))
+
+    if prirastkovo and not cely:
+        # z archívu len nové; ostatné priečinky celé (ponuky, weby – fotky sa v nich menia aj mažú)
+        verejne = [r for r in verejne if r["b"] != ARCHIV or je_nova(r)]
+
     def jeden(r):
         cast = [x for x in r["n"].split("/") if x]
         if not cast or any(x in (".", "..") for x in cast):
             return r["b"], "zlý názov"
-        cesta = os.path.join(ciel, r["b"], *cast)
+        if prirastkovo and not cely and r["b"] == ARCHIV:
+            cesta = os.path.join(nove, *cast)
+        else:
+            cesta = os.path.join(ciel, r["b"], *cast)
         os.makedirs(os.path.dirname(cesta), exist_ok=True)
         url = f"https://{REF}.supabase.co/storage/v1/object/public/{r['b']}/" + "/".join(quote(x) for x in cast)
         for pokus in range(4):
@@ -127,11 +161,45 @@ def stiahni_verejne(ciel):
     zle = [v for v in vysledky if v[1]]
     for b in sorted({r["b"] for r in verejne}):
         n = sum(1 for v in vysledky if v[0] == b)
-        print(f"{b}: {n - sum(1 for v in zle if v[0] == b)} z {n} súborov")
+        if prirastkovo and b == ARCHIV and not cely:
+            print(f"{b}: {n - sum(1 for v in zle if v[0] == b)} z {n} nových súborov (ostatné už sú na hostingu)")
+        else:
+            print(f"{b}: {n - sum(1 for v in zle if v[0] == b)} z {n} súborov")
     if zle:
         from collections import Counter
         druhy = ", ".join(f"{c}: {n}×" for c, n in Counter(c for _, c in zle).most_common())
         print(f"::warning::Nepodarilo sa stiahnuť {len(zle)} súborov ({druhy}) – HTTP 400/404 = súbor v úložisku už nie je")
+
+    if prirastkovo:
+        # nové fotky archívu (stiahnuté v poriadku) → <nove>; nový zoznam = čo už na hostingu je + tieto
+        # (zlyhané v zozname nebudú, skúsia sa nabudúce). Zoznam sa na hosting nahrá až po nahratí fotiek.
+        os.makedirs(nove, exist_ok=True)
+        novy = dict(na_hostingu)
+        pocet = velkost = 0
+        for r, (_, chyba) in zip(verejne, vysledky):
+            if r["b"] != ARCHIV or chyba or not je_nova(r):
+                continue
+            cast = [x for x in r["n"].split("/") if x]
+            if cely:  # export: celý archív je v <ciel>/archiv, nové sa len prepoja (bez druhej kópie)
+                ciel_nove = os.path.join(nove, *cast)
+                os.makedirs(os.path.dirname(ciel_nove), exist_ok=True)
+                if not os.path.exists(ciel_nove):
+                    os.link(os.path.join(ciel, ARCHIV, *cast), ciel_nove)
+            sub = os.path.join(nove, *cast)
+            novy[r["n"]] = os.path.getsize(sub)
+            pocet += 1
+            velkost += novy[r["n"]]
+        with open(zoznam + ".novy", "w", encoding="utf-8") as f:
+            for n in sorted(novy):
+                f.write(f"{n}\t{novy[n]}\n")
+        spolu = sum(max(s, 0) for s in novy.values())
+        print(f"Archív skenera: {pocet} nových fotiek ({velkost / 1048576:.1f} MB), na hostingu potom spolu "
+              f"{len(novy)} ({spolu / 1048576:.0f} MB)")
+        if os.environ.get("GITHUB_ENV"):
+            with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+                f.write(f"ARCHIV_NOVE={pocet}\nARCHIV_NOVE_MB={velkost / 1048576:.1f}\n"
+                        f"ARCHIV_SPOLU={len(novy)}\nARCHIV_SPOLU_MB={spolu / 1048576:.0f}\n")
+
     if len(zle) > max(3, len(verejne) // 50):
         sys.exit(1)
 
@@ -253,7 +321,11 @@ def main():
     elif cmd == "tajne":
         tajne(sys.argv[2])
     elif cmd == "subory":
-        stiahni_verejne(sys.argv[2])
+        arg = sys.argv[3:]
+        if arg and arg[0] == "--archiv":
+            stiahni_verejne(sys.argv[2], zoznam=arg[1], nove=arg[2], cely="--cely" in arg[3:])
+        else:
+            stiahni_verejne(sys.argv[2])
     elif cmd == "buckety":
         for r in q("select id from storage.buckets order by id"):
             print(r["id"])

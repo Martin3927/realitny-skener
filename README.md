@@ -29,20 +29,25 @@ Supabase na bezplatnom pláne nezálohuje nič, preto beží vlastná záloha (`
 - **databáza** (všetky tabuľky, používatelia, pravidlá prístupu, funkcie) – každú noc a pred každou zmenou databázy
   (ak posledná záloha nie je mladšia ako 2 h; keď záloha zlyhá, zmena sa nespustí),
 - **nastavenia** (plánovač, pravidlá prístupu k súborom, rozšírenia, zoznam funkcií, DNS) – spolu s databázou,
-- **súbory** (fotky ponúk, archív skenera, weby) a **kód** (celý repozitár s históriou) – každú nedeľu,
+- **súbory** (fotky ponúk, weby, prílohy), **archív skenera** a **kód** (celý repozitár s históriou) – každú nedeľu,
 - uložené na hosting Websupport do `/realitnytypek.sk/zalohy` (mimo webu, z internetu nedostupné):
-  60 posledných záloh databázy, 4 zálohy súborov. Stiahnuť sa dajú cez SFTP prístup k hostingu (ten istý ako pri nasadení).
+  `databaza/` 60 posledných záloh, `subory/` 4 zálohy súborov, `kod/` 2 zálohy kódu a `archiv/` – archív skenera
+  ako **jedna kópia**, do ktorej sa dohrávajú len nové fotky (zoznam v `archiv-zoznam.tsv`). Fotky v archíve
+  pribúdajú a nemenia sa – celá kópia každý týždeň by zbytočne zapĺňala hosting.
+  Stiahnuť sa dajú cez SFTP prístup k hostingu (ten istý ako pri nasadení).
+- Koľko zálohy na hostingu zaberajú: *Run workflow* so zaškrtnutým `len_miesto` (nič nezálohuje, len vypíše).
 - Voliteľne zašifrovaná kópia v GitHube: v *Settings → Secrets and variables → Actions* pridať `ZALOHA_HESLO`
   (heslo si treba uložiť aj inde – bez neho sa kópia neotvorí). Otvára sa 7-Zipom.
 - Súkromné priečinky (prílohy chatu, dokumenty ponúk) sa zálohujú, až keď kľúč `SUPABASE_ACCESS_TOKEN`
   dostane právo *API gateway keys: read*.
 - Ručne: *Actions → Záloha → Run workflow* (dá sa zaškrtnúť aj súbory a skúška obnovy).
 
-- Export pre majiteľa na stiahnutie: *Run workflow* s verejným kľúčom age (`pre_kluc`) – navyše s kľúčmi z Vaultu.
+- Export pre majiteľa na stiahnutie: *Run workflow* s verejným kľúčom age (`pre_kluc`) – navyše s kľúčmi z Vaultu,
+  celým archívom skenera (`typek-archiv-*`) a kódom.
 
 **Obnova** – plán podľa toho, čo sa pokazilo, je v `.github/OBNOVA.txt` (je aj v každej zálohe). Nikdy rovno do ostrej databázy. Záloha sa najprv obnoví do prázdnej databázy
 (postup v `README.txt` v každej zálohe), skontroluje sa a až potom sa vrátia potrebné údaje.
-Pri zmene `zaloha.yml` sa spraví plná záloha aj skúšobná obnova do prázdnej databázy s porovnaním počtu riadkov.
+Pri zmene `zaloha.yml` sa spraví záloha so súbormi aj skúšobná obnova do prázdnej databázy s porovnaním počtu riadkov.
 
 ## Nastavenia
 - `config.json` – sledované okresy, typy, portály, od koľkých % je ponuka podhodnotená, kto dostáva emaily.

@@ -3,12 +3,18 @@ name: Záloha
 # Záloha databázy Supabase (všetky tabuľky, používatelia, pravidlá prístupu, funkcie) a súborov
 # (fotky ponúk, dokumenty, prílohy chatu, weby). Supabase na bezplatnom pláne nezálohuje nič – zálohujeme si sami.
 #
-# Kedy:   každú noc databáza (3:40 v zime / 4:40 v lete), v nedeľu aj súbory;
+# Kedy:   každú noc databáza (3:40 v zime / 4:40 v lete), v nedeľu aj súbory a kód;
 #         pred zmenou databázy (databaza.yml) – ak posledná záloha nie je mladšia ako 2 hodiny;
 #         ručne: Actions → Záloha → Run workflow (dá sa zaškrtnúť aj súbory a skúška obnovy).
-#         Pri zmene tohto súboru alebo .github/zaloha.py sa spraví plná záloha aj skúška obnovy.
+#         Pri zmene tohto súboru alebo .github/zaloha.py sa spraví záloha so súbormi aj skúška obnovy.
 # Kam:    hosting Websupport (rovnaký SFTP prístup ako nasadenie) do /realitnytypek.sk/zalohy – mimo webu,
-#         z internetu nedostupné. Ostáva 60 posledných záloh databázy a 4 zálohy súborov.
+#         z internetu nedostupné:
+#           databaza/  60 posledných záloh databázy a nastavení (bez kódu, ~5 MB)
+#           subory/    4 posledné zálohy súborov – fotky ponúk, weby, prílohy (bez archívu skenera)
+#           archiv/    archív skenera – JEDNA kópia, dohrávajú sa len nové fotky (zoznam v archiv-zoznam.tsv);
+#                      fotky v archíve pribúdajú a nemenia sa, celá kópia každý týždeň by zbytočne zapĺňala hosting
+#           kod/       2 posledné zálohy kódu (celý repozitár s históriou) – len v nedeľu a pri exporte
+#         Ručne s „len_miesto“ sa nič nezálohuje, len sa vypíše, koľko zálohy na hostingu zaberajú.
 #         Keď je v Settings → Secrets → Actions nastavené ZALOHA_HESLO, ide navyše kópia zašifrovaná
 #         týmto heslom (7z, AES-256) do GitHubu – beh v Actions → Artifacts, 90 dní.
 #         Nezašifrovaná záloha sa do GitHubu nikdy nenahráva (repozitár je verejný).
@@ -38,6 +44,10 @@ on:
         description: "Export na stiahnutie: verejný kľúč age (age1…) – záloha sa ním zašifruje a bude 1 deň v Artifacts"
         type: string
         default: ""
+      len_miesto:
+        description: "Nič nezálohovať – len vypísať, koľko miesta zálohy na hostingu zaberajú"
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       dovod:
@@ -65,14 +75,20 @@ jobs:
       CHCEM_SUBORY: ${{ inputs.subory }}
       CHCEM_SKUSKU: ${{ inputs.skuska }}
       PRE_KLUC: ${{ inputs.pre_kluc }}
+      LEN_MIESTO: ${{ inputs.len_miesto }}
       PONECHAT_DB: 60
       PONECHAT_SUBORY: 4
+      PONECHAT_KOD: 2
     steps:
       - name: Čo a kam zálohovať
         run: |
           [ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "::error::Chýba SUPABASE_ACCESS_TOKEN – bez neho sa do databázy nedostanem."; exit 1; }
           [ -n "$FTP_HESLO" ] && echo "NA_WEBSUPPORT=1" >> "$GITHUB_ENV"
           [ -n "$ZALOHA_HESLO" ] && echo "DO_GITHUBU=1" >> "$GITHUB_ENV"
+          if [ "$LEN_MIESTO" = "true" ]; then
+            [ -n "$FTP_HESLO" ] || { echo "::error::Bez SFTP prístupu (FTP_HESLO) sa miesto na hostingu zistiť nedá."; exit 1; }
+            echo "PRESKOCIT=1" >> "$GITHUB_ENV"; echo "Len miesto na hostingu – nič nezálohujem."; exit 0
+          fi
           if [ -z "$FTP_HESLO" ] && [ -z "$ZALOHA_HESLO" ]; then
             echo "::error::Nie je kam zálohu uložiť – chýba SFTP prístup na Websupport (FTP_HESLO) aj ZALOHA_HESLO."; exit 1
           fi
@@ -84,8 +100,12 @@ jobs:
             [[ "$PRE_KLUC" =~ ^age1[0-9a-z]{58}$ ]] || { echo "::error::pre_kluc nie je verejný kľúč age (age1…)"; exit 1; }
             echo "EXPORT=1" >> "$GITHUB_ENV"
           fi
-          # kód (celý repozitár s históriou) – v nedeľu so súbormi, pri ručnej zálohe a exporte; v noci netreba
-          kod=0; if [ "$subory" = 1 ] || [ -n "$PRE_KLUC" ] || [ "$DOVOD" = rucna ] || [ "$DOVOD" = skuska ]; then kod=1; fi
+          # kód (celý repozitár s históriou, ~22 MB) – len v nedeľu a do exportu; kód je aj v GitHube,
+          # na hostingu stačia 2 posledné kópie (samostatne v kod/, nie v každej zálohe databázy)
+          kod=0; if [ "$PLAN" = "40 2 * * 0" ] || [ -n "$PRE_KLUC" ]; then kod=1; fi
+          # archív skenera na hostingu po kúskoch (len nové fotky); celý sa sťahuje len do exportu
+          # alebo keď sa záloha nenahráva na hosting (vtedy ide do zálohy súborov ako predtým)
+          if [ "$subory" = 1 ] && [ -n "$FTP_HESLO" ]; then echo "ARCHIV_ZVLAST=1" >> "$GITHUB_ENV"; fi
           echo "SUBORY=$subory" >> "$GITHUB_ENV"; echo "SKUSKA=$skuska" >> "$GITHUB_ENV"; echo "KOD=$kod" >> "$GITHUB_ENV"
           echo "STAMP=$(TZ=Europe/Bratislava date +%Y-%m-%d-%H%M)" >> "$GITHUB_ENV"
           echo "Dôvod: $DOVOD · súbory: $subory · kód: $kod · skúška obnovy: $skuska"
@@ -99,7 +119,7 @@ jobs:
           EOF
 
       - name: Je posledná záloha čerstvá?
-        if: env.DOVOD == 'pred-zmenou' && env.NA_WEBSUPPORT == '1'
+        if: env.DOVOD == 'pred-zmenou' && env.NA_WEBSUPPORT == '1' && env.PRESKOCIT != '1'
         run: |
           posl=$(lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls -1 $DIR/databaza/; bye" 2>/dev/null \
                  | xargs -r -n1 basename | grep '^typek-databaza-' | sort | tail -1 || true)
@@ -154,8 +174,9 @@ jobs:
           data.sql    – všetky údaje vrátane používateľov (auth.users) a zoznamu súborov (storage.objects)
           pocty.tsv   – počet riadkov v každej tabuľke v čase zálohy (na kontrolu po obnove)
 
-          Nie je tu: obsah súborov (fotky, dokumenty – sú v zálohe typek-subory-*.tar), tajomstvá funkcií a Vaultu,
-          heslá vlastných rolí. Kód aplikácie a migrácie sú v GitHube (Martin3927/realitny-skener).
+          Nie je tu: obsah súborov (fotky ponúk, weby, dokumenty – sú v zálohe typek-subory-*.tar, archív skenera
+          v priečinku archiv/ na hostingu), tajomstvá funkcií a Vaultu, heslá vlastných rolí.
+          Kód aplikácie a migrácie sú v GitHube (Martin3927/realitny-skener) a v zálohe typek-kod-*.tar.
 
           Obnova do novej/prázdnej databázy Supabase (najprv vždy skúšobne, nikdy rovno do ostrej):
             psql "<adresa databázy>" --single-transaction -v ON_ERROR_STOP=1 \
@@ -177,10 +198,14 @@ jobs:
           echo "DNS: $(wc -l < "$n/dns.txt") záznamov"
           cp "$GITHUB_WORKSPACE/.github/OBNOVA.txt" "$z/OBNOVA.txt"
           if [ "$KOD" = 1 ]; then
-            mkdir -p "$z/kod"
-            git -C "$GITHUB_WORKSPACE" bundle create "$z/kod/realitny-skener.bundle" --all
-            git -C "$GITHUB_WORKSPACE" log -1 --format='%H %ci %s' > "$z/kod/commit.txt"
-            git bundle verify "$z/kod/realitny-skener.bundle" >/dev/null 2>&1 && echo "Kód: $(du -h "$z/kod/realitny-skener.bundle" | cut -f1), $(git -C "$GITHUB_WORKSPACE" rev-list --count HEAD) zmien"
+            # kód ide do samostatného súboru typek-kod-*.tar (nie do zálohy databázy)
+            k="$RUNNER_TEMP/k/kod"; mkdir -p "$k"
+            git -C "$GITHUB_WORKSPACE" bundle create "$k/realitny-skener.bundle" --all
+            git -C "$GITHUB_WORKSPACE" log -1 --format='%H %ci %s' > "$k/commit.txt"
+            cp "$GITHUB_WORKSPACE/.github/OBNOVA.txt" "$k/OBNOVA.txt"
+            git bundle verify "$k/realitny-skener.bundle" >/dev/null 2>&1 \
+              || { echo "::error::Záloha kódu je poškodená (git bundle verify)"; exit 1; }
+            echo "Kód: $(du -h "$k/realitny-skener.bundle" | cut -f1), $(git -C "$GITHUB_WORKSPACE" rev-list --count HEAD) zmien"
           fi
           if [ -n "$PRE_KLUC" ]; then python3 "$GITHUB_WORKSPACE/.github/zaloha.py" tajne "$z/tajne"; fi
 
@@ -189,7 +214,17 @@ jobs:
         run: |
           s="$RUNNER_TEMP/z/subory"; mkdir -p "$s"; cd "$s"
           # verejné priečinky (fotky ponúk, archív skenera, weby) cez verejnú adresu – kľúč netreba
-          python3 "$GITHUB_WORKSPACE/.github/zaloha.py" subory "$s" || echo "SUBORY_NEUPLNE=1" >> "$GITHUB_ENV"
+          if [ "$ARCHIV_ZVLAST" = 1 ]; then
+            # archív skenera: zoznam toho, čo na hostingu už je → stiahnu sa len nové fotky (pri exporte celý archív)
+            zoz="$RUNNER_TEMP/archiv-zoznam.tsv"
+            lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; get $DIR/archiv-zoznam.tsv -o $zoz; bye" >/dev/null 2>&1 \
+              || { rm -f "$zoz"; echo "Archív skenera na hostingu ešte nie je – nahrá sa celý."; }
+            [ -f "$zoz" ] && echo "Na hostingu je už $(wc -l < "$zoz") fotiek archívu."
+            python3 "$GITHUB_WORKSPACE/.github/zaloha.py" subory "$s" --archiv "$zoz" "$RUNNER_TEMP/archiv-nove" ${PRE_KLUC:+--cely} \
+              || echo "SUBORY_NEUPLNE=1" >> "$GITHUB_ENV"
+          else
+            python3 "$GITHUB_WORKSPACE/.github/zaloha.py" subory "$s" || echo "SUBORY_NEUPLNE=1" >> "$GITHUB_ENV"
+          fi
           # súkromné priečinky (prílohy chatu, dokumenty) cez Supabase CLI – kľúč SUPABASE_ACCESS_TOKEN
           # musí mať právo „API gateway keys: read“ (api_gateway_keys_read + api_gateway_keys_secret_read)
           SUKROMNE=$(grep '^SUKROMNE=' "$GITHUB_ENV" | tail -1 | cut -d= -f2-)
@@ -211,12 +246,27 @@ jobs:
         run: |
           cd "$RUNNER_TEMP"
           DB_SUBOR="typek-databaza-$STAMP-$DOVOD.tar.gz"
-          tar -C z -czf "$DB_SUBOR" OBNOVA.txt databaza nastavenia $( [ -d z/kod ] && echo kod )
+          tar -C z -czf "$DB_SUBOR" OBNOVA.txt databaza nastavenia
           echo "DB_SUBOR=$DB_SUBOR" >> "$GITHUB_ENV"
-          if [ -d z/subory ] && [ "$(find z/subory -type f | wc -l)" -gt 0 ]; then
+          # súbory bez archívu skenera (ten je na hostingu zvlášť v archiv/)
+          vynechat=(); [ "$ARCHIV_ZVLAST" = 1 ] && vynechat=(--exclude=subory/archiv)
+          if [ "$ARCHIV_ZVLAST" = 1 ]; then n=$(find z/subory -type f -not -path 'z/subory/archiv/*' 2>/dev/null | wc -l)
+          else n=$(find z/subory -type f 2>/dev/null | wc -l); fi
+          if [ "$n" -gt 0 ]; then
             SUB_SUBOR="typek-subory-$STAMP.tar"
-            tar -C z -cf "$SUB_SUBOR" subory
+            tar -C z "${vynechat[@]}" -cf "$SUB_SUBOR" subory
             echo "SUB_SUBOR=$SUB_SUBOR" >> "$GITHUB_ENV"
+          fi
+          # export: celý archív skenera zvlášť (na hosting nejde – tam sa dohrávajú len nové fotky)
+          if [ -n "$PRE_KLUC" ] && [ "$ARCHIV_ZVLAST" = 1 ] && [ -d z/subory/archiv ]; then
+            ARCH_SUBOR="typek-archiv-$STAMP.tar"
+            tar -C z -cf "$ARCH_SUBOR" subory/archiv
+            echo "ARCH_SUBOR=$ARCH_SUBOR" >> "$GITHUB_ENV"
+          fi
+          if [ -d k/kod ]; then
+            KOD_SUBOR="typek-kod-$STAMP.tar"
+            tar -C k -cf "$KOD_SUBOR" kod
+            echo "KOD_SUBOR=$KOD_SUBOR" >> "$GITHUB_ENV"
           fi
           ls -la typek-*
 
@@ -226,16 +276,37 @@ jobs:
           cd "$RUNNER_TEMP"
           put="put -O $DIR/databaza $DB_SUBOR;"
           [ -n "$SUB_SUBOR" ] && put="$put put -O $DIR/subory $SUB_SUBOR;"
-          lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; mkdir -p -f $DIR/databaza; mkdir -p -f $DIR/subory; $put bye"
+          [ -n "$KOD_SUBOR" ] && put="$put put -O $DIR/kod $KOD_SUBOR;"
+          lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; mkdir -p -f $DIR/databaza; mkdir -p -f $DIR/subory; mkdir -p -f $DIR/kod; $put bye"
           # kontrola: na Websuporte je súbor celý
-          for f in "databaza/$DB_SUBOR" ${SUB_SUBOR:+"subory/$SUB_SUBOR"}; do
-            tam=$(lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls --size --block-size=1 $DIR/$f; bye" | awk '{print $1}')
+          for f in "databaza/$DB_SUBOR" ${SUB_SUBOR:+"subory/$SUB_SUBOR"} ${KOD_SUBOR:+"kod/$KOD_SUBOR"}; do
+            tam=$(lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls --size --block-size=1 $DIR/$f; bye" | awk '{print $1}' || true)
             tu=$(stat -c %s "$(basename "$f")")
-            [ "$tam" = "$tu" ] || { echo "::error::$f na Websuporte nesedí ($tam B, má byť $tu B)"; exit 1; }
+            [ "$tam" = "$tu" ] || { echo "::error::$f na Websuporte nesedí ($tam B, má byť $tu B) – nie je hosting plný?"; exit 1; }
             echo "Uložené: $DIR/$f ($tu B)"
           done
-          # staré zálohy preč (najnovšie ostávajú)
-          for d in databaza:$PONECHAT_DB subory:$PONECHAT_SUBORY; do
+          # archív skenera: dohrať len nové fotky, potom overiť a až potom nahrať nový zoznam
+          if [ "$ARCHIV_ZVLAST" = 1 ] && [ -f archiv-zoznam.tsv.novy ]; then
+            if [ -d archiv-nove ] && [ -n "$(find archiv-nove -type f -print -quit)" ]; then
+              lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; set cmd:fail-exit yes;
+                mkdir -p -f $DIR/archiv; mirror -R --ignore-time --no-perms --parallel=4 archiv-nove/ $DIR/archiv/; bye" \
+                || { echo "::error::Nové fotky archívu sa nepodarilo nahrať na Websupport – nie je hosting plný?"; exit 1; }
+              # kontrola: druhé porovnanie nesmie nájsť nič na nahratie (veľkosti na hostingu sedia);
+              # výpis porovnania sa nezobrazuje – lftp v ňom ukazuje adresu aj s heslom
+              ostava=$(lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp;
+                mirror -R --dry-run --ignore-time --no-perms archiv-nove/ $DIR/archiv/; bye" 2>/dev/null | grep -cE '^(get|put) ' || true)
+              [ "$ostava" = 0 ] || { echo "::error::Na hostingu nesedí $ostava fotiek archívu"; exit 1; }
+              echo "Archív skenera: nahraných $ARCHIV_NOVE nových fotiek ($ARCHIV_NOVE_MB MB)"
+            else
+              echo "Archív skenera: žiadne nové fotky."
+            fi
+            lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; set cmd:fail-exit yes;
+              put archiv-zoznam.tsv.novy -o $DIR/archiv-zoznam.tsv; bye" \
+              || { echo "::error::Zoznam archívu sa nepodarilo uložiť na Websupport"; exit 1; }
+            echo "ARCHIV_OK=1" >> "$GITHUB_ENV"
+          fi
+          # staré zálohy preč (najnovšie ostávajú); archív skenera sa nemaže nikdy
+          for d in databaza:$PONECHAT_DB subory:$PONECHAT_SUBORY kod:$PONECHAT_KOD; do
             p=${d%%:*}; n=${d##*:}
             lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls -1 $DIR/$p/; bye" \
               | xargs -r -n1 basename | grep '^typek-' | sort | head -n -"$n" > stare.txt || true
@@ -250,7 +321,8 @@ jobs:
         if: env.PRESKOCIT != '1' && env.DO_GITHUBU == '1'
         run: |
           cd "$RUNNER_TEMP"
-          7z a -t7z -mhe=on -mx=1 -p"$ZALOHA_HESLO" "typek-zaloha-$STAMP.7z" "$DB_SUBOR" ${SUB_SUBOR:+"$SUB_SUBOR"} >/dev/null
+          # archív skenera sem nejde (je na hostingu v archiv/ a v exporte)
+          7z a -t7z -mhe=on -mx=1 -p"$ZALOHA_HESLO" "typek-zaloha-$STAMP.7z" "$DB_SUBOR" ${SUB_SUBOR:+"$SUB_SUBOR"} ${KOD_SUBOR:+"$KOD_SUBOR"} >/dev/null
           7z t -p"$ZALOHA_HESLO" "typek-zaloha-$STAMP.7z" >/dev/null && echo "Zašifrovaná kópia je v poriadku."
           mkdir -p sifrovane && mv "typek-zaloha-$STAMP.7z" sifrovane/
 
@@ -271,7 +343,8 @@ jobs:
           command -v age >/dev/null || sudo apt-get install -y -qq age >/dev/null
           mkdir -p export
           # kľúče z Vaultu idú len sem (zašifrované kľúčom toho, kto export chcel), nie na Websupport
-          tar -cf - "$DB_SUBOR" ${SUB_SUBOR:+"$SUB_SUBOR"} -C z tajne | age -r "$PRE_KLUC" -o "export/typek-export-$STAMP.tar.age"
+          tar -cf - "$DB_SUBOR" ${SUB_SUBOR:+"$SUB_SUBOR"} ${ARCH_SUBOR:+"$ARCH_SUBOR"} ${KOD_SUBOR:+"$KOD_SUBOR"} -C z tajne \
+            | age -r "$PRE_KLUC" -o "export/typek-export-$STAMP.tar.age"
           ls -la export
 
       - uses: actions/upload-artifact@v4
@@ -312,6 +385,39 @@ jobs:
           python3 "$GITHUB_WORKSPACE/.github/zaloha.py" porovnaj "$z/pocty.tsv" obnovene.tsv | tee porovnanie.txt
           echo "SKUSKA_OK=1" >> "$GITHUB_ENV"
 
+      - name: Miesto na hostingu
+        if: always() && env.NA_WEBSUPPORT == '1' && (env.LEN_MIESTO == 'true' || env.PRESKOCIT != '1')
+        run: |
+          cd "$RUNNER_TEMP"
+          ws() { lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; $1; bye" 2>/dev/null; }
+          # zálohy po priečinkoch (archív podľa zoznamu – prechádzať tisíce fotiek cez SFTP by trvalo dlho)
+          ws "du -s -m $DIR/databaza $DIR/subory $DIR/kod" | sed "s#$DIR/##" > miesto.txt || true
+          [ -f archiv-zoznam.tsv.novy ] && cp archiv-zoznam.tsv.novy archiv-zoznam-teraz.tsv \
+            || ws "get $DIR/archiv-zoznam.tsv -o archiv-zoznam-teraz.tsv" >/dev/null || true
+          [ -s archiv-zoznam-teraz.tsv ] && awk -F'\t' '{s+=$2} END {printf "%d\tarchiv (%d fotiek)\n", s/1048576, NR}' archiv-zoznam-teraz.tsv >> miesto.txt
+          spolu=$(awk '{s+=$1} END {print s+0}' miesto.txt)
+          {
+            echo "### Zálohy na hostingu: spolu $spolu MB"
+            awk -F'\t' '{printf "- %s: %s MB\n", $2, $1}' miesto.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat miesto.txt
+          if [ "$LEN_MIESTO" = "true" ]; then
+            # podrobne: každá záloha s veľkosťou a dátumom (názvy obsahujú len dátum a dôvod zálohy)
+            for p in databaza subory kod; do
+              echo "== $p"; ws "cls -l --block-size=1048576 --sort=name $DIR/$p/" | awk '{n=$NF; sub(".*/", "", n); printf "  %5s MB  %s\n", $5, n}' || true
+            done | tee -a podrobne.txt
+            # celý hosting po priečinkoch (bez archívu skenera, ten je vyššie)
+            echo "== hosting" | tee -a podrobne.txt
+            ws "du -m --max-depth=1 --exclude=archiv /" | sort -rn | head -20 | tee -a podrobne.txt || true
+            # koľko miesta zostáva (ak to server povie – nie každý SFTP server to vie)
+            sudo apt-get install -y -qq sshpass >/dev/null 2>&1 || true
+            host=${FTP_SERVER%%:*}; port=22; [[ "$FTP_SERVER" == *:* ]] && port=${FTP_SERVER##*:}
+            SSHPASS="$FTP_HESLO" timeout 60 sshpass -e sftp -q -P "$port" -oBatchMode=no -oStrictHostKeyChecking=accept-new \
+              -oPreferredAuthentications=password,keyboard-interactive -b - "$FTP_USER@$host" <<< "df -h" 2>/dev/null \
+              | grep -v '^sftp>' | tee -a podrobne.txt || echo "(server voľné miesto neprezradí)" | tee -a podrobne.txt
+            { echo; echo '```'; cat podrobne.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Súhrn
         if: always() && env.PRESKOCIT != '1'
         run: |
@@ -319,8 +425,11 @@ jobs:
           {
             echo "### Záloha $STAMP ($DOVOD)"
             [ -n "$DB_SUBOR" ] && echo "- Databáza: \`$DB_SUBOR\` – $(du -h "$DB_SUBOR" | cut -f1), $(awk -F'\t' '{n+=$2} END {print NR " tabuliek, " n " riadkov"}' z/databaza/pocty.tsv 2>/dev/null)"
-            [ -n "$SUB_SUBOR" ] && echo "- Súbory: \`$SUB_SUBOR\` – $(du -h "$SUB_SUBOR" | cut -f1), $(find z/subory -type f | wc -l) súborov${SUBORY_NEUPLNE:+ (neúplné)}${SUKROMNE_CHYBA:+ – bez súkromných priečinkov (chýba právo kľúča)}"
-            [ -f z/nastavenia/nastavenia.sql ] && echo "- Nastavenia: plánovač, pravidlá súborov, rozšírenia, DNS$( [ -d z/kod ] && echo ', kód s históriou' )"
+            [ -n "$SUB_SUBOR" ] && echo "- Súbory (bez archívu skenera): \`$SUB_SUBOR\` – $(du -h "$SUB_SUBOR" | cut -f1), $(tar -tf "$SUB_SUBOR" | grep -vc '/$') súborov${SUBORY_NEUPLNE:+ (neúplné)}${SUKROMNE_CHYBA:+ – bez súkromných priečinkov (chýba právo kľúča)}"
+            [ "$ARCHIV_OK" = 1 ] && echo "- Archív skenera na hostingu: dohraných $ARCHIV_NOVE nových fotiek ($ARCHIV_NOVE_MB MB), spolu $ARCHIV_SPOLU fotiek ($ARCHIV_SPOLU_MB MB)"
+            [ -n "$ARCH_SUBOR" ] && echo "- Celý archív skenera do exportu: \`$ARCH_SUBOR\` – $(du -h "$ARCH_SUBOR" | cut -f1)"
+            [ -f z/nastavenia/nastavenia.sql ] && echo "- Nastavenia: plánovač, pravidlá súborov, rozšírenia, DNS"
+            [ -n "$KOD_SUBOR" ] && echo "- Kód s históriou: \`$KOD_SUBOR\` – $(du -h "$KOD_SUBOR" | cut -f1)"
             [ "$ULOZENE_WS" = 1 ] && echo "- Uložené na Websupport: \`$DIR\`"
             [ "$DO_GITHUBU" = 1 ] && echo "- Zašifrovaná kópia: Artifacts tohto behu (90 dní)"
             [ "$SKUSKA_OK" = 1 ] && echo "- Skúška obnovy do prázdnej databázy: **v poriadku**"

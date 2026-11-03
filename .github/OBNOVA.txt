@@ -15,11 +15,13 @@ nastavenia\    nastavenia.sql – plánovač (skener každých 10 min, pripomien
                nastavenia.json – nastavenia projektu Supabase (prihlasovanie, funkcie, mená tajomstiev),
                vlastné domény maklérov
                dns.txt – DNS záznamy domén (kam smeruje web, aplikácia, e-mail)
-kod\           realitny-skener.bundle – celý kód z GitHubu aj s históriou (aplikácia, predajný web,
+typek-kod-*    kod\realitny-skener.bundle – celý kód z GitHubu aj s históriou (aplikácia, predajný web,
                portál, skener, funkcie, zmeny databázy, automatické nasadenie)
 tajne\         (len v exporte, ktorý si sťahuješ ty) kľúče z trezoru databázy – napr. kľúč pre
                upozornenia v mobile, aby po obnove fungovali bez nového povolenia v telefónoch
-typek-subory-* fotky ponúk, weby maklérov, archív skenera (samostatný archív)
+typek-subory-* fotky ponúk, weby maklérov, prílohy (samostatný archív)
+archiv\        archív skenera – fotky súkromných inzerátov; na hostingu je jedna kópia, ku ktorej sa
+               pridávajú len nové fotky (v exporte typek-archiv-*); archiv-zoznam.tsv = čo v nej je
 
 
 ČO V ZÁLOHE NIE JE (TREBA MAŤ V TREZORE HESIEL)
@@ -52,7 +54,8 @@ B) Prišli sme o celý projekt Supabase
         -c 'SET session_replication_role = replica' -f databaza/data.sql
       potom nastavenia/nastavenia.sql a tajne/vault.sql; skontrolovať počty s databaza/pocty.tsv.
    3. Súbory: najprv vymazať riadky storage.objects (prišli z data.sql bez obsahu), potom nahrať
-      priečinky z typek-subory-* do rovnomenných priečinkov úložiska (priečinky už existujú z data.sql).
+      priečinky z typek-subory-* do rovnomenných priečinkov úložiska (priečinky už existujú z data.sql)
+      a priečinok archiv (z hostingu zalohy/archiv alebo z typek-archiv-* v exporte) do priečinka archiv.
    4. Funkcie: Actions → Funkcie (Supabase) → Run workflow pre každú funkciu (kód je v GitHube)
       a vložiť ich tajomstvá (zoznam vyššie, mená sú aj v nastavenia.json).
    5. Prihlasovanie (Authentication): adresa aplikácie, povolené adresy presmerovania, e-mail (SMTP)
@@ -68,12 +71,16 @@ C) Prišli sme o hosting Websupport (web, aplikácia)
    alebo v databáze (len dočasná vyrovnávacia pamäť).
 
 D) Prišli sme o GitHub
-   git clone kod/realitny-skener.bundle realitny-skener → nový repozitár na GitHube → git push
+   rozbaliť typek-kod-* → git clone kod/realitny-skener.bundle realitny-skener → nový repozitár na GitHube → git push
    → vložiť tajomstvá (zoznam vyššie) → Actions sa rozbehnú samé (skener, nasadenie, záloha).
 
 
 AUTOMATICKÉ ZÁLOHY
 ------------------
 Databáza a nastavenia každú noc a pred každou zmenou databázy, súbory a kód každú nedeľu – na hosting
-Websupport do /realitnytypek.sk/zalohy (mimo webu). Obnova databázy do prázdnej databázy sa skúša
-pri každej zmene zálohovania (počty riadkov sa porovnávajú).
+Websupport do /realitnytypek.sk/zalohy (mimo webu):
+  databaza\  60 posledných záloh databázy a nastavení
+  subory\    4 posledné zálohy súborov (bez archívu skenera)
+  archiv\    archív skenera – jedna kópia, každú nedeľu sa dohrajú len nové fotky
+  kod\       2 posledné zálohy kódu
+Obnova databázy do prázdnej databázy sa skúša pri každej zmene zálohovania (počty riadkov sa porovnávajú).
