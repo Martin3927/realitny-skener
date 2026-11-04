@@ -86,3 +86,26 @@ select poslat_registraciu((select id from zakaznici where email = 'jana@novakova
 reset role; reset request.jwt.claim.sub;
 select 'Jana čaká' t, registracia_poslat is not null from zakaznici where email = 'jana@novakova.sk';                     -- → t
 select 'Alpha stále všetko' t, (select sekcie from kancelarie where id = 1) is null alpha_null, _kancelaria_platna(1) platna;  -- → t, t
+
+\echo '=== 9. opakovaná žiadosť s tým istým e-mailom → odkaz znova (najviac raz za hodinu)'
+alter table zakaznici disable trigger zakaznici_upravene;   -- v skúške treba „staré“ upravene (inak web_ziadost poznámku nedoplní)
+update zakaznici set registracia_poslat = null, registracia_email = now() - interval '2 hours', upravene = now() - interval '1 hour', poznamky = 'x' where email = 'jana@novakova.sk';
+select web_ziadost('jana@novakova.sk', array['web'], 1, 'mesacne', null, 'Jana Nováková', null, null, null);
+select 'Jana znova' t, registracia_poslat is not null caka from zakaznici where email = 'jana@novakova.sk';             -- → t
+update zakaznici set registracia_poslat = null, registracia_email = now() - interval '5 minutes', upravene = now() - interval '1 hour', poznamky = 'x' where email = 'jana@novakova.sk';
+select web_ziadost('jana@novakova.sk', array['web'], 1, 'mesacne', null, 'Jana Nováková', null, null, null);
+select 'Jana o 5 min' t, registracia_poslat is not null caka from zakaznici where email = 'jana@novakova.sk';           -- → f (poslaný pred 5 min)
+update zakaznici set upravene = now() - interval '1 hour', poznamky = 'x' where email = 'peter@maly.sk';
+select web_ziadost('peter@maly.sk', array['skener'], 1, 'mesacne', null, null, null, null, null);
+select 'Peter (zaregistrovaný)' t, registracia_poslat is not null caka from zakaznici where email = 'peter@maly.sk';   -- → f
+
+alter table zakaznici enable trigger zakaznici_upravene;
+
+\echo '=== 10. platiaci zákazník ostane platiaci'
+\set Z '00000000-0000-0000-0000-0000000000c3'
+insert into auth.users (id, email) values (:'Z', 'plati@realitka.sk') on conflict do nothing;
+insert into zakaznici (typ, nazov, email, stav, moduly, zaplatene_do, registracia_hash, registracia_do)
+values ('makler', 'Platiaci maklér', 'plati@realitka.sk', 'aktivny', array['web'], current_date + 20, 'h-plati', now() + interval '1 day');
+select 'výsledok' t, r->>'skusobna_do' is null bez_skusobnej from (select _registracia_dokoncit('h-plati', :'Z', 'Pavol Platiaci', '0907 111 222', null, null) r) x;  -- → t
+select 'zákazník' t, stav, skusobna_do is null bez_skusobnej, registrovany is not null reg from zakaznici where email = 'plati@realitka.sk';  -- → aktivny, t, t
+select 'upozornenie' t, left(poznamka, 60) from pripomienky where druh = 'zakaznik' and poznamka like '%Pavol%';     -- → Nová registrácia: Pavol Platiaci … platiaci zákazník

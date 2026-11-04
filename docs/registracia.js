@@ -55,7 +55,7 @@
   function formular() {
     var okresy = D.okresy && D.okresy.length ? D.okresy.slice(0, MAX) : [""];
     obal(
-      '<p class="reg-zadarmo">Ešte pár údajov a máš ' + D.dni + " dní zadarmo.</p>" +
+      '<p class="reg-zadarmo">' + (D.platiaci ? "Ešte pár údajov a môžeš začať." : "Ešte pár údajov a máš " + D.dni + " dní zadarmo.") + "</p>" +
       (D.balik && D.balik.length ? '<div class="reg-balik">' + D.balik.map(function (b) { return "<span>" + esc(b) + "</span>"; }).join("") + "</div>" : "") +
       '<form id="r-form" novalidate class="login-box" style="padding:0;gap:14px;animation:none">' +
         '<label class="field"><span>E-mail (prihlasovacie meno)</span><input type="email" value="' + esc(D.email) + '" readonly autocomplete="username"></label>' +
@@ -64,7 +64,7 @@
         '<label class="field"><span>Telefón</span><input id="r-tel" type="tel" autocomplete="tel" inputmode="tel" maxlength="30" required placeholder="0900 123 456" value="' + esc(D.telefon) + '"></label>' +
         (D.skener ? '<div class="reg-okresy"><span>Okresy pre skener</span><div id="r-okresy-zoz" class="reg-okresy">' + okresy.map(okresSelect).join("") + "</div>" +
           '<button type="button" class="reg-plus" id="r-okres-plus">+ Pridať okres</button>' +
-          '<p class="reg-pozn">Počas skúšobnej doby najviac ' + MAX + " okresy. Ďalšie si pridáš po objednaní.</p></div>" : "") +
+          '<p class="reg-pozn">' + (D.platiaci ? "Najviac " + MAX + " okresy. Ďalšie ti pridáme podľa objednávky." : "Počas skúšobnej doby najviac " + MAX + " okresy. Ďalšie si pridáš po objednaní.") + "</p></div>" : "") +
         '<label class="field"><span>Heslo (aspoň 8 znakov)</span><input id="r-heslo" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label>' +
         '<label class="field"><span>Heslo ešte raz</span><input id="r-heslo2" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label>' +
         '<label class="reg-suhlas"><input type="checkbox" id="r-suhlas" required><span>Súhlasím so <a href="https://realitnytypek.sk/ochrana-udajov.html" target="_blank" rel="noopener">spracovaním osobných údajov</a> na účely používania Realitného týpka.</span></label>' +
@@ -127,7 +127,7 @@
       if (r.status === 410) return hlaska("Odkaz už neplatí", r.chyba, '<a class="btn primary wide" href="mailto:info@realitnytypek.sk">Napísať na info@realitnytypek.sk</a>');
       return chyba(r.chyba || "Registráciu sa nepodarilo dokončiť. Skús to o chvíľu znova.");
     }
-    hlaska("Hotovo, vitaj v Týpkovi! 🎉", "Skúšobná doba ti beží do " + datum(r.skusobna_do) + ". Prihlasujem ťa…");
+    hlaska("Hotovo, vitaj v Týpkovi! 🎉", (r.skusobna_do ? "Skúšobná doba ti beží do " + datum(r.skusobna_do) + ". " : "") + "Prihlasujem ťa…");
     var s = await sb.auth.signInWithPassword({ email: r.email, password: h });
     if (s.error) return hlaska("Účet je hotový", "Prihlás sa svojím e-mailom a heslom, ktoré si si práve nastavil.", '<a class="btn primary wide" href="./">Prihlásiť sa</a>');
     try { history.replaceState(null, "", location.pathname); } catch (er) { /* nič */ }

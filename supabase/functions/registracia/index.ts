@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       ok: true, email: z.email, typ: z.typ, meno: z.kontakt_meno || "", telefon: z.telefon || "",
       nazov: z.typ === "kancelaria" && z.nazov !== z.email ? z.nazov : "",
       balik: moduly.map((m) => NAZVY[m] || m), skener: moduly.includes("skener"),
-      okresy: (Array.isArray(z.okresy) ? z.okresy : []).slice(0, 3), max_okresov: 3, dni: 14,
+      okresy: (Array.isArray(z.okresy) ? z.okresy : []).slice(0, 3), max_okresov: 3, dni: 14, platiaci: z.stav === "aktivny",
     });
   }
 
