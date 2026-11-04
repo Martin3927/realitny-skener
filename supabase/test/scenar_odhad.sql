@@ -62,10 +62,10 @@ select 'po chybách' t, count(*) from odhady_hodnoty;                           
 
 \echo '=== 3. byt v Smižanoch → Kristián (má tam ponuku), zvonček, mobil, predávajúci, potvrdenie'
 set role anon;
-select r->>'ok' ok, r->>'obec' obec, r->'makler'->>'meno' makler, r->>'pokryte' pokryte
-  from (select odhad_ziadost(:'BYT'::jsonb, :'P6') r) x;                    -- → true, Smižany, Kristián Alpha, true
+select r->>'ok' ok, r->>'obec' obec, r ? 'makler' meno_maklera, r->>'pokryte' pokryte
+  from (select odhad_ziadost(:'BYT'::jsonb, :'P6') r) x;                    -- → true, Smižany, f (114: klient makléra nevidí), true
 -- dvojklik: tá istá žiadosť do 15 minút sa neuloží druhýkrát
-select odhad_ziadost(:'BYT'::jsonb, :'P7')->'makler'->>'meno' druhykrat;    -- → Kristián Alpha
+select odhad_ziadost(:'BYT'::jsonb, :'P7')->>'ok' druhykrat;               -- → true (uloží sa len raz – pozri pocet nižšie)
 reset role;
 select count(*) pocet, max(nazov) nazov, max(email) email, max(telefon) tel, max(kancelaria_id) kanc, bool_and(potvrdenie_poslat) potvrdenie,
        max(array_to_string(doplnky, ',')) doplnky, max(auto->>'pocet') auto_pocet from odhady_hodnoty;
@@ -139,8 +139,8 @@ select count(*) po_upratani from odhady_hodnoty;                                
 select pg_temp.pow(30000000) "P11", pg_temp.pow(32000000) "P12" \gset
 insert into telefony (inzerat_id, telefon, zadal, kancelaria_id) values ('o6', '0944555666', :'K', 1);
 set role anon;
-select r->'fotky' is not null ma_fotky, length(r->'fotky'->>'token') dlzka, r->'makler'->>'meno' makler
-  from (select odhad_ziadost('{"typ":"byt","obec":"Smižany","okres":"Spišská Nová Ves","ulica":"Tatranská","plocha":"68","izby":"3","poschodie":"1","stav":"Novostavba","dovod":"Zvažujem predaj","kedy_predat":"Čo najskôr","kedy_volat":"Poobede","fotky":"3","meno":"Ivan Rýchly","telefon":"0944 555 666","email":"ivan@x.sk"}'::jsonb, :'P11') r) x;  -- → t, 32, Kristián Alpha
+select r->'fotky' is not null ma_fotky, length(r->'fotky'->>'token') dlzka, r ? 'makler' meno_maklera
+  from (select odhad_ziadost('{"typ":"byt","obec":"Smižany","okres":"Spišská Nová Ves","ulica":"Tatranská","plocha":"68","izby":"3","poschodie":"1","stav":"Novostavba","dovod":"Zvažujem predaj","kedy_predat":"Čo najskôr","kedy_volat":"Poobede","fotky":"3","meno":"Ivan Rýchly","telefon":"0944 555 666","email":"ivan@x.sk"}'::jsonb, :'P11') r) x;  -- → t, 32, f
 reset role;
 select kedy_predat, kedy_volat, fotky_cesta like id || '/%' cesta, fotky_do > now() plati from odhady_hodnoty where email = 'ivan@x.sk';  -- → Čo najskôr, Poobede, t, t
 select titul from push_fronta order by id desc limit 1;                                             -- → (prázdne bez odberu push – v teste nie je push_odbery)

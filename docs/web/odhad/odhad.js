@@ -304,23 +304,14 @@
     var d = new Date(zajtra); while (!pracovny(d)) d.setDate(d.getDate() + 1);
     return "najneskôr " + DNI[d.getDay()] + " " + d.getDate() + ". " + (d.getMonth() + 1) + ".";
   }
-  function inicialy(m) { return String(m || "").split(/[\s,]+/).filter(function (x) { return x && !/\.$/.test(x); }).slice(0, 2).map(function (x) { return x[0]; }).join("").toUpperCase(); }
   function hotovo(r, u) {
-    var meno = (u.meno || "").split(/\s+/)[0], m = r && r.makler, zena = m && m.pohlavie === "zena";
-    el("hotovo-t").textContent = "Ďakujeme, " + meno + ". Približnú hodnotu vám " + (m && r.pokryte ? (zena ? "maklérka" : "maklér") : "maklér") +
-      " oznámi telefonicky alebo e-mailom " + kedy().replace(/\.$/, "") + ".";
-    var mk = el("makler"), mimo = el("hotovo-mimo");
-    if (m && r.pokryte) {
-      var tel = String(m.telefon || "").trim();
-      mk.innerHTML = '<span class="makler-foto">' + (m.foto ? '<img src="' + esc(m.foto) + '" alt="">' : esc(inicialy(m.meno))) + "</span>" +
-        "<span><small>Žiadosť dostal" + (zena ? "a" : "") + "</small><b>" + esc(m.meno) + "</b>" + (m.kancelaria ? "<small>" + esc(m.kancelaria) + "</small>" : "") +
-        (tel ? '<small><a href="tel:' + esc(tel.replace(/[^\d+]/g, "")) + '">' + esc(tel) + "</a></small>" : "") + "</span>";
-      mk.hidden = false; mimo.hidden = true;
-    } else {
-      mk.hidden = true;
-      mimo.textContent = "V okrese " + (r && r.okres || (V.obec && V.obec.o) || "") + " zatiaľ nemáme makléra, ktorý by používal Týpka. Žiadosť sme prijali a dáme vám vedieť, či vám vieme pomôcť.";
+    // meno makléra klientovi neukazujeme – ozve sa mu maklér z jeho okolia
+    var meno = (u.meno || "").split(/\s+/)[0], mimo = el("hotovo-mimo");
+    el("hotovo-t").textContent = "Ďakujeme, " + meno + ". Približnú hodnotu vám maklér z vášho okolia oznámi telefonicky alebo e-mailom " + kedy().replace(/\.$/, "") + ".";
+    if (r && r.pokryte === false) {
+      mimo.textContent = "V okrese " + (r.okres || (V.obec && V.obec.o) || "") + " zatiaľ nemáme makléra, ktorý by používal Týpka. Žiadosť sme prijali a dáme vám vedieť, či vám vieme pomôcť.";
       mimo.hidden = false;
-    }
+    } else mimo.hidden = true;
     el("flow").hidden = true; el("hotovo").hidden = false;
     el("odhad").scrollIntoView({ behavior: pohybOk() ? "smooth" : "auto", block: "start" });
     el("hotovo-n").focus({ preventScroll: true });

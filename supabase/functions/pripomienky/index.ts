@@ -652,20 +652,15 @@ async function odhadEmaily(db: any) {
   for (const o of (pot as any[]) ?? []) {
     try {
       if (!o.email) continue;
+      // meno makléra klientovi neuvádzame (rozhodnutie 4. 11. 2026) – odpoveď na e-mail však ide maklérovi
       const m = await makler(o.makler_id);
-      const kn = nazovK(kancelarie, m?.kancelaria_id ?? o.kancelaria_id);
-      const mm = m ? menoMaklera(m) : "";
-      const tel = String(m?.telefon || "").trim();
       const html = obalPortalu(`
         <p style="font-size:16px;margin:0 0 10px">Dobrý deň${o.meno ? ", " + esc(String(o.meno).split(" ")[0]) : ""},</p>
-        <p style="font-size:15px;line-height:1.55;margin:0 0 12px">ďakujeme za žiadosť o odhad hodnoty nehnuteľnosti. ${mm
-          ? `Dostal${m?.pohlavie === "zena" ? "a" : ""} ju <b>${esc(mm)}</b> z kancelárie ${esc(kn)}, ${m?.pohlavie === "zena" ? "maklérka, ktorá" : "maklér, ktorý"} vo vašom okolí pôsobí.`
-          : "Odovzdali sme ju maklérovi, ktorý vo vašom okolí pôsobí."}</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 12px">ďakujeme za žiadosť o odhad hodnoty nehnuteľnosti. Odovzdali sme ju maklérovi, ktorý vo vašom okolí pôsobí.</p>
         <p style="font-size:15px;line-height:1.55;margin:0 0 16px">Približnú hodnotu vám oznámi telefonicky alebo e-mailom <b>${esc(kedySaOzve(new Date(o.vytvorene)))}</b> (v pracovné dni).</p>
         <table role="presentation" style="border-collapse:collapse;font-size:14px;margin:0 0 16px;background:#fffdf8;border-radius:12px;padding:12px">
-          ${riadok("Nehnuteľnosť", esc(o.nazov || ""))}${riadok("Adresa", esc([o.ulica, o.cislo].filter(Boolean).join(" ")))}${riadok("Dôvod", esc(o.dovod || ""))}
-          ${mm ? riadok("Maklér", esc(mm) + (tel ? ` · <a href="tel:${esc(tel.replace(/[^\d+]/g, ""))}" style="color:#1e2a35">${esc(tel)}</a>` : "")) : ""}</table>
-        <p style="font-size:15px;line-height:1.55;margin:0">Ak chcete niečo doplniť, stačí odpísať na tento e-mail – správa pôjde priamo ${m?.pohlavie === "zena" ? "maklérke" : "maklérovi"}.</p>`,
+          ${riadok("Nehnuteľnosť", esc(o.nazov || ""))}${riadok("Adresa", esc([o.ulica, o.cislo].filter(Boolean).join(" ")))}${riadok("Dôvod", esc(o.dovod || ""))}</table>
+        <p style="font-size:15px;line-height:1.55;margin:0">Ak chcete niečo doplniť, stačí odpísať na tento e-mail – správa pôjde priamo maklérovi.</p>`,
         `Tento e-mail vám prišiel, lebo ste na realitnytypek.sk/odhad požiadali o odhad hodnoty nehnuteľnosti. Odhad je orientačný a nezáväzný – <a href="${ODHAD_PODMIENKY}" style="color:#7a828c">podmienky odhadu</a>.`);
       await posli(o.email, "Žiadosť o odhad hodnoty – " + String(o.nazov || "vaša nehnuteľnosť").slice(0, 90), html,
         { odMeno: PORTAL_OD, odpovedat: m?.email || PORTAL_ODPOVED });

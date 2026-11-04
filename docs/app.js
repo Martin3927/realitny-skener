@@ -1553,7 +1553,15 @@
   }
   async function nacitajPripomienky() {
     var rows = await vsetkyRiadky("pripomienky", "*", "id");
+    var predtym = (S.prip || []).reduce(function (m, p) { return Math.max(m, p.id); }, 0);
     S.prip = rows.sort(function (a, b) { return String(a.cas).localeCompare(String(b.cas)); });
+    // nový kontakt z webu (aj žiadosť o odhad) → obnoviť žiadosti o odhad, aby sa nová dala hneď otvoriť a bola v zozname
+    if (predtym && maSekciu("odhady") && rows.some(function (p) { return p.id > predtym && p.druh === "web" && p.web_kontakt_id; })) {
+      S.odhadyCas = 0;
+      nacitajOdhadyHodnoty(true).then(function () {
+        if (S.tab === "odhady" && !S.odhadDetail && !$(".odh-detail") && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) vykresliOdhady();
+      });
+    }
   }
   function mojeAktivne() {
     return S.prip.filter(function (p) { return p.makler_id === S.me.id && !p.hotovo; });
@@ -3595,7 +3603,7 @@
     var prip = splatne().length, pripVsetky = mojeAktivne().length, pripNove = splatne().filter(function (p) { return noveOd(p.cas); }).length;
     var neprec = pocetNeprecitanych();
     var odhadyNove = (S.odhady || []).filter(function (o) { return o.stav === "nova" && o.makler_id === S.me.id; }).length;
-    if (maSekciu("odhady") && Date.now() - (S.odhadyCas || 0) > 120000) nacitajOdhady(true).then(function () {
+    if (maSekciu("odhady") && Date.now() - (S.odhadyCas || 0) > 120000) nacitajOdhadyHodnoty(true).then(function () {
       var n = (S.odhady || []).filter(function (o) { return o.stav === "nova" && o.makler_id === S.me.id; }).length;
       if (S.tab === "domov" && n !== odhadyNove) vykresliDomov();
     });
@@ -7196,7 +7204,7 @@
   function odhVykup(o) { return /výkup/i.test(o.dovod || ""); }
   function odhBsm(o) { return /^Vyporiadanie/.test(o.dovod || ""); }
   function odhAdresa(o) { return [[o.ulica, o.cislo].filter(Boolean).join(" "), o.cast_obce].filter(Boolean).join(", "); }
-  function nacitajOdhady(ticho) {
+  function nacitajOdhadyHodnoty(ticho) {
     if (S.odhadyNacitavam) return S.odhadyNacitavam;
     S.odhadyNacitavam = sb.from("odhady_hodnoty").select("*").order("vytvorene", { ascending: false }).limit(500).then(function (r) {
       if (r.error) throw r.error;
@@ -7226,11 +7234,11 @@
     var el = $("#obsah"); if (!el) return;
     if (!S.odhady) {
       el.innerHTML = '<div class="box"><div class="meta">Načítavam žiadosti o odhad…</div></div>';
-      nacitajOdhady().then(function () { if (S.tab === "odhady") vykresliOdhady(); });
+      nacitajOdhadyHodnoty().then(function () { if (S.tab === "odhady") vykresliOdhady(); });
       return;
     }
     if (S.odhadDetail) return vykresliOdhadDetail();
-    if (Date.now() - (S.odhadyCas || 0) > 60000) nacitajOdhady(true).then(function () { if (S.tab === "odhady" && !S.odhadDetail && !$(".odh-detail")) vykresliOdhady(); });
+    if (Date.now() - (S.odhadyCas || 0) > 60000) nacitajOdhadyHodnoty(true).then(function () { if (S.tab === "odhady" && !S.odhadDetail && !$(".odh-detail")) vykresliOdhady(); });
     var F = S.odhF = S.odhF || { sk: "aktivne", m: "" };
     var vsetky = S.odhady.filter(function (o) { return !F.m || (F.m === "ja" ? o.makler_id === S.me.id : o.makler_id === F.m); });
     var sk = ODH_SKUPINY.find(function (x) { return x[0] === F.sk; }) || ODH_SKUPINY[0];
@@ -7391,7 +7399,20 @@
   function vykresliOdhadDetail() {
     var el = $("#obsah"), o = (S.odhady || []).find(function (x) { return x.id === S.odhadDetail; });
     var spat = '<button type="button" class="btn ghost" data-odh-spat>← Všetky odhady</button>';
-    if (!o) { el.innerHTML = '<div class="box">' + spat + '<p class="meta">Žiadosť sa nenašla – možno ju medzitým dostal iný maklér.</p></div>'; el.querySelector("[data-odh-spat]").onclick = function () { S.odhadDetail = null; history.pushState({ tab: "odhady" }, "", "#odhady"); vykresliOdhady(); }; return; }
+    if (!o) {
+      // nová žiadosť (z mobilu alebo zvončeka) ešte nemusí byť v načítanom zozname – raz ho obnovíme
+      var hladat = S.odhHladam !== S.odhadDetail;
+      el.innerHTML = '<div class="box">' + spat + '<p class="meta">' + (hladat ? "Načítavam žiadosť…" : "Žiadosť sa nenašla – možno ju medzitým dostal iný maklér.") + "</p></div>";
+      el.querySelector("[data-odh-spat]").onclick = function () { S.odhadDetail = null; history.pushState({ tab: "odhady" }, "", "#odhady"); vykresliOdhady(); };
+      if (hladat) {
+        var id = S.odhHladam = S.odhadDetail;
+        S.odhadyCas = 0;
+        (S.odhadyNacitavam || Promise.resolve()).then(function () { return nacitajOdhadyHodnoty(true); })
+          .then(function () { if (S.tab === "odhady" && S.odhadDetail === id) vykresliOdhadDetail(); });
+      }
+      return;
+    }
+    S.odhHladam = null;
     nacitajPodklad(o);
     var st = odhStav(o.stav), riadky = [];
     function r(k, v) { if (v !== null && v !== undefined && String(v).trim() !== "") riadky.push("<tr><th>" + k + "</th><td>" + v + "</td></tr>"); }
@@ -7477,7 +7498,7 @@
     var pb = el.querySelector("[data-odh-priradit]");
     if (pb) pb.onclick = async function () {
       var komu = $("#odh-komu").value; if (komu === o.makler_id) return toast("Žiadosť už má tento maklér.");
-      try { await rpc("odhad_priradit", { p_id: o.id, p_makler: komu }); o.makler_id = komu; toast("Žiadosť je odovzdaná – " + meno(komu) + " dostal(a) upozornenie."); await nacitajOdhady(true); vykresliOdhadDetail(); }
+      try { await rpc("odhad_priradit", { p_id: o.id, p_makler: komu }); o.makler_id = komu; toast("Žiadosť je odovzdaná – " + meno(komu) + " dostal(a) upozornenie."); await nacitajOdhadyHodnoty(true); vykresliOdhadDetail(); }
       catch (e) { toast(chybaText(e), true); }
     };
     el.querySelector("[data-odh-kopiruj]").onclick = function () { kopiruj(f.text.value, "Text odhadu je skopírovaný."); };
@@ -7520,7 +7541,7 @@
         toast("✉️ Odhad sa odosiela klientovi.");
         [6000, 20000].forEach(function (t) {
           setTimeout(function () {
-            nacitajOdhady(true).then(function () { var n = (S.odhady || []).find(function (x) { return x.id === o.id; }), s = $("#odh-email-stav"); if (n && s && S.odhadDetail === o.id) { o = n; s.innerHTML = odhEmailStav(n); } });
+            nacitajOdhadyHodnoty(true).then(function () { var n = (S.odhady || []).find(function (x) { return x.id === o.id; }), s = $("#odh-email-stav"); if (n && s && S.odhadDetail === o.id) { o = n; s.innerHTML = odhEmailStav(n); } });
           }, t);
         });
       } catch (err) { toast(chybaText(err), true); }
@@ -9860,7 +9881,7 @@
     try {
       var w = await Promise.all([rpc("vykon_maklerov", { p_od: r[0].toISOString(), p_do: r[1].toISOString() }),
         rpc("statistiky_ponuk", { p_od: r[0].toISOString(), p_do: r[1].toISOString() }).catch(function () { return null; }),
-        maSekciu("odhady") ? nacitajOdhady(true) : null]);
+        maSekciu("odhady") ? nacitajOdhadyHodnoty(true) : null]);
       S.vykon = w[0]; S.statPonuk = w[1];
     }
     catch (e) { S.vykon = { chyba: chybaText(e) }; }
@@ -10413,7 +10434,7 @@
           if (wk.zdroj === "odhad" && wk.portal && maSekciu("odhady")) {
             var wo = odhadPodlaKontaktu(wk.id);
             if (wo) ciel = '<a href="#odhady" data-prip-odhad="' + wo.id + '">📈 Otvoriť žiadosť o odhad</a>';
-            else if (!S.odhady && !S.odhadyNacitavam) nacitajOdhady(true).then(vykresliZvoncek);
+            else if (!S.odhadyNacitavam && !(S.odhZvon = S.odhZvon || {})[wk.id]) { S.odhZvon[wk.id] = 1; nacitajOdhadyHodnoty(true).then(vykresliZvoncek); }
           }
         }
       }
