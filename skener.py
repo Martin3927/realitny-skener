@@ -673,16 +673,20 @@ def skenuj_bazos(plny, max_stran, zname=frozenset(), typy_radar=None, plne=froze
     # režim „kontrola“: čo našlo hľadanie po okresoch a celoslovenské čítanie nie (v rovnakom rozsahu čísel inzerátov)
     if rezim_sk == "kontrola" and sk and stav_sk is not None:
         ids_sk = {r["pid"] for r in sk}
-        od = {}
+        od, do = {}, {}
         for r in sk:
             if not r.get("top"):
                 od[r["typ"]] = min(od.get(r["typ"], 10**12), int(r["pid"]))
-        vynechane = [r for r in vysledky.values() if r["pid"] not in ids_sk and not r.get("top") and r.get("okres") in OKRESY
-                     and r.get("typ") in od and int(r["pid"]) >= od[r["typ"]]]
+                do[r["typ"]] = max(do.get(r["typ"], 0), int(r["pid"]))
+        # porovnáva sa len rozsah čísel, ktorý celoslovenské čítanie videlo – inzerát pridaný počas behu (číslo vyššie)
+        # nájde celoslovenské čítanie až pri ďalšej kontrole, to nie je vynechanie
+
+        def v_rozsahu(r):
+            return r.get("typ") in od and od[r["typ"]] <= int(r["pid"]) <= do[r["typ"]]
+        vynechane = [r for r in vysledky.values() if r["pid"] not in ids_sk and not r.get("top") and r.get("okres") in OKRESY and v_rozsahu(r)]
         k = stav_sk.setdefault("_kontrola", {"behov": 0, "porovnanych": 0, "vynechane": 0, "priklady": []})
         k["behov"] += 1
-        k["porovnanych"] += sum(1 for r in vysledky.values() if not r.get("top") and r.get("okres") in OKRESY
-                                and r.get("typ") in od and int(r["pid"]) >= od[r["typ"]])
+        k["porovnanych"] += sum(1 for r in vysledky.values() if not r.get("top") and r.get("okres") in OKRESY and v_rozsahu(r))
         k["vynechane"] += len(vynechane)
         k["priklady"] = (k["priklady"] + [f"{NOW_ISO[:16]} {r['typ']} {r['pid']}" for r in vynechane])[-20:]
         log(f"Bazoš kontrola: celoslovensky vynechané {len(vynechane)} (spolu {k['vynechane']} z {k['porovnanych']} za {k['behov']} behov)")
