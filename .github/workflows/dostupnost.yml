@@ -19,7 +19,8 @@ concurrency:
 
 jobs:
   skontroluj:
-    runs-on: ubuntu-latest
+    # vlastný server (VPS): premenná SKENER_BEZEC = typek (štítok runnera z server/instalacia.sh); inak servery GitHubu
+    runs-on: ${{ vars.SKENER_BEZEC || 'ubuntu-latest' }}
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4

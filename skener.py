@@ -445,9 +445,13 @@ def bazos_okres(r):
 
 
 def bazos_strana(kat, psc, okruh, offset):
+    """Jedna strana výsledkov Bazoša. psc=None = celé Slovensko (najnovšie inzeráty v kategórii)."""
     cesta = f"/predam/{kat}/" + (f"{offset}/" if offset else "")
-    url = (f"https://reality.bazos.sk{cesta}?hledat=&rubriky=reality&hlokalita={psc}"
-           f"&humkreis={okruh}&cenaod=&cenado=&order=")
+    if psc:
+        url = (f"https://reality.bazos.sk{cesta}?hledat=&rubriky=reality&hlokalita={psc}"
+               f"&humkreis={okruh}&cenaod=&cenado=&order=")
+    else:
+        url = f"https://reality.bazos.sk{cesta}"
     h = get(url)
     if not h:
         return [], 0
@@ -462,7 +466,7 @@ def bazos_strana(kat, psc, okruh, offset):
         if not a:
             continue
         mid = re.search(r"/inzerat/(\d+)/", a["href"])
-        if not mid:
+        if not mid or any(v["pid"] == mid.group(1) for v in vysledky):
             continue
         lok = blok.select_one(".inzeratylok")
         lok_txt = lok.get_text("\n", strip=True).split("\n") if lok else []
@@ -505,15 +509,144 @@ BAZOS_STRAN_PRVE = 8         # nový okres mimo nočnej kontroly: najnovších 8
 BAZOS_DETAILOV_PRVE = 120    # nový okres: celé popisy najviac 120 inzerátov za beh (ostatné majú popis zo zoznamu)
 
 
-def skenuj_bazos(plny, max_stran, zname=frozenset(), typy_radar=None, plne=frozenset()):
+# ---- Bazoš pre celé Slovensko naraz (config "bazos_celoslovensky": true) ----
+# Namiesto hľadania okres po okrese (PSČ + okruh) prečíta najnovšie inzeráty celého Slovenska v každej kategórii
+# a sledované okresy si vyberie sám. Počet dopytov tak nerastie s počtom okresov (dôležité, keď skener beží
+# z jednej IP adresy na vlastnom serveri). Platí len pre bežnú a rýchlu kontrolu – nočná plná kontrola a prvé
+# načítanie nového okresu idú po okresoch ako doteraz.
+# Na Bazoši sú najprv topované inzeráty (celé SR ~1 000), za nimi netopované od najnovších. Skener si pamätá
+# hranicu, kde netopované začínajú, a najvyššie číslo netopovaného inzerátu, ktoré už videl (meta "bazos_sk").
+BAZOS_SK_MAX_STRAN = 10       # netopovaných strán za jednu kontrolu (40 inzerátov na stranu ≈ pol dňa celého SR v kategórii)
+BAZOS_SK_PAMAT_H = 3          # keď posledná celoslovenská kontrola kategórie bola dávnejšie, ide sa po okresoch
+
+
+def bazos_krok(riadky):
+    """Posun na ďalšiu stranu: Bazoš od jesene 2026 ukazuje 40 inzerátov na stranu (predtým 20); posun musí byť
+    násobok 20 (iný vráti 404) a nikdy väčší ako strana – inak by sa inzeráty preskočili."""
+    return 40 if len(riadky) > 20 else 20
+
+
+def _bazos_top_strana(riadky):
+    return bool(riadky) and sum(1 for r in riadky if r.get("top")) >= 0.9 * len(riadky)
+
+
+def bazos_sk_hranica(kat, odhad=None):
+    """Offset (násobok 20), kde na celoslovenskom zozname kategórie končia topované inzeráty."""
+    cache = {}
+
+    def top(o):
+        if o not in cache:
+            cache[o] = bazos_strana(kat, None, None, o)[0]
+        return _bazos_top_strana(cache[o])
+
+    if odhad is not None:
+        o = max(0, int(odhad) // 20 * 20)
+        if top(o):                       # hranica sa posunula dopredu
+            for _ in range(15):
+                o += 40
+                if not top(o):
+                    break
+            return o, cache
+        for _ in range(15):              # hranica sa posunula dozadu (ubudli topované)
+            if o == 0 or top(max(0, o - 40)):
+                return o, cache
+            o = max(0, o - 40)
+        return o, cache
+    # prvýkrát: rýchlo dopredu, potom pol na pol
+    lo, hi = 0, 320
+    if not top(0):
+        return 0, cache
+    while top(hi) and hi < 20000:
+        lo, hi = hi, hi * 2
+    while hi - lo > 40:
+        mid = (lo + hi) // 2 // 20 * 20
+        if top(mid):
+            lo = mid
+        else:
+            hi = mid
+    return hi, cache
+
+
+def skenuj_bazos_sk(stav_sk, typy, zname=frozenset()):
+    """Najnovšie inzeráty celého Slovenska v kategóriách typy. stav_sk: meta["bazos_sk"] (hranica, max. číslo, čas).
+    Vráti (inzeráty, kategórie, ktoré sa nedali prečítať celoslovensky – tie treba prejsť po okresoch)."""
+    vysledky, po_okresoch = {}, []
+    for typ in typy:
+        kat = BAZOS_KAT.get(typ)
+        if not kat:
+            continue
+        st = stav_sk.get(kat) or {}
+        cas = st.get("cas")
+        cerstvy = cas and NOW - datetime.fromisoformat(cas) < timedelta(hours=BAZOS_SK_PAMAT_H)
+        try:
+            hranica, cache = bazos_sk_hranica(kat, st.get("h"))
+        except Exception as e:  # noqa
+            log(f"! Bazoš SR {kat}: {e}")
+            po_okresoch.append(typ)
+            continue
+        max_pred = int(st.get("m") or 0)
+        # 1. strana – čerstvo topované inzeráty (aj súkromníci, ktorí si inzerát hneď topujú)
+        prva = cache.get(0) if 0 in cache else bazos_strana(kat, None, None, 0)[0]
+        for r in prva:
+            r["typ"] = typ
+            vysledky.setdefault(r["pid"], r)
+        # netopované od hranice (o stranu skôr – hraničná strana býva zmiešaná)
+        offset, strana, max_teraz, celkom_videne = max(0, hranica - 40), 0, max_pred, 0
+        while strana < BAZOS_SK_MAX_STRAN:
+            riadky = cache.get(offset) if offset in cache else bazos_strana(kat, None, None, offset)[0]
+            strana += 1
+            if not riadky:
+                break
+            netop = [r for r in riadky if not r.get("top")]
+            for r in riadky:
+                r["typ"] = typ
+                vysledky.setdefault(r["pid"], r)
+            for r in netop:
+                max_teraz = max(max_teraz, int(r["pid"]))
+            celkom_videne += len(netop)
+            # celá strana netopovaných už známa (číslo nie vyššie ako minule, alebo inzerát už máme) → ďalej sú len staršie
+            if cerstvy and len(netop) >= 5 and all(int(r["pid"]) <= max_pred or r["pid"] in zname for r in netop) and offset >= hranica:
+                break
+            offset += bazos_krok(riadky)
+        else:
+            if cerstvy:
+                log(f"  ! Bazoš SR {kat}: {BAZOS_SK_MAX_STRAN} strán nestačilo – kategóriu prejdem aj po okresoch")
+                po_okresoch.append(typ)
+        if not cerstvy:
+            # bez čerstvej pamäti nevieme, či sme nič nevynechali – tentoraz ešte po okresoch, odteraz celoslovensky
+            po_okresoch.append(typ)
+        stav_sk[kat] = {"h": hranica, "m": max_teraz, "cas": NOW_ISO}
+        log(f"  Bazoš SR {kat}: hranica {hranica}, strán {strana}, netopovaných {celkom_videne}")
+    for r in vysledky.values():
+        r["okres"] = bazos_okres(r) or r["okres_bazos"]
+    return list(vysledky.values()), po_okresoch
+
+
+def skenuj_bazos(plny, max_stran, zname=frozenset(), typy_radar=None, plne=frozenset(), stav_sk=None):
     """Pri plnej kontrole prejde všetky strany. Pri kratšej kontrole listuje, kým nenarazí na netopovaný
     inzerát, ktorý už pozná – Bazoš dáva topované inzeráty na prvé strany, nové súkromné bývajú až za nimi.
     typy_radar: pri rýchlej kontrole len tieto kategórie v okresoch radaru (None = všetky);
     plne: okresy, ktoré sa načítavajú prvýkrát – prejdú sa celé."""
     vysledky = {}
+    # celé Slovensko naraz (bežná a rýchla kontrola); kategórie, ktoré sa tak nedali prečítať, idú po okresoch
+    typy_okresy = TYPY
+    rezim_sk = CONFIG.get("bazos_celoslovensky")   # True = celé SR; "kontrola" = celé SR aj po okresoch a porovnať
+    sk = []
+    if rezim_sk and not plny and stav_sk is not None:
+        sk, typy_okresy = skenuj_bazos_sk(stav_sk, TYPY, zname)
+        for r in sk:
+            vysledky.setdefault(r["pid"], r)
+        log(f"Bazoš celé SR: {len(sk)} inzerátov, z toho v sledovaných okresoch {sum(1 for r in sk if r['okres'] in OKRESY)}"
+            + (f"; po okresoch ešte: {', '.join(typy_okresy)}" if typy_okresy else ""))
+        if rezim_sk == "kontrola":
+            typy_okresy = TYPY
     for (psc, okruh), okresy in bazos_hladania().items():
         plne_h = plny or bool(okresy & plne)
+        if not plne_h and not typy_okresy:
+            continue
         typy = typy_radar if (typy_radar is not None and okresy <= RADAR_OKRESY and not plne_h) else TYPY
+        if not plne_h:
+            typy = [t for t in typy if t in typy_okresy]
         for typ in typy:
             if typ not in BAZOS_KAT:
                 continue
@@ -526,7 +659,8 @@ def skenuj_bazos(plny, max_stran, zname=frozenset(), typy_radar=None, plne=froze
                     r["typ"] = typ
                     r["okres"] = bazos_okres(r) or r["okres_bazos"]
                     vysledky.setdefault(r["pid"], r)
-                if not riadky or offset + 20 >= celkom or strana >= 40:
+                krok = bazos_krok(riadky)
+                if not riadky or offset + krok >= celkom or strana >= 40:
                     break
                 if plne_h and not plny and strana >= BAZOS_STRAN_PRVE:
                     break
@@ -535,7 +669,23 @@ def skenuj_bazos(plny, max_stran, zname=frozenset(), typy_radar=None, plne=froze
                     dosiahol_zname = any(r["pid"] in zname for r in netop)
                     if (dosiahol_zname and strana >= max_stran) or strana >= BAZOS_MAX_STRAN_KRATKA or (not zname and strana >= max_stran):
                         break
-                offset += 20
+                offset += krok
+    # režim „kontrola“: čo našlo hľadanie po okresoch a celoslovenské čítanie nie (v rovnakom rozsahu čísel inzerátov)
+    if rezim_sk == "kontrola" and sk and stav_sk is not None:
+        ids_sk = {r["pid"] for r in sk}
+        od = {}
+        for r in sk:
+            if not r.get("top"):
+                od[r["typ"]] = min(od.get(r["typ"], 10**12), int(r["pid"]))
+        vynechane = [r for r in vysledky.values() if r["pid"] not in ids_sk and not r.get("top") and r.get("okres") in OKRESY
+                     and r.get("typ") in od and int(r["pid"]) >= od[r["typ"]]]
+        k = stav_sk.setdefault("_kontrola", {"behov": 0, "porovnanych": 0, "vynechane": 0, "priklady": []})
+        k["behov"] += 1
+        k["porovnanych"] += sum(1 for r in vysledky.values() if not r.get("top") and r.get("okres") in OKRESY
+                                and r.get("typ") in od and int(r["pid"]) >= od[r["typ"]])
+        k["vynechane"] += len(vynechane)
+        k["priklady"] = (k["priklady"] + [f"{NOW_ISO[:16]} {r['typ']} {r['pid']}" for r in vynechane])[-20:]
+        log(f"Bazoš kontrola: celoslovensky vynechané {len(vynechane)} (spolu {k['vynechane']} z {k['porovnanych']} za {k['behov']} behov)")
     log(f"Bazoš: {len(vysledky)} inzerátov v okolí")
     return list(vysledky.values())
 
@@ -1748,10 +1898,12 @@ def main():
             if z:
                 najdene.append(z)
         kontrola_spracovania(nazov, portal, surove_p, len(najdene) - pred)
-    if "bazos" in portaly and (bazos_typy != [] or set(OKRESY) - RADAR_OKRESY or any(p == "bazos" for p, _ in zaklad)):
+    if "bazos" in portaly and (bazos_typy != [] or set(OKRESY) - RADAR_OKRESY or any(p == "bazos" for p, _ in zaklad)
+                               or CONFIG.get("bazos_celoslovensky")):
         zname_bazos = frozenset(k.split(":", 1)[1] for k in inzeraty if k.startswith("bazos:"))
         surove = bezpecne("Bazoš", lambda: skenuj_bazos(plny, max_stran, zname_bazos, bazos_typy,
-                                                       frozenset(o for p, o in zaklad if p == "bazos")), "bazos")
+                                                       frozenset(o for p, o in zaklad if p == "bazos"),
+                                                       meta.setdefault("bazos_sk", {})), "bazos")
         if surove and POUZI_DB:
             try:
                 _rpc("skener_radar_vybavene", p_kluc=SKENER_KLUC, p_kategorie=[BAZOS_KAT[t] for t in (bazos_typy or TYPY)], p_od=NOW_ISO)
