@@ -41,7 +41,8 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: env.MA_KLUC == 'true'
         with:
-          version: latest
+          # pevná verzia ako v zálohe – „latest“ sa pýta GitHubu na najnovšie vydanie a pri obmedzení počtu dopytov zlyhá
+          version: 3.0.0
 
       - name: Ktoré funkcie nasadiť
         id: ktore
