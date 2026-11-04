@@ -94,6 +94,7 @@ PATA = '''<!-- FOOTER -->
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px">
 <a href="./">Hlavná stránka</a>
 <a href="mailto:info@realitnytypek.sk">info@realitnytypek.sk</a>
+<a href="prve-kroky.html">Prvé kroky</a>
 <a href="podmienky.html">Podmienky používania</a>
 <a href="ochrana-udajov.html">Ochrana osobných údajov</a>
 <button type="button" class="linkbtn" data-ck-act="reopen">Nastavenia cookies</button>
@@ -287,7 +288,7 @@ def skener_objednavka():
 <div class="obj-uvod">
 <span class="obj-badge">14 DNÍ ZADARMO</span>
 <h2 style="margin: 16px 0 0; font-size: clamp(32px, 3.6vw, 48px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 800">Objednaj si skener.<br>Prvých 14 dní zadarmo.</h2>
-<p style="margin: 18px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A">Vyber si balík a okresy, ktoré ti má Týpek strážiť. Prvých 14 dní neplatíš nič, potom platíš mesačne len za to, čo používaš. Ozveme sa ti osobne.</p>
+<p style="margin: 18px 0 0; font-size: 18px; line-height: 1.55; color: #3A4B5A">Vyber si balík a okresy, ktoré ti má Týpek strážiť. Prvých 14 dní neplatíš nič, potom platíš mesačne len za to, čo používaš. Na e-mail ti príde odkaz a registráciu dokončíš sám za minútu.</p>
 <ul class="obj-plusy"><li>%(f)sVšetky kraje a okresy Slovenska</li><li>%(f)sĎalší okres len za 2 € mesačne</li><li>%(f)sS osobným webom skener za polovicu</li><li>%(f)sZmena balíka kedykoľvek</li></ul>
 <div class="obj-typek"><img class="mfloat" src="typek.png?v=202610251300" alt="Maskot Realitný týpek" style="display: block; width: 100%%; height: auto; filter: drop-shadow(0 18px 22px rgba(30,42,53,.25))"></div>
 </div>
@@ -738,12 +739,12 @@ stranka('skener.html', 'skener',
             ('Čo keď mi predávajúci povie, aby som zavolal neskôr?',
              'Pri inzeráte si nastavíš pripomienku. Keď ti povie „zavolajte podvečer“, Týpek ti v ten čas pripomenie, že máš volať, aj upozornením v mobile.'),
             ('Koľko okresov môžem sledovať?',
-             'Koľko chceš, z celého Slovenska. V objednávke si vyberieš hlavný okres za 21 € mesačne s DPH a ďalšie pridáš tlačidlom +, každý za 2 € mesačne.'),
+             'Koľko chceš, z celého Slovenska. V objednávke si vyberieš hlavný okres za 21 € mesačne s DPH a ďalšie pridáš tlačidlom +, každý za 2 € mesačne. Počas 14 dní zadarmo najviac 3 okresy, Bratislavu a Košice zapíname po dohode.'),
             ('Je skener lacnejší, keď mám aj osobný web?',
              'Áno. S osobným webom makléra máš Realitný skener za polovicu – 10,50 € namiesto 21 € mesačne s DPH. '
              'Spolu je to balík Jednotlivec za 67,50 € mesačne. <button ' + WI + ' class="faq-web">Čo je osobný web makléra?</button>'),
             ('Musím niečo inštalovať?',
-             'Nie. Týpek je webová aplikácia, funguje na počítači aj v mobile. Do mobilu si ho pridáš ako ikonu a upozornenia ti budú chodiť ako správy.'),
+             'Nie. Týpek je webová aplikácia, funguje na počítači aj v mobile. Do mobilu si ho pridáš ako ikonu a upozornenia ti budú chodiť ako správy. Ako na to, je v <a href="prve-kroky.html">Prvých krokoch</a>.'),
             ('Môžem to najprv vyskúšať?',
              'Áno, 14 dní zadarmo. Potom platíš mesačne, ceny sú vždy s DPH. Keď zaplatíš na rok dopredu, máš mesiac zdarma.'),
         ]),

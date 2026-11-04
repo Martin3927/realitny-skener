@@ -279,7 +279,7 @@ async function registracneEmaily(db: any) {
         <p style="margin:10px 0 0">ďakujeme za záujem o Realitného týpka${bal ? " (" + esc(bal) + ")" : ""}. Registráciu dokončíš za minútu:
           nastavíš si heslo, telefón${sk ? " a okresy pre skener" : ""}. ${plati ? "Hneď potom sa prihlásiš a môžeš začať." : "Hneď potom sa ti spustí skúšobná doba na <b>14 dní zadarmo</b>."}</p>
         <p style="margin:22px 0"><a href="${esc(odkaz)}" style="background:#db9522;color:#1e2a35;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Dokončiť registráciu</a></p>
-        <p style="margin:0;font-size:14px;color:#3a4b5a">Odkaz platí 7 dní. Ak máš otázku, stačí odpísať na tento e-mail.</p>
+        <p style="margin:0;font-size:14px;color:#3a4b5a">Odkaz platí 7 dní. Ako si dať Týpka do mobilu a zapnúť upozornenia, nájdeš v <a href="https://realitnytypek.sk/prve-kroky" style="color:#8a5a2b">Prvých krokoch</a>. Ak máš otázku, stačí odpísať na tento e-mail.</p>
         <p style="margin:18px 0 0">Tím Realitného týpka<br><a href="https://realitnytypek.sk/" style="color:#8a5a2b">realitnytypek.sk</a></p>
         <p style="color:#999;font-size:12px;margin-top:20px">Tento e-mail ti prišiel, lebo si na webe realitnytypek.sk požiadal o skúšobnú verziu Realitného týpka.
           Ak si to nebol ty, správu pokojne ignoruj – bez dokončenia registrácie sa nič nevytvorí.</p></div>`;

@@ -1882,7 +1882,7 @@
       ["V aplikácii ťuknite hore na svoju <b>fotku / meno</b> → <b>Môj profil</b>.", ""],
       ["V časti <b>🔔 Upozornenia do mobilu</b> ťuknite na <b>Zapnúť upozornenia</b>.", ""],
       ["Telefón sa opýta na povolenie – ťuknite <b>Povoliť</b>.", "Hneď príde skúšobné upozornenie „Upozornenia sú zapnuté“."],
-      ["V Mojom profile si nastavte <b>📍 Moje obce</b>.", "Budú vám chodiť len inzeráty z vašich obcí. Bez obcí chodia všetky z oboch okresov."]]) +
+      ["V Mojom profile si nastavte <b>📍 Moje obce</b>.", "Budú vám chodiť len inzeráty z vašich obcí. Bez obcí chodia všetky zo sledovaných okresov."]]) +
       '<h4>Keď upozornenia nechodia</h4>' + kroky([
       ["Podržte prst na ikone <b>Realitný týpek</b> → <b>Informácie o aplikácii</b> → <b>Upozornenia</b> → zapnite.", ""],
       ["Ak ste omylom ťukli <b>Nepovoliť</b>:", "Chrome → <b>⋮</b> → <b>Nastavenia</b> → <b>Nastavenia stránok</b> → <b>Upozornenia</b> → povoľte adresu skenera. Potom v profile znova <b>Zapnúť upozornenia</b>."],
@@ -1897,7 +1897,7 @@
       ["V aplikácii <b>z ikony na ploche</b> ťuknite hore na svoju <b>fotku / meno</b> → <b>Môj profil</b>.", "V Safari sa upozornenia zapnúť nedajú – iPhone ich dovolí len aplikácii z plochy."],
       ["V časti <b>🔔 Upozornenia do mobilu</b> ťuknite na <b>Zapnúť upozornenia</b>.", ""],
       ["iPhone sa opýta na povolenie – ťuknite <b>Povoliť</b>.", "Hneď príde skúšobné upozornenie „Upozornenia sú zapnuté“."],
-      ["V Mojom profile si nastavte <b>📍 Moje obce</b>.", "Budú vám chodiť len inzeráty z vašich obcí. Bez obcí chodia všetky z oboch okresov."]]) +
+      ["V Mojom profile si nastavte <b>📍 Moje obce</b>.", "Budú vám chodiť len inzeráty z vašich obcí. Bez obcí chodia všetky zo sledovaných okresov."]]) +
       '<h4>Keď upozornenia nechodia</h4>' + kroky([
       ["Nastavenia → <b>Upozornenia</b> → <b>Realitný týpek</b> → zapnite <b>Povoliť upozornenia</b>.", "Ak ste omylom ťukli Nepovoliť, zapnete ich tu a potom v profile znova <b>Zapnúť upozornenia</b>."],
       ["Skontrolujte <b>Sústredenie</b> (Nerušiť, Spánok).", "Keď je zapnuté, upozornenia sa nezobrazia. Realitného týpka môžete v Sústredení pridať medzi povolené aplikácie."],
