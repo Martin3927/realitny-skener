@@ -7273,7 +7273,16 @@
     if (o.typ === "ine") return '<p class="meta">Pri chatách, garážach a iných nehnuteľnostiach skener podobné inzeráty nepočíta – pozrite si ich v skeneri ručne.</p>';
     if (P === undefined) return '<p class="meta">Načítavam podobné inzeráty…</p>';
     if (P === false) return '<p class="error">Podklad sa nepodarilo načítať. Skúste obnoviť stránku.</p>';
-    var s = P.stat, a = P.auto, h = "";
+    var s = P.stat, a = P.auto, m = P.median, h = "";
+    // byty: medián okresu (realityradar.eu) upravený podľa stavu – novostavba a kompletná rekonštrukcia +10 %, pôvodný stav −10 %
+    if (m) {
+      var up = Number(m.uprava) || 0, stav = (m.stav ? esc(m.stav.charAt(0).toLowerCase() + m.stav.slice(1)) : "stav neuvedený") +
+        (up ? " " + (up > 0 ? "+" : "−") + Math.abs(up) + " %" : " bez úpravy");
+      h += '<div class="odh-stat"><div><small>Medián bytov · ' + esc(m.oblast) + " · " + nf.format(m.m2) + " €/m² · " + stav + "</small>" +
+        (m.od ? "<b>" + odhRozpatie(m.od, m.do) + "</b><small>stred " + nf.format(m.stred) + " € · " + nf.format(m.m2_upr) + " €/m²</small>" : "<b>" + nf.format(m.m2_upr) + " €/m²</b><small>Klient nezadal plochu.</small>") + "</div>" +
+        (m.od ? '<button type="button" class="btn" data-odh-pouzi="' + m.od + "-" + m.do + '">Použiť ako odhad</button>' : "") + "</div>" +
+        '<p class="meta">Medián ponukových cien bytov v celom okrese podľa realityradar.eu (' + esc(datumSk(m.k_datumu)) + "). Predajné ceny bývajú o 5 – 10 % nižšie.</p>";
+    }
     if (s) {
       h += '<div class="odh-stat"><div><small>Podobné ponuky · ' + esc(s.oblast) + " · " + s.pocet + (s.pocet === 1 ? " inzerát" : s.pocet <= 4 ? " inzeráty" : " inzerátov") + "</small>" +
         (s.od ? "<b>" + odhRozpatie(s.od, s.do) + "</b><small>stred " + nf.format(s.stred) + " € · " : "<b>") + nf.format(s.m2_od) + " – " + nf.format(s.m2_do) + " €/m²" + (s.od ? "</small>" : "</b>") + "</div>" +
@@ -7307,7 +7316,7 @@
         var c = b.dataset.odhPouzi.split("-"), f = $("#f-odh");
         if (!f) return;
         f.od.value = c[0]; f.do.value = c[1]; f.od.dispatchEvent(new Event("input", { bubbles: true }));
-        f.od.focus(); toast("Rozpätie zo skenera je v odhade – upravte ho podľa seba.");
+        f.od.focus(); toast("Rozpätie je v odhade – upravte ho podľa seba.");
       };
     });
   }
@@ -7426,7 +7435,7 @@
         return '<option value="' + m.id + '"' + (m.id === o.makler_id ? " selected" : "") + ">" + esc(m.meno) + "</option>"; }).join("") + '</select><button type="button" class="btn" data-odh-priradit>Odovzdať</button></div>' +
         '<p class="meta">Kolega dostane upozornenie do zvončeka a mobilu.</p></div>' : "") +
       '</div><div class="odh-pravy">' +
-      '<div class="box"><h3>📊 Podklad zo skenera</h3><div id="odh-podklad">' + odhPodkladHtml(o) + "</div></div>" +
+      '<div class="box"><h3>📊 Podklad k odhadu</h3><div id="odh-podklad">' + odhPodkladHtml(o) + "</div></div>" +
       '<form class="box odh-form" id="f-odh"><h3>✉️ Odhad pre klienta</h3>' +
         '<div class="form-grid dva"><label class="field"><span>Od (€)</span><input name="od" type="number" inputmode="numeric" min="1" step="500" value="' + esc(o.cena_od || "") + '" placeholder="napr. 105000"></label>' +
         '<label class="field"><span>Do (€)</span><input name="do" type="number" inputmode="numeric" min="1" step="500" value="' + esc(o.cena_do || "") + '" placeholder="napr. 115000"></label></div>' +

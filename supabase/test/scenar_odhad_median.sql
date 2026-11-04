@@ -1,0 +1,43 @@
+-- Skúška 113_odhad_median.sql: približná cena bytu podľa mediánu okresu a stavu.
+-- Spúšťať po prehraj.sh (+ supabase/seed/lokality.sql). Očakávané výsledky v komentároch „→“.
+\set ON_ERROR_STOP 0
+\pset footer off
+\set K '00000000-0000-0000-0000-0000000000c1'
+insert into auth.users (id, email) values (:'K','k@alpha.sk') on conflict do nothing;
+insert into makleri (id, meno, email, rola, aktivny, pristup) values (:'K','Kristián Alpha','k@alpha.sk','makler',true,'{odhady}') on conflict do nothing;
+
+create function pg_temp.m(p_typ text, p_okres text, p_plocha numeric, p_stav text) returns jsonb language plpgsql as $$
+declare o odhady_hodnoty; begin o.typ := p_typ; o.okres := p_okres; o.plocha := p_plocha; o.stav_nehn := p_stav; return _odhad_median(o); end $$;
+
+\echo '=== 1. počet okresov a Spišská Nová Ves (2 109 €/m², 60 m²)'
+select count(*) okresov from odhad_mediany where typ = 'byt';                                               -- → 79
+select pg_temp.m('byt', 'Spišská Nová Ves', 60, 'Čiastočne zrekonštruovaný') ->> 'stred' ciastocne,       -- → 127000 (2109 × 60 = 126 540)
+       pg_temp.m('byt', 'Spišská Nová Ves', 60, 'Po kompletnej rekonštrukcii') ->> 'stred' kompletna,      -- → 139000 (2320 × 60 = 139 200)
+       pg_temp.m('byt', 'Spišská Nová Ves', 60, 'Novostavba') ->> 'uprava' novostavba,                     -- → 10
+       pg_temp.m('byt', 'Spišská Nová Ves', 60, 'Pôvodný, udržiavaný') ->> 'stred' povodny,                -- → 114000 (1898 × 60 = 113 880)
+       pg_temp.m('byt', 'Spišská Nová Ves', 60, 'Na rekonštrukciu') ->> 'm2_upr' na_rek;                   -- → 1898
+select pg_temp.m('byt', 'Spišská Nová Ves', 60, 'Po kompletnej rekonštrukcii') - 'k_datumu' cely;         -- → od 132000, do 146000, oblast okres Spišská Nová Ves
+
+\echo '=== 2. Košice IV, Košice bez časti (priemer I–IV), Košice-okolie, bez plochy, dom, neznámy okres'
+select pg_temp.m('byt', 'Košice IV', 70, null) ->> 'm2' kosice_iv,                                         -- → 3466
+       pg_temp.m('byt', 'Košice', 70, null) ->> 'm2' kosice_mesto,                                         -- → 3471 (priemer 3670, 3573, 3176, 3466)
+       pg_temp.m('byt', 'Bratislava', 70, null) ->> 'oblast' ba,                                           -- → Bratislava
+       pg_temp.m('byt', 'Košice-okolie', 70, null) ->> 'm2' ke_okolie,                                     -- → 2114
+       pg_temp.m('byt', 'Levoča', null, 'Novostavba') ->> 'stred' bez_plochy,                              -- → (prázdne)
+       pg_temp.m('byt', 'Levoča', null, 'Novostavba') ->> 'm2_upr' levoca_m2,                              -- → 1945
+       pg_temp.m('dom', 'Levoča', 120, null) is null dom,                                                  -- → t
+       pg_temp.m('byt', 'Neexistuje', 70, null) is null nezname;                                           -- → t
+
+\echo '=== 3. podklad v aplikácii obsahuje medián; anonym nič nedostane'
+insert into odhady_hodnoty (id, kancelaria_id, makler_id, typ, nazov, okres, obec, plocha, stav_nehn, meno, telefon)
+  overriding system value values (99001, 1, :'K', 'byt', '2-izbový byt, Levoča', 'Levoča', 'Levoča', 52, 'Pôvodný, udržiavaný', 'Jana Skúšobná', '0905 000 111');
+set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c1';
+select odhad_podklad(99001) -> 'median' ->> 'stred' podklad_stred;                                         -- → 83000 (1591 × 52 = 82 732)
+select count(*) mediany_citatelne from odhad_mediany;                                                       -- → 79
+select _odhad_median(null::odhady_hodnoty);                                                                 -- → ERROR permission denied
+reset role;
+set role anon;
+select count(*) from odhad_mediany;                                                                          -- → ERROR permission denied
+select odhad_podklad(99001);                                                                                 -- → ERROR permission denied
+reset role;
+delete from odhady_hodnoty where id = 99001;
