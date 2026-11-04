@@ -1,4 +1,4 @@
--- Skúška konca skúšobnej doby a pripomienok do mobilu (102_skusobna_koniec_a_pripomienky_mobil.sql).
+-- Skúška konca skúšobnej doby a pripomienok do mobilu (103_skusobna_koniec_a_pripomienky_mobil.sql).
 -- Spúšťať po prehraj.sh (+ supabase/seed/lokality.sql). Očakávané výsledky sú v komentároch „→“.
 \set ON_ERROR_STOP 0
 \pset footer off
