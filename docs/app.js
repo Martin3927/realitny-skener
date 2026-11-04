@@ -2232,6 +2232,13 @@
     if (z.publikovane) { var p = new Date(z.publikovane + "T12:00:00").getTime(); if (p < t) t = p; }
     return t;
   }
+  // „📅 na portáli od 15. 10. (20 dní)“ – dátum z portálu, inak kedy ho skener prvýkrát videl
+  function naPortaliOd(z) {
+    var dni = dniNaPortali(z), od = new Date(zverejnene(z)).toISOString();
+    var kolko = dni <= 0 ? "dnes" : dni === 1 ? "1 deň" : dni <= 4 ? dni + " dni" : dni + " dní";
+    return '<span class="na-portali" title="Na portáli od ' + datum(od) + " · v skeneri od " + datum(z.prvy_krat, true) + '">📅 na portáli od ' +
+      datum(od) + " (" + kolko + ")</span>";
+  }
   function dniNaPortali(z) { return Math.floor((Date.now() - zverejnene(z)) / 864e5); }
   function filtruj() {
     var f = S.f, q = norm(f.q).trim(), qd = /\d/.test(q) ? telCifry(q) : "", nv = f.novost || "", lim = /^\d+$/.test(nv) ? Date.now() - Number(nv) * 864e5 : 0, me = S.me.id;
@@ -2442,8 +2449,7 @@
       '<div class="row"><a class="thumb-link" href="' + esc(z.url) + '" target="_blank" rel="noopener" aria-label="Otvoriť inzerát">' + foto + '</a><div class="body">' +
       '<a class="title" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(z.nazov) + "</a>" +
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
-      (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + (dniNaPortali(z) - Math.floor((Date.now() - new Date(z.prvy_krat).getTime()) / 864e5) >= 2 ?
-        '<span title="Zverejnené ' + datum(new Date(zverejnene(z)).toISOString()) + ", v skeneri " + ago(z.prvy_krat) + '">na portáli ' + dniNaPortali(z) + (dniNaPortali(z) <= 4 ? " dni" : " dní") + "</span>" : "<span>v skeneri " + ago(z.prvy_krat) + "</span>") + "</div>" +
+      (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + naPortaliOd(z) + "</div>" +
       telRiadok(z) + predRiadok(z) + aiRiadok(z) +
       '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") +
       (obnovenyNedavno(z) ? '<span class="pill new" title="Predajca inzerát zverejnil znova – oplatí sa ozvať">🔁 Znova zverejnený ' + datum(z.obnovene) + "</span>" : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
@@ -2562,7 +2568,7 @@
     if (!(z.id in S.arch)) return h + '<div class="meta">Načítavam uložené údaje…</div></div>';
     var a = S.arch[z.id], hist = z.historia_cien || [];
     var fotky = a ? (a.fotky.length ? a.fotky.map(fotoUrl) : z.aktivny ? a.fotky_portal.slice(0, 10) : []) : [];
-    h += '<div class="meta">V skeneri od ' + datum(z.prvy_krat, true) + " · " + (z.aktivny ? "na portáli aktívny" : "<b>z portálu zmizol</b>, naposledy videný " + datum(z.naposledy)) +
+    h += '<div class="meta">Na portáli od ' + datum(new Date(zverejnene(z)).toISOString()) + " · v skeneri od " + datum(z.prvy_krat, true) + " · " + (z.aktivny ? "na portáli aktívny" : "<b>z portálu zmizol</b>, naposledy videný " + datum(z.naposledy)) +
       (a ? " · uložené " + datum(a.ulozene) + (a.fotky.length ? " s " + a.fotky.length + " fotkami" : "") : "") + "</div>";
     if (fotky.length) h += '<div class="d-fotky">' + fotky.map(function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img loading="lazy" referrerpolicy="no-referrer" src="' + esc(u) + '" alt=""></a>'; }).join("") + "</div>";
     var tt = telefon(z);
