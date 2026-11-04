@@ -1522,16 +1522,21 @@
   }
   async function nacitajVsetko(dotazMaklerov) {
     await nacitajMaklerov(dotazMaklerov);
-    var meta = sb.from("stav_skenera").select("meta, upravene").maybeSingle().then(function (r) { S.meta = (r.data && r.data.meta) || {}; });
+    var meta = nacitajMeta();
     await Promise.all([nacitajStrazcu(), nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
       nacitajPredajcov().catch(function () { S.pred = null; }), nacitajMatterport().catch(function () { S.mp = null; })]);
+  }
+  // stav skenera (posledná kontrola, chyby) – pri štarte aj priebežne, inak by otvorená aplikácia po pár hodinách hlásila, že skener stojí
+  function nacitajMeta() {
+    return sb.from("stav_skenera").select("meta, upravene").maybeSingle()
+      .then(function (r) { if (!r.error) S.meta = (r.data && r.data.meta) || {}; }, function () { /* posledný známy stav */ });
   }
   var obnovuje = false;
   async function obnov() {
     if (obnovuje || !S.me) return;
     obnovuje = true;
     try {
-      var uloha = [nacitajLicenciu(), nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), chatNove(), inzeratyNoveNacitaj().catch(function () {})];
+      var uloha = [nacitajLicenciu(), nacitajMeta(), nacitajPrevzatia(), nacitajMaklerov(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), chatNove(), inzeratyNoveNacitaj().catch(function () {})];
       // celý zoznam inzerátov raz za hodinu, medzitým len zmenené (bez databázovej zmeny 075 ako doteraz každých 10 min)
       if (Date.now() - S.lastInzLoad > (S.zmenyOd ? 60 : 10) * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
       else if (S.zmenyOd) uloha.push(nacitajZmeny().catch(function () {}));
