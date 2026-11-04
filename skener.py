@@ -1255,6 +1255,28 @@ def je_silne_rk(z):
     return z.get("predajca_typ") == "rk" and " inzeruje RK (" not in d and "inzerát" not in d
 
 
+def je_duplikat_bez_ceny(a, b):
+    """Ten istý inzerát, keď na jednom portáli chýba cena („dohodou“): rovnaká plocha, obec a takmer rovnaký názov.
+    Prísnejšie než pri rovnakej cene – plochy ako 68 m² alebo 600 m² má veľa rôznych nehnuteľností."""
+    if not a.get("plocha") or not b.get("plocha") or a.get("typ") != b.get("typ"):
+        return False
+    if (a.get("predajca_typ") == "rk") != (b.get("predajca_typ") == "rk"):
+        return False   # súkromník sa nesmie schovať pod realitku len podľa plochy
+    pa, pb = float(a["plocha"]), float(b["plocha"])
+    rozdiel = abs(pa - pb) / max(pa, pb)
+    if a.get("obec") and b.get("obec") and a["obec"] != b["obec"]:
+        return False
+    if a.get("izby") and b.get("izby") and a["izby"] != b["izby"]:
+        return False
+    sa, sb = set(slova_nazvu(a.get("nazov"))), set(slova_nazvu(b.get("nazov")))
+    podobnost = len(sa & sb) / len(sa | sb) if sa and sb else 0
+    if a["typ"] in ("byt", "dom", "garaz"):
+        return rozdiel <= 0.01 and podobnost >= 0.7
+    # pozemky a chaty: nezaokrúhlená plocha (4 473 m²) je silný znak, okrúhla (600 m²) nie
+    okruhla = pa % 50 == 0 or pb % 50 == 0
+    return rozdiel <= 0.005 and (podobnost >= 0.5 or (podobnost >= 0.25 and not okruhla))
+
+
 def je_duplikat(a, b):
     """Ten istý inzerát na inom portáli (alebo dvakrát od toho istého predajcu)."""
     if a.get("obec") and b.get("obec") and a["obec"] != b["obec"]:
@@ -1266,8 +1288,12 @@ def je_duplikat(a, b):
     if a.get("plocha") and b.get("plocha"):
         if a["plocha"] == b["plocha"]:
             return True
+        rozdiel = abs(float(a["plocha"]) - float(b["plocha"])) / max(float(a["plocha"]), float(b["plocha"]))
         # rovnaká cena a takmer rovnaká plocha, ale celkom iný názov = dva rôzne byty v tom istom dome
-        return abs(a["plocha"] - b["plocha"]) <= 0.03 * a["plocha"] and podobnost > 0.25
+        if rozdiel <= 0.03 and podobnost > 0.25:
+            return True
+        # portály uvádzajú plochu trochu inak (21 vs 21,7 m²) – pri takmer rovnakom názve je to ten istý inzerát
+        return rozdiel <= 0.06 and len(sa & sb) >= 3 and podobnost >= 0.6
     if not sa or not sb:
         return False
     # všeobecné názvy („3-izbový byt“) nestačia – treba aspoň 3 spoločné významové slová
@@ -2006,6 +2032,7 @@ def main():
 
     # --- duplicity medzi portálmi (rovnaký typ, okres, cena a plocha)
     podla_kluca = {}
+    podla_typu = {}   # (typ, okres) → zoznam pôvodných – na porovnanie, keď na jednom portáli chýba cena
     skupiny = {}
     for e in inzeraty.values():
         e["dalsie_odkazy"] = []
@@ -2017,9 +2044,12 @@ def main():
             continue
         k = kluc_duplicity(e)
         e["duplikat_z"] = None
-        if not k:
-            continue
-        povodny = next((x for x in podla_kluca.get(k, []) if je_duplikat(x, e)), None)
+        povodny = next((x for x in podla_kluca.get(k, []) if je_duplikat(x, e)), None) if k else None
+        if not povodny:
+            # na jednom portáli chýba cena – spojíme, len ak sa hodí presne jeden inzerát (inak nevieme, ktorý to je)
+            kandidati = [x for x in podla_typu.get((e["typ"], e["okres"]), [])
+                         if bool(x.get("cena")) != bool(e.get("cena")) and je_duplikat_bez_ceny(x, e)]
+            povodny = kandidati[0] if len(kandidati) == 1 else None
         if povodny:
             e["duplikat_z"] = povodny["id"]
             for p in e["portaly"]:
@@ -2029,7 +2059,9 @@ def main():
                 povodny["dalsie_odkazy"].append([e["portal"], e["url"]])
             skupiny.setdefault(povodny["id"], []).append(e)
         else:
-            podla_kluca.setdefault(k, []).append(e)
+            if k:
+                podla_kluca.setdefault(k, []).append(e)
+            podla_typu.setdefault((e["typ"], e["okres"]), []).append(e)
     # typ predajcu za celú skupinu: jasná realitka (portál, meno, text) > jasný súkromník > slabé znaky
     nove_id = {z["id"] for z in nove if z["id"] not in zakladne}
     obnovene = []   # byty, ktoré predajca zverejnil znova (alebo pridal na ďalší portál) aspoň 3 dni po prvom zverejnení
