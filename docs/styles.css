@@ -303,6 +303,16 @@ tr:last-child td { border-bottom: 0 }
 .zvon-vymaz.otazka ul { margin: 0; padding-left: 18px; display: grid; gap: 2px }
 .zvon-vymaz.otazka p { margin: 6px 0 0 }
 .zvon-vymaz-akcie { display: flex; gap: 8px; flex-wrap: wrap; align-self: center }
+/* roleta „Pripomienky ostatných maklérov“ */
+.zvon-roleta { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; width: 100%; margin-top: 6px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--ink); font: inherit; text-align: left; cursor: pointer }
+.zvon-roleta:hover { border-color: var(--gold-strong) }
+.zvon-roleta .meta { display: inline; margin: 0 }
+.zvon-roleta-t { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap }
+.zvon-roleta-t i { display: inline-block; font-style: normal; transition: transform .2s }
+.zvon-roleta[aria-expanded="true"] .zvon-roleta-t i { transform: rotate(180deg) }
+.zvon-ostatni { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) }
+@media (prefers-reduced-motion: reduce) { .zvon-roleta-t i { transition: none } }
 .prip { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2) }
 .prip.due { border-color: var(--bad); background: var(--bad-soft) }
 .prip-cas { font-weight: 700; font-variant-numeric: tabular-nums }

@@ -10432,9 +10432,24 @@
     if (S.pripForm) h += formPripomienka(S.pripForm);
     h += sekcia("Po termíne", po) + sekcia("Dnes", dnes) + sekcia("Neskôr", neskor);
     if (!moje.length && !S.pripForm) h += '<div class="meta">Nemáte žiadne pripomienky. Nastavíte ich tlačidlom „🔔 Pripomenúť“ pri inzeráte alebo v schránkovaní.</div>';
-    if (ostatni.length) h += sekcia("Pripomienky ostatných maklérov", ostatni, true);
+    // pripomienky ostatných maklérov (administrátor) – schované v rolete, otvorí sa ťuknutím (zariadenie si pamätá voľbu)
+    if (ostatni.length) {
+      var otv = zvonOstatniOtvorene(), poT = ostatni.filter(function (p) { return new Date(p.cas).getTime() <= t; }).length;
+      h += '<button type="button" class="zvon-roleta" data-zvon-ostatni aria-expanded="' + otv + '" aria-controls="zvon-ostatni">' +
+        "<span><b>Pripomienky ostatných maklérov (" + ostatni.length + ")</b>" + (poT ? ' <span class="meta">· ' + poT + " po termíne</span>" : "") + "</span>" +
+        '<span class="zvon-roleta-t">' + (otv ? "Skryť" : "Zobraziť") + ' <i aria-hidden="true">▾</i></span></button>';
+      if (otv) h += '<div class="zvon-ostatni" id="zvon-ostatni">' + ostatni.map(function (p) { return riadok(p, true); }).join("") + "</div>";
+    }
     el.innerHTML = h + "</div>";
   }
+  function zvonOstatniOtvorene() { try { return localStorage.getItem("typek-zvon-ostatni") === "1"; } catch (e) { return false; } }
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest("[data-zvon-ostatni]")) return;
+    var otv = !zvonOstatniOtvorene();
+    try { localStorage.setItem("typek-zvon-ostatni", otv ? "1" : "0"); } catch (x) { /* bez úložiska */ }
+    vykresliZvoncek();
+    var b = $("#zvon [data-zvon-ostatni]"); if (b) b.focus({ preventScroll: true });
+  });
 
   // údaje kontaktov z webu (meno, telefón/e-mail, čo chce) k pripomienkam v zvončeku
   var webKontaktyNacitavam = false;
