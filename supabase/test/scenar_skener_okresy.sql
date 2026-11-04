@@ -11,7 +11,7 @@ update zakaznici set stav = 'vlastna' where id in (select zakaznik_id from kance
 
 \echo '=== 1. sekcie podľa modulov'
 select 'skener' t, _sekcie_z_modulov(array['skener']);                                   -- → {chat,inzeraty,kalendar,kataster,mapa}
-select 'web' t, _sekcie_z_modulov(array['web']);                                         -- → {asistent,chat,kalendar,nehnutelnosti,recenzie,web}
+select 'web' t, _sekcie_z_modulov(array['web']);                                         -- → {asistent,chat,kalendar,nehnutelnosti,odhady,recenzie,web} (odhady od 108)
 
 \echo '=== 2. registrácia skenera v Poprade → kataster a mapa, okresy v licencii'
 select web_ziadost('peter@maly.sk', array['skener'], 1, 'mesacne', array['Poprad'], 'Peter Malý', '0905 123 456', null, null, null);

@@ -593,6 +593,129 @@ async function sha256(t: string) {
   return Array.from(new Uint8Array(h)).map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
+// ---------------------------------------------------------------- Odhad hodnoty (realitnytypek.sk/odhad, migrácia 108)
+// 1) potvrdenie klientovi hneď po odoslaní žiadosti (od „Týpkove nehnuteľnosti“, odpoveď ide maklérovi)
+// 2) odhad od makléra (tlačidlo „Poslať klientovi e-mailom“ v sekcii Odhady) – od mena makléra, odpoveď ide maklérovi
+// Pri chybe sa nič neopakuje samo: potvrdenie nie je nutné a maklér vidí chybu pri žiadosti a môže odhad poslať znova alebo vlastným e-mailom.
+const SVIATKY = ["01-01", "01-06", "05-01", "05-08", "07-05", "08-29", "09-15", "11-01", "12-24", "12-25", "12-26"];
+const POZASTAVENE: Record<number, string[]> = { 2026: ["05-08", "09-15"] };   // v roku 2026 sa tieto sviatky nečerpajú (konsolidácia)
+function velkaNoc(y: number) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+    h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451),
+    mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(y, mo - 1, da));
+}
+function pracovnyDen(d: Date) {   // d = dátum v UTC predstavujúci deň v Bratislave
+  const wd = d.getUTCDay(); if (wd === 0 || wd === 6) return false;
+  const y = d.getUTCFullYear(), md = String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
+  if (SVIATKY.includes(md) && !(POZASTAVENE[y] || []).includes(md)) return false;
+  const vn = velkaNoc(y).getTime(), t = d.getTime();
+  return t !== vn - 2 * 864e5 && t !== vn + 864e5;
+}
+function kedySaOzve(od: Date) {
+  const s = od.toLocaleDateString("en-CA", { timeZone: "Europe/Bratislava" });   // YYYY-MM-DD
+  const dnes = new Date(s + "T00:00:00Z"), zajtra = new Date(dnes.getTime() + 864e5);
+  if (pracovnyDen(dnes) && pracovnyDen(zajtra)) return "do 24 hodín";
+  const d = new Date(dnes.getTime() + 864e5);
+  while (!pracovnyDen(d)) d.setUTCDate(d.getUTCDate() + 1);
+  const dni = ["v nedeľu", "v pondelok", "v utorok", "v stredu", "vo štvrtok", "v piatok", "v sobotu"];
+  return "najneskôr " + dni[d.getUTCDay()] + " " + d.getUTCDate() + ". " + (d.getUTCMonth() + 1) + ".";
+}
+function menoMaklera(m: { titul_pred?: string; meno?: string; titul_za?: string }) {
+  return [m.titul_pred, m.meno].filter(Boolean).join(" ") + (m.titul_za ? ", " + m.titul_za : "");
+}
+const ODHAD_PODMIENKY = "https://realitnytypek.sk/odhad/#podmienky";
+// deno-lint-ignore no-explicit-any
+async function odhadEmaily(db: any) {
+  const ted = new Date().toISOString(), vysl = { potvrdenia: 0, odhady: 0, chyby: [] as string[] };
+  const kancelarie = await nazvyKancelarii(db);
+  // deno-lint-ignore no-explicit-any
+  const makleri = new Map<string, any>();
+  async function makler(id: string) {
+    if (!id) return null;
+    if (!makleri.has(id)) {
+      const { data } = await db.from("makleri").select("meno, titul_pred, titul_za, email, telefon, pohlavie, kancelaria_id").eq("id", id).maybeSingle();
+      makleri.set(id, data);
+    }
+    return makleri.get(id);
+  }
+  const riadok = (k: string, v: string) => v ? `<tr><td style="padding:4px 14px 4px 0;color:#4a6074;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:4px 0">${v}</td></tr>` : "";
+
+  // 1) potvrdenia (len čerstvé – po dni už nemajú zmysel)
+  const { data: pot } = await db.from("odhady_hodnoty")
+    .update({ potvrdenie_poslat: false, potvrdenie_odoslane: ted })
+    .eq("potvrdenie_poslat", true).gt("vytvorene", new Date(Date.now() - 864e5).toISOString())
+    .select("id, meno, email, nazov, ulica, cislo, dovod, makler_id, kancelaria_id, vytvorene");
+  await db.from("odhady_hodnoty").update({ potvrdenie_poslat: false }).eq("potvrdenie_poslat", true)
+    .lte("vytvorene", new Date(Date.now() - 864e5).toISOString());   // staršie už nie
+  // deno-lint-ignore no-explicit-any
+  for (const o of (pot as any[]) ?? []) {
+    try {
+      if (!o.email) continue;
+      const m = await makler(o.makler_id);
+      const kn = nazovK(kancelarie, m?.kancelaria_id ?? o.kancelaria_id);
+      const mm = m ? menoMaklera(m) : "";
+      const tel = String(m?.telefon || "").trim();
+      const html = obalPortalu(`
+        <p style="font-size:16px;margin:0 0 10px">Dobrý deň${o.meno ? ", " + esc(String(o.meno).split(" ")[0]) : ""},</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 12px">ďakujeme za žiadosť o odhad hodnoty nehnuteľnosti. ${mm
+          ? `Dostal${m?.pohlavie === "zena" ? "a" : ""} ju <b>${esc(mm)}</b> z kancelárie ${esc(kn)}, ${m?.pohlavie === "zena" ? "maklérka, ktorá" : "maklér, ktorý"} vo vašom okolí pôsobí.`
+          : "Odovzdali sme ju maklérovi, ktorý vo vašom okolí pôsobí."}</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 16px">Približnú hodnotu vám oznámi telefonicky alebo e-mailom <b>${esc(kedySaOzve(new Date(o.vytvorene)))}</b> (v pracovné dni).</p>
+        <table role="presentation" style="border-collapse:collapse;font-size:14px;margin:0 0 16px;background:#fffdf8;border-radius:12px;padding:12px">
+          ${riadok("Nehnuteľnosť", esc(o.nazov || ""))}${riadok("Adresa", esc([o.ulica, o.cislo].filter(Boolean).join(" ")))}${riadok("Dôvod", esc(o.dovod || ""))}
+          ${mm ? riadok("Maklér", esc(mm) + (tel ? ` · <a href="tel:${esc(tel.replace(/[^\d+]/g, ""))}" style="color:#1e2a35">${esc(tel)}</a>` : "")) : ""}</table>
+        <p style="font-size:15px;line-height:1.55;margin:0">Ak chcete niečo doplniť, stačí odpísať na tento e-mail – správa pôjde priamo ${m?.pohlavie === "zena" ? "maklérke" : "maklérovi"}.</p>`,
+        `Tento e-mail vám prišiel, lebo ste na realitnytypek.sk/odhad požiadali o odhad hodnoty nehnuteľnosti. Odhad je orientačný a nezáväzný – <a href="${ODHAD_PODMIENKY}" style="color:#7a828c">podmienky odhadu</a>.`);
+      await posli(o.email, "Žiadosť o odhad hodnoty – " + String(o.nazov || "vaša nehnuteľnosť").slice(0, 90), html,
+        { odMeno: PORTAL_OD, odpovedat: m?.email || PORTAL_ODPOVED });
+      vysl.potvrdenia++;
+    } catch (e) {
+      const t = String((e as Error).message || e).slice(0, 300);
+      vysl.chyby.push(t);
+      await db.from("odhady_hodnoty").update({ potvrdenie_odoslane: null, potvrdenie_chyba: t }).eq("id", o.id);
+    }
+  }
+
+  // 2) odhady od makléra
+  const { data: odh } = await db.from("odhady_hodnoty")
+    .update({ email_odoslany: ted })
+    .not("email_poslat", "is", null).is("email_odoslany", null).is("email_chyba", null)
+    .select("id, meno, email, nazov, ulica, cislo, cena_od, cena_do, text_klientovi, makler_id, email_kto, kancelaria_id");
+  // deno-lint-ignore no-explicit-any
+  for (const o of (odh as any[]) ?? []) {
+    try {
+      if (!o.email) throw new Error("klient nemá e-mail");
+      const m = await makler(o.email_kto || o.makler_id) || await makler(o.makler_id);
+      const kn = nazovK(kancelarie, m?.kancelaria_id ?? o.kancelaria_id);
+      const mm = m ? menoMaklera(m) : kn;
+      const tel = String(m?.telefon || "").trim();
+      const suma = cisloSk(o.cena_od) + " €" + (o.cena_do && Number(o.cena_do) !== Number(o.cena_od) ? " – " + cisloSk(o.cena_do) + " €" : "");
+      const datum = new Date().toLocaleDateString("sk-SK", { timeZone: "Europe/Bratislava", day: "numeric", month: "numeric", year: "numeric" });
+      const text = esc(String(o.text_klientovi || "")).replace(/\r?\n/g, "<br>");
+      const html = `<div style="background:#f7f2e8;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#1e2a35">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:540px;width:100%;margin:0 auto"><tr><td>
+        <p style="margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a5a2b">Odhad hodnoty nehnuteľnosti</p>
+        <p style="margin:0 0 18px;font-size:20px;font-weight:800;line-height:1.3">${esc(o.nazov || "Vaša nehnuteľnosť")}${o.ulica ? `<br><span style="font-size:15px;font-weight:400;color:#3a4b5a">${esc([o.ulica, o.cislo].filter(Boolean).join(" "))}</span>` : ""}</p>
+        <div style="background:#1e2a35;border-radius:18px;padding:20px 22px;margin:0 0 20px">
+          <p style="margin:0 0 6px;font-size:13px;color:#c9d4dd">Orientačná hodnota k ${esc(datum)}</p>
+          <p style="margin:0;font-size:28px;font-weight:800;color:#db9522;letter-spacing:-.5px">${suma}</p></div>
+        <div style="background:#fffdf8;border-radius:18px;padding:18px 22px;font-size:15px;line-height:1.6;margin:0 0 20px">${text}</div>
+        <p style="margin:0;font-size:15px;line-height:1.5"><b>${esc(mm)}</b><br>${esc(kn)}${tel ? `<br><a href="tel:${esc(tel.replace(/[^\d+]/g, ""))}" style="color:#1e2a35">${esc(tel)}</a>` : ""}${m?.email ? `<br><a href="mailto:${esc(m.email)}" style="color:#1e2a35">${esc(m.email)}</a>` : ""}</p>
+        <p style="font-size:12px;line-height:1.5;color:#7a828c;margin:26px 0 0;border-top:1px solid #e6dccb;padding-top:12px">Ide o orientačný odhad realitného makléra platný ku dňu vydania, nie o znalecký posudok. Presnejšiu cenu vie maklér určiť po obhliadke. Odhad je len pre vašu potrebu – <a href="${ODHAD_PODMIENKY}" style="color:#7a828c">podmienky odhadu</a>. Na tento e-mail môžete priamo odpísať.</p>
+        </td></tr></table></div>`;
+      await posli(o.email, "Odhad hodnoty: " + String(o.nazov || "vaša nehnuteľnosť").slice(0, 100), html,
+        { odMeno: (mm + (kn && kn !== mm ? " · " + kn : "")).slice(0, 70), odpovedat: m?.email || PORTAL_ODPOVED });
+      vysl.odhady++;
+    } catch (e) {
+      const t = String((e as Error).message || e).slice(0, 300);
+      vysl.chyby.push(t);
+      await db.from("odhady_hodnoty").update({ email_odoslany: null, email_chyba: t }).eq("id", o.id);
+    }
+  }
+  return { ok: vysl.chyby.length === 0, ...vysl };
+}
+
 Deno.serve(async (req) => {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
@@ -669,5 +792,6 @@ Deno.serve(async (req) => {
     potvrdenia: await portalStrazcaPotvrdenia(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) })),
     strazca: await portalStrazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) })),
   };
-  return Response.json({ ok: true, odoslane, web, registracie, skusobna, potvrdenia, strazca, portal });
+  const odhad = await odhadEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
+  return Response.json({ ok: true, odoslane, web, registracie, skusobna, potvrdenia, strazca, portal, odhad });
 });

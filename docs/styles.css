@@ -2648,3 +2648,70 @@ html.bez-posuvu #toast { z-index: 210 }
   .prenos-makler { justify-items: start }
   .prenos-vsetko { margin-left: 0 }
 }
+
+/* ---------------------------------------------------------------- Odhady hodnoty (realitnytypek.sk/odhad) */
+.odh-filtre { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.odh-makler { min-height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 4px 8px }
+.odh-zoznam { display: grid; gap: 8px }
+.odh-karta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease }
+.odh-karta:hover { border-color: var(--gold-strong); box-shadow: 0 10px 24px -18px rgba(30, 42, 53, .55); transform: translateY(-1px) }
+.odh-karta.nova { border-left: 4px solid var(--gold-strong) }
+.odh-ik { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: var(--gold-soft); font-size: 21px }
+.odh-ik.velka { width: 52px; height: 52px; font-size: 26px; flex: none }
+.odh-telo { display: grid; gap: 4px; min-width: 0 }
+.odh-telo > b { font-size: 15px; overflow: hidden; text-overflow: ellipsis }
+.odh-cipy { display: flex; flex-wrap: wrap; gap: 6px }
+.odh-stav, .odh-znak { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--info-soft); color: var(--info); white-space: nowrap }
+.odh-stav.s-nova { background: var(--gold-strong); color: #1e2a35 }
+.odh-stav.s-odoslany, .odh-stav.s-obhliadka { background: var(--good-soft); color: var(--good) }
+.odh-stav.s-zakazka, .odh-stav.s-vykup { background: var(--good); color: #fff }
+.odh-stav.s-bez_obchodu { background: var(--surface-2); color: var(--muted) }
+.odh-znak { background: var(--surface-2); color: var(--muted) }
+.odh-znak.zlaty { background: var(--gold-soft); color: var(--gold) }
+.odh-znak.zly { background: var(--bad-soft); color: var(--bad) }
+.odh-pravo { display: grid; gap: 2px; justify-items: end; text-align: right; font-size: 13px }
+.odh-pravo small { color: var(--muted) }
+.odh-pravo .odh-cena { color: var(--good); font-weight: 700 }
+.odh-prazdne { padding: 18px 4px }
+.odh-hlava { gap: 14px }
+.odh-hlava > .btn { justify-self: start }
+.odh-hlava-t { display: flex; gap: 14px; align-items: center }
+.odh-hlava-t h3 { font-size: 18px }
+.odh-stavy .cip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink) }
+.odh-stlpce { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 12px; align-items: start }
+.odh-klient { display: grid; gap: 2px; font-size: 15px }
+.odh-klient a { color: var(--ink); font-weight: 600 }
+.odh-odp { margin-top: 0 }
+.odh-odp .btn { text-decoration: none; color: var(--ink) }
+.odh-tab { width: 100%; border-collapse: collapse; font-size: 14px }
+.odh-tab th { text-align: left; font-weight: 600; color: var(--muted); padding: 6px 12px 6px 0; vertical-align: top; white-space: nowrap; width: 1%; font-size: 13px }
+.odh-tab td { padding: 6px 0; border-bottom: 1px solid var(--line) }
+.odh-tab tr:last-child td { border-bottom: 0 }
+#odh-pozn, .odh-form textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; background: var(--surface-2); resize: vertical; line-height: 1.5 }
+.odh-form input { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px; background: var(--surface-2); font-size: 16px; font-weight: 700 }
+.odh-priradit { display: flex; gap: 8px; flex-wrap: wrap }
+.odh-priradit select { flex: 1; min-width: 160px; min-height: 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 4px 8px }
+.odh-stat { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 12px; background: var(--graphite); color: #f7f2e8 }
+.odh-stat small { display: block; font-size: 12px; color: #c9d4dd }
+.odh-stat b { display: block; font-size: 22px; color: #db9522; font-family: var(--display); margin: 2px 0 }
+.odh-stat .btn { background: #db9522; border-color: #db9522; color: #1e2a35 }
+.odh-podobne { display: grid; gap: 6px }
+.odh-inz { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); text-decoration: none; background: var(--surface) }
+.odh-inz:hover { border-color: var(--gold-strong) }
+.odh-inz img, .odh-inz-bez { width: 56px; height: 44px; border-radius: 7px; object-fit: cover; background: var(--surface-2); display: grid; place-items: center }
+.odh-inz b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.odh-inz small { display: block; font-size: 12px; color: var(--muted) }
+.odh-inz .odh-zmizol { color: var(--warn) }
+.odh-inz-cena { text-align: right; font-size: 13px }
+.odh-akcie { display: flex; flex-wrap: wrap; gap: 8px }
+.odh-akcie .btn { text-decoration: none; color: var(--ink) }
+.odh-akcie .btn.primary { color: var(--on-accent) }
+.odh-ok { margin: 0; color: var(--good); font-weight: 700; font-size: 14px }
+@media (max-width: 860px) {
+  .odh-stlpce { grid-template-columns: 1fr }
+  .odh-karta { grid-template-columns: auto minmax(0, 1fr) }
+  .odh-pravo { grid-column: 2; justify-items: start; text-align: left }
+}
+.odh-popis { margin: 0; color: var(--muted); font-size: 13px; max-width: 80ch }
+.odh-box .vykon-hlava .btn { text-decoration: none; color: var(--ink) }
