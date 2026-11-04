@@ -1750,7 +1750,7 @@
     });
   }
   function ukazkaInzeratu() {
-    return S.inz.find(function (z) { return z.typ === "byt" && z.izby && z.obec; }) || { typ: "byt", izby: 3, obec: "Spišská Nová Ves", cena: 135000, portal: "bazos" };
+    return S.inz.find(function (z) { return z.typ === "byt" && z.izby && z.obec; }) || { typ: "byt", izby: 3, obec: okresyKancelarie()[0], cena: 135000, portal: "bazos" };
   }
   function formSms() {
     var text = S.me.sms_sablona || SMS_ZAKLAD;
@@ -5553,9 +5553,9 @@
       '<div class="cipy" data-dcipy="kategorie">' + KATEGORIE.map(function (x) { return '<button type="button" class="cip" data-hodnota="' + x[0] + '" aria-pressed="' + (d.kategorie.indexOf(x[0]) >= 0) + '">' + x[2] + " " + x[1] + "</button>"; }).join("") + "</div>" +
       (typy.length ? '<h4>Typ <small class="meta">nič nevybrané = akýkoľvek</small></h4><div class="cipy" data-dcipy="typy">' + typy.map(function (t) { return '<button type="button" class="cip" data-hodnota="' + esc(t) + '" aria-pressed="' + (d.typy.indexOf(t) >= 0) + '">' + esc(t) + "</button>"; }).join("") + "</div>" : "") +
       '<h4>Lokalita <small class="meta">nič nevybrané = kdekoľvek</small></h4>' +
-      '<div class="lok-hladat"><input type="search" id="dlok-q" autocomplete="off" placeholder="Pridať obec alebo okres, napr. Smižany, Levoča…"><div class="lok-navrhy" id="dlok-navrhy" hidden></div></div>' +
+      '<div class="lok-hladat"><input type="search" id="dlok-q" autocomplete="off" placeholder="Pridať obec alebo okres, napr. ' + esc(okresyKancelarie().slice(0, 2).join(", ")) + '…"><div class="lok-navrhy" id="dlok-navrhy" hidden></div></div>' +
       '<div class="pf-dok">' + (lok.length ? lok.join("") : '<span class="meta">Kdekoľvek</span>') +
-      '<button type="button" class="btn ghost" data-dokres="Spišská Nová Ves">+ okres SNV</button><button type="button" class="btn ghost" data-dokres="Levoča">+ okres Levoča</button></div>' +
+      okresyKancelarie().slice(0, 4).map(function (o) { return '<button type="button" class="btn ghost" data-dokres="' + esc(o) + '">+ okres ' + esc(o === "Spišská Nová Ves" ? "SNV" : o) + "</button>"; }).join("") + "</div>" +
       '<h4>Rozpočet a parametre</h4><div class="form-grid dva">' + n("Cena od (€)", "cena_od") + n("Cena do (€)", "cena_do") + n("Plocha od (m²)", "plocha_od") + n("Plocha do (m²)", "plocha_do") +
       n("Izby od", "izby_od") + n("Izby do", "izby_do") + "</div>" +
       '<label class="field"><span>Čo klient hľadá vlastnými slovami <small class="meta">vidia aj ostatní makléri</small></span><textarea data-d="popis" rows="3" placeholder="napr. hľadá byt s balkónom, nie prízemie, financovanie hypotékou schválené">' + esc(d.popis || "") + "</textarea></label>" +
@@ -6160,14 +6160,40 @@
     return (S.uliceVz[obec] = zoz);
   }
   // obec z textu inzerátu, keď ju portál neuviedol (Bazoš)
-  var OKRESY_MAPA = ["Spišská Nová Ves", "Levoča"];
+  // okresy kancelárie (z licencie); bez nich okresy z vlastných inzerátov, inak Alpha Reality (SNV a Levoča)
+  function okresyKancelarie() {
+    var o = (S.lic && S.lic.okresy) || [];
+    if (o.length) return o;
+    if ((S.okresy || []).length) return S.okresy;
+    return ["Spišská Nová Ves", "Levoča"];
+  }
+  // stred a priblíženie mapy podľa obcí okresov kancelárie
+  function stredOkresov() {
+    var ok = okresyKancelarie(), b = (window.LOKALITY || []).filter(function (x) { return !x[5] && ok.indexOf(x[1]) >= 0 && x[3] && x[4]; });
+    if (!b.length) return { c: [48.946, 20.565], z: 11 };
+    var la = b.map(function (x) { return x[3]; }), lo = b.map(function (x) { return x[4]; });
+    var c = [(Math.min.apply(null, la) + Math.max.apply(null, la)) / 2, (Math.min.apply(null, lo) + Math.max.apply(null, lo)) / 2];
+    var rozp = Math.max(Math.max.apply(null, la) - Math.min.apply(null, la), (Math.max.apply(null, lo) - Math.min.apply(null, lo)) / 1.5);
+    return { c: c, z: rozp > 1.2 ? 8 : rozp > 0.6 ? 9 : rozp > 0.3 ? 10 : 11 };
+  }
+  // väčšie obce okresov kancelárie (rýchle tlačidlá v katastri): pri SNV a Levoči osvedčený zoznam, inak okresné mestá
+  function hlavneObceKancelarie(max) {
+    var ok = okresyKancelarie(), vyber = [];
+    if (ok.indexOf("Spišská Nová Ves") >= 0) vyber.push("Spišská Nová Ves", "Smižany", "Krompachy", "Spišské Vlachy", "Markušovce", "Hrabušice", "Harichovce");
+    if (ok.indexOf("Levoča") >= 0) vyber.push("Levoča", "Spišské Podhradie", "Spišský Štvrtok");
+    ok.forEach(function (o) {
+      var mesto = o.replace(/\s+[IV]+$/, "");   // Bratislava I → Bratislava, Košice II → Košice
+      if (vyber.indexOf(mesto) < 0 && (window.LOKALITY || []).some(function (x) { return x[0] === mesto; })) vyber.push(mesto);
+    });
+    return vyber.slice(0, max || 12);
+  }
   function obecZTextu(z) {
     if (!window.LOKALITY) return null;
     return obecZTextuV(z, z.okres) || obecZTextuV(z, "*");
   }
   function obecZTextuV(z, okr) {
     S.obceVz = S.obceVz || {};
-    var vz = S.obceVz[okr] || (S.obceVz[okr] = window.LOKALITY.filter(function (x) { return !x[5] && (okr === "*" ? OKRESY_MAPA.indexOf(x[1]) >= 0 : x[1] === okr); }).map(function (x) {
+    var vz = S.obceVz[okr] || (S.obceVz[okr] = window.LOKALITY.filter(function (x) { return !x[5] && (okr === "*" ? okresyKancelarie().indexOf(x[1]) >= 0 : x[1] === okr); }).map(function (x) {
       var w = norm(x[0]).split(/\s+/).map(function (s) { return s === "ves" ? "v(?:es|si)" : s.length > 5 ? s.slice(0, s.length - 2) + "[a-z]{0,4}" : s.length > 3 ? s.slice(0, -1) + "[a-z]{0,3}" : s; });
       var vz = w.join("\\s+");
       if (x[0] === "Spišská Nová Ves") vz = "(?:" + vz + "|snv|sp\\.?\\s*nov[a-z]{0,3}\\s+v(?:es|si))";
@@ -6209,7 +6235,7 @@
     var st = (window.ULICE && window.ULICE._stredy || {})[obec];
     if (st) return st;
     var l = (window.LOKALITY || []).find(function (x) { return !x[5] && normLok(x[0]) === normLok(obec) && (!okres || x[1] === okres); }) ||
-      (window.LOKALITY || []).find(function (x) { return !x[5] && normLok(x[0]) === normLok(obec) && OKRESY_MAPA.indexOf(x[1]) >= 0; });
+      (window.LOKALITY || []).find(function (x) { return !x[5] && normLok(x[0]) === normLok(obec) && okresyKancelarie().indexOf(x[1]) >= 0; });
     return l ? [l[3], l[4]] : null;
   }
   function posun(id, ll, rMin, rMax) {
@@ -6264,7 +6290,7 @@
     Promise.all([nacitajCluster(), nacitajLokality(), nacitajUlice()]).then(function () {
       var box = $("#realitna-mapa"); if (!box) return;
       var p = S.mapaPohlad;
-      var mapa = L.map(box, { scrollWheelZoom: true }).setView(p ? p.c : [48.98, 20.6], p ? p.z : 11);
+      var so = stredOkresov(), mapa = L.map(box, { scrollWheelZoom: true }).setView(p ? p.c : so.c, p ? p.z : so.z);
       ovladanieVrstiev(mapa, "realVrstvy", "mapa", ulozMapu);
       mapa.createPane("obce"); mapa.getPane("obce").style.zIndex = 450;
       mapa.on("moveend zoomend", function () {
@@ -6323,13 +6349,14 @@
     });
     vrstva.addTo(mapa); S.realVrstva = vrstva; S.realBody = body;
     // názvy obcí – vidno ich aj na leteckej mape; ťuknutím obec priblížite
-    var obce = L.layerGroup();
+    var obce = L.layerGroup(), okresyMapy = okresyKancelarie();
     (window.LOKALITY || []).forEach(function (x) {
-      if (x[5] || (x[1] !== "Spišská Nová Ves" && x[1] !== "Levoča")) return;
-      var ll = stredObce(x[0], x[1]), pocet = naObec[x[0]] || 0, mesto = MESTA_MAPA.indexOf(x[0]) >= 0;
+      if (x[5] || okresyMapy.indexOf(x[1]) < 0) return;
+      var ll = stredObce(x[0], x[1]), pocet = naObec[x[0]] || 0, mesto = MESTA_MAPA.indexOf(x[0]) >= 0 || x[0] === x[1];
+      if (!ll) return;
       var t = L.marker(ll, { pane: "obce", keyboard: false, title: x[0] + (pocet ? " – " + pocetText(pocet, "bod", "body", "bodov") + " na mape" : ""),
         icon: L.divIcon({ className: "", iconSize: null, iconAnchor: [0, 0], html: '<span class="rm-obec' + (mesto ? " mesto" : "") + (pocet ? "" : " prazdna") + '">' + esc(x[0]) + (pocet ? "<b>" + pocet + "</b>" : "") + "</span>" }) });
-      t.on("click", function () { mapa.setView(ll, Math.max(mapa.getZoom() + 1, x[0] === "Spišská Nová Ves" || x[0] === "Levoča" ? 14 : 15)); });
+      t.on("click", function () { mapa.setView(ll, Math.max(mapa.getZoom() + 1, mesto ? 14 : 15)); });
       obce.addLayer(t);
     });
     obce.addTo(mapa); S.realObce = obce;
@@ -6426,14 +6453,16 @@
   }
   function vykresliKataster() {
     var el = $("#obsah"); if (!el) return;
-    var obce = ["Spišská Nová Ves", "Levoča", "Smižany", "Spišské Podhradie", "Krompachy", "Spišské Vlachy", "Markušovce", "Hrabušice", "Harichovce", "Spišský Štvrtok"];
+    // obce a stred mapy sa berú z okresov kancelárie – najprv zoznam obcí
+    if (!window.LOKALITY && !S.katBezLok) return nacitajLokality().then(function () { if (S.tab === "kataster") vykresliKataster(); }, function () { S.katBezLok = true; S.lokalityP = null; if (S.tab === "kataster") vykresliKataster(); });
+    var obce = hlavneObceKancelarie(10);
     el.innerHTML = '<div class="box kat-box"><div class="vykon-hlava"><h3>📐 Kataster nehnuteľností</h3></div>' +
       '<div class="kat-pikto">' +
       '<a class="kat-dl" href="' + KAT_ODKAZY.zbgis + '" target="_blank" rel="noopener" id="kat-zbgis"><span class="kat-ik">' + ikona("kataster") + "</span><b>Katastrálna mapa</b><small>ZBGIS – parcely, LV, vlastníci</small></a>" +
       '<button type="button" class="kat-dl" data-kat="poloha"><span class="kat-ik">' + ikona("poloha") + "</span><b>Kataster tu, kde stojím</b><small>otvorí parcelu podľa GPS mobilu</small></button>" +
       '<a class="kat-dl" href="' + KAT_ODKAZY.eskn + '" target="_blank" rel="noopener"><span class="kat-ik">' + ikona("lv") + "</span><b>List vlastníctva</b><small>portál ESKN – vyhľadanie LV a parciel</small></a>" +
       '<a class="kat-dl" href="' + KAT_ODKAZY.ugkk + '" target="_blank" rel="noopener"><span class="kat-ik">' + ikona("urad") + "</span><b>Úrad geodézie</b><small>skgeodesy.sk – ÚGKK SR</small></a></div>" +
-      '<div class="kat-obec"><label class="field"><span>Otvoriť kataster obce</span><input type="text" id="kat-obec" list="kat-obce" placeholder="napr. Spišská Nová Ves"></label>' +
+      '<div class="kat-obec"><label class="field"><span>Otvoriť kataster obce</span><input type="text" id="kat-obec" list="kat-obce" placeholder="napr. ' + esc(obce[0] || "Poprad") + '"></label>' +
       '<button class="btn primary" type="button" data-kat="obec">Otvoriť v katastri</button><datalist id="kat-obce"></datalist>' +
       '<div class="cipy">' + obce.map(function (o) { return '<button type="button" class="cip" data-kat-rychla="' + esc(o) + '">' + esc(o) + "</button>"; }).join("") + "</div></div>" +
       '<div id="kat-mapa" class="realitna-mapa kat-mapa"></div>' +
@@ -6464,7 +6493,7 @@
     };
     nacitajLeaflet().then(function () {
       var box = $("#kat-mapa"); if (!box) return;
-      var mapa = S.katMapa = L.map(box, { scrollWheelZoom: true }).setView(S.katStred || [48.946, 20.565], S.katZoom || 13);
+      var mapa = S.katMapa = L.map(box, { scrollWheelZoom: true }).setView(S.katStred || stredOkresov().c, S.katZoom || 13);
       ovladanieVrstiev(mapa, "katVrstvy", "letecka");
       var odkaz = $("#kat-zbgis");
       function aktualizuj() { var c = mapa.getCenter(); S.katStred = [c.lat, c.lng]; S.katZoom = mapa.getZoom(); if (odkaz) odkaz.href = zbgisOdkaz(c.lat, c.lng, Math.max(14, mapa.getZoom())); }
@@ -6508,7 +6537,7 @@
         '<p class="meta">Ukazuje sa v hlavičke a päte stránky ponuky, letáku, reportu pre majiteľa a stránky makléra, aj pri zdieľaní na Facebooku a WhatsAppe.</p>' +
         '<div class="form-grid"><label class="field"><span>Obchodné meno <small class="meta">do päty</small></span><input type="text" data-vz-pole="firma" maxlength="120" value="' + esc(D.firma || "") + '" placeholder="napr. Alpha Reality s.r.o."></label>' +
         '<label class="field"><span>Web kancelárie</span><input type="url" data-vz-pole="web" maxlength="200" value="' + esc(D.web || "") + '" placeholder="www.vasakancelaria.sk"></label>' +
-        '<label class="field"><span>Kde pôsobíte</span><input type="text" data-vz-pole="region" maxlength="120" value="' + esc(D.region || "") + '" placeholder="napr. Spišská Nová Ves a Levoča"></label></div>' +
+        '<label class="field"><span>Kde pôsobíte</span><input type="text" data-vz-pole="region" maxlength="120" value="' + esc(D.region || "") + '" placeholder="napr. ' + esc(okresyKancelarie().slice(0, 2).join(" a ")) + '"></label></div>' +
         '<h5 class="vz-h5">Meranie návštevnosti <small class="meta">nepovinné</small></h5>' +
         '<div class="form-grid"><label class="field"><span>Google Analytics <small class="meta">ID v tvare G-…</small></span><input type="text" data-vz-meranie="ga" maxlength="20" value="' + esc((D.meranie || {}).ga || "") + '" placeholder="G-XXXXXXXXXX"></label>' +
         '<label class="field"><span>Meta Pixel <small class="meta">číslo pixelu z Facebooku</small></span><input type="text" inputmode="numeric" data-vz-meranie="fb" maxlength="20" value="' + esc((D.meranie || {}).fb || "") + '" placeholder="napr. 123456789012345"></label></div>' +

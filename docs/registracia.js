@@ -42,7 +42,9 @@
     return '<div class="reg-okr"><select aria-label="Okres" required><option value="">Vyberte okres…</option>' +
       KRAJE.map(function (k) {
         return '<optgroup label="' + esc(k[0]) + '">' + k[1].map(function (o) {
-          return '<option' + (o === hodnota ? " selected" : "") + ">" + esc(o) + "</option>";
+          // Bratislava a Košice (mestské okresy) v skúšobnej dobe nie – skener ich zatiaľ neprejde celé; platiacemu po dohode
+          var velky = !(D && D.platiaci) && /^(Bratislava|Košice) [IV]+$/.test(o);
+          return '<option' + (o === hodnota && !velky ? " selected" : "") + (velky ? ' disabled value=""' : "") + ">" + esc(o) + (velky ? " – po dohode" : "") + "</option>";
         }).join("") + "</optgroup>";
       }).join("") + '</select><button type="button" aria-label="Odobrať okres" title="Odobrať okres">×</button></div>';
   }
@@ -64,7 +66,7 @@
         '<label class="field"><span>Telefón</span><input id="r-tel" type="tel" autocomplete="tel" inputmode="tel" maxlength="30" required placeholder="0900 123 456" value="' + esc(D.telefon) + '"></label>' +
         (D.skener ? '<div class="reg-okresy"><span>Okresy pre skener</span><div id="r-okresy-zoz" class="reg-okresy">' + okresy.map(okresSelect).join("") + "</div>" +
           '<button type="button" class="reg-plus" id="r-okres-plus">+ Pridať okres</button>' +
-          '<p class="reg-pozn">' + (D.platiaci ? "Najviac " + MAX + " okresy. Ďalšie ti pridáme podľa objednávky." : "Počas skúšobnej doby najviac " + MAX + " okresy. Ďalšie si pridáš po objednaní.") + "</p></div>" : "") +
+          '<p class="reg-pozn">' + (D.platiaci ? "Najviac " + MAX + " okresy. Ďalšie ti pridáme podľa objednávky." : "Počas skúšobnej doby najviac " + MAX + " okresy. Ďalšie si pridáš po objednaní. Bratislavu a Košice zapíname po dohode – napíš na info@realitnytypek.sk.") + "</p></div>" : "") +
         '<label class="field"><span>Heslo (aspoň 8 znakov)</span><input id="r-heslo" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label>' +
         '<label class="field"><span>Heslo ešte raz</span><input id="r-heslo2" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label>' +
         '<label class="reg-suhlas"><input type="checkbox" id="r-suhlas" required><span>Súhlasím s <a href="https://realitnytypek.sk/podmienky.html" target="_blank" rel="noopener">podmienkami používania</a> a beriem na vedomie <a href="https://realitnytypek.sk/ochrana-udajov.html" target="_blank" rel="noopener">ochranu osobných údajov</a>.</span></label>' +

@@ -23,6 +23,7 @@ const CHYBY: Record<string, string> = {
   telefon: "Napíš telefónne číslo (aspoň 9 číslic).",
   okresy: "Vyber aspoň jeden okres pre skener.",
   okresy_max: "Počas skúšobnej doby môžeš mať najviac 3 okresy.",
+  okresy_velke: "Bratislavu a Košice v skúšobnej dobe zatiaľ nezapíname – vyber iný okres alebo nám napíš na info@realitnytypek.sk.",
 };
 
 async function sha256(t: string) {

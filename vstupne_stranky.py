@@ -277,7 +277,10 @@ def skener_cennik():
 
 
 def skener_objednavka():
-    moznosti = ''.join('<optgroup label="%s">%s</optgroup>' % (k, ''.join('<option>%s</option>' % o for o in okr)) for k, okr in KRAJE)
+    # Bratislava I–V a Košice I–IV: skúšobnú dobu na ne zatiaľ nezapíname (skener ich neprejde celé) – v objednávke „po dohode“
+    velky = lambda o: re.match(r'^(Bratislava|Košice) [IV]+$', o)
+    moznosti = ''.join('<optgroup label="%s">%s</optgroup>' % (k, ''.join(
+        ('<option value="%s">%s – po dohode</option>' % (o, o)) if velky(o) else '<option>%s</option>' % o for o in okr)) for k, okr in KRAJE)
     return '''<!-- CTA: OBJEDNÁVKA -->
 <section id="pristup" style="max-width: 1200px; margin: 0 auto; padding: 110px 24px 90px">
 <div class="obj-obal">
