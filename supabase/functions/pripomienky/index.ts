@@ -43,7 +43,25 @@ async function posli(komu: string, predmet: string, html: string, o: Moznosti = 
     host, port: Number(Deno.env.get("SMTP_PORT") || 465), secure: (Deno.env.get("SMTP_SECURE") ?? "true") !== "false",
     auth: { user: Deno.env.get("SMTP_USER"), pass: Deno.env.get("SMTP_PASS") },
   });
-  await t.sendMail({ from: { name: odMeno, address: od }, to: komu, subject: predmet, html, ...(odpovedat ? { replyTo: odpovedat } : {}), ...(o.hlavicky ? { headers: o.hlavicky } : {}) });
+  try {
+    await t.sendMail({ from: { name: odMeno, address: od }, to: komu, subject: predmet, html, ...(odpovedat ? { replyTo: odpovedat } : {}), ...(o.hlavicky ? { headers: o.hlavicky } : {}) });
+  } catch (e) {
+    // zlé prihlásenie do schránky: do záznamov funkcie len meno a vlastnosti hesla (nikdy nie heslo samotné)
+    if (/Invalid login|535/i.test(String((e as Error).message || e))) smtpDiagnostika();
+    throw e;
+  }
+}
+let smtpDiagnostikaHotova = false;
+function smtpDiagnostika() {
+  if (smtpDiagnostikaHotova) return;
+  smtpDiagnostikaHotova = true;
+  const u = Deno.env.get("SMTP_USER") || "", h = Deno.env.get("SMTP_PASS") || "";
+  console.error("smtp-prihlasenie", JSON.stringify({
+    host: Deno.env.get("SMTP_HOST") || "", port: Deno.env.get("SMTP_PORT") || "", secure: Deno.env.get("SMTP_SECURE") ?? "(predvolené true)",
+    user: u, user_dlzka: u.length, user_medzera: u !== u.trim(), from: Deno.env.get("EMAIL_FROM") || "",
+    heslo_dlzka: h.length, heslo_medzera_zaciatok: /^\s/.test(h), heslo_medzera_koniec: /\s$/.test(h), heslo_novy_riadok: /[\r\n]/.test(h),
+    heslo_uvodzovky: /^["']|["']$/.test(h), heslo_mimo_ascii: /[^\x20-\x7e]/.test(h),
+  }));
 }
 
 const DRUH: Record<string, [string, string]> = {
