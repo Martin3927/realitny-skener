@@ -75,9 +75,10 @@ def zoznam_okresov(aktivny=None):
             f'<a href="{WEB}{s[0]}/"' + (' aria-current="page"' if s[0] == aktivny else "") + f">{html.escape(s[1])}</a>"
             for s in sorted((x for x in stranky if x[3] == kraj), key=lambda x: triedenie(x[1])))
         bloky.append(f'<div class="okresy-kraj"><h3>{html.escape(kraj)}</h3><div class="okresy-odkazy">{odkazy}</div></div>')
-    return ('<!-- OKRESY – generuje odhad_generuj.py -->\n<section class="sekcia sekcia-okresy" id="okresy" aria-labelledby="okresy-n">\n  <div class="obal">\n'
-            '    <h2 id="okresy-n" class="nadpis nadpis-maly">Odhad hodnoty nehnuteľnosti na celom Slovensku</h2>\n'
-            '    <div class="okresy">' + "".join(bloky) + "</div>\n  </div>\n</section>\n<!-- /OKRESY -->")
+    # zbalené – názvy okresov sa ukážu až po kliknutí (vyhľadávače ich vidia aj tak)
+    return ('<!-- OKRESY – generuje odhad_generuj.py -->\n<section class="sekcia sekcia-okresy" id="okresy">\n  <div class="obal">\n'
+            '    <details class="okresy-obal"><summary>Odhad hodnoty nehnuteľnosti na celom Slovensku – podľa okresov</summary>\n'
+            '    <div class="okresy">' + "".join(bloky) + "</div></details>\n  </div>\n</section>\n<!-- /OKRESY -->")
 
 sablona = (PRIECINOK / "index.html").read_text(encoding="utf-8")
 okresy_re = re.compile(r"<!-- OKRESY.*?<!-- /OKRESY -->", re.S)
@@ -96,8 +97,9 @@ for d in PRIECINOK.iterdir():
 
 for sl, nazov, v_kom, kraj, okr, obce, priklad, nazov_okresu in stranky:
     t = okresy_re.sub(lambda m: zoznam_okresov(sl), sablona)
-    for subor in ("odhad.css", "obce.js", "odhad.js", "typek-head.png", "typek.webp"):
+    for subor in ("odhad.css", "obce.js", "odhad.js", "typek-head.png", "typek.webp", "ochrana-udajov.html"):
         t = re.sub(r'(src|href)="' + re.escape(subor), r'\1="../' + subor, t)
+    t = t.replace('href="./"', 'href="../"')   # logo vedie na úvod odhadu
     url = WEB + sl + "/"
     titul = f"Odhad hodnoty nehnuteľnosti {nazov} – zadarmo | Týpkove nehnuteľnosti"
     popis = (f"Koľko stojí byt, dom alebo pozemok {v_kom}? Vyplňte pár údajov a maklér, ktorý tu pôsobí, vám približnú hodnotu "
@@ -111,9 +113,8 @@ for sl, nazov, v_kom, kraj, okr, obce, priklad, nazov_okresu in stranky:
     t = nahrad(t, "<body>", '<body data-okresy="' + html.escape("|".join(okr)) + '">')
     t = nahrad(t, '<p class="stitok">Odhad hodnoty nehnuteľnosti · zadarmo</p>',
                f'<p class="stitok">Odhad hodnoty nehnuteľnosti · {html.escape(nazov_okresu)} · zadarmo</p>')
-    t = nahrad(t, '<h1 id="nadpis">Koľko dnes stojí vaša nehnuteľnosť?</h1>',
-               f'<h1 id="nadpis">Koľko dnes stojí vaša nehnuteľnosť {html.escape(v_kom)}?</h1>')
-    t = nahrad(t, 'placeholder="Začnite písať, napr. Smižany"', f'placeholder="Začnite písať, napr. {html.escape(priklad)}"')
+    t = nahrad(t, '<h1 id="nadpis">Koľko dnes stojí <span class="zv">vaša nehnuteľnosť</span>?</h1>',
+               f'<h1 id="nadpis">Koľko dnes stojí <span class="zv">vaša nehnuteľnosť</span> {html.escape(v_kom)}?</h1>')
     obce_html = ", ".join(html.escape(o) for o in obce)
     sekcia = (f'<section class="sekcia sekcia-obce" aria-labelledby="obce-n">\n  <div class="obal obal-uzky">\n'
               f'    <p class="stitok stitok-svetly">{html.escape(kraj)}</p>\n'

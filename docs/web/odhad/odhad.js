@@ -7,10 +7,12 @@
 
   // ---------------------------------------------------------------- meranie reklamy (zapína sa doplnením ID)
   // GA_ID: Google Analytics → Správca → Dátové toky → ID merania (G-…); META_PIXEL_ID: Meta Events Manager → ID pixelu (číslo).
-  // Kým sú prázdne, stránka nič nemeria a lišta cookies sa neukáže. Súhlas je spoločný s predajným webom (rt-cookies).
+  // Kým sú prázdne, stránka nič nemeria (lišta cookies sa ukazuje vždy). Súhlas je spoločný s predajným webom (rt-cookies).
   var MERANIE = { GA_ID: "", META_PIXEL_ID: "" };
 
   var SUPA = "https://uwxziqapghlyktwpipjd.supabase.co";
+  // priečinok stránky odhadu (aj z podstránky okresu) – odkazy na ochranu údajov a pod.
+  var ZAKLAD = ((document.currentScript && document.currentScript.src) || "").replace(/odhad\.js[^/]*$/, "");
   var KLUC = "sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf";
   var TYPY = { byt: "Byt", dom: "Rodinný dom", pozemok: "Pozemok", ine: "Iné" };
 
@@ -18,6 +20,7 @@
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function norm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim(); }
+  function hladNorm(s) { return norm(s).replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim(); }
   function pohybOk() { return document.documentElement.classList.contains("pohyb-vzdy") || !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
 
   // ---------------------------------------------------------------- spojenie s databázou
@@ -84,10 +87,12 @@
     var K = window.ODHAD_OBCE || {};
     Object.keys(K).forEach(function (kraj) {
       Object.keys(K[kraj]).forEach(function (okres) {
-        K[kraj][okres].forEach(function (n) { OBCE.push({ n: n, o: okres, k: kraj, s: norm(n) }); });
+        // mestské časti Bratislavy a Košíc ako „Košice – Juh“, aby sa dali nájsť aj podľa mesta
+        var mesto = (/^(Bratislava|Košice) [IV]+$/.exec(okres) || [])[1];
+        K[kraj][okres].forEach(function (n) { var d = mesto ? mesto + " – " + n : n; OBCE.push({ n: n, d: d, o: okres, k: kraj, s: hladNorm(d), m: mesto || "" }); });
       });
     });
-    OBCE.sort(function (a, b) { return a.n.localeCompare(b.n, "sk") || a.o.localeCompare(b.o, "sk"); });
+    OBCE.sort(function (a, b) { return a.d.localeCompare(b.d, "sk") || a.o.localeCompare(b.o, "sk"); });
     return OBCE;
   }
   function nacitajPokrytie() {
@@ -101,7 +106,7 @@
     if (!V.obec) { el.textContent = ""; el.className = "pole-info"; return; }
     var pokr = POKRYTIE && POKRYTIE.length ? POKRYTIE.indexOf(V.obec.o) >= 0 : null;
     el.className = "pole-info" + (pokr === false ? " mimo" : pokr ? " ok" : "");
-    el.textContent = (/^(Bratislava|Košice) /.test(V.obec.o) ? V.obec.o : "Okres " + V.obec.o) + " · " + V.obec.k +
+    el.textContent = (V.obec.m ? "Mestská časť, okres " + V.obec.o : "Okres " + V.obec.o) + " · " + V.obec.k +
       (pokr === false ? ". V tomto okrese zatiaľ nemáme makléra – žiadosť môžete poslať, dáme vám vedieť, či vám vieme pomôcť."
         : pokr ? ". V okolí pôsobí maklér, ktorý vám odhad pripraví." : ".");
   }
@@ -109,11 +114,11 @@
     var inp = $("#obec"), zoz = $("#obec-zoznam"), akt = -1, vysl = [];
     function zavri() { zoz.hidden = true; inp.setAttribute("aria-expanded", "false"); inp.removeAttribute("aria-activedescendant"); akt = -1; }
     function vyber(o) {
-      V.obec = o; inp.value = o.n; inp.setAttribute("aria-invalid", "false"); zavri(); infoObce(); skryChybu();
+      V.obec = o; inp.value = o.d; inp.setAttribute("aria-invalid", "false"); zavri(); infoObce(); skryChybu();
     }
     function hladaj() {
-      var q = norm(inp.value);
-      if (V.obec && inp.value !== V.obec.n) { V.obec = null; infoObce(); }
+      var q = hladNorm(inp.value);
+      if (V.obec && inp.value !== V.obec.d) { V.obec = null; infoObce(); }
       if (q.length < 2) { zavri(); return; }
       // na stránke okresu (/odhad/<okres>/) idú obce okresu prvé
       var dom = String(document.body.getAttribute("data-okresy") || "").split("|").filter(Boolean);
@@ -122,11 +127,12 @@
         var i = o.s.indexOf(q), d = dom.indexOf(o.o) >= 0, slovo = i === 0 || (i > 0 && /[\s-]/.test(o.s.charAt(i - 1)));
         if (slovo) (d ? zacD : zac).push(o); else if (i > 0) (d ? obsD : obs).push(o);
       });
-      vysl = zacD.concat(obsD, zac, obs).slice(0, 8);
+      vysl = zacD.concat(obsD, zac, obs).slice(0, 10);
       akt = vysl.length ? 0 : -1;
       zoz.innerHTML = vysl.length ? vysl.map(function (o, i) {
-        return '<li role="option" id="obec-m' + i + '" aria-selected="' + (i === akt) + '" data-i="' + i + '"><b>' + esc(o.n) + "</b><span>" + esc(/^(Bratislava|Košice) /.test(o.o) ? o.o : "okres " + o.o) + "</span></li>";
-      }).join("") : '<li class="prazdne" role="option" aria-disabled="true">Takú obec nepoznáme – skúste iný tvar názvu.</li>';
+        return '<li role="option" id="obec-m' + i + '" aria-selected="' + (i === akt) + '" data-i="' + i + '"><b>' + esc(o.d) + "</b><span>" + esc(o.m ? "mestská časť" : "okres " + o.o) + "</span></li>";
+      }).join("") + (/^(bratislava|kosice)$/.test(q) ? '<li class="prazdne" aria-hidden="true">Dopíšte mestskú časť, napr. „' + (q === "kosice" ? "Košice Juh" : "Bratislava Ružinov") + "“</li>" : "")
+        : '<li class="prazdne" role="option" aria-disabled="true">Takú obec nepoznáme – skúste iný tvar názvu.</li>';
       zoz.hidden = false; inp.setAttribute("aria-expanded", "true");
       if (akt >= 0) inp.setAttribute("aria-activedescendant", "obec-m0");
     }
@@ -150,7 +156,7 @@
       setTimeout(zavri, 120);
       // presná zhoda názvu (napísaná bez výberu zo zoznamu) – ak je obec s týmto názvom len jedna, vyberieme ju
       if (!V.obec && inp.value.trim()) {
-        var q = norm(inp.value), zh = obce().filter(function (o) { return o.s === q; });
+        var q = hladNorm(inp.value), zh = obce().filter(function (o) { return o.s === q; });
         if (zh.length === 1) vyber(zh[0]);
       }
     });
@@ -405,7 +411,6 @@
   var CKK = "rt-cookies";
   function ckGet() { try { return JSON.parse(localStorage.getItem(CKK) || "null"); } catch (e) { return null; } }
   function ckSet(v) { try { localStorage.setItem(CKK, JSON.stringify(v)); } catch (e) { /* bez úložiska */ } }
-  function meranieZapnute() { return !!(MERANIE.GA_ID || MERANIE.META_PIXEL_ID); }
   function nacitajGA() {
     if (!MERANIE.GA_ID || window.gtag) return;
     var sc = document.createElement("script"); sc.async = true; sc.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(MERANIE.GA_ID);
@@ -433,10 +438,10 @@
     var c = ckGet() || {}, d = document.createElement("div");
     d.className = "ck"; d.setAttribute("role", "dialog"); d.setAttribute("aria-labelledby", "ck-t");
     d.innerHTML = '<h2 id="ck-t">Pár slov o cookies</h2><p>Nevyhnutné súbory potrebujeme, aby stránka fungovala. ' +
-      (MERANIE.GA_ID ? "Analytické (Google Analytics) " : "") + (MERANIE.GA_ID && MERANIE.META_PIXEL_ID ? "a " : "") + (MERANIE.META_PIXEL_ID ? "marketingové (Meta Pixel) " : "") +
-      'použijeme len so súhlasom. Výber zmeníte kedykoľvek v pätičke. Viac v <a href="https://realitnytypek.sk/nehnutelnosti/ochrana-udajov.html#meranie" target="_blank" rel="noopener">ochrane osobných údajov</a>.</p>' +
-      (nastavenia ? '<div class="ck-volby">' + (MERANIE.GA_ID ? '<label><span><b>Analytické</b><small>Koľko ľudí stránku navštívi a odkiaľ prišli.</small></span><input type="checkbox" data-ck-an' + (c.an ? " checked" : "") + "></label>" : "") +
-        (MERANIE.META_PIXEL_ID ? '<label><span><b>Marketingové</b><small>Aby sme reklamu ukazovali tým, ktorých môže zaujímať.</small></span><input type="checkbox" data-ck-mk' + (c.mk ? " checked" : "") + "></label>" : "") + "</div>" : "") +
+      'Analytické a marketingové cookies použijeme len s vaším súhlasom. Výber zmeníte kedykoľvek v pätičke. Viac v <a href="' + ZAKLAD + 'ochrana-udajov.html#cookies" target="_blank" rel="noopener">ochrane osobných údajov</a>.</p>' +
+      (nastavenia ? '<div class="ck-volby"><label class="ck-vzdy"><span><b>Nevyhnutné</b><small>Zapamätajú si váš výber a udržia stránku v chode.</small></span><em>Vždy zapnuté</em></label>' +
+        '<label><span><b>Analytické</b><small>Koľko ľudí stránku navštívi a odkiaľ prišli (Google Analytics).</small></span><input type="checkbox" data-ck-an' + (c.an ? " checked" : "") + "></label>" +
+        '<label><span><b>Marketingové</b><small>Aby sme reklamu ukazovali tým, ktorých môže zaujímať (Meta Pixel).</small></span><input type="checkbox" data-ck-mk' + (c.mk ? " checked" : "") + "></label></div>" : "") +
       '<div class="ck-akcie"><button type="button" class="btn btn-zlate" data-ck="vsetky">Prijať všetky</button><button type="button" class="btn btn-tmave" data-ck="nic">Len nevyhnutné</button>' +
       (nastavenia ? '<button type="button" class="btn btn-obrys" data-ck="ulozit">Uložiť výber</button>' : '<button type="button" class="btn btn-obrys" data-ck="nastavit">Nastaviť</button>') + "</div>";
     document.body.appendChild(d);
@@ -451,19 +456,46 @@
     });
   }
   function meranieStart() {
-    if (!meranieZapnute()) return;
-    var z = $("[data-ck-znova]"); if (z) { z.hidden = false; z.addEventListener("click", function () { listaCookies(true); }); }
-    if (ckGet()) pouziSuhlas(); else listaCookies(false);
+    $$("[data-ck-znova]").forEach(function (z) { z.hidden = false; z.addEventListener("click", function () { listaCookies(true); }); });
+    if (ckGet()) pouziSuhlas(); else setTimeout(function () { if (!ckGet()) listaCookies(false); }, 900);
   }
 
   // ---------------------------------------------------------------- spustenie
+  // ---------------------------------------------------------------- animácie (pri obmedzenom pohybe v systéme len jemné prelínanie, všetko ukáže ?pohyb=1)
+  function animacie() {
+    var hl = $(".hlava");
+    if (hl) { var tien = function () { hl.classList.toggle("tien", window.scrollY > 8); }; window.addEventListener("scroll", tien, { passive: true }); tien(); }
+    if (!pohybOk() || !("IntersectionObserver" in window)) return;
+    document.documentElement.classList.add("anim");
+    var ciele = $$(".sekcia .stitok, .sekcia .nadpis, .krok-karta, .por-karta, .vykup, .otazky details, .podmienky li, .obce-text, .okresy-obal, .pravne .karta-p, .pravne .skratka");
+    ciele.forEach(function (x) {
+      var surodenci = x.parentElement ? Array.prototype.indexOf.call(x.parentElement.children, x) : 0;
+      x.classList.add("odkryt"); x.style.setProperty("--i", String(Math.min(surodenci, 6)));
+    });
+    var io = new IntersectionObserver(function (zaznamy) {
+      zaznamy.forEach(function (z) { if (z.isIntersecting) { z.target.classList.add("vidno"); io.unobserve(z.target); } });
+    }, { rootMargin: "0px 0px -6% 0px", threshold: 0.1 });
+    ciele.forEach(function (x) { io.observe(x); });
+    // karta s formulárom sa jemne nakloní za kurzorom (len myš)
+    var karta = el("odhad");
+    if (karta && window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      karta.addEventListener("mousemove", function (e) {
+        if (e.target.closest("input, textarea, .combo-zoznam")) return;
+        var r = karta.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+        karta.style.setProperty("--rx", (-y * 2.2).toFixed(2) + "deg"); karta.style.setProperty("--ry", (x * 2.2).toFixed(2) + "deg");
+      });
+      karta.addEventListener("mouseleave", function () { karta.style.setProperty("--rx", "0deg"); karta.style.setProperty("--ry", "0deg"); });
+    }
+  }
+
   function start() {
+    animacie();
+    meranieStart();
     form = el("form"); if (!form) return;
     kroky = $$(".krok", form); dalejBtn = el("dalej"); spatBtn = el("spat");
     nastavTyp("byt");
     napojObec();
     napojFotky();
-    meranieStart();
     dalejBtn.addEventListener("click", function () {
       if (!over()) return;
       if (cur < kroky.length - 1) ukaz(cur + 1, 1); else odosli();

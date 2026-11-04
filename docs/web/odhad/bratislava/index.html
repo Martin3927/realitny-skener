@@ -23,23 +23,23 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uwxziqapghlyktwpipjd.supabase.co" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Instrument+Sans:wght@400..700&amp;family=Montserrat:wght@900&amp;display=swap">
-<link rel="stylesheet" href="../odhad.css?v=202611042130">
+<link rel="stylesheet" href="../odhad.css?v=202611042230">
 <script>
   // všetky animácie aj pri obmedzenom pohybe v systéme: adresa ?pohyb=1
   if (/[?&]pohyb=1/.test(location.search)) document.documentElement.classList.add("pohyb-vzdy");
   document.documentElement.classList.add("js");
 </script>
-<script defer src="../obce.js?v=202611042130"></script>
-<script defer src="../odhad.js?v=202611042130"></script>
+<script defer src="../obce.js?v=202611042230"></script>
+<script defer src="../odhad.js?v=202611042230"></script>
 </head>
 <body data-okresy="Bratislava I|Bratislava II|Bratislava III|Bratislava IV|Bratislava V">
 <a class="preskoc" href="#odhad">Preskočiť na formulár</a>
 
 <header class="hlava">
   <div class="obal hlava-in">
-    <a class="logo" href="https://realitnytypek.sk/nehnutelnosti/" aria-label="Týpkove nehnuteľnosti – ponuky nehnuteľností">
+    <a class="logo" href="../" aria-label="Odhad hodnoty – úvod">
       <img src="../typek-head.png" width="40" height="40" alt="">
-      <span class="wm"><span class="a">Týpkove</span> <span class="b">nehnuteľnosti</span></span>
+      <span class="wm"><span class="a">Odhad</span> <span class="b">hodnoty</span></span>
     </a>
     <nav class="hlava-nav" aria-label="Stránka">
       <a href="#ako">Ako to funguje</a>
@@ -54,7 +54,7 @@
   <div class="obal uvod-grid">
     <div class="uvod-text">
       <p class="stitok">Odhad hodnoty nehnuteľnosti · Bratislava · zadarmo</p>
-      <h1 id="nadpis">Koľko dnes stojí vaša nehnuteľnosť v Bratislave?</h1>
+      <h1 id="nadpis">Koľko dnes stojí <span class="zv">vaša nehnuteľnosť</span> v Bratislave?</h1>
       <p class="uvod-lead">Vyplňte pár údajov o byte, dome alebo pozemku. Žiadosť dostane maklér, ktorý vo vašej obci pôsobí, a približnú hodnotu vám <strong>zavolá alebo pošle e-mailom do 24 hodín</strong> v pracovné dni. Zadarmo a nezáväzne.</p>
     </div>
     <div class="uvod-doplnok">
@@ -103,19 +103,19 @@
                 <label for="obec">Obec alebo mestská časť</label>
                 <div class="combo">
                   <input id="obec" name="obec" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="obec-zoznam"
-                         autocomplete="off" spellcheck="false" placeholder="Začnite písať, napr. Čunovo" maxlength="60" required aria-describedby="obec-info">
+                         autocomplete="off" spellcheck="false" placeholder="Začnite písať názov obce alebo mesta" maxlength="60" required aria-describedby="obec-info">
                   <ul id="obec-zoznam" class="combo-zoznam" role="listbox" aria-label="Obce" hidden></ul>
                 </div>
                 <p class="pole-info" id="obec-info" aria-live="polite"></p>
               </div>
               <div class="pole">
                 <label for="cast">Časť obce alebo sídlisko <span class="nepov">nepovinné</span></label>
-                <input id="cast" name="cast_obce" type="text" maxlength="60" autocomplete="off" placeholder="napr. sídlisko Západ">
+                <input id="cast" name="cast_obce" type="text" maxlength="60" autocomplete="off" placeholder="napr. názov sídliska alebo štvrte">
               </div>
               <div class="riadok-2">
                 <div class="pole">
                   <label for="ulica"><span data-ulica-nazov>Ulica</span> <span class="nepov" data-ulica-nepov hidden>nepovinné</span></label>
-                  <input id="ulica" name="ulica" type="text" autocomplete="address-line1" maxlength="80" placeholder="napr. Letná">
+                  <input id="ulica" name="ulica" type="text" autocomplete="address-line1" maxlength="80" placeholder="Názov ulice">
                 </div>
                 <div class="pole pole-male">
                   <label for="cislo">Číslo <span class="nepov">nepovinné</span></label>
@@ -182,7 +182,7 @@
               <fieldset class="pod" data-pre="ine" hidden disabled>
                 <legend class="sr">Iná nehnuteľnosť</legend>
                 <div class="pole"><label for="popis">Čo to je</label>
-                  <input id="popis" name="popis" type="text" maxlength="120" required placeholder="napr. chata pri vode, garáž, apartmán"></div>
+                  <input id="popis" name="popis" type="text" maxlength="120" required placeholder="napr. chata, garáž, apartmán"></div>
                 <div class="pole"><label for="plocha-ine">Plocha <span class="nepov">nepovinné</span></label>
                   <div class="jednotka"><input id="plocha-ine" name="plocha" type="number" inputmode="decimal" min="1" max="100000" step="any" placeholder="napr. 45"><span>m²</span></div></div>
               </fieldset>
@@ -311,7 +311,7 @@
               </fieldset>
               <div class="med" aria-hidden="true"><label for="web">Web</label><input id="web" name="web" tabindex="-1" autocomplete="off"></div>
               <label class="suhlas"><input type="checkbox" name="podmienky" id="podmienky-suhlas" required>
-                <span>Súhlasím s <a href="#podmienky" data-podmienky>podmienkami odhadu</a>. Údaje dostane len maklér, ktorý odhad pripraví – viac v <a href="https://realitnytypek.sk/nehnutelnosti/ochrana-udajov.html#formulare" target="_blank" rel="noopener">ochrane osobných údajov</a>.</span></label>
+                <span>Súhlasím s <a href="#podmienky" data-podmienky>podmienkami odhadu</a> a beriem na vedomie <a href="../ochrana-udajov.html" target="_blank" rel="noopener">informácie o ochrane osobných údajov</a>. Údaje dostane len maklér, ktorý odhad pripraví.</span></label>
             </div>
           </fieldset>
 
@@ -416,7 +416,7 @@
       <details><summary>Kde robíte odhady?</summary>
         <p>Všade tam, kde pôsobia makléri, ktorí používajú Týpka. Ak vo vašom okrese zatiaľ makléra nemáme, formulár vám to povie a dáme vám vedieť, či vám vieme pomôcť.</p></details>
       <details><summary>Čo sa stane s mojimi údajmi?</summary>
-        <p>Dostane ich len maklér, ktorý odhad pripravuje, a jeho realitná kancelária. Nepredávame ich a po dvoch rokoch ich vymažeme. Viac v <a href="https://realitnytypek.sk/nehnutelnosti/ochrana-udajov.html#formulare" target="_blank" rel="noopener">ochrane osobných údajov</a>.</p></details>
+        <p>Dostane ich len maklér, ktorý odhad pripravuje, a jeho realitná kancelária. Nepredávame ich a po dvoch rokoch ich vymažeme. Viac v <a href="../ochrana-udajov.html">ochrane osobných údajov</a>.</p></details>
     </div>
   </div>
 </section>
@@ -433,10 +433,10 @@
   </div>
 </section>
 <!-- OKRESY – generuje odhad_generuj.py -->
-<section class="sekcia sekcia-okresy" id="okresy" aria-labelledby="okresy-n">
+<section class="sekcia sekcia-okresy" id="okresy">
   <div class="obal">
-    <h2 id="okresy-n" class="nadpis nadpis-maly">Odhad hodnoty nehnuteľnosti na celom Slovensku</h2>
-    <div class="okresy"><div class="okresy-kraj"><h3>Banskobystrický kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/banska-bystrica/">Banská Bystrica</a><a href="https://realitnytypek.sk/odhad/banska-stiavnica/">Banská Štiavnica</a><a href="https://realitnytypek.sk/odhad/brezno/">Brezno</a><a href="https://realitnytypek.sk/odhad/detva/">Detva</a><a href="https://realitnytypek.sk/odhad/krupina/">Krupina</a><a href="https://realitnytypek.sk/odhad/lucenec/">Lučenec</a><a href="https://realitnytypek.sk/odhad/poltar/">Poltár</a><a href="https://realitnytypek.sk/odhad/revuca/">Revúca</a><a href="https://realitnytypek.sk/odhad/rimavska-sobota/">Rimavská Sobota</a><a href="https://realitnytypek.sk/odhad/velky-krtis/">Veľký Krtíš</a><a href="https://realitnytypek.sk/odhad/zvolen/">Zvolen</a><a href="https://realitnytypek.sk/odhad/zarnovica/">Žarnovica</a><a href="https://realitnytypek.sk/odhad/ziar-nad-hronom/">Žiar nad Hronom</a></div></div><div class="okresy-kraj"><h3>Bratislavský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/bratislava/" aria-current="page">Bratislava</a><a href="https://realitnytypek.sk/odhad/malacky/">Malacky</a><a href="https://realitnytypek.sk/odhad/pezinok/">Pezinok</a><a href="https://realitnytypek.sk/odhad/senec/">Senec</a></div></div><div class="okresy-kraj"><h3>Košický kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/gelnica/">Gelnica</a><a href="https://realitnytypek.sk/odhad/kosice/">Košice</a><a href="https://realitnytypek.sk/odhad/kosice-okolie/">Košice-okolie</a><a href="https://realitnytypek.sk/odhad/michalovce/">Michalovce</a><a href="https://realitnytypek.sk/odhad/roznava/">Rožňava</a><a href="https://realitnytypek.sk/odhad/sobrance/">Sobrance</a><a href="https://realitnytypek.sk/odhad/spisska-nova-ves/">Spišská Nová Ves</a><a href="https://realitnytypek.sk/odhad/trebisov/">Trebišov</a></div></div><div class="okresy-kraj"><h3>Nitriansky kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/komarno/">Komárno</a><a href="https://realitnytypek.sk/odhad/levice/">Levice</a><a href="https://realitnytypek.sk/odhad/nitra/">Nitra</a><a href="https://realitnytypek.sk/odhad/nove-zamky/">Nové Zámky</a><a href="https://realitnytypek.sk/odhad/sala/">Šaľa</a><a href="https://realitnytypek.sk/odhad/topolcany/">Topoľčany</a><a href="https://realitnytypek.sk/odhad/zlate-moravce/">Zlaté Moravce</a></div></div><div class="okresy-kraj"><h3>Prešovský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/bardejov/">Bardejov</a><a href="https://realitnytypek.sk/odhad/humenne/">Humenné</a><a href="https://realitnytypek.sk/odhad/kezmarok/">Kežmarok</a><a href="https://realitnytypek.sk/odhad/levoca/">Levoča</a><a href="https://realitnytypek.sk/odhad/medzilaborce/">Medzilaborce</a><a href="https://realitnytypek.sk/odhad/poprad/">Poprad</a><a href="https://realitnytypek.sk/odhad/presov/">Prešov</a><a href="https://realitnytypek.sk/odhad/sabinov/">Sabinov</a><a href="https://realitnytypek.sk/odhad/snina/">Snina</a><a href="https://realitnytypek.sk/odhad/stara-lubovna/">Stará Ľubovňa</a><a href="https://realitnytypek.sk/odhad/stropkov/">Stropkov</a><a href="https://realitnytypek.sk/odhad/svidnik/">Svidník</a><a href="https://realitnytypek.sk/odhad/vranov-nad-toplou/">Vranov nad Topľou</a></div></div><div class="okresy-kraj"><h3>Trenčiansky kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/banovce-nad-bebravou/">Bánovce nad Bebravou</a><a href="https://realitnytypek.sk/odhad/ilava/">Ilava</a><a href="https://realitnytypek.sk/odhad/myjava/">Myjava</a><a href="https://realitnytypek.sk/odhad/nove-mesto-nad-vahom/">Nové Mesto nad Váhom</a><a href="https://realitnytypek.sk/odhad/partizanske/">Partizánske</a><a href="https://realitnytypek.sk/odhad/povazska-bystrica/">Považská Bystrica</a><a href="https://realitnytypek.sk/odhad/prievidza/">Prievidza</a><a href="https://realitnytypek.sk/odhad/puchov/">Púchov</a><a href="https://realitnytypek.sk/odhad/trencin/">Trenčín</a></div></div><div class="okresy-kraj"><h3>Trnavský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/dunajska-streda/">Dunajská Streda</a><a href="https://realitnytypek.sk/odhad/galanta/">Galanta</a><a href="https://realitnytypek.sk/odhad/hlohovec/">Hlohovec</a><a href="https://realitnytypek.sk/odhad/piestany/">Piešťany</a><a href="https://realitnytypek.sk/odhad/senica/">Senica</a><a href="https://realitnytypek.sk/odhad/skalica/">Skalica</a><a href="https://realitnytypek.sk/odhad/trnava/">Trnava</a></div></div><div class="okresy-kraj"><h3>Žilinský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/bytca/">Bytča</a><a href="https://realitnytypek.sk/odhad/cadca/">Čadca</a><a href="https://realitnytypek.sk/odhad/dolny-kubin/">Dolný Kubín</a><a href="https://realitnytypek.sk/odhad/kysucke-nove-mesto/">Kysucké Nové Mesto</a><a href="https://realitnytypek.sk/odhad/liptovsky-mikulas/">Liptovský Mikuláš</a><a href="https://realitnytypek.sk/odhad/martin/">Martin</a><a href="https://realitnytypek.sk/odhad/namestovo/">Námestovo</a><a href="https://realitnytypek.sk/odhad/ruzomberok/">Ružomberok</a><a href="https://realitnytypek.sk/odhad/turcianske-teplice/">Turčianske Teplice</a><a href="https://realitnytypek.sk/odhad/tvrdosin/">Tvrdošín</a><a href="https://realitnytypek.sk/odhad/zilina/">Žilina</a></div></div></div>
+    <details class="okresy-obal"><summary>Odhad hodnoty nehnuteľnosti na celom Slovensku – podľa okresov</summary>
+    <div class="okresy"><div class="okresy-kraj"><h3>Banskobystrický kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/banska-bystrica/">Banská Bystrica</a><a href="https://realitnytypek.sk/odhad/banska-stiavnica/">Banská Štiavnica</a><a href="https://realitnytypek.sk/odhad/brezno/">Brezno</a><a href="https://realitnytypek.sk/odhad/detva/">Detva</a><a href="https://realitnytypek.sk/odhad/krupina/">Krupina</a><a href="https://realitnytypek.sk/odhad/lucenec/">Lučenec</a><a href="https://realitnytypek.sk/odhad/poltar/">Poltár</a><a href="https://realitnytypek.sk/odhad/revuca/">Revúca</a><a href="https://realitnytypek.sk/odhad/rimavska-sobota/">Rimavská Sobota</a><a href="https://realitnytypek.sk/odhad/velky-krtis/">Veľký Krtíš</a><a href="https://realitnytypek.sk/odhad/zvolen/">Zvolen</a><a href="https://realitnytypek.sk/odhad/zarnovica/">Žarnovica</a><a href="https://realitnytypek.sk/odhad/ziar-nad-hronom/">Žiar nad Hronom</a></div></div><div class="okresy-kraj"><h3>Bratislavský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/bratislava/" aria-current="page">Bratislava</a><a href="https://realitnytypek.sk/odhad/malacky/">Malacky</a><a href="https://realitnytypek.sk/odhad/pezinok/">Pezinok</a><a href="https://realitnytypek.sk/odhad/senec/">Senec</a></div></div><div class="okresy-kraj"><h3>Košický kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/gelnica/">Gelnica</a><a href="https://realitnytypek.sk/odhad/kosice/">Košice</a><a href="https://realitnytypek.sk/odhad/kosice-okolie/">Košice-okolie</a><a href="https://realitnytypek.sk/odhad/michalovce/">Michalovce</a><a href="https://realitnytypek.sk/odhad/roznava/">Rožňava</a><a href="https://realitnytypek.sk/odhad/sobrance/">Sobrance</a><a href="https://realitnytypek.sk/odhad/spisska-nova-ves/">Spišská Nová Ves</a><a href="https://realitnytypek.sk/odhad/trebisov/">Trebišov</a></div></div><div class="okresy-kraj"><h3>Nitriansky kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/komarno/">Komárno</a><a href="https://realitnytypek.sk/odhad/levice/">Levice</a><a href="https://realitnytypek.sk/odhad/nitra/">Nitra</a><a href="https://realitnytypek.sk/odhad/nove-zamky/">Nové Zámky</a><a href="https://realitnytypek.sk/odhad/sala/">Šaľa</a><a href="https://realitnytypek.sk/odhad/topolcany/">Topoľčany</a><a href="https://realitnytypek.sk/odhad/zlate-moravce/">Zlaté Moravce</a></div></div><div class="okresy-kraj"><h3>Prešovský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/bardejov/">Bardejov</a><a href="https://realitnytypek.sk/odhad/humenne/">Humenné</a><a href="https://realitnytypek.sk/odhad/kezmarok/">Kežmarok</a><a href="https://realitnytypek.sk/odhad/levoca/">Levoča</a><a href="https://realitnytypek.sk/odhad/medzilaborce/">Medzilaborce</a><a href="https://realitnytypek.sk/odhad/poprad/">Poprad</a><a href="https://realitnytypek.sk/odhad/presov/">Prešov</a><a href="https://realitnytypek.sk/odhad/sabinov/">Sabinov</a><a href="https://realitnytypek.sk/odhad/snina/">Snina</a><a href="https://realitnytypek.sk/odhad/stara-lubovna/">Stará Ľubovňa</a><a href="https://realitnytypek.sk/odhad/stropkov/">Stropkov</a><a href="https://realitnytypek.sk/odhad/svidnik/">Svidník</a><a href="https://realitnytypek.sk/odhad/vranov-nad-toplou/">Vranov nad Topľou</a></div></div><div class="okresy-kraj"><h3>Trenčiansky kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/banovce-nad-bebravou/">Bánovce nad Bebravou</a><a href="https://realitnytypek.sk/odhad/ilava/">Ilava</a><a href="https://realitnytypek.sk/odhad/myjava/">Myjava</a><a href="https://realitnytypek.sk/odhad/nove-mesto-nad-vahom/">Nové Mesto nad Váhom</a><a href="https://realitnytypek.sk/odhad/partizanske/">Partizánske</a><a href="https://realitnytypek.sk/odhad/povazska-bystrica/">Považská Bystrica</a><a href="https://realitnytypek.sk/odhad/prievidza/">Prievidza</a><a href="https://realitnytypek.sk/odhad/puchov/">Púchov</a><a href="https://realitnytypek.sk/odhad/trencin/">Trenčín</a></div></div><div class="okresy-kraj"><h3>Trnavský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/dunajska-streda/">Dunajská Streda</a><a href="https://realitnytypek.sk/odhad/galanta/">Galanta</a><a href="https://realitnytypek.sk/odhad/hlohovec/">Hlohovec</a><a href="https://realitnytypek.sk/odhad/piestany/">Piešťany</a><a href="https://realitnytypek.sk/odhad/senica/">Senica</a><a href="https://realitnytypek.sk/odhad/skalica/">Skalica</a><a href="https://realitnytypek.sk/odhad/trnava/">Trnava</a></div></div><div class="okresy-kraj"><h3>Žilinský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/bytca/">Bytča</a><a href="https://realitnytypek.sk/odhad/cadca/">Čadca</a><a href="https://realitnytypek.sk/odhad/dolny-kubin/">Dolný Kubín</a><a href="https://realitnytypek.sk/odhad/kysucke-nove-mesto/">Kysucké Nové Mesto</a><a href="https://realitnytypek.sk/odhad/liptovsky-mikulas/">Liptovský Mikuláš</a><a href="https://realitnytypek.sk/odhad/martin/">Martin</a><a href="https://realitnytypek.sk/odhad/namestovo/">Námestovo</a><a href="https://realitnytypek.sk/odhad/ruzomberok/">Ružomberok</a><a href="https://realitnytypek.sk/odhad/turcianske-teplice/">Turčianske Teplice</a><a href="https://realitnytypek.sk/odhad/tvrdosin/">Tvrdošín</a><a href="https://realitnytypek.sk/odhad/zilina/">Žilina</a></div></div></div></details>
   </div>
 </section>
 <!-- /OKRESY -->
@@ -445,15 +445,15 @@
 <footer class="pata">
   <div class="obal pata-in">
     <div>
-      <a class="logo logo-pata" href="https://realitnytypek.sk/nehnutelnosti/"><img src="../typek-head.png" width="34" height="34" alt=""><span class="wm"><span class="a">Týpkove</span> <span class="b">nehnuteľnosti</span></span></a>
-      <p>Ponuky a služby realitných kancelárií a maklérov, ktorí používajú softvér Realitný týpek. Prevádzkuje Alpha Reality s.r.o., Hviezdoslavova 8, 052 01 Spišská Nová Ves, IČO 50 801 457.</p>
+      <a class="logo logo-pata" href="../"><img src="../typek-head.png" width="34" height="34" alt=""><span class="wm"><span class="a">Odhad</span> <span class="b">hodnoty</span></span></a>
+      <p>Služba Týpkových nehnuteľností – realitných kancelárií a maklérov, ktorí používajú softvér Realitný týpek. Prevádzkuje Alpha Reality s.r.o., IČO 50 801 457.</p>
     </div>
     <nav class="pata-odkazy" aria-label="Odkazy">
       <a href="https://realitnytypek.sk/nehnutelnosti/">Ponuky nehnuteľností</a>
       <a href="#podmienky">Podmienky odhadu</a>
-      <a href="https://realitnytypek.sk/nehnutelnosti/ochrana-udajov.html#formulare">Ochrana osobných údajov</a>
+      <a href="../ochrana-udajov.html">Ochrana osobných údajov</a>
       <a href="mailto:info@realitnytypek.sk">info@realitnytypek.sk</a>
-      <button type="button" class="pata-ck" data-ck-znova hidden>Nastavenia cookies</button>
+      <button type="button" class="pata-ck" data-ck-znova>Nastavenia cookies</button>
       <a class="pata-makler" href="https://realitnytypek.sk/">Ste maklér? Takéto žiadosti môžu chodiť aj vám →</a>
     </nav>
   </div>
