@@ -134,3 +134,48 @@ select 'odhady' = any(pristup) novy_ma_odhady from makleri where email = 'n@alph
 update odhady_hodnoty set vytvorene = now() - interval '25 months' where obec = 'Svit';
 select _portal_upratanie();
 select count(*) po_upratani from odhady_hodnoty;                                                     -- → 2
+
+\echo '=== 10. (110) kedy predať a volať, fotky s jednorazovým kľúčom'
+select pg_temp.pow(30000000) "P11", pg_temp.pow(32000000) "P12" \gset
+insert into telefony (inzerat_id, telefon, zadal, kancelaria_id) values ('o6', '0944555666', :'K', 1);
+set role anon;
+select r->'fotky' is not null ma_fotky, length(r->'fotky'->>'token') dlzka, r->'makler'->>'meno' makler
+  from (select odhad_ziadost('{"typ":"byt","obec":"Smižany","okres":"Spišská Nová Ves","ulica":"Tatranská","plocha":"68","izby":"3","poschodie":"1","stav":"Novostavba","dovod":"Zvažujem predaj","kedy_predat":"Čo najskôr","kedy_volat":"Poobede","fotky":"3","meno":"Ivan Rýchly","telefon":"0944 555 666","email":"ivan@x.sk"}'::jsonb, :'P11') r) x;  -- → t, 32, Kristián Alpha
+reset role;
+select kedy_predat, kedy_volat, fotky_cesta like id || '/%' cesta, fotky_do > now() plati from odhady_hodnoty where email = 'ivan@x.sk';  -- → Čo najskôr, Poobede, t, t
+select titul from push_fronta order by id desc limit 1;                                             -- → (prázdne bez odberu push – v teste nie je push_odbery)
+select (select fotky_cesta from odhady_hodnoty where email = 'ivan@x.sk') "CESTA", (select id from odhady_hodnoty where email = 'ivan@x.sk') "ID_IVAN" \gset
+select _odhad_fotky_smie(:'CESTA' || '/1.jpg') ok, _odhad_fotky_smie(:'CESTA' || '/7.jpg') sedem, _odhad_fotky_smie(:'ID_IVAN' || '/' || repeat('a', 32) || '/1.jpg') zly_kluc,
+       _odhad_fotky_smie('../1.jpg') zly;                                                              -- → t, f, f, f
+insert into storage.objects (bucket_id, name) values ('odhady-fotky', :'CESTA' || '/1.jpg'), ('odhady-fotky', :'CESTA' || '/2.jpg');
+set role anon;
+select odhad_fotky_hotovo(:ID_IVAN, split_part(:'CESTA', '/', 2)) pocet;                             -- → 2
+select odhad_fotky_hotovo(:ID_IVAN, repeat('b', 32));                                                -- → ERROR Fotky sa nepodarilo priradiť.
+reset role;
+set role authenticated; set request.jwt.claim.sub = :'K';
+select _odhad_fotky_vidi(:'CESTA' || '/1.jpg') kristian;                                             -- → t
+set request.jwt.claim.sub = :'B';
+select _odhad_fotky_vidi(:'CESTA' || '/1.jpg') beata;                                                -- → f
+
+\echo '=== 11. zhody: Ivan inzeruje (telefón pri inzeráte o6) a podobné odhady'
+set request.jwt.claim.sub = :'K';
+select jsonb_array_length(z->'inzeraty') inz, z->'inzeraty'->0->>'id' prvy, z->'inzeraty'->0->>'zhoda' zhoda, z->'predajca'->>'meno' predajca,
+       jsonb_array_length(z->'odhady') ine_odhady from (select odhad_zhody(:ID_IVAN) z) x;           -- → ≥1, o6, telefon, Ivan Rýchly, 0
+
+\echo '=== 12. odoslanie → odkaz na PDF a pripomienka o 3 mesiace; zákazka ju zruší'
+select (r->>'list_token') is not null token, (r->>'pripomienka_neskor') is not null prip
+  from (select odhad_poslat(:ID_IVAN, 120000, 128000, 'Dobrý deň, odhadujem hodnotu vášho bytu na 120 – 128 tisíc eur.') r) x;  -- → t, t
+reset role; reset request.jwt.claim.sub;
+select to_char(cas at time zone 'Europe/Bratislava', 'HH24:MI') hodina, cas::date - current_date > 85 o_3_mesiace, druh, left(poznamka, 40)
+  from pripomienky where id = (select pripomienka_neskor from odhady_hodnoty where id = :ID_IVAN);  -- → 09:00, t, pripomienka, Ozvi sa – pred 3 mesiacmi…
+select (select list_token from odhady_hodnoty where id = :ID_IVAN) "TOK" \gset
+set role anon;
+select l->'odhad'->>'cena_od' od, l->'odhad'->>'meno' meno, l->'makler'->>'meno' makler, jsonb_array_length(l->'porovnanie'->'podobne') porovnanie,
+       l->'odhad' ? 'telefon' telefon_klienta from (select odhad_list(:'TOK') l) x;               -- → 120000, Ivan Rýchly, Kristián Alpha, ≥1, f
+select odhad_list(repeat('0', 32)) neplatny;                                                         -- → null
+reset role;
+set role authenticated; set request.jwt.claim.sub = :'K';
+select odhad_ulozit(:ID_IVAN, '{"stav":"zakazka","pdf_porovnanie":false}')->>'stav' stav;            -- → zakazka
+reset role; reset request.jwt.claim.sub;
+select zrusena is not null zrusena from pripomienky where id = (select pripomienka_neskor from odhady_hodnoty where id = :ID_IVAN);  -- → t
+set role anon; select odhad_list(:'TOK')->'porovnanie' bez_porovnania; reset role;                   -- → null

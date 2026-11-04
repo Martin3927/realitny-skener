@@ -74,7 +74,7 @@ a:focus-visible,.toc:focus-visible,.btn:focus-visible{outline:3px solid #1E2A35;
 <span class="stitok">PRÁVNE INFORMÁCIE</span>
 <h1>Ochrana osobných údajov</h1>
 <p class="uvod">Tu nájdete, aké údaje spracúvame, keď na Týpkových nehnuteľnostiach napíšete maklérovi, požiadate o odhad ceny, ponúknete nehnuteľnosť na predaj alebo zapnete strážcu ponúk – prečo, ako dlho a aké máte práva podľa nariadenia GDPR (2016/679) a zákona č. 18/2018 Z. z. o ochrane osobných údajov.</p>
-<p class="ucinne">Účinné od 1. 11. 2026, doplnené 4. 11. 2026 (odhad hodnoty)</p>
+<p class="ucinne">Účinné od 1. 11. 2026, doplnené 4. 11. 2026 (odhad hodnoty, fotky, meranie so súhlasom)</p>
 
 <nav class="obsah" aria-label="Obsah stránky">
 <a class="toc" href="#kto">Kto spracúva</a>
@@ -91,7 +91,7 @@ a:focus-visible,.toc:focus-visible,.btn:focus-visible{outline:3px solid #1E2A35;
 <ul>
 <li>Spracúvame len to, čo nám sami napíšete, a to len na účel, na ktorý ste nám to poslali.</li>
 <li>Správu k ponuke dostane maklér, ktorý ponuku má na starosti. Žiadosť o odhad alebo predaj dostane maklér, ktorý vo vašej obci pôsobí.</li>
-<li>Údaje nepredávame. Portál nepoužíva cookies ani nástroje na sledovanie návštevnosti či reklamu.</li>
+<li>Údaje nepredávame. Portál nepoužíva cookies ani nástroje na sledovanie návštevnosti či reklamu. Stránka Odhad hodnoty ich môže použiť len s vaším súhlasom.</li>
 <li>Uložené ponuky a porovnanie zostávajú len vo vašom prehliadači.</li>
 <li>Kedykoľvek nám môžete napísať a údaje si pozrieť, opraviť alebo nechať vymazať.</li>
 </ul>
@@ -120,7 +120,7 @@ a:focus-visible,.toc:focus-visible,.btn:focus-visible{outline:3px solid #1E2A35;
 <tbody>
 <tr><td>Mám záujem o ponuku</td><td>meno (nepovinné), telefón alebo e-mail, správa, navrhnutý termín obhliadky, o ktorú ponuku ide</td><td>aby sa vám maklér ozval, dohodol obhliadku alebo odpovedal na otázku</td><td>vaša žiadosť pred uzavretím zmluvy – čl. 6 ods. 1 písm. b) GDPR</td></tr>
 <tr><td>Odhad ceny</td><td>obec, druh nehnuteľnosti, výmera, počet izieb, stav, meno (nepovinné), telefón alebo e-mail</td><td>aby vám maklér pripravil presnejší odhad</td><td>čl. 6 ods. 1 písm. b) GDPR</td></tr>
-<tr><td>Odhad hodnoty (realitnytypek.sk/odhad)</td><td>druh, obec, ulica a číslo (pri pozemku nepovinné), výmera, izby, poschodie, stav, siete, vybavenie, dôvod odhadu, poznámka, meno, telefón, e-mail; pri reklame aj odkiaľ ste prišli (napr. utm_source)</td><td>aby vám maklér, ktorý vo vašej obci pôsobí, pripravil a poslal odhad hodnoty a poslali sme vám potvrdenie o prijatí žiadosti</td><td>čl. 6 ods. 1 písm. b) GDPR</td></tr>
+<tr><td>Odhad hodnoty (realitnytypek.sk/odhad)</td><td>druh, obec, ulica a číslo (pri pozemku nepovinné), výmera, izby, poschodie, stav, siete, vybavenie, dôvod odhadu, kedy chcete predávať, kedy vám môžeme zavolať, poznámka, fotky (nepovinné), meno, telefón, e-mail; pri reklame aj odkiaľ ste prišli (napr. utm_source)</td><td>aby vám maklér, ktorý vo vašej obci pôsobí, pripravil a poslal odhad hodnoty a poslali sme vám potvrdenie o prijatí žiadosti</td><td>čl. 6 ods. 1 písm. b) GDPR</td></tr>
 <tr><td>Chcem predať</td><td>obec, druh nehnuteľnosti, výmera, kedy chcete predávať, poznámka, meno (nepovinné), telefón alebo e-mail</td><td>aby vás maklér kontaktoval a poradil s predajom</td><td>čl. 6 ods. 1 písm. b) GDPR</td></tr>
 <tr><td>Strážca ponúk a upozornenie na nižšiu cenu</td><td>e-mail, meno (nepovinné), vaše filtre alebo sledovaná ponuka, čas prihlásenia a potvrdenia</td><td>aby sme vám posielali nové a zlacnené ponuky</td><td>váš súhlas – čl. 6 ods. 1 písm. a) GDPR. Odvoláte ho jedným klikom v každom e-maile.</td></tr>
 <tr><td>Chcem byť maklér</td><td>meno, telefón alebo e-mail, okres, skúsenosti, správa</td><td>aby sme sa vám ozvali s ponukou spolupráce</td><td>čl. 6 ods. 1 písm. b) GDPR</td></tr>
@@ -177,9 +177,11 @@ a:focus-visible,.toc:focus-visible,.btn:focus-visible{outline:3px solid #1E2A35;
 <tr><td><code>typek-porovnanie</code></td><td>najviac 3 ponuky na porovnanie</td><td>kým ich neodstránite</td></tr>
 <tr><td><code>typek-videne</code></td><td>naposledy prezerané ponuky (najviac 12)</td><td>kým ich neodstránite</td></tr>
 <tr><td><code>typek-videne-…</code></td><td>aby sa zobrazenie ponuky započítalo len raz</td><td>do zatvorenia okna prehliadača</td></tr>
+<tr><td><code>rt-cookies</code></td><td>váš výber v lište cookies (spoločný s webom realitnytypek.sk)</td><td>kým ho nezmeníte</td></tr>
 </tbody>
 </table>
 </div>
+<p id="meranie"><strong>Meranie reklamy na stránke Odhad hodnoty</strong> (realitnytypek.sk/odhad): ak je meranie zapnuté, stránka sa vás najprv opýta v lište cookies. Až s vaším súhlasom načíta <strong>Google Analytics</strong> (Google Ireland Ltd. – koľko ľudí stránku navštívilo a odkiaľ prišli) a <strong>Meta Pixel</strong> (Meta Platforms Ireland Ltd. – úspešnosť reklamy na Facebooku a Instagrame). Pri odoslaní žiadosti im dáme vedieť len to, že žiadosť prišla a o aký druh nehnuteľnosti ide – nie vaše meno, telefón, e-mail ani adresu. Právnym základom je váš súhlas (čl. 6 ods. 1 písm. a) GDPR) a odvoláte ho kedykoľvek cez „Nastavenia cookies“ v pätičke stránky. Bez súhlasu sa nič nespustí.</p>
 <p>Všetko vymažete v nastaveniach prehliadača cez vymazanie údajov stránok.</p>
 </section>
 

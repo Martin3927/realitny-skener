@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1E2A35">
+<title>Odhad hodnoty nehnuteľnosti Košice-okolie – zadarmo | Týpkove nehnuteľnosti</title>
+<meta name="description" content="Koľko stojí byt, dom alebo pozemok v okrese Košice-okolie? Vyplňte pár údajov a maklér, ktorý tu pôsobí, vám približnú hodnotu oznámi do 24 hodín v pracovné dni. Zadarmo a nezáväzne.">
+<link rel="canonical" href="https://realitnytypek.sk/odhad/kosice-okolie/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Týpkove nehnuteľnosti">
+<meta property="og:locale" content="sk_SK">
+<meta property="og:url" content="https://realitnytypek.sk/odhad/kosice-okolie/">
+<meta property="og:title" content="Koľko dnes stojí vaša nehnuteľnosť v okrese Košice-okolie?">
+<meta property="og:description" content="Maklér z vášho okolia vám približnú hodnotu bytu, domu alebo pozemku oznámi do 24 hodín v pracovné dni. Zadarmo a nezáväzne.">
+<meta property="og:image" content="https://realitnytypek.sk/odhad/og-odhad.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="../typek-head.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uwxziqapghlyktwpipjd.supabase.co" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Instrument+Sans:wght@400..700&amp;family=Montserrat:wght@900&amp;display=swap">
+<link rel="stylesheet" href="../odhad.css?v=202611042130">
+<script>
+  // všetky animácie aj pri obmedzenom pohybe v systéme: adresa ?pohyb=1
+  if (/[?&]pohyb=1/.test(location.search)) document.documentElement.classList.add("pohyb-vzdy");
+  document.documentElement.classList.add("js");
+</script>
+<script defer src="../obce.js?v=202611042130"></script>
+<script defer src="../odhad.js?v=202611042130"></script>
+</head>
+<body data-okresy="Košice-okolie">
+<a class="preskoc" href="#odhad">Preskočiť na formulár</a>
+
+<header class="hlava">
+  <div class="obal hlava-in">
+    <a class="logo" href="https://realitnytypek.sk/nehnutelnosti/" aria-label="Týpkove nehnuteľnosti – ponuky nehnuteľností">
+      <img src="../typek-head.png" width="40" height="40" alt="">
+      <span class="wm"><span class="a">Týpkove</span> <span class="b">nehnuteľnosti</span></span>
+    </a>
+    <nav class="hlava-nav" aria-label="Stránka">
+      <a href="#ako">Ako to funguje</a>
+      <a href="#otazky">Časté otázky</a>
+      <a class="btn btn-zlate btn-male" href="#odhad" data-na-formular>Chcem odhad zadarmo</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="uvod" aria-labelledby="nadpis">
+  <div class="obal uvod-grid">
+    <div class="uvod-text">
+      <p class="stitok">Odhad hodnoty nehnuteľnosti · okres Košice-okolie · zadarmo</p>
+      <h1 id="nadpis">Koľko dnes stojí vaša nehnuteľnosť v okrese Košice-okolie?</h1>
+      <p class="uvod-lead">Vyplňte pár údajov o byte, dome alebo pozemku. Žiadosť dostane maklér, ktorý vo vašej obci pôsobí, a približnú hodnotu vám <strong>zavolá alebo pošle e-mailom do 24 hodín</strong> v pracovné dni. Zadarmo a nezáväzne.</p>
+    </div>
+    <div class="uvod-doplnok">
+      <ul class="uvod-body">
+        <li><span class="fajka" aria-hidden="true"></span>Odhad od makléra z vášho okolia, nie z kalkulačky</li>
+        <li><span class="fajka" aria-hidden="true"></span>Porovnanie s ponukami a predajmi v okolí</li>
+        <li><span class="fajka" aria-hidden="true"></span>Bez povinnosti predávať</li>
+      </ul>
+      <div class="uvod-typek" aria-hidden="true"><span class="kruh"></span><img src="../typek.webp" width="440" height="499" alt=""></div>
+    </div>
+
+    <div class="karta" id="odhad">
+      <form id="form" novalidate>
+        <div id="flow">
+          <div class="postup" aria-live="polite"><span>Krok <b id="krok-c">1</b> zo 6</span><span id="krok-n">Typ nehnuteľnosti</span></div>
+          <div class="pas" aria-hidden="true"><i id="pas"></i></div>
+
+          <!-- 1. Typ -->
+          <fieldset class="krok" data-nazov="Typ nehnuteľnosti">
+            <legend class="sr">Typ nehnuteľnosti</legend>
+            <h2 tabindex="-1">Čo chcete oceniť?</h2>
+            <div class="krok-telo">
+              <div class="typy" role="radiogroup" aria-label="Typ nehnuteľnosti">
+                <label class="moz"><input type="radio" name="typ" value="byt" required><span class="moz-box">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="7" y="4" width="18" height="24" rx="1.5"/><path d="M11 9h3M18 9h3M11 14h3M18 14h3M11 19h3M18 19h3M14 28v-4h4v4"/></svg>
+                  <b>Byt</b></span></label>
+                <label class="moz"><input type="radio" name="typ" value="dom"><span class="moz-box">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 15L16 5l12 10"/><path d="M7 13v14h18V13"/><path d="M13 27v-7h6v7"/></svg>
+                  <b>Rodinný dom</b></span></label>
+                <label class="moz"><input type="radio" name="typ" value="pozemok"><span class="moz-box">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 22l7-4 7 3 12-5"/><path d="M3 27l7-4 7 3 12-5"/><path d="M10 18V7l6 3-6 3"/></svg>
+                  <b>Pozemok</b></span></label>
+                <label class="moz"><input type="radio" name="typ" value="ine"><span class="moz-box">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 17L16 8l11 9"/><path d="M8 15v12h16V15"/><path d="M12 27v-5h8v5"/><path d="M21 6v4"/></svg>
+                  <b>Chata, garáž alebo iné</b></span></label>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- 2. Lokalita -->
+          <fieldset class="krok" data-nazov="Lokalita" hidden>
+            <legend class="sr">Lokalita</legend>
+            <h2 tabindex="-1">Kde sa nachádza?</h2>
+            <div class="krok-telo">
+              <div class="pole pole-obec">
+                <label for="obec">Obec alebo mestská časť</label>
+                <div class="combo">
+                  <input id="obec" name="obec" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="obec-zoznam"
+                         autocomplete="off" spellcheck="false" placeholder="Začnite písať, napr. Medzev" maxlength="60" required aria-describedby="obec-info">
+                  <ul id="obec-zoznam" class="combo-zoznam" role="listbox" aria-label="Obce" hidden></ul>
+                </div>
+                <p class="pole-info" id="obec-info" aria-live="polite"></p>
+              </div>
+              <div class="pole">
+                <label for="cast">Časť obce alebo sídlisko <span class="nepov">nepovinné</span></label>
+                <input id="cast" name="cast_obce" type="text" maxlength="60" autocomplete="off" placeholder="napr. sídlisko Západ">
+              </div>
+              <div class="riadok-2">
+                <div class="pole">
+                  <label for="ulica"><span data-ulica-nazov>Ulica</span> <span class="nepov" data-ulica-nepov hidden>nepovinné</span></label>
+                  <input id="ulica" name="ulica" type="text" autocomplete="address-line1" maxlength="80" placeholder="napr. Letná">
+                </div>
+                <div class="pole pole-male">
+                  <label for="cislo">Číslo <span class="nepov">nepovinné</span></label>
+                  <input id="cislo" name="cislo" type="text" autocomplete="off" maxlength="15" placeholder="napr. 12">
+                </div>
+              </div>
+              <p class="pole-tip">Adresu uvidí len maklér, ktorý vám odhad pripraví.</p>
+            </div>
+          </fieldset>
+
+          <!-- 3. Veľkosť -->
+          <fieldset class="krok" data-nazov="Veľkosť" hidden>
+            <legend class="sr">Veľkosť</legend>
+            <h2 tabindex="-1" data-titul-byt="Aký veľký je byt?" data-titul-dom="Aký veľký je dom?" data-titul-pozemok="Aký veľký je pozemok?" data-titul-ine="Čo presne chcete oceniť?">Aký veľký je byt?</h2>
+            <div class="krok-telo">
+              <fieldset class="pod" data-pre="byt">
+                <legend class="sr">Byt</legend>
+                <div class="pole"><label for="plocha-byt">Podlahová plocha</label>
+                  <div class="jednotka"><input id="plocha-byt" name="plocha" type="number" inputmode="decimal" min="10" max="1000" step="any" required placeholder="napr. 68"><span>m²</span></div></div>
+                <div class="pole"><span class="pole-n" id="izby-byt-n">Počet izieb</span>
+                  <div class="cipy" role="radiogroup" aria-labelledby="izby-byt-n">
+                    <label class="cip"><input type="radio" name="izby" value="1" required><span>1</span></label>
+                    <label class="cip"><input type="radio" name="izby" value="2"><span>2</span></label>
+                    <label class="cip"><input type="radio" name="izby" value="3"><span>3</span></label>
+                    <label class="cip"><input type="radio" name="izby" value="4"><span>4</span></label>
+                    <label class="cip"><input type="radio" name="izby" value="5 a viac"><span>5 a viac</span></label>
+                  </div></div>
+                <div class="riadok-2">
+                  <div class="pole"><label for="posch">Poschodie</label>
+                    <input id="posch" name="poschodie" type="number" inputmode="numeric" min="-1" max="30" required placeholder="prízemie = 0"></div>
+                  <div class="pole"><label for="posch-sp">Poschodí v dome <span class="nepov">nepovinné</span></label>
+                    <input id="posch-sp" name="poschodi" type="number" inputmode="numeric" min="1" max="30" placeholder="napr. 8"></div>
+                </div>
+              </fieldset>
+              <fieldset class="pod" data-pre="dom" hidden disabled>
+                <legend class="sr">Rodinný dom</legend>
+                <div class="riadok-2">
+                  <div class="pole"><label for="plocha-dom">Úžitková plocha</label>
+                    <div class="jednotka"><input id="plocha-dom" name="plocha" type="number" inputmode="decimal" min="20" max="3000" step="any" required placeholder="napr. 140"><span>m²</span></div></div>
+                  <div class="pole"><label for="pozemok-dom">Pozemok <span class="nepov">nepovinné</span></label>
+                    <div class="jednotka"><input id="pozemok-dom" name="pozemok" type="number" inputmode="decimal" min="0" max="200000" step="any" placeholder="napr. 600"><span>m²</span></div></div>
+                </div>
+                <div class="pole"><span class="pole-n" id="izby-dom-n">Počet izieb</span>
+                  <div class="cipy" role="radiogroup" aria-labelledby="izby-dom-n">
+                    <label class="cip"><input type="radio" name="izby" value="2 a menej" required><span>2 a menej</span></label>
+                    <label class="cip"><input type="radio" name="izby" value="3"><span>3</span></label>
+                    <label class="cip"><input type="radio" name="izby" value="4"><span>4</span></label>
+                    <label class="cip"><input type="radio" name="izby" value="5"><span>5</span></label>
+                    <label class="cip"><input type="radio" name="izby" value="6 a viac"><span>6 a viac</span></label>
+                  </div></div>
+              </fieldset>
+              <fieldset class="pod" data-pre="pozemok" hidden disabled>
+                <legend class="sr">Pozemok</legend>
+                <div class="pole"><label for="plocha-poz">Výmera pozemku</label>
+                  <div class="jednotka"><input id="plocha-poz" name="plocha" type="number" inputmode="decimal" min="10" max="10000000" step="any" required placeholder="napr. 800"><span>m²</span></div></div>
+                <div class="pole"><span class="pole-n" id="druh-n">Druh pozemku</span>
+                  <div class="cipy" role="radiogroup" aria-labelledby="druh-n">
+                    <label class="cip"><input type="radio" name="druh_pozemku" value="Stavebný" required><span>Stavebný</span></label>
+                    <label class="cip"><input type="radio" name="druh_pozemku" value="Záhrada"><span>Záhrada</span></label>
+                    <label class="cip"><input type="radio" name="druh_pozemku" value="Orná pôda alebo lúka"><span>Orná pôda alebo lúka</span></label>
+                    <label class="cip"><input type="radio" name="druh_pozemku" value="Iný alebo neviem"><span>Iný alebo neviem</span></label>
+                  </div></div>
+              </fieldset>
+              <fieldset class="pod" data-pre="ine" hidden disabled>
+                <legend class="sr">Iná nehnuteľnosť</legend>
+                <div class="pole"><label for="popis">Čo to je</label>
+                  <input id="popis" name="popis" type="text" maxlength="120" required placeholder="napr. chata pri vode, garáž, apartmán"></div>
+                <div class="pole"><label for="plocha-ine">Plocha <span class="nepov">nepovinné</span></label>
+                  <div class="jednotka"><input id="plocha-ine" name="plocha" type="number" inputmode="decimal" min="1" max="100000" step="any" placeholder="napr. 45"><span>m²</span></div></div>
+              </fieldset>
+            </div>
+          </fieldset>
+
+          <!-- 4. Stav -->
+          <fieldset class="krok" data-nazov="Stav" hidden>
+            <legend class="sr">Stav</legend>
+            <h2 tabindex="-1" data-titul-byt="V akom stave je byt?" data-titul-dom="V akom stave je dom?" data-titul-pozemok="Aké siete sú na pozemku?" data-titul-ine="V akom je stave?">V akom stave je byt?</h2>
+            <div class="krok-telo">
+              <fieldset class="pod" data-pre="byt dom ine">
+                <legend class="sr">Stav nehnuteľnosti</legend>
+                <div class="cipy cipy-stlpec" role="radiogroup" aria-label="Stav nehnuteľnosti">
+                  <label class="cip"><input type="radio" name="stav" value="Novostavba" required><span>Novostavba</span></label>
+                  <label class="cip"><input type="radio" name="stav" value="Po kompletnej rekonštrukcii"><span>Po kompletnej rekonštrukcii</span></label>
+                  <label class="cip"><input type="radio" name="stav" value="Čiastočne zrekonštruovaný"><span>Čiastočne zrekonštruovaný</span></label>
+                  <label class="cip"><input type="radio" name="stav" value="Pôvodný, udržiavaný"><span>Pôvodný, udržiavaný</span></label>
+                  <label class="cip"><input type="radio" name="stav" value="Na rekonštrukciu"><span>Na rekonštrukciu</span></label>
+                </div>
+              </fieldset>
+              <fieldset class="pod" data-pre="pozemok" hidden disabled>
+                <legend class="sr">Inžinierske siete</legend>
+                <p class="pole-tip">Vyberte všetky, ktoré sú na pozemku alebo pri ňom.</p>
+                <div class="cipy" data-povinna-skupina="siete" aria-label="Inžinierske siete">
+                  <label class="cip"><input type="checkbox" name="siete" value="Elektrina"><span>Elektrina</span></label>
+                  <label class="cip"><input type="checkbox" name="siete" value="Voda"><span>Voda</span></label>
+                  <label class="cip"><input type="checkbox" name="siete" value="Kanalizácia"><span>Kanalizácia</span></label>
+                  <label class="cip"><input type="checkbox" name="siete" value="Plyn"><span>Plyn</span></label>
+                  <label class="cip"><input type="checkbox" name="siete" value="Žiadne siete" data-vylucne><span>Žiadne siete</span></label>
+                  <label class="cip"><input type="checkbox" name="siete" value="Neviem" data-vylucne><span>Neviem</span></label>
+                </div>
+              </fieldset>
+            </div>
+          </fieldset>
+
+          <!-- 5. Detaily a dôvod -->
+          <fieldset class="krok" data-nazov="Detaily" hidden>
+            <legend class="sr">Detaily</legend>
+            <h2 tabindex="-1">Ešte pár detailov</h2>
+            <div class="krok-telo">
+              <fieldset class="pod" data-pre="byt">
+                <legend class="pole-n">Čo k bytu patrí <span class="nepov">nepovinné</span></legend>
+                <div class="cipy">
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Balkón alebo loggia"><span>Balkón alebo loggia</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Pivnica"><span>Pivnica</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Výťah"><span>Výťah</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Garáž alebo parkovanie"><span>Garáž alebo parkovanie</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Zateplený dom"><span>Zateplený dom</span></label>
+                </div>
+              </fieldset>
+              <fieldset class="pod" data-pre="dom" hidden disabled>
+                <legend class="pole-n">Čo k domu patrí <span class="nepov">nepovinné</span></legend>
+                <div class="cipy">
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Garáž"><span>Garáž</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Pivnica"><span>Pivnica</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Terasa"><span>Terasa</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Zateplenie"><span>Zateplenie</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Nové kúrenie"><span>Nové kúrenie</span></label>
+                </div>
+              </fieldset>
+              <fieldset class="pod" data-pre="pozemok" hidden disabled>
+                <legend class="pole-n">O pozemku <span class="nepov">nepovinné</span></legend>
+                <div class="cipy">
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Prístup po spevnenej ceste"><span>Prístup po spevnenej ceste</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Rovinatý"><span>Rovinatý</span></label>
+                  <label class="cip"><input type="checkbox" name="doplnky" value="Vydané stavebné povolenie"><span>Vydané stavebné povolenie</span></label>
+                </div>
+              </fieldset>
+              <fieldset class="pod pod-dovod">
+                <legend class="pole-n">Prečo chcete odhad?</legend>
+                <div class="cipy cipy-stlpec" role="radiogroup" aria-label="Dôvod odhadu">
+                  <label class="cip"><input type="radio" name="dovod" value="Zvažujem predaj" required><span>Zvažujem predaj <em class="znak znak-zadarmo">Zadarmo</em></span></label>
+                  <label class="cip"><input type="radio" name="dovod" value="Mám záujem aj o ponuku na výkup"><span>Mám záujem aj o ponuku na výkup <em class="znak znak-zadarmo">Zadarmo</em></span></label>
+                  <label class="cip"><input type="radio" name="dovod" value="Len informatívne, zaujíma ma hodnota"><span>Len informatívne, zaujíma ma hodnota <em class="znak znak-zadarmo">Zadarmo</em></span></label>
+                  <label class="cip"><input type="radio" name="dovod" value="Vyporiadanie BSM, rozvod alebo delenie majetku" data-platene><span>Vyporiadanie BSM, rozvod alebo delenie majetku <em class="znak znak-platene">Spoplatnené</em></span></label>
+                  <label class="cip"><input type="radio" name="dovod" value="Iný dôvod"><span>Iný dôvod</span></label>
+                </div>
+                <p class="pole-tip pole-platene" id="platene-info" hidden>Odhad na vyporiadanie majetku je spoplatnený. Cenu vám maklér povie vopred, ešte kým sa do odhadu pustí.</p>
+              </fieldset>
+              <fieldset class="pod">
+                <legend class="pole-n">Kedy chcete predávať?</legend>
+                <div class="cipy" role="radiogroup" aria-label="Kedy chcete predávať">
+                  <label class="cip"><input type="radio" name="kedy_predat" value="Čo najskôr" required><span>Čo najskôr</span></label>
+                  <label class="cip"><input type="radio" name="kedy_predat" value="Do 3 mesiacov"><span>Do 3 mesiacov</span></label>
+                  <label class="cip"><input type="radio" name="kedy_predat" value="Do roka"><span>Do roka</span></label>
+                  <label class="cip"><input type="radio" name="kedy_predat" value="Zatiaľ len zisťujem"><span>Zatiaľ len zisťujem</span></label>
+                </div>
+              </fieldset>
+              <div class="pole"><label for="poznamka">Chcete ešte niečo doplniť? <span class="nepov">nepovinné</span></label>
+                <textarea id="poznamka" name="poznamka" maxlength="1000" rows="3" placeholder="napr. nová strecha v roku 2021, tichá ulica"></textarea></div>
+              <div class="pole">
+                <span class="pole-n" id="fotky-n">Fotky <span class="nepov">nepovinné, najviac 6</span></span>
+                <p class="pole-tip">S fotkami vie maklér odhadnúť cenu presnejšie. Stačia aj z mobilu – izby, kuchyňa, kúpeľňa, pohľad zvonku.</p>
+                <div class="fotky" id="fotky" aria-labelledby="fotky-n">
+                  <label class="fotky-pridat" id="fotky-pridat"><input type="file" id="fotky-vstup" accept="image/*" multiple>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.4"/></svg>
+                    <span>Pridať fotky</span></label>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- 6. Kontakt -->
+          <fieldset class="krok" data-nazov="Kontakt" hidden>
+            <legend class="sr">Kontakt</legend>
+            <h2 tabindex="-1">Kam vám máme odhad poslať?</h2>
+            <p class="krok-tip">Maklér sa vám ozve telefonicky alebo e-mailom.</p>
+            <div class="krok-telo">
+              <div class="pole"><label for="meno">Meno a priezvisko</label>
+                <input id="meno" name="meno" type="text" autocomplete="name" required maxlength="80"></div>
+              <div class="riadok-2">
+                <div class="pole"><label for="telefon">Telefón</label>
+                  <input id="telefon" name="telefon" type="tel" autocomplete="tel" inputmode="tel" placeholder="09xx xxx xxx" maxlength="25" required></div>
+                <div class="pole"><label for="email">E-mail</label>
+                  <input id="email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="120" required></div>
+              </div>
+              <fieldset class="pod">
+                <legend class="pole-n">Kedy vám môžeme zavolať? <span class="nepov">nepovinné</span></legend>
+                <div class="cipy" role="radiogroup" aria-label="Kedy vám môžeme zavolať">
+                  <label class="cip"><input type="radio" name="kedy_volat" value="Doobeda"><span>Doobeda</span></label>
+                  <label class="cip"><input type="radio" name="kedy_volat" value="Poobede"><span>Poobede</span></label>
+                  <label class="cip"><input type="radio" name="kedy_volat" value="Kedykoľvek"><span>Kedykoľvek</span></label>
+                  <label class="cip"><input type="radio" name="kedy_volat" value="Radšej e-mailom"><span>Radšej e-mailom</span></label>
+                </div>
+              </fieldset>
+              <div class="med" aria-hidden="true"><label for="web">Web</label><input id="web" name="web" tabindex="-1" autocomplete="off"></div>
+              <label class="suhlas"><input type="checkbox" name="podmienky" id="podmienky-suhlas" required>
+                <span>Súhlasím s <a href="#podmienky" data-podmienky>podmienkami odhadu</a>. Údaje dostane len maklér, ktorý odhad pripraví – viac v <a href="https://realitnytypek.sk/nehnutelnosti/ochrana-udajov.html#formulare" target="_blank" rel="noopener">ochrane osobných údajov</a>.</span></label>
+            </div>
+          </fieldset>
+
+          <p class="chyba" id="chyba" role="alert" hidden></p>
+          <div class="akcie">
+            <button type="button" class="btn btn-obrys" id="spat" hidden>Späť</button>
+            <button type="button" class="btn btn-zlate" id="dalej">Pokračovať</button>
+          </div>
+          <p class="pod-formularom"><span class="fajka" aria-hidden="true"></span>Zadarmo a nezáväzne · zaberie to asi 2 minúty</p>
+        </div>
+
+        <div id="hotovo" hidden>
+          <div class="hotovo-ik" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+          <h2 id="hotovo-n" tabindex="-1">Žiadosť o odhad je odoslaná</h2>
+          <p id="hotovo-t"></p>
+          <div class="makler" id="makler" hidden></div>
+          <p class="hotovo-mimo" id="hotovo-mimo" hidden></p>
+          <p class="hotovo-fotky" id="hotovo-fotky" aria-live="polite" hidden></p>
+          <div class="hotovo-akcie">
+            <button type="button" class="btn btn-obrys" id="znova">Oceniť ďalšiu nehnuteľnosť</button>
+            <a class="btn btn-tmave" href="https://realitnytypek.sk/nehnutelnosti/">Pozrieť ponuky nehnuteľností</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section class="sekcia sekcia-obce" aria-labelledby="obce-n">
+  <div class="obal obal-uzky">
+    <p class="stitok stitok-svetly">Košický kraj</p>
+    <h2 id="obce-n" class="nadpis">Odhad hodnoty bytu, domu aj pozemku v okrese Košice-okolie</h2>
+    <p class="obce-text">Žiadosť odovzdáme maklérovi, ktorý vo vašej obci alebo v okolí pôsobí a pozná tunajšie ceny. Odhad pripravíme pre obce: Bačkovík, Baška, Belža, Beniakovce, Bidovce, Blažice, Bočiar, Bohdanovce, Boliarov, Budimír, Bukovec, Bunetice, Buzica, Cestice, Čakanovce, Čaňa, Čečejovce, Čižatice, Debraď, Drienovec, Družstevná pri Hornáde, Dvorníky-Včeláre, Ďurďošík, Ďurkov, Geča, Gyňov, Hačava, Haniska, Háj, Herľany, Hodkovce, Hosťovce, Hrašovík, Hýľov, Chorváty, Chrastné, Janík, Jasov, Kalša, Kecerovce, Kecerovský Lipovec, Kechnec, Kokšov-Bakša, Komárovce, Kostoľany nad Hornádom, Košická Belá, Košická Polianka, Košické Oľšany, Košický Klečenov, Kráľovce, Kysak, Malá Ida, Malá Lodina, Medzev, Milhosť, Mokrance, Moldava nad Bodvou, Mudrovce, Nižná Hutka, Nižná Kamenica, Nižná Myšľa, Nižný Čaj, Nižný Klátov, Nižný Lánec, Nová Polhora, Nováčany, Nový Salaš, Obišovce, Olšovany, Opátka, Opiná, Paňovce, Peder, Perín-Chym, Ploské, Poproč, Rankovce, Rákoš, Rešica, Rozhanovce, Rudník, Ruskov, Sady nad Torysou, Seňa, Skároš, Slančík, Slanec, Slanská Huta, Slanské Nové Mesto, Sokoľ, Sokoľany, Svinica, Šemša, Štós, Trebejov, Trstené pri Hornáde, Trsťany, Turnianska Nová Ves, Turňa nad Bodvou, Vajkovce, Valaliky, Veľká Ida, Veľká Lodina, Vtáčkovce, Vyšná Hutka, Vyšná Kamenica, Vyšná Myšľa, Vyšný Čaj, Vyšný Klátov, Vyšný Medzev, Zádiel, Zlatá Idka, Žarnov, Ždaňa.</p>
+  </div>
+</section>
+
+<section class="sekcia" id="ako" aria-labelledby="ako-n">
+  <div class="obal">
+    <p class="stitok stitok-svetly">Ako to funguje</p>
+    <h2 id="ako-n" class="nadpis">Tri kroky k reálnej cene</h2>
+    <ol class="kroky">
+      <li class="krok-karta"><span class="krok-cislo">1</span><h3>Vyplníte formulár</h3><p>Typ, lokalita, veľkosť a stav nehnuteľnosti. Zaberie to asi dve minúty.</p></li>
+      <li class="krok-karta"><span class="krok-cislo">2</span><h3>Maklér porovná trh</h3><p>Maklér z vášho okolia porovná údaje s ponukami a predajmi vo vašej obci – nie s celoslovenským priemerom.</p></li>
+      <li class="krok-karta"><span class="krok-cislo">3</span><h3>Ozve sa vám</h3><p>Približnú hodnotu vám zavolá alebo pošle e-mailom do 24 hodín v pracovné dni.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="sekcia sekcia-tmava" aria-labelledby="preco-n">
+  <div class="obal">
+    <p class="stitok">Prečo nie online kalkulačka</p>
+    <h2 id="preco-n" class="nadpis">Kalkulačka pozná priemer. Maklér pozná vašu ulicu.</h2>
+    <div class="porovnanie">
+      <div class="por-karta por-kalk">
+        <h3>Online kalkulačka</h3>
+        <ul>
+          <li>počíta s priemernými cenami za celý okres alebo kraj</li>
+          <li>nevidí stav, rekonštrukciu, poschodie ani výhľad</li>
+          <li>nevie, za koľko sa vo vašej obci naozaj predáva</li>
+        </ul>
+      </div>
+      <div class="por-karta por-makler">
+        <h3>Odhad od makléra</h3>
+        <ul>
+          <li>maklér vo vašej obci pôsobí a pozná jej ulice aj sídliská</li>
+          <li>zohľadní stav, rekonštrukciu, poschodie a to, čo mu doplníte</li>
+          <li>povie vám cenu, za ktorú sa dá predať – nie nafúknuté číslo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sekcia" aria-labelledby="vykup-n">
+  <div class="obal">
+    <div class="vykup">
+      <div>
+        <p class="stitok stitok-svetly">Výkup nehnuteľnosti</p>
+        <h2 id="vykup-n" class="nadpis">Potrebujete predať rýchlo?</h2>
+        <p>Niektoré realitné kancelárie v Týpkových nehnuteľnostiach nehnuteľnosti aj priamo vykupujú. Vo formulári vyberte „Mám záujem aj o ponuku na výkup“ a maklér vám povie, či je výkup pri vašej nehnuteľnosti možný a za koľko.</p>
+      </div>
+      <a class="btn btn-tmave" href="#odhad" data-vykup>Chcem aj ponuku na výkup</a>
+    </div>
+  </div>
+</section>
+
+<section class="sekcia" id="otazky" aria-labelledby="otazky-n">
+  <div class="obal obal-uzky">
+    <p class="stitok stitok-svetly">Časté otázky</p>
+    <h2 id="otazky-n" class="nadpis">Čo vás môže zaujímať</h2>
+    <div class="otazky">
+      <details><summary>Je odhad naozaj zadarmo?</summary>
+        <p>Áno, ak zvažujete predaj, chcete ponuku na výkup alebo vás hodnota len zaujíma. Odhad na vyporiadanie bezpodielového spoluvlastníctva, rozvod alebo delenie majetku je spoplatnený – cenu vám maklér povie vopred.</p></details>
+      <details><summary>Kto mi odhad pripraví?</summary>
+        <p>Maklér z realitnej kancelárie, ktorá vo vašej obci pôsobí. Kto žiadosť dostal, uvidíte hneď po odoslaní formulára.</p></details>
+      <details><summary>Kedy sa mi ozvete?</summary>
+        <p>Do 24 hodín v pracovné dni. Žiadosť poslanú cez víkend alebo sviatok vybavíme najbližší pracovný deň.</p></details>
+      <details><summary>Aký presný je odhad?</summary>
+        <p>Je to orientačná hodnota podľa údajov, ktoré pošlete, a podľa toho, za koľko sa v okolí ponúka a predáva. Nejde o znalecký posudok. Presnejšiu cenu vie maklér určiť po obhliadke na mieste.</p></details>
+      <details><summary>Musím potom predávať cez vás?</summary>
+        <p>Nie. Odhad vás k ničomu nezaväzuje. Ak sa rozhodnete predávať, maklér vám rád pomôže, ale je to len na vás.</p></details>
+      <details><summary>Kde robíte odhady?</summary>
+        <p>Všade tam, kde pôsobia makléri, ktorí používajú Týpka. Ak vo vašom okrese zatiaľ makléra nemáme, formulár vám to povie a dáme vám vedieť, či vám vieme pomôcť.</p></details>
+      <details><summary>Čo sa stane s mojimi údajmi?</summary>
+        <p>Dostane ich len maklér, ktorý odhad pripravuje, a jeho realitná kancelária. Nepredávame ich a po dvoch rokoch ich vymažeme. Viac v <a href="https://realitnytypek.sk/nehnutelnosti/ochrana-udajov.html#formulare" target="_blank" rel="noopener">ochrane osobných údajov</a>.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="sekcia sekcia-podmienky" id="podmienky" aria-labelledby="podmienky-n">
+  <div class="obal obal-uzky">
+    <h2 id="podmienky-n" class="nadpis nadpis-maly">Podmienky odhadu</h2>
+    <ol class="podmienky">
+      <li>Odhad hodnoty nehnuteľnosti poskytuje maklér realitnej kancelárie, ktorá žiadosť dostala, ako realitný sprostredkovateľ – na základe údajov od vás a znalosti miestneho trhu. Nejde o znalecký posudok podľa zákona č. 382/2004 Z. z. o znalcoch, tlmočníkoch a prekladateľoch a nemožno ho použiť na účely, pre ktoré právny predpis vyžaduje znalecký posudok. Odhad je orientačný a platí ku dňu jeho vydania.</li>
+      <li>Osobná obhliadka nehnuteľnosti ani vydanie odhadu, ústneho či písomného, nie sú nárokovateľné. Maklér môže obhliadku aj odhad odmietnuť, a to aj bez uvedenia dôvodu.</li>
+      <li>Odhad sa poskytuje výhradne pre vašu osobnú potrebu ako nezáväzný podklad pri zvažovaní predaja. Nie je určený na použitie v súdnych, exekučných, dedičských, daňových ani iných konaniach, ani pri riešení sporov. Použiť ho na takýto účel bez predchádzajúceho písomného súhlasu realitnej kancelárie je v rozpore s účelom, na ktorý bol vydaný.</li>
+      <li>Odhad pre potreby dohody o vyporiadaní bezpodielového spoluvlastníctva manželov, rozvodového konania, vyporiadania podielového spoluvlastníctva alebo vyporiadania majetku medzi fyzickými či právnickými osobami je spoplatnený. Cenu určí realitná kancelária individuálne podľa druhu, charakteru a výmery nehnuteľnosti a rozsahu požadovaných podkladov a povie vám ju vopred.</li>
+    </ol>
+  </div>
+</section>
+<!-- OKRESY – generuje odhad_generuj.py -->
+<section class="sekcia sekcia-okresy" id="okresy" aria-labelledby="okresy-n">
+  <div class="obal">
+    <h2 id="okresy-n" class="nadpis nadpis-maly">Odhad hodnoty nehnuteľnosti na celom Slovensku</h2>
+    <div class="okresy"><div class="okresy-kraj"><h3>Banskobystrický kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/banska-bystrica/">Banská Bystrica</a><a href="https://realitnytypek.sk/odhad/banska-stiavnica/">Banská Štiavnica</a><a href="https://realitnytypek.sk/odhad/brezno/">Brezno</a><a href="https://realitnytypek.sk/odhad/detva/">Detva</a><a href="https://realitnytypek.sk/odhad/krupina/">Krupina</a><a href="https://realitnytypek.sk/odhad/lucenec/">Lučenec</a><a href="https://realitnytypek.sk/odhad/poltar/">Poltár</a><a href="https://realitnytypek.sk/odhad/revuca/">Revúca</a><a href="https://realitnytypek.sk/odhad/rimavska-sobota/">Rimavská Sobota</a><a href="https://realitnytypek.sk/odhad/velky-krtis/">Veľký Krtíš</a><a href="https://realitnytypek.sk/odhad/zvolen/">Zvolen</a><a href="https://realitnytypek.sk/odhad/zarnovica/">Žarnovica</a><a href="https://realitnytypek.sk/odhad/ziar-nad-hronom/">Žiar nad Hronom</a></div></div><div class="okresy-kraj"><h3>Bratislavský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/bratislava/">Bratislava</a><a href="https://realitnytypek.sk/odhad/malacky/">Malacky</a><a href="https://realitnytypek.sk/odhad/pezinok/">Pezinok</a><a href="https://realitnytypek.sk/odhad/senec/">Senec</a></div></div><div class="okresy-kraj"><h3>Košický kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/gelnica/">Gelnica</a><a href="https://realitnytypek.sk/odhad/kosice/">Košice</a><a href="https://realitnytypek.sk/odhad/kosice-okolie/" aria-current="page">Košice-okolie</a><a href="https://realitnytypek.sk/odhad/michalovce/">Michalovce</a><a href="https://realitnytypek.sk/odhad/roznava/">Rožňava</a><a href="https://realitnytypek.sk/odhad/sobrance/">Sobrance</a><a href="https://realitnytypek.sk/odhad/spisska-nova-ves/">Spišská Nová Ves</a><a href="https://realitnytypek.sk/odhad/trebisov/">Trebišov</a></div></div><div class="okresy-kraj"><h3>Nitriansky kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/komarno/">Komárno</a><a href="https://realitnytypek.sk/odhad/levice/">Levice</a><a href="https://realitnytypek.sk/odhad/nitra/">Nitra</a><a href="https://realitnytypek.sk/odhad/nove-zamky/">Nové Zámky</a><a href="https://realitnytypek.sk/odhad/sala/">Šaľa</a><a href="https://realitnytypek.sk/odhad/topolcany/">Topoľčany</a><a href="https://realitnytypek.sk/odhad/zlate-moravce/">Zlaté Moravce</a></div></div><div class="okresy-kraj"><h3>Prešovský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/bardejov/">Bardejov</a><a href="https://realitnytypek.sk/odhad/humenne/">Humenné</a><a href="https://realitnytypek.sk/odhad/kezmarok/">Kežmarok</a><a href="https://realitnytypek.sk/odhad/levoca/">Levoča</a><a href="https://realitnytypek.sk/odhad/medzilaborce/">Medzilaborce</a><a href="https://realitnytypek.sk/odhad/poprad/">Poprad</a><a href="https://realitnytypek.sk/odhad/presov/">Prešov</a><a href="https://realitnytypek.sk/odhad/sabinov/">Sabinov</a><a href="https://realitnytypek.sk/odhad/snina/">Snina</a><a href="https://realitnytypek.sk/odhad/stara-lubovna/">Stará Ľubovňa</a><a href="https://realitnytypek.sk/odhad/stropkov/">Stropkov</a><a href="https://realitnytypek.sk/odhad/svidnik/">Svidník</a><a href="https://realitnytypek.sk/odhad/vranov-nad-toplou/">Vranov nad Topľou</a></div></div><div class="okresy-kraj"><h3>Trenčiansky kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/banovce-nad-bebravou/">Bánovce nad Bebravou</a><a href="https://realitnytypek.sk/odhad/ilava/">Ilava</a><a href="https://realitnytypek.sk/odhad/myjava/">Myjava</a><a href="https://realitnytypek.sk/odhad/nove-mesto-nad-vahom/">Nové Mesto nad Váhom</a><a href="https://realitnytypek.sk/odhad/partizanske/">Partizánske</a><a href="https://realitnytypek.sk/odhad/povazska-bystrica/">Považská Bystrica</a><a href="https://realitnytypek.sk/odhad/prievidza/">Prievidza</a><a href="https://realitnytypek.sk/odhad/puchov/">Púchov</a><a href="https://realitnytypek.sk/odhad/trencin/">Trenčín</a></div></div><div class="okresy-kraj"><h3>Trnavský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/dunajska-streda/">Dunajská Streda</a><a href="https://realitnytypek.sk/odhad/galanta/">Galanta</a><a href="https://realitnytypek.sk/odhad/hlohovec/">Hlohovec</a><a href="https://realitnytypek.sk/odhad/piestany/">Piešťany</a><a href="https://realitnytypek.sk/odhad/senica/">Senica</a><a href="https://realitnytypek.sk/odhad/skalica/">Skalica</a><a href="https://realitnytypek.sk/odhad/trnava/">Trnava</a></div></div><div class="okresy-kraj"><h3>Žilinský kraj</h3><div class="okresy-odkazy"><a href="https://realitnytypek.sk/odhad/bytca/">Bytča</a><a href="https://realitnytypek.sk/odhad/cadca/">Čadca</a><a href="https://realitnytypek.sk/odhad/dolny-kubin/">Dolný Kubín</a><a href="https://realitnytypek.sk/odhad/kysucke-nove-mesto/">Kysucké Nové Mesto</a><a href="https://realitnytypek.sk/odhad/liptovsky-mikulas/">Liptovský Mikuláš</a><a href="https://realitnytypek.sk/odhad/martin/">Martin</a><a href="https://realitnytypek.sk/odhad/namestovo/">Námestovo</a><a href="https://realitnytypek.sk/odhad/ruzomberok/">Ružomberok</a><a href="https://realitnytypek.sk/odhad/turcianske-teplice/">Turčianske Teplice</a><a href="https://realitnytypek.sk/odhad/tvrdosin/">Tvrdošín</a><a href="https://realitnytypek.sk/odhad/zilina/">Žilina</a></div></div></div>
+  </div>
+</section>
+<!-- /OKRESY -->
+</main>
+
+<footer class="pata">
+  <div class="obal pata-in">
+    <div>
+      <a class="logo logo-pata" href="https://realitnytypek.sk/nehnutelnosti/"><img src="../typek-head.png" width="34" height="34" alt=""><span class="wm"><span class="a">Týpkove</span> <span class="b">nehnuteľnosti</span></span></a>
+      <p>Ponuky a služby realitných kancelárií a maklérov, ktorí používajú softvér Realitný týpek. Prevádzkuje Alpha Reality s.r.o., Hviezdoslavova 8, 052 01 Spišská Nová Ves, IČO 50 801 457.</p>
+    </div>
+    <nav class="pata-odkazy" aria-label="Odkazy">
+      <a href="https://realitnytypek.sk/nehnutelnosti/">Ponuky nehnuteľností</a>
+      <a href="#podmienky">Podmienky odhadu</a>
+      <a href="https://realitnytypek.sk/nehnutelnosti/ochrana-udajov.html#formulare">Ochrana osobných údajov</a>
+      <a href="mailto:info@realitnytypek.sk">info@realitnytypek.sk</a>
+      <button type="button" class="pata-ck" data-ck-znova hidden>Nastavenia cookies</button>
+      <a class="pata-makler" href="https://realitnytypek.sk/">Ste maklér? Takéto žiadosti môžu chodiť aj vám →</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

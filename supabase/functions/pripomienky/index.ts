@@ -681,7 +681,7 @@ async function odhadEmaily(db: any) {
   const { data: odh } = await db.from("odhady_hodnoty")
     .update({ email_odoslany: ted })
     .not("email_poslat", "is", null).is("email_odoslany", null).is("email_chyba", null)
-    .select("id, meno, email, nazov, ulica, cislo, cena_od, cena_do, text_klientovi, makler_id, email_kto, kancelaria_id");
+    .select("id, meno, email, nazov, ulica, cislo, cena_od, cena_do, text_klientovi, makler_id, email_kto, kancelaria_id, list_token");
   // deno-lint-ignore no-explicit-any
   for (const o of (odh as any[]) ?? []) {
     try {
@@ -701,6 +701,7 @@ async function odhadEmaily(db: any) {
           <p style="margin:0 0 6px;font-size:13px;color:#c9d4dd">Orientačná hodnota k ${esc(datum)}</p>
           <p style="margin:0;font-size:28px;font-weight:800;color:#db9522;letter-spacing:-.5px">${suma}</p></div>
         <div style="background:#fffdf8;border-radius:18px;padding:18px 22px;font-size:15px;line-height:1.6;margin:0 0 20px">${text}</div>
+        ${o.list_token ? `<p style="margin:0 0 22px"><a href="${esc(WEB_URL + "odhad.html?t=" + o.list_token)}" style="display:inline-block;background:#db9522;color:#1e2a35;font-weight:700;font-size:15px;padding:12px 22px;border-radius:999px;text-decoration:none">Stiahnuť odhad v PDF</a></p>` : ""}
         <p style="margin:0;font-size:15px;line-height:1.5"><b>${esc(mm)}</b><br>${esc(kn)}${tel ? `<br><a href="tel:${esc(tel.replace(/[^\d+]/g, ""))}" style="color:#1e2a35">${esc(tel)}</a>` : ""}${m?.email ? `<br><a href="mailto:${esc(m.email)}" style="color:#1e2a35">${esc(m.email)}</a>` : ""}</p>
         <p style="font-size:12px;line-height:1.5;color:#7a828c;margin:26px 0 0;border-top:1px solid #e6dccb;padding-top:12px">Ide o orientačný odhad realitného makléra platný ku dňu vydania, nie o znalecký posudok. Presnejšiu cenu vie maklér určiť po obhliadke. Odhad je len pre vašu potrebu – <a href="${ODHAD_PODMIENKY}" style="color:#7a828c">podmienky odhadu</a>. Na tento e-mail môžete priamo odpísať.</p>
         </td></tr></table></div>`;
@@ -712,6 +713,17 @@ async function odhadEmaily(db: any) {
       vysl.chyby.push(t);
       await db.from("odhady_hodnoty").update({ email_odoslany: null, email_chyba: t }).eq("id", o.id);
     }
+  }
+  // 3) fotky žiadostí starších ako 2 roky – zmazať z úložiska (žiadosť potom v noci zmaže databáza)
+  const { data: stare } = await db.from("odhady_hodnoty").select("id, fotky_cesta")
+    .not("fotky_cesta", "is", null).lt("vytvorene", new Date(Date.now() - 2 * 365.25 * 864e5).toISOString()).limit(20);
+  // deno-lint-ignore no-explicit-any
+  for (const o of (stare as any[]) ?? []) {
+    const { data: subory } = await db.storage.from("odhady-fotky").list(o.fotky_cesta, { limit: 50 });
+    // deno-lint-ignore no-explicit-any
+    const cesty = ((subory as any[]) ?? []).map((x) => o.fotky_cesta + "/" + x.name);
+    const { error } = cesty.length ? await db.storage.from("odhady-fotky").remove(cesty) : { error: null };
+    if (!error) await db.from("odhady_hodnoty").update({ fotky_cesta: null, fotky: 0 }).eq("id", o.id);
   }
   return { ok: vysl.chyby.length === 0, ...vysl };
 }

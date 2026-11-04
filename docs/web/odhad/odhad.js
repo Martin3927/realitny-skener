@@ -5,6 +5,11 @@
 (function () {
   "use strict";
 
+  // ---------------------------------------------------------------- meranie reklamy (zapína sa doplnením ID)
+  // GA_ID: Google Analytics → Správca → Dátové toky → ID merania (G-…); META_PIXEL_ID: Meta Events Manager → ID pixelu (číslo).
+  // Kým sú prázdne, stránka nič nemeria a lišta cookies sa neukáže. Súhlas je spoločný s predajným webom (rt-cookies).
+  var MERANIE = { GA_ID: "", META_PIXEL_ID: "" };
+
   var SUPA = "https://uwxziqapghlyktwpipjd.supabase.co";
   var KLUC = "sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf";
   var TYPY = { byt: "Byt", dom: "Rodinný dom", pozemok: "Pozemok", ine: "Iné" };
@@ -110,9 +115,14 @@
       var q = norm(inp.value);
       if (V.obec && inp.value !== V.obec.n) { V.obec = null; infoObce(); }
       if (q.length < 2) { zavri(); return; }
-      var zac = [], obs = [];
-      obce().forEach(function (o) { var i = o.s.indexOf(q); if (i === 0) zac.push(o); else if (i > 0) obs.push(o); });
-      vysl = zac.concat(obs).slice(0, 8);
+      // na stránke okresu (/odhad/<okres>/) idú obce okresu prvé
+      var dom = String(document.body.getAttribute("data-okresy") || "").split("|").filter(Boolean);
+      var zac = [], obs = [], zacD = [], obsD = [];
+      obce().forEach(function (o) {
+        var i = o.s.indexOf(q), d = dom.indexOf(o.o) >= 0, slovo = i === 0 || (i > 0 && /[\s-]/.test(o.s.charAt(i - 1)));
+        if (slovo) (d ? zacD : zac).push(o); else if (i > 0) (d ? obsD : obs).push(o);
+      });
+      vysl = zacD.concat(obsD, zac, obs).slice(0, 8);
       akt = vysl.length ? 0 : -1;
       zoz.innerHTML = vysl.length ? vysl.map(function (o, i) {
         return '<li role="option" id="obec-m' + i + '" aria-selected="' + (i === akt) + '" data-i="' + i + '"><b>' + esc(o.n) + "</b><span>" + esc(/^(Bratislava|Košice) /.test(o.o) ? o.o : "okres " + o.o) + "</span></li>";
@@ -229,7 +239,10 @@
       if (!aktivne('input[name="siete"]').some(function (x) { return x.checked; })) { $('[data-povinna-skupina="siete"]').classList.add("zle"); return chyba("Vyberte siete – alebo „Neviem“.", aktivne('input[name="siete"]')[0]); }
       return true;
     }
-    if (k === "Detaily") return radio("dovod", "Vyberte, prečo chcete odhad.");
+    if (k === "Detaily") {
+      if (FOTKY.some(function (f) { return !f.blob; })) return chyba("Chvíľu počkajte, fotky sa ešte pripravujú.");
+      return radio("dovod", "Vyberte, prečo chcete odhad.") && radio("kedy_predat", "Vyberte, kedy chcete predávať.");
+    }
     if (k === "Kontakt") {
       var m = el("meno"), t = el("telefon"), e = el("email");
       if (m.value.trim().length < 2) return chyba("Napíšte svoje meno.", m);
@@ -252,10 +265,11 @@
   }
   function udaje() {
     var fd = new FormData(form), u = { typ: typ, obec: V.obec ? V.obec.n : "", okres: V.obec ? V.obec.o : "" };
-    ["cast_obce", "ulica", "cislo", "plocha", "pozemok", "izby", "poschodie", "poschodi", "druh_pozemku", "popis", "stav", "dovod", "poznamka", "meno", "telefon", "email"].forEach(function (k) {
+    ["cast_obce", "ulica", "cislo", "plocha", "pozemok", "izby", "poschodie", "poschodi", "druh_pozemku", "popis", "stav", "dovod", "kedy_predat", "kedy_volat", "poznamka", "meno", "telefon", "email"].forEach(function (k) {
       var v = fd.get(k); if (v != null && String(v).trim() !== "") u[k] = String(v).trim();
     });
     u.siete = fd.getAll("siete"); u.doplnky = fd.getAll("doplnky");
+    u.fotky = FOTKY.length;
     u.odkial = odkial();
     return u;
   }
@@ -315,9 +329,131 @@
       });
     }
     posli(4).catch(function (e) { if (e && e.message === "tazsie-overenie") return posli(5); throw e; })
-      .then(function (r) { hotovo(r || {}, u); })
+      .then(function (r) { hotovo(r || {}, u); merajZiadost(u); if (r && r.fotky && FOTKY.length) nahrajFotky(r.fotky); })
       .catch(function (e) { chyba(((e && e.message) || "Odoslanie sa nepodarilo.") + " Ak to nepôjde, napíšte nám na info@realitnytypek.sk."); })
       .then(function () { dalejBtn.disabled = false; dalejBtn.textContent = cur === kroky.length - 1 ? "Požiadať o odhad" : "Pokračovať"; });
+  }
+
+  // ---------------------------------------------------------------- fotky od klienta (zmenšené v prehliadači na 1920 px, JPEG)
+  var FOTKY = [], MAX_FOTIEK = 6;
+  function zmensi(subor) {
+    return new Promise(function (ok, chyba) {
+      var url = URL.createObjectURL(subor), img = new Image();
+      img.onload = function () {
+        var k = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
+        c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) { if (b) ok(b); else chyba(new Error("fotka")); }, "image/jpeg", 0.82);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); chyba(new Error("Fotku sa nepodarilo otvoriť.")); };
+      img.src = url;
+    });
+  }
+  function kresliFotky() {
+    var box = el("fotky"), pridat = el("fotky-pridat");
+    $$(".fotka", box).forEach(function (x) { x.remove(); });
+    FOTKY.forEach(function (f, i) {
+      var d = document.createElement("div");
+      d.className = "fotka" + (f.blob ? "" : " spracuva");
+      d.innerHTML = '<img src="' + esc(f.nahlad) + '" alt="Fotka ' + (i + 1) + '"><button type="button" aria-label="Odobrať fotku ' + (i + 1) + '">×</button>';
+      d.querySelector("button").onclick = function () { URL.revokeObjectURL(f.nahlad); FOTKY.splice(FOTKY.indexOf(f), 1); kresliFotky(); };
+      box.insertBefore(d, pridat);
+    });
+    pridat.hidden = FOTKY.length >= MAX_FOTIEK;
+  }
+  function napojFotky() {
+    var inp = el("fotky-vstup");
+    inp.addEventListener("change", function () {
+      var subory = Array.prototype.slice.call(inp.files || []).filter(function (x) { return /^image\//.test(x.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(x.name); });
+      var volne = MAX_FOTIEK - FOTKY.length;
+      if (subory.length > volne) chyba("Najviac " + MAX_FOTIEK + " fotiek – pridali sme prvé " + volne + ".");
+      subory.slice(0, volne).forEach(function (sub) {
+        var f = { nahlad: URL.createObjectURL(sub), blob: null };
+        FOTKY.push(f);
+        zmensi(sub).then(function (b) { f.blob = b; kresliFotky(); }, function () {
+          FOTKY.splice(FOTKY.indexOf(f), 1); kresliFotky(); chyba("Jednu z fotiek sa nepodarilo otvoriť – skúste ju vybrať znova alebo použite inú.");
+        });
+      });
+      inp.value = "";
+      kresliFotky();
+    });
+  }
+  function nahrajFotky(F) {
+    var stav = el("hotovo-fotky"), spolu = FOTKY.length, hotove = 0, zlyhane = 0;
+    stav.className = "hotovo-fotky"; stav.hidden = false;
+    function text() { stav.textContent = "Nahrávam fotky " + Math.min(hotove + zlyhane + 1, spolu) + " z " + spolu + "…"; }
+    text();
+    var poradie = Promise.resolve();
+    FOTKY.forEach(function (f, i) {
+      poradie = poradie.then(function () {
+        text();
+        return fetch(SUPA + "/storage/v1/object/odhady-fotky/" + F.cesta + "/" + (i + 1) + ".jpg", {
+          method: "POST", headers: { apikey: KLUC, "Content-Type": "image/jpeg", "x-upsert": "false" }, body: f.blob,
+        }).then(function (r) { if (r.ok) hotove++; else zlyhane++; }, function () { zlyhane++; });
+      });
+    });
+    poradie.then(function () {
+      return hotove ? rpc("odhad_fotky_hotovo", { p_id: F.id, p_token: F.token }).catch(function () { /* fotky ostanú v úložisku, maklér ich uvidí */ }) : null;
+    }).then(function () {
+      if (!zlyhane) { stav.className = "hotovo-fotky ok"; stav.textContent = "✓ " + (hotove === 1 ? "Fotka je nahratá" : (hotove < 5 ? hotove + " fotky sú nahraté" : hotove + " fotiek je nahratých")) + " – maklér ich uvidí pri žiadosti."; }
+      else { stav.className = "hotovo-fotky zle"; stav.textContent = (hotove ? hotove + " z " + spolu + " fotiek sa nahralo. " : "Fotky sa nepodarilo nahrať. ") + "Ostatné môžete poslať maklérovi, keď sa vám ozve."; }
+    });
+  }
+
+  // ---------------------------------------------------------------- meranie reklamy po súhlase (Google Analytics, Meta Pixel)
+  var CKK = "rt-cookies";
+  function ckGet() { try { return JSON.parse(localStorage.getItem(CKK) || "null"); } catch (e) { return null; } }
+  function ckSet(v) { try { localStorage.setItem(CKK, JSON.stringify(v)); } catch (e) { /* bez úložiska */ } }
+  function meranieZapnute() { return !!(MERANIE.GA_ID || MERANIE.META_PIXEL_ID); }
+  function nacitajGA() {
+    if (!MERANIE.GA_ID || window.gtag) return;
+    var sc = document.createElement("script"); sc.async = true; sc.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(MERANIE.GA_ID);
+    document.head.appendChild(sc);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { window.dataLayer.push(arguments); };
+    window.gtag("js", new Date()); window.gtag("config", MERANIE.GA_ID);
+  }
+  function nacitajPixel() {
+    if (!MERANIE.META_PIXEL_ID || window.fbq) return;
+    var n = window.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
+    if (!window._fbq) window._fbq = n; n.push = n; n.loaded = true; n.version = "2.0"; n.queue = [];
+    var sc = document.createElement("script"); sc.async = true; sc.src = "https://connect.facebook.net/en_US/fbevents.js"; document.head.appendChild(sc);
+    window.fbq("init", MERANIE.META_PIXEL_ID); window.fbq("track", "PageView");
+  }
+  function pouziSuhlas() { var c = ckGet() || {}; if (c.an) nacitajGA(); if (c.mk) nacitajPixel(); }
+  function merajZiadost(u) {
+    try {
+      if (window.gtag) window.gtag("event", "generate_lead", { typ: u.typ, dovod: u.dovod });
+      if (window.fbq) window.fbq("track", "Lead", { content_category: u.typ });
+    } catch (e) { /* meranie nesmie pokaziť formulár */ }
+  }
+  function listaCookies(nastavenia) {
+    var stara = $(".ck"); if (stara) stara.remove();
+    var c = ckGet() || {}, d = document.createElement("div");
+    d.className = "ck"; d.setAttribute("role", "dialog"); d.setAttribute("aria-labelledby", "ck-t");
+    d.innerHTML = '<h2 id="ck-t">Pár slov o cookies</h2><p>Nevyhnutné súbory potrebujeme, aby stránka fungovala. ' +
+      (MERANIE.GA_ID ? "Analytické (Google Analytics) " : "") + (MERANIE.GA_ID && MERANIE.META_PIXEL_ID ? "a " : "") + (MERANIE.META_PIXEL_ID ? "marketingové (Meta Pixel) " : "") +
+      'použijeme len so súhlasom. Výber zmeníte kedykoľvek v pätičke. Viac v <a href="https://realitnytypek.sk/nehnutelnosti/ochrana-udajov.html#meranie" target="_blank" rel="noopener">ochrane osobných údajov</a>.</p>' +
+      (nastavenia ? '<div class="ck-volby">' + (MERANIE.GA_ID ? '<label><span><b>Analytické</b><small>Koľko ľudí stránku navštívi a odkiaľ prišli.</small></span><input type="checkbox" data-ck-an' + (c.an ? " checked" : "") + "></label>" : "") +
+        (MERANIE.META_PIXEL_ID ? '<label><span><b>Marketingové</b><small>Aby sme reklamu ukazovali tým, ktorých môže zaujímať.</small></span><input type="checkbox" data-ck-mk' + (c.mk ? " checked" : "") + "></label>" : "") + "</div>" : "") +
+      '<div class="ck-akcie"><button type="button" class="btn btn-zlate" data-ck="vsetky">Prijať všetky</button><button type="button" class="btn btn-tmave" data-ck="nic">Len nevyhnutné</button>' +
+      (nastavenia ? '<button type="button" class="btn btn-obrys" data-ck="ulozit">Uložiť výber</button>' : '<button type="button" class="btn btn-obrys" data-ck="nastavit">Nastaviť</button>') + "</div>";
+    document.body.appendChild(d);
+    d.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-ck]"); if (!b) return;
+      var a = b.dataset.ck;
+      if (a === "nastavit") return listaCookies(true);
+      if (a === "vsetky") ckSet({ an: true, mk: true });
+      else if (a === "nic") ckSet({ an: false, mk: false });
+      else if (a === "ulozit") ckSet({ an: !!$("[data-ck-an]", d) && $("[data-ck-an]", d).checked, mk: !!$("[data-ck-mk]", d) && $("[data-ck-mk]", d).checked });
+      d.remove(); pouziSuhlas();
+    });
+  }
+  function meranieStart() {
+    if (!meranieZapnute()) return;
+    var z = $("[data-ck-znova]"); if (z) { z.hidden = false; z.addEventListener("click", function () { listaCookies(true); }); }
+    if (ckGet()) pouziSuhlas(); else listaCookies(false);
   }
 
   // ---------------------------------------------------------------- spustenie
@@ -326,6 +462,8 @@
     kroky = $$(".krok", form); dalejBtn = el("dalej"); spatBtn = el("spat");
     nastavTyp("byt");
     napojObec();
+    napojFotky();
+    meranieStart();
     dalejBtn.addEventListener("click", function () {
       if (!over()) return;
       if (cur < kroky.length - 1) ukaz(cur + 1, 1); else odosli();
@@ -360,6 +498,7 @@
     el("znova").addEventListener("click", function () {
       var kontakt = { meno: el("meno").value, telefon: el("telefon").value, email: el("email").value };
       form.reset(); V.obec = null; infoObce(); el("platene-info").hidden = true;
+      FOTKY = []; kresliFotky(); el("hotovo-fotky").hidden = true;
       el("meno").value = kontakt.meno; el("telefon").value = kontakt.telefon; el("email").value = kontakt.email;
       nastavTyp("byt");
       el("hotovo").hidden = true; el("flow").hidden = false;

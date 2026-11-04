@@ -271,3 +271,46 @@ legend.pole-n{margin-bottom:10px}
   html:not(.pohyb-vzdy) .uvod-typek img{animation:none}
   html:not(.pohyb-vzdy) .moz:hover .moz-box{transform:none}
 }
+
+/* fotky od klienta */
+.fotky{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.fotky-pridat{position:relative;display:grid;place-items:center;align-content:center;gap:4px;aspect-ratio:1;border-radius:14px;background:var(--cream);color:var(--brown);font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:background-color .2s}
+.fotky-pridat:hover{background:var(--cream2)}
+.fotky-pridat svg{width:28px;height:28px}
+.fotky-pridat input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.fotky-pridat:focus-within{outline:3px solid var(--gold);outline-offset:2px}
+.fotka{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;background:var(--cream2)}
+.fotka img{width:100%;height:100%;object-fit:cover;display:block}
+.fotka button{position:absolute;top:5px;right:5px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(30,42,53,.82);color:#fff;font-size:17px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.fotka.spracuva::after{content:"";position:absolute;inset:0;background:rgba(255,253,248,.6)}
+.hotovo-fotky{margin-top:14px;padding:10px 14px;border-radius:12px;background:var(--cream);font-size:14px;font-weight:600;color:var(--inksoft)}
+.hotovo-fotky.ok{background:var(--okbg);color:var(--ok)}
+.hotovo-fotky.zle{background:var(--goldsoft);color:var(--brown)}
+
+/* lišta cookies (len keď je zapnuté meranie reklamy) */
+.ck{position:fixed;left:16px;right:16px;bottom:16px;z-index:60;max-width:560px;margin-left:auto;padding:20px;border-radius:26px;background:var(--paper);color:var(--ink);box-shadow:var(--tien2);animation:vstup .4s var(--ease)}
+.ck h2{font-size:20px;font-weight:800}
+.ck p{margin-top:6px;font-size:14.5px;color:var(--inksoft)}
+.ck a{color:var(--brown);font-weight:600}
+.ck-volby{display:grid;gap:8px;margin-top:14px}
+.ck-volby label{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:var(--cream);font-size:14px;cursor:pointer}
+.ck-volby label small{display:block;color:var(--slate);font-size:12.5px}
+.ck-volby input{width:20px;height:20px;accent-color:var(--ink);flex:none}
+.ck-akcie{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.ck-akcie .btn{min-height:44px;padding:0 18px;font-size:15px}
+.pata-ck{appearance:none;border:0;background:none;padding:0;font:inherit;color:var(--mist);font-weight:600;cursor:pointer;text-align:left}
+.pata-ck:hover{color:var(--cream)}
+
+/* okresy celého Slovenska (generuje odhad_generuj.py) a obce na stránke okresu */
+.sekcia-okresy{padding-top:0!important;padding-bottom:72px}
+.okresy{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 24px;margin-top:22px}
+.okresy-kraj h3{font-size:15px;font-weight:800;color:var(--brown);margin-bottom:8px}
+.okresy-odkazy{display:flex;flex-wrap:wrap;gap:4px 12px}
+.okresy-odkazy a{font-size:14px;color:var(--slate);text-decoration:none;line-height:1.7}
+.okresy-odkazy a:hover{color:var(--ink);text-decoration:underline}
+.okresy-odkazy a[aria-current="page"]{color:var(--ink);font-weight:700}
+.sekcia-obce{padding-bottom:0}
+.obce-text{margin-top:16px;color:var(--inksoft);font-size:15px;line-height:1.7}
+@media (max-width:1040px){.okresy{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.okresy{grid-template-columns:1fr}}
+body[data-okresy] .uvod h1{max-width:16ch;font-size:clamp(36px,4.6vw,58px)}
