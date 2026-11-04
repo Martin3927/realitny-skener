@@ -266,6 +266,11 @@ tr:last-child td { border-bottom: 0 }
   border-radius: 9px; display: grid; place-items: center; padding: 0 4px; font-family: var(--body) }
 @keyframes zvon { 0%, 88%, 100% { transform: rotate(0) } 91% { transform: rotate(-14deg) } 94% { transform: rotate(12deg) } 97% { transform: rotate(-6deg) } }
 @media (prefers-reduced-motion: reduce) { .bell.ring { animation: none } }
+/* na počítači väčší zvonček – aby ho bolo vidno hneď */
+@media (min-width: 900px) {
+  .bell { font-size: 24px; padding: 7px 12px !important }
+  .bell .badge { top: -7px; right: -7px; min-width: 22px; height: 22px; border-radius: 11px; font-size: 12.5px; padding: 0 5px }
+}
 
 /* ---------- prevzaté inzeráty */
 /* prevzatý inzerát – výrazný pás cez celú šírku karty */
@@ -291,6 +296,13 @@ tr:last-child td { border-bottom: 0 }
 .zvon-box > * { min-width: 0 }
 .zvon-box h4 { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
 .zvon-hlava { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap }
+/* vymazať všetky upozornenia naraz */
+.zvon-vymaz { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding-bottom: 10px; border-bottom: 1px solid var(--line) }
+.zvon-vymaz.otazka { align-items: flex-start; padding: 12px 14px; border: 1px solid var(--gold-strong); border-radius: 12px; background: var(--gold-soft) }
+.zvon-vymaz.otazka b { display: block; margin-bottom: 4px }
+.zvon-vymaz.otazka ul { margin: 0; padding-left: 18px; display: grid; gap: 2px }
+.zvon-vymaz.otazka p { margin: 6px 0 0 }
+.zvon-vymaz-akcie { display: flex; gap: 8px; flex-wrap: wrap; align-self: center }
 .prip { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2) }
 .prip.due { border-color: var(--bad); background: var(--bad-soft) }
 .prip-cas { font-weight: 700; font-variant-numeric: tabular-nums }

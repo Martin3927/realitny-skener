@@ -1128,11 +1128,17 @@
   function obnovNaNovuVerziu() {
     if (!novaVerzia || !mozemObnovit()) return;
     try { if (sessionStorage.getItem("typek-verzia") === String(novaVerzia)) return; sessionStorage.setItem("typek-verzia", String(novaVerzia)); } catch (e) { return; }
+    // maklér práve ťukol na upozornenie – po obnovení sa otvorí to, na čo ťukol (inzerát, zvonček, chat…)
+    if (cielUpozornenia && cielUpozornenia.hash && Date.now() - cielUpozornenia.cas < 60000) history.replaceState(null, "", cielUpozornenia.hash);
     location.reload();
   }
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) { zistiNovuVerziu(); return; }
-    if (novaVerzia) obnovNaNovuVerziu(); else zistiNovuVerziu().then(function (v) { if (v) obnovNaNovuVerziu(); });
+    // po ťuknutí na upozornenie príde adresa od service workera o chvíľu neskôr – s obnovením na novú verziu počkáme
+    setTimeout(function () {
+      if (document.hidden) return;
+      if (novaVerzia) obnovNaNovuVerziu(); else zistiNovuVerziu().then(function (v) { if (v) obnovNaNovuVerziu(); });
+    }, 1200);
   });
   setInterval(function () { zistiNovuVerziu(); }, 10 * 60000);
   document.addEventListener("keydown", function (e) {
@@ -1176,27 +1182,79 @@
     history.pushState({ tab: tab, jeden: S.jedenId }, "", "#" + tab);
     vykresli(); window.scrollTo(0, 0);
   }
-  // odkaz #nehnutelnosti/ID alebo #inzeraty/ID otvorený v už bežiacej aplikácii
-  window.addEventListener("hashchange", function () {
-    if (!S.me) return;
-    if (location.hash === "#zvoncek") {
-      history.replaceState({ tab: S.tab }, "", "#" + S.tab);
-      S.zvonOpen = true; S.pripForm = null; vykresliZvoncek(); window.scrollTo(0, 0); return;
+  // odkaz v už bežiacej aplikácii: #zvoncek, #chat/ID, #odhady/ID, #nehnutelnosti/ID, #inzeraty/ID
+  // (aj ťuknutie na upozornenie v mobile – vtedy aj samotná sekcia, napr. #chat, a aj keď je aplikácia práve na tej istej adrese)
+  function otvorOdkaz(h, ajSekciu) {
+    if (!S.me) return false;
+    h = h || "";
+    if (h === "#zvoncek") {
+      zavriMenu(); history.replaceState({ tab: S.tab }, "", "#" + S.tab);
+      S.zvonOpen = true; S.pripForm = null; vykresliZvoncek(); window.scrollTo(0, 0); return true;
     }
-    var dm = location.hash.match(/^#chat\/([0-9a-f-]{36})$/i);
-    if (dm && tabPovoleny("chat")) {
-      S.chatS = dm[1]; history.replaceState({ tab: "chat" }, "", "#chat");
-      S.tab = "chat"; S.zvonOpen = false; vykresli(); window.scrollTo(0, 0); return;
+    var dm = h.match(/^#chat(?:\/([0-9a-f-]{36}))?$/i);
+    // z upozornenia (ajSekciu) nový krok v histórii – Späť vráti, kde maklér bol, a rozpísané sa neprepíše bez otázky;
+    // pri zmene adresy (hashchange) krok už spravil prehliadač
+    if (dm && (dm[1] || ajSekciu) && tabPovoleny("chat")) {
+      zavriMenu(); S.zvonOpen = false; vykresliZvoncek(); S.chatS = dm[1] || null;
+      if (S.tab === "chat") { history.replaceState({ tab: "chat" }, "", "#chat"); vykresliChat(); }
+      else if (ajSekciu) prejdi("chat");
+      else { history.replaceState({ tab: "chat" }, "", "#chat"); S.tab = "chat"; vykresli(); }
+      window.scrollTo(0, 0); return true;
     }
-    var oh = location.hash.match(/^#odhady\/(\d+)$/);
-    if (oh && tabPovoleny("odhady")) { history.replaceState({ tab: S.tab }, "", "#" + S.tab); otvorOdhad(oh[1]); return; }
-    var m = location.hash.match(/^#(nehnutelnosti|inzeraty)\/(.+)$/);
-    if (!m || !S.me || !tabPovoleny(m[1])) return;
-    if (m[1] === "nehnutelnosti") {
-      S.tab = "nehnutelnosti"; S.ponukaEdit = null; S.ponukaDetail = Number(m[2]) || null;
-      history.replaceState({ tab: S.tab, detail: S.ponukaDetail }, "", "#nehnutelnosti"); vykresli(); window.scrollTo(0, 0);
-    } else { history.replaceState({ tab: "inzeraty" }, "", "#inzeraty"); prejdi("inzeraty", decodeURIComponent(m[2])); }
-  });
+    var oh = h.match(/^#odhady\/(\d+)$/);
+    if (oh && tabPovoleny("odhady")) { zavriMenu(); history.replaceState({ tab: S.tab }, "", "#" + S.tab); otvorOdhad(oh[1]); return true; }
+    var m = h.match(/^#(nehnutelnosti|inzeraty)\/(.+)$/);
+    if (m && tabPovoleny(m[1])) {
+      zavriMenu();
+      if (m[1] === "nehnutelnosti") {
+        if (ajSekciu && !odistBezUlozenia()) return true;
+        S.tab = "nehnutelnosti"; S.ponukaEdit = null; S.ponukaDetail = Number(m[2]) || null; S.zvonOpen = false;
+        history[ajSekciu ? "pushState" : "replaceState"]({ tab: S.tab, detail: S.ponukaDetail }, "", "#nehnutelnosti"); vykresli(); window.scrollTo(0, 0);
+      } else { history.replaceState({ tab: "inzeraty" }, "", "#inzeraty"); otvorInzeratZUpozornenia(decodeURIComponent(m[2])); }
+      return true;
+    }
+    var t = decodeURIComponent(h.replace(/^#/, "")).split("/")[0];
+    if (ajSekciu && tabPovoleny(t)) {
+      zavriMenu();
+      if (t === S.tab && !S.jedenId) { S.zvonOpen = false; vykresliZvoncek(); history.replaceState({ tab: t }, "", "#" + t); window.scrollTo(0, 0); }
+      else prejdi(t);
+      if (t === "inzeraty") inzeratyNoveNacitaj().catch(function () {});
+      return true;
+    }
+    return false;
+  }
+  // nový inzerát z upozornenia ešte nemusí byť v aplikácii (bola na pozadí) – najprv ho dočíta
+  async function otvorInzeratZUpozornenia(id) {
+    var ma = function () { return (S.inz || []).some(function (z) { return z.id === id; }); };
+    if (!ma()) await inzeratyNoveNacitaj().catch(function () {});
+    if (!ma()) {
+      try { var r = await sb.from("inzeraty").select("*").eq("id", id).maybeSingle(); if (r.data && S.inz && !ma()) { r.data._t = textHladania(r.data); S.inz.push(r.data); } }
+      catch (e) { /* bez internetu – otvorí sa skener */ }
+    }
+    if (ma()) return otvorCelyInzerat(id);
+    prejdi("inzeraty");
+  }
+  window.addEventListener("hashchange", function () { otvorOdkaz(location.hash, false); });
+  // ťuknutie na upozornenie v mobile, keď je aplikácia otvorená (aj na pozadí): adresu pošle service worker
+  var cielUpozornenia = null;   // pri obnovení na novú verziu sa adresa nestratí
+  function otvorZUpozornenia(adresa) {
+    var u; try { u = new URL(adresa, location.href); } catch (e) { return; }
+    if (u.origin !== location.origin) return;
+    var koren = location.pathname.replace(/index\.html$/, "");
+    if (u.pathname !== koren && u.pathname !== koren + "index.html") { location.assign(u.href); return; }   // napr. Správa zákazníkov
+    cielUpozornenia = { hash: u.hash, cas: Date.now() };
+    // aplikácia sa ešte načítava alebo čaká na prihlásenie – adresu použije po štarte
+    if (!S.me || !$("#obsah")) { history.replaceState(null, "", u.hash || "#"); if (S.me) nastavAdresu(); return; }
+    otvorOdkaz(u.hash, true);
+  }
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", function (e) {
+      var d = e.data || {};
+      if (d.typek !== "otvor" || !d.url) return;
+      try { if (e.ports && e.ports[0]) e.ports[0].postMessage("ok"); } catch (x) { /* nevadí */ }
+      otvorZUpozornenia(String(d.url));
+    });
+  }
   window.addEventListener("popstate", function (e) {
     // otvorená fotka: Späť ju len zatvorí; zatvorenie krížikom vráti históriu bez prekreslenia stránky
     if (S.ignorujPop) { S.ignorujPop = false; return; }
@@ -10258,9 +10316,68 @@
     $("#zvon-btn").title = t.length ? t.join(", ") : "Upozornenia a pripomienky";
   }
 
+  // ---------- „Vymazať všetky upozornenia“: všetko, čo už prišlo, jedným ťuknutím
+  // pripomienky po termíne (kontakty z webu, objednávky, zníženie ceny…) → hotové, nové inzeráty → videné, ignorované správy → OK.
+  // Naplánované pripomienky a neprečítané správy z chatu ostávajú (správu treba prečítať – kolega uvidí „Videli“).
+  function zvonNaVymazanie(po) {
+    return { prip: po || splatne(), inz: noveInzeraty(), ign: S.reak && maSekciu("chat") ? ignoracieNevidene() : [] };
+  }
+  function zvonVymazHtml(po, naplanovane) {
+    var v = zvonNaVymazanie(po), n = v.prip.length + v.inz.length + v.ign.length;
+    if (n < 2) { S.zvonVymaz = false; return ""; }
+    if (!S.zvonVymaz) {
+      return '<div class="zvon-vymaz"><span class="meta">' + pocetText(n, "upozornenie", "upozornenia", "upozornení") + " v zvončeku</span>" +
+        '<button class="btn ghost" type="button" data-zvon-vymaz="opytat">Vymazať všetky upozornenia</button></div>';
+    }
+    var co = [];
+    if (v.prip.length) co.push(pocetText(v.prip.length, "pripomienka po termíne sa označí", "pripomienky po termíne sa označia", "pripomienok po termíne sa označí") + " ako hotov" + (v.prip.length === 1 ? "á" : "é"));
+    if (v.inz.length) co.push(pocetText(v.inz.length, "nový inzerát sa označí", "nové inzeráty sa označia", "nových inzerátov sa označí") + " ako viden" + (v.inz.length === 1 ? "ý (v skeneri ostane)" : "é (v skeneri ostanú)"));
+    if (v.ign.length) co.push(pocetText(v.ign.length, "oznámenie o ignorovanej správe zmizne", "oznámenia o ignorovaných správach zmiznú", "oznámení o ignorovaných správach zmizne"));
+    var ostane = [];
+    if (naplanovane) ostane.push(pocetText(naplanovane, "naplánovaná pripomienka", "naplánované pripomienky", "naplánovaných pripomienok"));
+    if (maSekciu("chat") && S.reak && pocetNeprecitanych()) ostane.push("neprečítané správy z chatu");
+    return '<div class="zvon-vymaz otazka" role="group" aria-label="Vymazať všetky upozornenia"><div><b>Vymazať všetky upozornenia?</b>' +
+      "<ul>" + co.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>" +
+      (ostane.length ? '<p class="meta">Ostanú: ' + esc(ostane.join(" a ")) + ".</p>" : "") + "</div>" +
+      '<div class="zvon-vymaz-akcie"><button class="btn primary" type="button" data-zvon-vymaz="ano">Vymazať</button>' +
+      '<button class="btn ghost" type="button" data-zvon-vymaz="nie">Nechať</button></div></div>';
+  }
+  async function zvonVymazatVsetko(btn) {
+    var v = zvonNaVymazanie(), ids = v.prip.map(function (p) { return p.id; }), t = new Date().toISOString();
+    if (btn) btn.disabled = true;
+    try {
+      if (ids.length) {
+        try { await rpc("pripomienky_vybavit_vsetky", { p_ids: ids }); }
+        catch (err) {
+          // databáza ešte bez novej funkcie (pár minút po nasadení) – po jednej, ako „✓ Hotovo“
+          if (!/pripomienky_vybavit_vsetky|PGRST202|schema cache/i.test(String(err && (err.message || err.code)))) throw err;
+          for (var i = 0; i < ids.length; i += 8) await Promise.all(ids.slice(i, i + 8).map(function (id) { return rpc("pripomienka_hotovo", { p_id: id, p_hotovo: true }).catch(function () {}); }));
+        }
+        v.prip.forEach(function (p) { p.hotovo = t; });
+      }
+      if (v.ign.length) {
+        v.ign.forEach(function (r) { r.videne_autorom = t; });
+        rpc("ignoracie_videne", { p_ids: null }).catch(function () {});
+      }
+      if (v.inz.length) inzeratyVidene();
+      S.zvonVymaz = false;
+      toast("✓ Vymazané – " + pocetText(ids.length + v.inz.length + v.ign.length, "upozornenie", "upozornenia", "upozornení") + ".");
+      await nacitajPripomienky().catch(function () {});
+    } catch (err) { toast(chybaText(err), true); if (btn) btn.disabled = false; return; }
+    vykresliZvoncek(); popisZvoncek();
+    if (S.tab === "domov" || S.tab === "inzeraty") prekresliObsah();
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-zvon-vymaz]"); if (!b) return;
+    var a = b.dataset.zvonVymaz;
+    if (a === "ano") { zvonVymazatVsetko(b); return; }
+    S.zvonVymaz = a === "opytat"; vykresliZvoncek();
+    if (S.zvonVymaz) { var o = $('#zvon [data-zvon-vymaz="ano"]'); if (o) o.focus({ preventScroll: true }); }
+  });
+
   function vykresliZvoncek() {
     var el = $("#zvon"); if (!el) return;
-    if (!S.zvonOpen) { el.innerHTML = ""; return; }
+    if (!S.zvonOpen) { el.innerHTML = ""; S.zvonVymaz = false; return; }
     zvonVideny();
     var t = Date.now(), dnesKoniec = new Date(); dnesKoniec.setHours(23, 59, 59, 999);
     var moje = mojeAktivne();
@@ -10310,7 +10427,7 @@
       return zoznam.length ? "<h4>" + nadpis + " (" + zoznam.length + ")</h4>" + zoznam.map(function (p) { return riadok(p, cudzia); }).join("") : "";
     }
     var spr = zvonSpravyHtml() + zvonInzeratyHtml();
-    var h = '<div class="box zvon-box">' + spr + '<div class="zvon-hlava"><h3>🔔 Moje pripomienky</h3>' +
+    var h = '<div class="box zvon-box">' + zvonVymazHtml(po, dnes.length + neskor.length) + spr + '<div class="zvon-hlava"><h3>🔔 Moje pripomienky</h3>' +
       '<button class="btn primary" type="button" data-act="prip-nova">+ Nová pripomienka</button></div>';
     if (S.pripForm) h += formPripomienka(S.pripForm);
     h += sekcia("Po termíne", po) + sekcia("Dnes", dnes) + sekcia("Neskôr", neskor);
