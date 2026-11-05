@@ -69,6 +69,10 @@ jobs:
             <FilesMatch "\.(html|webmanifest)$|^sw\.js$">
               Header set Cache-Control "no-cache"
             </FilesMatch>
+            # písma (pisma/*.woff2) majú v názve odtlačok obsahu – prehliadač si ich môže pamätať rok
+            <FilesMatch "\.woff2$">
+              Header set Cache-Control "public, max-age=31536000, immutable"
+            </FilesMatch>
             # bezpečnosť: prehliadač nehádá typ súborov, neposiela celé adresy cudzím webom
             Header always set X-Content-Type-Options "nosniff"
             Header always set Referrer-Policy "strict-origin-when-cross-origin"
@@ -107,6 +111,9 @@ jobs:
             <FilesMatch "\.html$">
               Header set Cache-Control "no-cache"
               Header always set X-Frame-Options "SAMEORIGIN"
+            </FilesMatch>
+            <FilesMatch "\.woff2$">
+              Header set Cache-Control "public, max-age=31536000, immutable"
             </FilesMatch>
             Header always set X-Content-Type-Options "nosniff"
             Header always set Referrer-Policy "strict-origin-when-cross-origin"

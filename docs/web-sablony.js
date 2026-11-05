@@ -37,7 +37,7 @@ var FONTS = [
   { id: "jednoduche", name: "Jednoduché", h: '"Public Sans",system-ui,sans-serif', b: '"Public Sans",system-ui,sans-serif', w: 700, ls: "-0.015em" },
   { id: "priatelske", name: "Priateľské", h: '"Nunito",system-ui,sans-serif', b: '"Nunito",system-ui,sans-serif', w: 800, ls: "-0.01em" },
   { id: "vyrazne", name: "Výrazné", h: '"Archivo",system-ui,sans-serif', b: '"Archivo",system-ui,sans-serif', w: 900, ls: "-0.03em" }];
-var FONTS_URL = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=Young+Serif&family=Public+Sans:wght@400..800&family=Archivo:wght@400..900&family=Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@500..800&display=swap";
+var FONTS_URL = "pisma/pisma.css?v=20261105";
 var BGS = [
   { id: "svetle", name: "Svetlé", bg: "#FFFFFF", surf: "#F3F5F7", fg: "#1A2128", muted: "#5A6571", line: "#DEE3E8", dark: false },
   { id: "kremove", name: "Krémové", bg: "#F7F2E8", surf: "#FFFDF8", fg: "#1E2A35", muted: "#5A6470", line: "#E4DACA", dark: false },

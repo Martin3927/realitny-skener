@@ -100,6 +100,7 @@ for sl, nazov, v_kom, kraj, okr, obce, priklad, nazov_okresu in stranky:
     for subor in ("odhad.css", "obce.js", "odhad.js", "typek-head.png", "typek.webp", "ochrana-udajov.html"):
         t = re.sub(r'(src|href)="' + re.escape(subor), r'\1="../' + subor, t)
     t = t.replace('href="./"', 'href="../"')   # logo vedie na úvod odhadu
+    t = t.replace('href="../pisma/', 'href="../../pisma/')   # spoločné písma realitnytypek.sk/pisma
     url = WEB + sl + "/"
     titul = f"Odhad hodnoty nehnuteľnosti {nazov} – zadarmo | Týpkove nehnuteľnosti"
     popis = (f"Koľko stojí byt, dom alebo pozemok {v_kom}? Vyplňte pár údajov a maklér, ktorý tu pôsobí, vám približnú hodnotu "
