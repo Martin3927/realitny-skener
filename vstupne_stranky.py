@@ -769,6 +769,8 @@ stranka('osobny-web.html', 'web',
              'Rovno do Týpka a upozornenie aj do mobilu, takže ti žiadny záujemca neujde.'),
             ('Môžem mať k webu aj Realitný skener?',
              'Áno, s osobným webom máš Realitný skener za polovicu – od 10,50 € mesačne s DPH. Spolu je to balík Jednotlivec.'),
+            ('Je web pripravený podľa GDPR?',
+             'Áno. Web má lištu cookies a stránku Ochrana osobných údajov – doplníš len údaje svojej firmy. Bez súhlasu návštevníka nič nesleduje: písma a knižnicu mapy máme na vlastnom serveri a video z YouTube či 3D prehliadka sa načíta až po kliknutí. Ak zapneš Google Analytics alebo Meta Pixel, spustia sa až po súhlase v lište cookies.'),
             ('Môžem to najprv vyskúšať?',
              'Áno, 14 dní zadarmo. Potom platíš mesačne, ceny sú vždy s DPH. Keď zaplatíš na rok dopredu, máš mesiac zdarma.'),
         ]))
