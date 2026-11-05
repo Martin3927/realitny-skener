@@ -7203,13 +7203,15 @@
   function odhRozpatie(od, d) { od = Number(od) || 0; d = Number(d) || 0; return od ? (d && d !== od ? nf.format(od) + " – " + nf.format(d) + " €" : nf.format(od) + " €") : ""; }
   // byt: čo je nové / pôvodné a kedy prebehla rekonštrukcia (z formulára, migrácia 115)
   var ODH_REK = [["elektro", "elektroinštalácia"], ["jadro", "bytové jadro"], ["podlahy", "podlahy"], ["kuchyna", "kuchynská linka"]];
+  var ODH_REK_DALSIE = { dvere: "vchodové dvere", stropy: "stropy", svietidla: "nové svietidlá" };
   var ODH_REK_KEDY = { "2021+": "2021 a neskôr", "2016-2020": "2016 – 2020", "2010-2015": "2010 – 2015", "pred-2010": "pred rokom 2010", neviem: "klient nevie" };
   function odhRekRiadky(rk) {
     if (!rk) return [];
     var sk = function (v) { return ODH_REK.filter(function (x) { return rk[x[0]] === v; }).map(function (x) { return x[1]; }).join(", "); };
     var t = sk("nove");
     return [["Nové", t ? t.charAt(0).toUpperCase() + t.slice(1) : ""], ["Pôvodné", (t = sk("povodne")) ? t.charAt(0).toUpperCase() + t.slice(1) : ""],
-      ["Nevie", (t = sk("neviem")) ? t.charAt(0).toUpperCase() + t.slice(1) : ""], ["Rekonštrukcia", ODH_REK_KEDY[rk.kedy] || ""]].filter(function (x) { return x[1]; });
+      ["Nevie", (t = sk("neviem")) ? t.charAt(0).toUpperCase() + t.slice(1) : ""], ["Rekonštrukcia", (ODH_REK_KEDY[rk.kedy] || "") + (rk.nadstandard ? (rk.kedy ? " · " : "") + "nadštandardná" : "")],
+      ["Ešte nové", (t = (rk.dalsie || []).map(function (x) { return ODH_REK_DALSIE[x] || x; }).join(", ")) ? t.charAt(0).toUpperCase() + t.slice(1) : ""]].filter(function (x) { return x[1]; });
   }
   function odhVykup(o) { return /výkup/i.test(o.dovod || ""); }
   function odhBsm(o) { return /^Vyporiadanie/.test(o.dovod || ""); }
@@ -7295,7 +7297,7 @@
     // byty: medián okresu (realityradar.eu) upravený podľa stavu – novostavba a kompletná rekonštrukcia +10 %, pôvodný stav −10 %
     if (m) {
       var up = Number(m.uprava) || 0, stav = (m.stav ? esc(m.stav.charAt(0).toLowerCase() + m.stav.slice(1)) : "stav neuvedený") +
-        (m.podla_casti ? ", nové " + m.nove + " zo 4 častí" + (m.kedy && ODH_REK_KEDY[m.kedy] && m.nove ? " (" + esc(ODH_REK_KEDY[m.kedy]) + ")" : "") : "") +
+        (m.podla_casti ? ", nové " + m.nove + " zo 4 častí" + (m.kedy && ODH_REK_KEDY[m.kedy] && m.nove ? " (" + esc(ODH_REK_KEDY[m.kedy]) + ")" : "") + (m.nadstandard ? ", nadštandard" : "") : "") +
         (up ? " " + (up > 0 ? "+" : "−") + Math.abs(up) + " %" : " bez úpravy");
       h += '<div class="odh-stat"><div><small>Medián bytov · ' + esc(m.oblast) + " · " + nf.format(m.m2) + " €/m² · " + stav + "</small>" +
         (m.od ? "<b>" + odhRozpatie(m.od, m.do) + "</b><small>stred " + nf.format(m.stred) + " € · " + nf.format(m.m2_upr) + " €/m²</small>" : "<b>" + nf.format(m.m2_upr) + " €/m²</b><small>Klient nezadal plochu.</small>") + "</div>" +

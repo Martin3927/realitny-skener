@@ -203,6 +203,14 @@
   function nastavRekKedy() {
     var kedy = el("rek-kedy"), on = !el("rek").disabled && REK.some(function (k) { return vybrane("rek_" + k) === "nove"; });
     kedy.hidden = !on; kedy.disabled = !on;
+    // rýchla voľba svieti, len keď všetky štyri časti sedia
+    var vsetko = ["nove", "povodne"].filter(function (v) { return REK.every(function (k) { return vybrane("rek_" + k) === v; }); })[0];
+    $$('input[name="rek_rychlo"]', form).forEach(function (x) { x.checked = x.value === vsetko; });
+  }
+  function rekRychlo(v) {
+    REK.forEach(function (k) { var x = form.querySelector('input[name="rek_' + k + '"][value="' + v + '"]'); if (x) x.checked = true; });
+    var g = el("rek").querySelector(".cipy.zle"); if (g) g.classList.remove("zle");
+    nastavRekKedy();
   }
   function ukaz(i, smer) {
     kroky[cur].hidden = true;
@@ -299,6 +307,8 @@
     u.siete = fd.getAll("siete"); u.doplnky = fd.getAll("doplnky");
     if (typ === "byt" && !el("rek").disabled) {
       var rk = {}; REK.concat("kedy").forEach(function (k) { var v = fd.get("rek_" + k); if (v) rk[k] = String(v); });
+      var dalsie = fd.getAll("rek_dalsie").map(String); if (dalsie.length) rk.dalsie = dalsie;
+      if (fd.get("rek_nadstandard")) rk.nadstandard = true;
       u.rekonstrukcia = rk;
     }
     u.fotky = FOTKY.length;
@@ -536,7 +546,11 @@
       r.addEventListener("change", function () { el("platene-info").hidden = !r.hasAttribute("data-platene"); });
     });
     form.addEventListener("change", function (e) { if (e.target.matches("input[type=radio], input[type=checkbox]")) { var g = e.target.closest(".cipy.zle"); if (g) g.classList.remove("zle"); } });
-    form.addEventListener("change", function (e) { if (e.target.name === "stav") nastavRek(); else if (/^rek_/.test(e.target.name)) nastavRekKedy(); });
+    form.addEventListener("change", function (e) {
+      if (e.target.name === "stav") nastavRek();
+      else if (e.target.name === "rek_rychlo") rekRychlo(e.target.value);
+      else if (/^rek_/.test(e.target.name)) nastavRekKedy();
+    });
     form.addEventListener("input", function (e) { if (e.target.getAttribute("aria-invalid") === "true") { e.target.setAttribute("aria-invalid", "false"); el("chyba").hidden = true; } });
     // Enter v poli = Pokračovať (v poznámke nový riadok)
     form.addEventListener("keydown", function (e) {

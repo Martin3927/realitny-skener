@@ -391,4 +391,7 @@ body[data-okresy] .uvod h1{max-width:16ch;font-size:clamp(36px,4.6vw,58px)}
 .rek-kedy{margin-top:8px;padding:16px 0 2px;box-shadow:inset 0 1px 0 var(--line);animation:hore .4s var(--ease) both}
 .rek-kedy>legend{float:left;width:100%;margin-bottom:10px}
 .rek-kedy>legend+.cipy{clear:both}
+.rek-rychlo{margin:8px 0 4px}
+.rek-dalsie{margin-top:8px;padding-top:14px;box-shadow:inset 0 1px 0 var(--line)}
+.rek-dalsie>.pole-n{margin:0 0 10px}
 @media (max-width:560px){.rek{padding:16px 14px 14px}}

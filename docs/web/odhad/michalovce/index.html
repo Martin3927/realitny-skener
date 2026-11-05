@@ -23,14 +23,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uwxziqapghlyktwpipjd.supabase.co" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Instrument+Sans:wght@400..700&amp;family=Montserrat:wght@900&amp;display=swap">
-<link rel="stylesheet" href="../odhad.css?v=202611050950">
+<link rel="stylesheet" href="../odhad.css?v=202611051330">
 <script>
   // všetky animácie aj pri obmedzenom pohybe v systéme: adresa ?pohyb=1
   if (/[?&]pohyb=1/.test(location.search)) document.documentElement.classList.add("pohyb-vzdy");
   document.documentElement.classList.add("js");
 </script>
-<script defer src="../obce.js?v=202611050950"></script>
-<script defer src="../odhad.js?v=202611050950"></script>
+<script defer src="../obce.js?v=202611051330"></script>
+<script defer src="../odhad.js?v=202611051330"></script>
 </head>
 <body data-okresy="Michalovce">
 <a class="preskoc" href="#odhad">Preskočiť na formulár</a>
@@ -209,6 +209,10 @@
                 <fieldset class="rek" id="rek" hidden disabled>
                   <legend class="pole-n">Čo je v byte nové?</legend>
                   <p class="pole-tip">Podľa toho maklér presnejšie odhadne cenu.</p>
+                  <div class="cipy rek-rychlo" role="radiogroup" aria-label="Rýchla voľba">
+                    <label class="cip"><input type="radio" name="rek_rychlo" value="nove"><span>Kompletná rekonštrukcia</span></label>
+                    <label class="cip"><input type="radio" name="rek_rychlo" value="povodne"><span>Úplne pôvodný stav</span></label>
+                  </div>
                   <div class="rek-riadky">
                     <div class="rek-riadok">
                       <span class="rek-n" id="rek-elektro-n">Elektroinštalácia</span>
@@ -253,6 +257,15 @@
                       <label class="cip"><input type="radio" name="rek_kedy" value="neviem"><span>Neviem</span></label>
                     </div>
                   </fieldset>
+                  <div class="rek-dalsie">
+                    <p class="pole-n" id="rek-dalsie-n">Čo je ešte nové? <span class="nepov">nepovinné</span></p>
+                    <div class="cipy" aria-labelledby="rek-dalsie-n">
+                      <label class="cip"><input type="checkbox" name="rek_dalsie" value="dvere"><span>Vchodové dvere</span></label>
+                      <label class="cip"><input type="checkbox" name="rek_dalsie" value="stropy"><span>Stropy</span></label>
+                      <label class="cip"><input type="checkbox" name="rek_dalsie" value="svietidla"><span>Nové svietidlá</span></label>
+                      <label class="cip"><input type="checkbox" name="rek_nadstandard" value="1"><span>Nadštandardná rekonštrukcia</span></label>
+                    </div>
+                  </div>
                 </fieldset>
               </fieldset>
               <fieldset class="pod" data-pre="pozemok" hidden disabled>

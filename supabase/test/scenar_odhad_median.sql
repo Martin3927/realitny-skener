@@ -81,3 +81,14 @@ select position('Nové: elektroinštalácia, bytové jadro, kuchynská linka. P�
   from web_kontakty w join odhady_hodnoty h on h.web_kontakt_id = w.id where h.meno = 'Eva Skúšobná' and h.stav_nehn <> 'Novostavba';                     -- → t
 select odhad_list(null) is null;  -- → t
 delete from odhady_hodnoty where meno = 'Eva Skúšobná';
+
+\echo '=== 6. (116) nadštandardná rekonštrukcia +10 %, dvere/stropy/svietidlá len informácia'
+select pg_temp.r('Po kompletnej rekonštrukcii', '{"elektro":"nove","jadro":"nove","podlahy":"nove","kuchyna":"nove","kedy":"2021+","nadstandard":true}') ->> 'uprava' nadstandard,          -- → 20
+       pg_temp.r('Po kompletnej rekonštrukcii', '{"elektro":"nove","jadro":"nove","podlahy":"nove","kuchyna":"nove","kedy":"2021+","nadstandard":true}') ->> 'nadstandard' priznak,      -- → true
+       pg_temp.r('Čiastočne zrekonštruovaný', '{"elektro":"nove","jadro":"povodne","podlahy":"povodne","kuchyna":"povodne","kedy":"2016-2020","nadstandard":true}') ->> 'uprava' jedna,    -- → 5 (−5 + 10)
+       pg_temp.r('Pôvodný, udržiavaný', '{"elektro":"povodne","jadro":"povodne","podlahy":"povodne","kuchyna":"povodne","nadstandard":true}') ->> 'uprava' bez_novych,                   -- → -10 (nadštandard bez nových častí sa neráta)
+       pg_temp.r('Pôvodný, udržiavaný', '{"elektro":"povodne","jadro":"povodne","podlahy":"povodne","kuchyna":"povodne","dalsie":["dvere","stropy","svietidla"]}') ->> 'uprava' dvere; -- → -10
+select _odhad_rek('{"dalsie":["svietidla","dvere","okno","dvere"],"nadstandard":true}') ocistene,          -- → {"dalsie": ["dvere", "svietidla"], "nadstandard": true}
+       _odhad_rek('{"nadstandard":"ano"}') zle,                                                              -- → (prázdne)
+       _odhad_rek_text('{"elektro":"nove","jadro":"nove","podlahy":"nove","kuchyna":"nove","kedy":"2021+","dalsie":["dvere","svietidla"],"nadstandard":true}') text;
+-- → Nové: elektroinštalácia, bytové jadro, podlahy, kuchynská linka. Rekonštrukcia: 2021 a neskôr. Ešte nové: vchodové dvere, svietidlá. Nadštandardná rekonštrukcia
