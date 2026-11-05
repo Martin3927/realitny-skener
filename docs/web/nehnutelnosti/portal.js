@@ -7,7 +7,7 @@
   var SUPA = "https://uwxziqapghlyktwpipjd.supabase.co";
   var KLUC = "sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf";
   var OSM = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-  var LEAFLET = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/";
+  var LEAFLET = "/kniznice/leaflet/1.9.4/";   // vlastný server (predtým cdnjs)
 
   // ---------------------------------------------------------------- pomocníci
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -463,7 +463,7 @@
     return S.nacitanie;
   }
 
-  // ---------------------------------------------------------------- mapa (Leaflet z cdnjs, rovnako ako v aplikácii)
+  // ---------------------------------------------------------------- mapa (Leaflet z vlastného servera /kniznice, rovnako ako v aplikácii)
   var leafletP = null;
   function nacitajLeaflet() {
     if (window.L) return Promise.resolve();

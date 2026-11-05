@@ -778,14 +778,14 @@ function render() {
   if (K.hooks.poRender) K.hooks.poRender();
 }
 
-/* ---------------------------------------------------------------- mapy (Leaflet z cdnjs, mapové podklady OpenStreetMap) */
+/* ---------------------------------------------------------------- mapy (Leaflet z vlastného servera – kniznice/leaflet, mapové podklady OpenStreetMap) */
 var LP = null, MAPY = [];
 function leaflet() {
   if (window.L) return Promise.resolve();
   if (LP) return LP;
   LP = new Promise(function (ok, zle) {
-    var c = document.createElement("link"); c.rel = "stylesheet"; c.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(c);
-    var s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"; s.onload = ok; s.onerror = function () { LP = null; zle(); }; document.head.appendChild(s);
+    var c = document.createElement("link"); c.rel = "stylesheet"; c.href = "kniznice/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(c);
+    var s = document.createElement("script"); s.src = "kniznice/leaflet/1.9.4/leaflet.min.js"; s.onload = ok; s.onerror = function () { LP = null; zle(); }; document.head.appendChild(s);
   });
   return LP;
 }

@@ -93,28 +93,47 @@
       '<div class="tm-hlava"><span class="tm-ik">' + IK.tour + '</span><span class="tm-tit"><b>' + esc(opt.nadpis || "Virtuálna prehliadka 3D") + "</b><small>" + esc(t.zdroj) + "</small></span>" +
       '<span class="tm-akcie"><button type="button" class="tm-btn" data-tm-fs title="Na celú obrazovku">' + IK.fs + "<span>Celá obrazovka</span></button>" +
       '<a class="tm-btn" href="' + esc(t.url) + '" target="_blank" rel="noopener" title="Otvoriť v novom okne">' + IK.von + "<span>Otvoriť</span></a></span></div>" +
-      '<div class="tm-ramec tm-169 tm-3d-ramec"><div class="tm-nacitava"><span class="tm-spin"></span>Načítavam prehliadku…</div>' +
-      '<iframe src="' + esc(t.embed) + '" title="Virtuálna prehliadka" allow="fullscreen; autoplay; xr-spatial-tracking; gyroscope; accelerometer; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div></div>';
+      '<div class="tm-ramec tm-169 tm-3d-ramec">' + (opt.ihned ? '<div class="tm-nacitava"><span class="tm-spin"></span>Načítavam prehliadku…</div>' +
+      '<iframe src="' + esc(t.embed) + '" title="Virtuálna prehliadka" allow="' + ALLOW_3D + '" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>'
+        : spustit(t.embed, "Virtuálna prehliadka", ALLOW_3D, IK.tour, "Spustiť 3D prehliadku", t.zdroj, opt.nahlad)) + "</div></div>";
   }
-  function htmlVideo(v, n, spolu) {
+  // Prehrávač cudzej služby (YouTube, Vimeo, Matterport…) sa načíta až po kliknutí – dovtedy návštevník
+  // neposiela svoju IP adresu ani nedostane ich cookies (GDPR). Náhľad je fotka ponuky z nášho servera, nie z YouTube.
+  var ALLOW_3D = "fullscreen; autoplay; xr-spatial-tracking; gyroscope; accelerometer; web-share";
+  var ALLOW_VIDEO = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";
+  function spustit(embed, titul, allow, ikona, tlacidlo, zdroj, nahlad) {
+    var ok = /^https:\/\//.test(nahlad || "");
+    return '<button type="button" class="tm-spustit' + (ok ? " tm-s-foto" : "") + '" data-tm-spusti="' + esc(embed) + '" data-tm-titul="' + esc(titul) + '" data-tm-allow="' + esc(allow) + '"' +
+      (ok ? ' style="background-image:url(&quot;' + esc(nahlad) + '&quot;)"' : "") + ">" +
+      '<span class="tm-s-ik" aria-hidden="true">' + ikona + "</span>" +
+      '<span class="tm-s-text"><b>' + esc(tlacidlo) + "</b><small>" + esc(zdroj ? "Načíta sa zo služby " + zdroj + " až po kliknutí." : "Načíta sa až po kliknutí.") + "</small></span></button>";
+  }
+  function sAutoplay(embed) {
+    if (/youtube-nocookie\.com\/embed\/|player\.vimeo\.com\/video\//.test(embed)) return embed + (embed.indexOf("?") < 0 ? "?" : "&") + "autoplay=1";
+    return embed;
+  }
+  var ZDROJ = { youtube: "YouTube", vimeo: "Vimeo", tiktok: "TikTok", instagram: "Instagram" };
+  function htmlVideo(v, n, spolu, opt) {
+    opt = opt || {};
     var titul = spolu > 1 ? "Video " + (n + 1) : "Video";
     var ramec;
     if (v.typ === "subor") ramec = '<video src="' + esc(v.embed) + '" controls preload="metadata" playsinline></video>';
+    else if (v.embed && !opt.ihned) ramec = spustit(v.embed, titul, ALLOW_VIDEO, IK.play, spolu > 1 ? "Prehrať video " + (n + 1) : "Prehrať video", ZDROJ[v.typ] || "", opt.nahlad);
     else if (v.embed) ramec = '<div class="tm-nacitava"><span class="tm-spin"></span>Načítavam video…</div><iframe src="' + esc(v.embed) + '" title="' + esc(titul) + '" loading="lazy" ' +
-      'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+      'allow="' + ALLOW_VIDEO + '" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
     else return '<a class="tm-okno tm-video tm-odkaz" href="' + esc(v.url) + '" target="_blank" rel="noopener"><span class="tm-ik">' + IK.play + '</span><span class="tm-tit"><b>' + esc(titul) + "</b><small>" + esc(host(parsuj(v.url)) || v.url) + "</small></span>" + IK.von + "</a>";
-    return '<figure class="tm-okno tm-video' + (v.vysoke ? " tm-vysoke" : "") + '"' + (v.typ === "youtube" && !v.istota ? ' data-tm-yt="' + esc(v.id) + '"' : "") + ">" +
+    return '<figure class="tm-okno tm-video' + (v.vysoke ? " tm-vysoke" : "") + '"' + (v.typ === "youtube" && !v.istota ? ' data-tm-yt="' + esc(v.id) + '"' + (opt.ihned ? "" : ' data-tm-yt-po') : "") + ">" +
       '<div class="tm-ramec ' + (v.vysoke ? "tm-916" : "tm-169") + '">' + ramec + "</div>" +
       '<figcaption><span class="tm-typ">' + IK.play + '<span data-tm-nazov>' + esc(v.nazov) + "</span></span>" +
       '<a href="' + esc(v.url) + '" target="_blank" rel="noopener" class="tm-von">Otvoriť ' + IK.von + "</a></figcaption></figure>";
   }
-  function htmlVidea(text) {
+  function htmlVidea(text, opt) {
     var V = zoznam(text).map(video); if (!V.length) return "";
-    return '<div class="tm-videa">' + V.map(function (v, n) { return htmlVideo(v, n, V.length); }).join("") + "</div>";
+    return '<div class="tm-videa">' + V.map(function (v, n) { return htmlVideo(v, n, V.length, opt); }).join("") + "</div>";
   }
   function htmlVsetko(p, opt) {
     opt = opt || {};
-    var t = p.virtualna_prehliadka ? htmlPrehliadka(p.virtualna_prehliadka) : "", v = htmlVidea(p.video);
+    var t = p.virtualna_prehliadka ? htmlPrehliadka(p.virtualna_prehliadka, opt) : "", v = htmlVidea(p.video, opt);
     return t || v ? '<div class="tm-media">' + t + v + "</div>" : "";
   }
 
@@ -139,18 +158,38 @@
     root.querySelectorAll(".tm-ramec iframe").forEach(function (f) {
       f.addEventListener("load", function () { f.parentNode.classList.add("tm-hotovo"); });
     });
-    root.querySelectorAll("[data-tm-yt]").forEach(function (fig) {
+    root.querySelectorAll("[data-tm-yt]:not([data-tm-yt-po])").forEach(function (fig) {
       var id = fig.getAttribute("data-tm-yt"); fig.removeAttribute("data-tm-yt");
       jeShorts(id).then(function (s) { if (s) naShorts(fig); });
     });
+    root.querySelectorAll("[data-tm-spusti]").forEach(function (b) {
+      b.onclick = function () { spust(b); };
+    });
     root.querySelectorAll("[data-tm-fs]").forEach(function (b) {
       b.onclick = function () {
-        var okno = b.closest(".tm-okno"), r = okno.querySelector(".tm-ramec");
+        var okno = b.closest(".tm-okno"), r = okno.querySelector(".tm-ramec"), sp = r.querySelector("[data-tm-spusti]");
+        if (sp) spust(sp);
         var fn = r.requestFullscreen || r.webkitRequestFullscreen;
         if (fn) { var x = fn.call(r); if (x && x.catch) x.catch(function () { window.open(okno.querySelector("a.tm-btn").href, "_blank", "noopener"); }); }
         else window.open(okno.querySelector("a.tm-btn").href, "_blank", "noopener");
       };
     });
+  }
+
+  function spust(b) {
+    var r = b.parentNode, fig = b.closest(".tm-okno");
+    var f = document.createElement("iframe");
+    f.src = sAutoplay(b.getAttribute("data-tm-spusti")); f.title = b.getAttribute("data-tm-titul") || "Video";
+    f.setAttribute("allow", b.getAttribute("data-tm-allow") || ALLOW_VIDEO); f.setAttribute("allowfullscreen", "");
+    f.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+    var n = document.createElement("div"); n.className = "tm-nacitava"; n.innerHTML = '<span class="tm-spin"></span>Načítavam…';
+    f.addEventListener("load", function () { r.classList.add("tm-hotovo"); });
+    r.replaceChild(f, b); r.insertBefore(n, f);
+    try { f.focus(); } catch (e) { /* nič */ }
+    if (fig && fig.hasAttribute("data-tm-yt-po")) {
+      var id = fig.getAttribute("data-tm-yt"); fig.removeAttribute("data-tm-yt"); fig.removeAttribute("data-tm-yt-po");
+      jeShorts(id).then(function (s) { if (s) naShorts(fig); });
+    }
   }
 
   window.TYPEK_MEDIA = { zoznam: zoznam, spoj: spoj, video: video, prehliadka: prehliadka, jeShorts: jeShorts,

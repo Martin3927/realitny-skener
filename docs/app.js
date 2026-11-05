@@ -4325,7 +4325,7 @@
     if (nb) nb.onclick = function () {
       if (nbox.innerHTML) { nbox.innerHTML = ""; return; }
       if (!t3.value.trim()) return toast("Najprv vložte odkaz na virtuálnu prehliadku.", true);
-      nbox.innerHTML = TM.htmlPrehliadka(t3.value); TM.napoj(nbox);
+      nbox.innerHTML = TM.htmlPrehliadka(t3.value, { ihned: true }); TM.napoj(nbox);
     };
   }
   function napojFormularPonuky() {
@@ -4466,8 +4466,8 @@
     if (window.L) return Promise.resolve();
     if (S.leafletP) return S.leafletP;
     S.leafletP = new Promise(function (ok, chyba) {
-      var c = document.createElement("link"); c.rel = "stylesheet"; c.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(c);
-      var s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"; s.onload = ok; s.onerror = function () { chyba(new Error("Mapu sa nepodarilo načítať.")); };
+      var c = document.createElement("link"); c.rel = "stylesheet"; c.href = "kniznice/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(c);
+      var s = document.createElement("script"); s.src = "kniznice/leaflet/1.9.4/leaflet.min.js"; s.onload = ok; s.onerror = function () { chyba(new Error("Mapu sa nepodarilo načítať.")); };
       document.head.appendChild(s);
     });
     return S.leafletP;
@@ -4685,7 +4685,7 @@
       ((p.vybavenie || []).length ? '<h4>Vybavenie</h4><div class="cipy">' + p.vybavenie.map(function (v) { return '<span class="cip" aria-pressed="true">' + esc(v) + "</span>"; }).join("") + "</div>" : "") +
       (p.intro ? '<p class="pd-intro">' + esc(p.intro) + "</p>" : "") +
       (p.popis ? '<div class="pd-popis">' + esc(p.popis) + "</div>" : "") +
-      (p.virtualna_prehliadka || p.video ? '<section class="pd-media"><h4>🎬 Video a virtuálna prehliadka</h4>' + window.TYPEK_MEDIA.htmlVsetko(p) + "</section>" : "") +
+      (p.virtualna_prehliadka || p.video ? '<section class="pd-media"><h4>🎬 Video a virtuálna prehliadka</h4>' + window.TYPEK_MEDIA.htmlVsetko(p, { ihned: true }) + "</section>" : "") +
       (p.lat && p.lon ? '<div id="pd-mapa" class="pf-mapa"></div>' : "") +
       (I ? '<section class="pd-interne"><h4>🔒 Interné údaje</h4><dl class="pd-par">' +
         (I.majitel_meno || I.majitel_telefon ? "<dt>Majiteľ</dt><dd>" + esc(I.majitel_meno || "") + (I.majitel_telefon ? ' · <a class="tel" href="tel:' + esc(String(I.majitel_telefon).replace(/[^\d+]/g, "")) + '">' + esc(I.majitel_telefon) + "</a>" : "") +
@@ -6213,8 +6213,8 @@
   function nacitajCluster() {
     return nacitajLeaflet().then(function () {
       if (window.L && L.markerClusterGroup) return;
-      ["MarkerCluster.css", "MarkerCluster.Default.css"].forEach(function (c) { var l = document.createElement("link"); l.rel = "stylesheet"; l.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/" + c; document.head.appendChild(l); });
-      return nacitajSkript("https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js", "__nic__").then(function () {});
+      ["MarkerCluster.css", "MarkerCluster.Default.css"].forEach(function (c) { var l = document.createElement("link"); l.rel = "stylesheet"; l.href = "kniznice/leaflet.markercluster/1.5.3/" + c; document.head.appendChild(l); });
+      return nacitajSkript("kniznice/leaflet.markercluster/1.5.3/leaflet.markercluster.js", "__nic__").then(function () {});
     });
   }
   function hashCislo(s) { var h = 0; String(s).split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) | 0; }); return h; }

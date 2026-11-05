@@ -671,7 +671,7 @@ function detail(i, P) {
   var s = W.S, Z = ZOZ(), x = Z[i]; if (!x) return "";
   var p = x.raw || {}, imgs = galeria(x, i, P), pv = x.raw ? parametre(p) : x.a.map(function (v, j) { return [["Plocha", "Izby", "Ďalšie"][j] || "", esc(v)]; });
   var M = window.TYPEK_MEDIA, media = "";
-  if (M && !W.editor && x.raw) { try { media = M.htmlVsetko(p, {}); } catch (e) { media = ""; } }
+  if (M && !W.editor && x.raw) { try { media = M.htmlVsetko(p, { nahlad: x.foto && x.foto[0] }); } catch (e) { media = ""; } }
   var mapa = p.lat && p.lon ? '<div class="map"><iframe title="Poloha na mape" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' + (p.lon - 0.012) + "," + (p.lat - 0.007) + "," + (p.lon + 0.012) + "," + (p.lat + 0.007) + "&layer=mapnik&marker=" + p.lat + "," + p.lon + '"></iframe></div>' : "";
   var qMap = encodeURIComponent([p.ulica, p.cast_obce, p.obec || x.l].filter(Boolean).join(", "));
   var wa = waPonuka(x), popis = x.raw ? paras(p.popis || p.intro) : "<p>" + esc(x.d) + "</p>";

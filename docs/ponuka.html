@@ -11,7 +11,7 @@
 <meta property="og:image" content="https://app.realitnytypek.sk/logo.png">
 <link rel="stylesheet" href="pisma/pisma.css?v=20261105">
 <link rel="stylesheet" href="verejne.css?v=202610281600">
-<link rel="stylesheet" href="media.css?v=202610201600">
+<link rel="stylesheet" href="media.css?v=202611051800">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 </head>
 <body data-meranie data-kanc-caka>
@@ -24,7 +24,7 @@
 <script src="config.js?v=202610182100"></script>
 <script src="supabase.min.js"></script>
 <script src="verejne.js?v=202611031900"></script>
-<script src="media.js?v=202610232300"></script>
+<script src="media.js?v=202611051800"></script>
 <script>
 (function () {
   var T = window.TYPEK, esc = T.esc, nf = T.nf, id = Number(T.param("id")), NAHLAD = T.param("nahlad") === "1", P = null, g = 0;
@@ -388,7 +388,7 @@
         cipy() +
         (kl.length ? '<div class="v-kluc">' + kl.map(function (k) { return "<div><b>" + esc(k[0]) + "</b><span>" + esc(k[1]) + "</span></div>"; }).join("") + "</div>" : "") + "</section>";
     }
-    if (id === "media") return P.virtualna_prehliadka || P.video ? '<section class="v-media" aria-label="Video a virtuálna prehliadka">' + window.TYPEK_MEDIA.htmlVsetko(P) + "</section>" : "";
+    if (id === "media") return P.virtualna_prehliadka || P.video ? '<section class="v-media" aria-label="Video a virtuálna prehliadka">' + window.TYPEK_MEDIA.htmlVsetko(P, { nahlad: (P.fotky || []).length ? T.fotkaUrl(P.fotky[0]) : "" }) + "</section>" : "";
     if (id === "popis") return P.intro || P.popis ? '<section class="v-box"><h2>Popis</h2>' + (P.intro ? '<p class="v-intro">' + esc(P.intro) + "</p>" : "") + (P.popis ? '<div class="v-popis">' + esc(P.popis) + "</div>" : "") + "</section>" : "";
     if (id === "parametre") {
       var par = T.parametre(P);
@@ -452,8 +452,8 @@
   function nacitajLeaflet() {
     if (window.L) return Promise.resolve();
     return new Promise(function (ok, chyba) {
-      var c = document.createElement("link"); c.rel = "stylesheet"; c.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(c);
-      var s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"; s.onload = ok; s.onerror = chyba; document.head.appendChild(s);
+      var c = document.createElement("link"); c.rel = "stylesheet"; c.href = "kniznice/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(c);
+      var s = document.createElement("script"); s.src = "kniznice/leaflet/1.9.4/leaflet.min.js"; s.onload = ok; s.onerror = chyba; document.head.appendChild(s);
     });
   }
 
