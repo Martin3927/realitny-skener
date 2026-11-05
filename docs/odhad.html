@@ -80,6 +80,11 @@
     r("Izby", esc(o.izby || ""));
     r("Poschodie", o.poschodie !== undefined ? (o.poschodie === 0 ? "prízemie" : esc(o.poschodie) + ".") + (o.poschodi ? " z " + esc(o.poschodi) : "") : "");
     r("Stav", esc(o.stav_nehn || ""));
+    var rk = o.rekonstrukcia || {}, REK = [["elektro", "elektroinštalácia"], ["jadro", "bytové jadro"], ["podlahy", "podlahy"], ["kuchyna", "kuchynská linka"]];
+    var rekT = function (v) { var t = REK.filter(function (x) { return rk[x[0]] === v; }).map(function (x) { return x[1]; }).join(", "); return t ? t.charAt(0).toUpperCase() + t.slice(1) : ""; };
+    r("Nové", esc(rekT("nove")));
+    r("Pôvodné", esc(rekT("povodne")));
+    r("Rekonštrukcia", esc({ "2021+": "2021 a neskôr", "2016-2020": "2016 – 2020", "2010-2015": "2010 – 2015", "pred-2010": "pred rokom 2010" }[rk.kedy] || ""));
     r("Siete", esc((o.siete || []).join(", ")));
     r("Vybavenie", esc((o.doplnky || []).join(", ")));
     var tel = T.telOdkaz(m.telefon), datum = T.datum(o.datum);

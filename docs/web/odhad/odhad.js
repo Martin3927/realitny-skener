@@ -186,6 +186,23 @@
     $("[data-ulica-nazov]").textContent = povUl ? "Ulica" : "Ulica alebo lokalita";
     $("[data-ulica-nepov]").hidden = povUl;
     el("ulica").required = povUl;
+    nastavRek();
+  }
+  // byt: „Čo je v byte nové?“ pri stave po rekonštrukcii, čiastočne alebo pôvodnom; „Kedy?“ až keď je niečo nové
+  var STAV_REK = ["Po kompletnej rekonštrukcii", "Čiastočne zrekonštruovaný", "Pôvodný, udržiavaný"], REK = ["elektro", "jadro", "podlahy", "kuchyna"];
+  function vybrane(name) { var x = form.querySelector('input[name="' + name + '"]:checked'); return x ? x.value : ""; }
+  function nastavRek() {
+    var rek = el("rek"); if (!rek) return;
+    var stav = vybrane("stav"), on = typ === "byt" && STAV_REK.indexOf(stav) >= 0;
+    rek.hidden = !on; rek.disabled = !on;
+    // po kompletnej rekonštrukcii predvyplníme „nové“ – klient opraví, čo nesedí
+    if (on && stav === "Po kompletnej rekonštrukcii" && !REK.some(function (k) { return vybrane("rek_" + k); }))
+      REK.forEach(function (k) { var x = form.querySelector('input[name="rek_' + k + '"][value="nove"]'); if (x) x.checked = true; });
+    nastavRekKedy();
+  }
+  function nastavRekKedy() {
+    var kedy = el("rek-kedy"), on = !el("rek").disabled && REK.some(function (k) { return vybrane("rek_" + k) === "nove"; });
+    kedy.hidden = !on; kedy.disabled = !on;
   }
   function ukaz(i, smer) {
     kroky[cur].hidden = true;
@@ -241,7 +258,12 @@
       return cislo(el("plocha-ine"), "plochu");
     }
     if (k === "Stav") {
-      if (typ !== "pozemok") return radio("stav", "Vyberte stav.");
+      if (typ !== "pozemok") return radio("stav", "Vyberte stav.") &&
+        radio("rek_elektro", "Vyberte, či je elektroinštalácia nová alebo pôvodná (alebo „Neviem“).") &&
+        radio("rek_jadro", "Vyberte, či je bytové jadro nové alebo pôvodné (alebo „Neviem“).") &&
+        radio("rek_podlahy", "Vyberte, či sú podlahy nové alebo pôvodné (alebo „Neviem“).") &&
+        radio("rek_kuchyna", "Vyberte, či je kuchynská linka nová alebo pôvodná (alebo „Neviem“).") &&
+        radio("rek_kedy", "Vyberte, kedy prebehla rekonštrukcia (alebo „Neviem“).");
       if (!aktivne('input[name="siete"]').some(function (x) { return x.checked; })) { $('[data-povinna-skupina="siete"]').classList.add("zle"); return chyba("Vyberte siete – alebo „Neviem“.", aktivne('input[name="siete"]')[0]); }
       return true;
     }
@@ -275,6 +297,10 @@
       var v = fd.get(k); if (v != null && String(v).trim() !== "") u[k] = String(v).trim();
     });
     u.siete = fd.getAll("siete"); u.doplnky = fd.getAll("doplnky");
+    if (typ === "byt" && !el("rek").disabled) {
+      var rk = {}; REK.concat("kedy").forEach(function (k) { var v = fd.get("rek_" + k); if (v) rk[k] = String(v); });
+      u.rekonstrukcia = rk;
+    }
     u.fotky = FOTKY.length;
     u.odkial = odkial();
     return u;
@@ -510,6 +536,7 @@
       r.addEventListener("change", function () { el("platene-info").hidden = !r.hasAttribute("data-platene"); });
     });
     form.addEventListener("change", function (e) { if (e.target.matches("input[type=radio], input[type=checkbox]")) { var g = e.target.closest(".cipy.zle"); if (g) g.classList.remove("zle"); } });
+    form.addEventListener("change", function (e) { if (e.target.name === "stav") nastavRek(); else if (/^rek_/.test(e.target.name)) nastavRekKedy(); });
     form.addEventListener("input", function (e) { if (e.target.getAttribute("aria-invalid") === "true") { e.target.setAttribute("aria-invalid", "false"); el("chyba").hidden = true; } });
     // Enter v poli = Pokračovať (v poznámke nový riadok)
     form.addEventListener("keydown", function (e) {

@@ -7201,6 +7201,16 @@
   var ODH_STRANKA = "https://realitnytypek.sk/odhad/";
   function odhStav(k) { return ODH_STAVY.find(function (x) { return x[0] === k; }) || ODH_STAVY[0]; }
   function odhRozpatie(od, d) { od = Number(od) || 0; d = Number(d) || 0; return od ? (d && d !== od ? nf.format(od) + " – " + nf.format(d) + " €" : nf.format(od) + " €") : ""; }
+  // byt: čo je nové / pôvodné a kedy prebehla rekonštrukcia (z formulára, migrácia 115)
+  var ODH_REK = [["elektro", "elektroinštalácia"], ["jadro", "bytové jadro"], ["podlahy", "podlahy"], ["kuchyna", "kuchynská linka"]];
+  var ODH_REK_KEDY = { "2021+": "2021 a neskôr", "2016-2020": "2016 – 2020", "2010-2015": "2010 – 2015", "pred-2010": "pred rokom 2010", neviem: "klient nevie" };
+  function odhRekRiadky(rk) {
+    if (!rk) return [];
+    var sk = function (v) { return ODH_REK.filter(function (x) { return rk[x[0]] === v; }).map(function (x) { return x[1]; }).join(", "); };
+    var t = sk("nove");
+    return [["Nové", t ? t.charAt(0).toUpperCase() + t.slice(1) : ""], ["Pôvodné", (t = sk("povodne")) ? t.charAt(0).toUpperCase() + t.slice(1) : ""],
+      ["Nevie", (t = sk("neviem")) ? t.charAt(0).toUpperCase() + t.slice(1) : ""], ["Rekonštrukcia", ODH_REK_KEDY[rk.kedy] || ""]].filter(function (x) { return x[1]; });
+  }
   function odhVykup(o) { return /výkup/i.test(o.dovod || ""); }
   function odhBsm(o) { return /^Vyporiadanie/.test(o.dovod || ""); }
   function odhAdresa(o) { return [[o.ulica, o.cislo].filter(Boolean).join(" "), o.cast_obce].filter(Boolean).join(", "); }
@@ -7285,6 +7295,7 @@
     // byty: medián okresu (realityradar.eu) upravený podľa stavu – novostavba a kompletná rekonštrukcia +10 %, pôvodný stav −10 %
     if (m) {
       var up = Number(m.uprava) || 0, stav = (m.stav ? esc(m.stav.charAt(0).toLowerCase() + m.stav.slice(1)) : "stav neuvedený") +
+        (m.podla_casti ? ", nové " + m.nove + " zo 4 častí" + (m.kedy && ODH_REK_KEDY[m.kedy] && m.nove ? " (" + esc(ODH_REK_KEDY[m.kedy]) + ")" : "") : "") +
         (up ? " " + (up > 0 ? "+" : "−") + Math.abs(up) + " %" : " bez úpravy");
       h += '<div class="odh-stat"><div><small>Medián bytov · ' + esc(m.oblast) + " · " + nf.format(m.m2) + " €/m² · " + stav + "</small>" +
         (m.od ? "<b>" + odhRozpatie(m.od, m.do) + "</b><small>stred " + nf.format(m.stred) + " € · " + nf.format(m.m2_upr) + " €/m²</small>" : "<b>" + nf.format(m.m2_upr) + " €/m²</b><small>Klient nezadal plochu.</small>") + "</div>" +
@@ -7425,6 +7436,7 @@
     r("Druh pozemku", esc(o.druh_pozemku || ""));
     r("Čo to je", esc(o.popis || ""));
     r("Stav", esc(o.stav_nehn || ""));
+    odhRekRiadky(o.rekonstrukcia).forEach(function (x) { r(x[0], esc(x[1])); });
     r("Siete", esc((o.siete || []).join(", ")));
     r("Vybavenie", esc((o.doplnky || []).join(", ")));
     r("Dôvod", esc(o.dovod || "") + (odhBsm(o) ? ' <span class="odh-znak">spoplatnené – povedzte klientovi cenu vopred</span>' : "") + (odhVykup(o) ? ' <span class="odh-znak zlaty">záujem o výkup</span>' : ""));

@@ -23,14 +23,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uwxziqapghlyktwpipjd.supabase.co" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Instrument+Sans:wght@400..700&amp;family=Montserrat:wght@900&amp;display=swap">
-<link rel="stylesheet" href="../odhad.css?v=202611042320">
+<link rel="stylesheet" href="../odhad.css?v=202611050950">
 <script>
   // všetky animácie aj pri obmedzenom pohybe v systéme: adresa ?pohyb=1
   if (/[?&]pohyb=1/.test(location.search)) document.documentElement.classList.add("pohyb-vzdy");
   document.documentElement.classList.add("js");
 </script>
-<script defer src="../obce.js?v=202611042320"></script>
-<script defer src="../odhad.js?v=202611042320"></script>
+<script defer src="../obce.js?v=202611050950"></script>
+<script defer src="../odhad.js?v=202611050950"></script>
 </head>
 <body data-okresy="Malacky">
 <a class="preskoc" href="#odhad">Preskočiť na formulár</a>
@@ -203,6 +203,57 @@
                   <label class="cip"><input type="radio" name="stav" value="Pôvodný, udržiavaný"><span>Pôvodný, udržiavaný</span></label>
                   <label class="cip"><input type="radio" name="stav" value="Na rekonštrukciu"><span>Na rekonštrukciu</span></label>
                 </div>
+              </fieldset>
+              <fieldset class="pod" data-pre="byt">
+                <legend class="sr">Čo je v byte nové</legend>
+                <fieldset class="rek" id="rek" hidden disabled>
+                  <legend class="pole-n">Čo je v byte nové?</legend>
+                  <p class="pole-tip">Podľa toho maklér presnejšie odhadne cenu.</p>
+                  <div class="rek-riadky">
+                    <div class="rek-riadok">
+                      <span class="rek-n" id="rek-elektro-n">Elektroinštalácia</span>
+                      <div class="cipy rek-volby" role="radiogroup" aria-labelledby="rek-elektro-n">
+                        <label class="cip"><input type="radio" name="rek_elektro" value="nove"><span>Nová</span></label>
+                        <label class="cip"><input type="radio" name="rek_elektro" value="povodne"><span>Pôvodná</span></label>
+                        <label class="cip"><input type="radio" name="rek_elektro" value="neviem"><span>Neviem</span></label>
+                      </div>
+                    </div>
+                    <div class="rek-riadok">
+                      <span class="rek-n" id="rek-jadro-n">Bytové jadro <small>kúpeľňa a WC</small></span>
+                      <div class="cipy rek-volby" role="radiogroup" aria-labelledby="rek-jadro-n">
+                        <label class="cip"><input type="radio" name="rek_jadro" value="nove"><span>Nové</span></label>
+                        <label class="cip"><input type="radio" name="rek_jadro" value="povodne"><span>Pôvodné</span></label>
+                        <label class="cip"><input type="radio" name="rek_jadro" value="neviem"><span>Neviem</span></label>
+                      </div>
+                    </div>
+                    <div class="rek-riadok">
+                      <span class="rek-n" id="rek-podlahy-n">Podlahy</span>
+                      <div class="cipy rek-volby" role="radiogroup" aria-labelledby="rek-podlahy-n">
+                        <label class="cip"><input type="radio" name="rek_podlahy" value="nove"><span>Nové</span></label>
+                        <label class="cip"><input type="radio" name="rek_podlahy" value="povodne"><span>Pôvodné</span></label>
+                        <label class="cip"><input type="radio" name="rek_podlahy" value="neviem"><span>Neviem</span></label>
+                      </div>
+                    </div>
+                    <div class="rek-riadok">
+                      <span class="rek-n" id="rek-kuchyna-n">Kuchynská linka</span>
+                      <div class="cipy rek-volby" role="radiogroup" aria-labelledby="rek-kuchyna-n">
+                        <label class="cip"><input type="radio" name="rek_kuchyna" value="nove"><span>Nová</span></label>
+                        <label class="cip"><input type="radio" name="rek_kuchyna" value="povodne"><span>Pôvodná</span></label>
+                        <label class="cip"><input type="radio" name="rek_kuchyna" value="neviem"><span>Neviem</span></label>
+                      </div>
+                    </div>
+                  </div>
+                  <fieldset class="rek-kedy" id="rek-kedy" hidden disabled>
+                    <legend class="pole-n">Kedy prebehla rekonštrukcia?</legend>
+                    <div class="cipy" role="radiogroup" aria-label="Kedy prebehla rekonštrukcia">
+                      <label class="cip"><input type="radio" name="rek_kedy" value="2021+"><span>2021 a neskôr</span></label>
+                      <label class="cip"><input type="radio" name="rek_kedy" value="2016-2020"><span>2016 – 2020</span></label>
+                      <label class="cip"><input type="radio" name="rek_kedy" value="2010-2015"><span>2010 – 2015</span></label>
+                      <label class="cip"><input type="radio" name="rek_kedy" value="pred-2010"><span>Pred rokom 2010</span></label>
+                      <label class="cip"><input type="radio" name="rek_kedy" value="neviem"><span>Neviem</span></label>
+                    </div>
+                  </fieldset>
+                </fieldset>
               </fieldset>
               <fieldset class="pod" data-pre="pozemok" hidden disabled>
                 <legend class="sr">Inžinierske siete</legend>
