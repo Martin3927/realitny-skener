@@ -710,7 +710,8 @@
     }).join("") + "</div></section>";
 
     // nastavenie
-    var okresy = D.vsetky_okresy || [];
+    // „Bratislava“ a „Košice“ sú v zozname obcí len ako mestá – žiadosti z mestských častí majú okres Bratislava I – V / Košice I – IV
+    var okresy = (D.vsetky_okresy || []).filter(function (o) { return o !== "Bratislava" && o !== "Košice"; });
     h += '<form class="sp-box sp-ko-nast" id="ko-nast" novalidate><h3>Nastavenie</h3>' +
       '<div class="sp-okresy"><span class="sp-okresy-l">Okresy, v ktorých sa žiadosti o odhad predávajú (ostatné idú maklérovi z obce ako doteraz)</span>' +
         '<input type="search" id="ko-hladaj" placeholder="Hľadať okres…">' +
