@@ -12,7 +12,7 @@ insert into makleri (id, meno, email, rola, aktivny, pristup, telefon) values
   (:'A','Martin Alpha','a@alpha.sk','admin',true,'{}','0915 140 759'),
   (:'K','Kristián Alpha','k@alpha.sk','makler',true,'{inzeraty,nehnutelnosti,odhady}','0905 111 222') on conflict do nothing;
 insert into hlavni_spravcovia (user_id) values (:'A') on conflict do nothing;
-update kontakty_nastavenie set zaloha_makler = :'A' where id = 1;
+update kontakty_nastavenie set zaloha_makler = :'A', ceny_okresy = '{}' where id = 1;   -- ceny okresov (119) skúša časť 11
 update zakaznici set stav = 'vlastna' where id in (select zakaznik_id from kancelarie where id = 1);
 -- druhá kancelária (Poprad aj Spišská Nová Ves) a tretia (len Poprad)
 insert into zakaznici (id, nazov, email, stav, moduly) overriding system value values
@@ -233,3 +233,13 @@ set request.jwt.claim.sub = :'A';
 select kontakty_nastavit('{"okresy":[],"ceny":[{"h":0,"c":50},{"h":4,"c":35}],"ceny_okresy":{"Spišská Nová Ves":[{"h":0,"c":80},{"h":2,"c":40}]},"koniec_h":48,"zadarmo":2,"reklamacia_h":48}');
 reset role; reset request.jwt.claim.sub;
 select okresy, ceny_okresy ? 'Spišská Nová Ves' ma_ceny from kontakty_nastavenie;    -- → {}, t
+
+\echo '=== 12. ceny podľa mediánu (119)'
+set role authenticated; set request.jwt.claim.sub = :'K';
+select kontakty_ceny_podla_medianu();                                                  -- → ERROR Len pre hlavného správcu.
+set request.jwt.claim.sub = :'A';
+select r->'Levoča'->0->>'c' levoca, r->'Spišská Nová Ves'->0->>'c' snv, r->'Bratislava I'->0->>'c' ba1, r->'Bratislava I'->3->>'c' ba1_min, (select count(*) from jsonb_each(r)) okresov
+  from (select kontakty_ceny_podla_medianu() r) x;                                    -- → 50, 60, 150, 30 (pri spoločných 50 → 35 → 20 → 10), 79
+select kontakty_ceny_podla_medianu(5);                                                 -- → ERROR Deliteľ musí byť 10 až 200.
+reset role; reset request.jwt.claim.sub;
+select ceny_okresy->'Spišská Nová Ves'->0->>'c' snv_ulozene from kontakty_nastavenie;  -- → 60

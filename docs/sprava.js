@@ -718,13 +718,15 @@
           var n = (D.pokrytie || {})[o] || 0;
           return '<label data-okres="' + esc(o.toLowerCase()) + '"><input type="checkbox" value="' + esc(o) + '"' + (vybrane[o] ? " checked" : "") + "><span>" + esc(o) +
             (n ? " <small>" + n + " " + (n === 1 ? "kancelária" : n < 5 ? "kancelárie" : "kancelárií") + "</small>" : "") +
-            (cenyOkr[o] && cenyOkr[o].length ? ' <small class="sp-ko-vl">vlastné ceny</small>' : "") + "</span></label>";
+            (cenyOkr[o] && cenyOkr[o].length ? ' <small class="sp-ko-vl">' + esc(cenyOkr[o][0].c) + " €</small>" : "") + "</span></label>";
         }).join("") + "</div>" +
         '<p class="sp-pozn">Okres funguje len tam, kde ho má v nastavení aspoň jedna aktívna kancelária s odhadmi – inak žiadosť ide po starom maklérovi.</p></div>' +
       '<div class="sp-okresy"><span class="sp-okresy-l">Spoločná cena kontaktu s DPH – po koľkých hodinách koľko €</span><div class="sp-ko-ceny-blok"><div class="sp-ko-ceny" id="ko-ceny">' +
         (N.ceny || []).map(cenaRiadok).join("") + '</div><button type="button" class="btn ghost sp-okr-plus" data-cena-plus><b>+</b> Ďalšie zlacnenie</button></div>' +
         '<p class="sp-pozn">Platí vo všetkých okresoch, ktoré nemajú vlastné ceny. Prvá cena platí od 0 hodín. Keď žiadosť príde v noci (21:00 – 7:00), hodiny sa rátajú od 7:00.</p></div>' +
-      '<div class="sp-okresy"><span class="sp-okresy-l">Ceny podľa okresu</span><div id="ko-okr-ceny"></div></div>' +
+      '<div class="sp-okresy"><span class="sp-okresy-l">Ceny podľa okresu</span><div id="ko-okr-ceny"></div>' +
+        '<div class="sp-akcie" style="margin:0"><button type="button" class="btn ghost" id="ko-median">Navrhnúť ceny podľa mediánu</button>' +
+        '<span class="sp-pozn">Začiatočná cena = medián bytov €/m² ÷ 35 (40 – 150 €), zlacnenia v pomere spoločných cien. Prepíše vlastné ceny všetkých okresov.</span></div></div>' +
       '<div class="sp-ko-cisla">' +
         '<label class="field"><span>Záložnému maklérovi po (hodinách)</span><input id="ko-koniec" type="number" min="1" max="336" value="' + esc(N.koniec_h) + '"></label>' +
         '<label class="field"><span>Kontaktov zadarmo pre kanceláriu</span><input id="ko-zadarmo" type="number" min="0" max="20" value="' + esc(N.zadarmo) + '"></label>' +
@@ -817,6 +819,12 @@
       if (x.error) return toast(chybaText(x.error), true);
       toast(p.okresy.length ? "Uložené – kontakty sa predávajú v " + p.okresy.length + " " + (p.okresy.length === 1 ? "okrese" : "okresoch") + "." : "Uložené – predaj kontaktov je vypnutý.");
       znova();
+    });
+    $("#ko-median").addEventListener("click", async function () {
+      if (!confirm("Prepočítať vlastné ceny všetkých okresov podľa mediánu bytov? Neuložené zmeny v nastavení sa stratia.")) return;
+      var x = await sb.rpc("kontakty_ceny_podla_medianu", { p_delitel: 35, p_prepisat: true });
+      if (x.error) return toast(chybaText(x.error), true);
+      toast("Ceny okresov sú prepočítané podľa mediánu."); znova();
     });
     $("#sp").querySelectorAll("[data-dobit]").forEach(function (b) {
       b.addEventListener("click", async function () {
