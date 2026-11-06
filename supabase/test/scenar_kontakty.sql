@@ -212,3 +212,24 @@ set role anon;
 select odhad_ziadost(:'BYT'::jsonb || '{"obec":"Levoča","okres":"Levoča","email":"levoca@example.sk"}', pg_temp.pow(24000000))->>'ok';  -- → true
 reset role;
 select trh_od is null mimo_predaja, makler_id is not null ma_maklera from odhady_hodnoty where email = 'levoca@example.sk';  -- → t, t (Levoča: nikto ju nekupuje)
+
+\echo '=== 11. ceny podľa okresu (118): vlastné ceny okresu, inak spoločné; žiadosť si ich uloží'
+set role authenticated; set request.jwt.claim.sub = :'A';
+select kontakty_nastavit('{"okresy":["Spišská Nová Ves"],"ceny":[{"h":0,"c":50},{"h":4,"c":35}],"ceny_okresy":{"Levoča":[{"h":0,"c":20},{"h":4,"c":30}]},"koniec_h":48,"zadarmo":2,"reklamacia_h":48}');  -- → ERROR Okres Levoča: Cena môže časom len klesať.
+select kontakty_nastavit('{"okresy":["Spišská Nová Ves"],"ceny":[{"h":0,"c":50}],"ceny_okresy":{"Spišská Nová Ves":[{"h":0,"c":80},{"h":30,"c":40}]},"koniec_h":24,"zadarmo":2,"reklamacia_h":48}');  -- → ERROR Odovzdanie záložnému maklérovi musí byť neskôr…
+select kontakty_nastavit('{"okresy":["Spišská Nová Ves"],"ceny":[{"h":0,"c":50}],"ceny_okresy":{"Neexistujúci":[{"h":0,"c":80}]},"koniec_h":24,"zadarmo":2,"reklamacia_h":48}');  -- → ERROR Neznámy okres.
+select kontakty_nastavit('{"okresy":["Spišská Nová Ves"],"ceny":[{"h":0,"c":50},{"h":4,"c":35}],"ceny_okresy":{"Spišská Nová Ves":[{"h":0,"c":80},{"h":2,"c":40}],"Levoča":[]},"koniec_h":48,"zadarmo":2,"reklamacia_h":48}');
+select kontakty_sprava()->'nastavenie'->'ceny_okresy' ceny_okresy;                    -- → {"Spišská Nová Ves": [{"c": 80, "h": 0}, {"c": 40, "h": 2}]}
+reset role; reset request.jwt.claim.sub;
+select _kontakty_ceny('Spišská Nová Ves') snv, _kontakty_ceny('Levoča') levoca;      -- → [80 od 0 h, 40 od 2 h], [50, 35] (spoločné)
+set role anon;
+select odhad_ziadost(:'BYT'::jsonb || '{"email":"okres@example.sk","ulica":"Okresná"}', pg_temp.pow(26000000))->>'ok';  -- → true
+reset role;
+select trh_ceny from odhady_hodnoty where email = 'okres@example.sk';                 -- → [{"c": 80, "h": 0}, {"c": 40, "h": 2}]
+set role authenticated; set request.jwt.claim.sub = :'K';
+select p->>'cena' cena, p->'dalsia'->>'c' dalsia from jsonb_array_elements(kontakty_na_predaj()->'ponuky') p where p->>'nazov' like '%Smižany%' order by (p->>'id')::int desc limit 1;  -- → 80, 40
+set request.jwt.claim.sub = :'A';
+-- vypnutý okres si vlastné ceny nechá
+select kontakty_nastavit('{"okresy":[],"ceny":[{"h":0,"c":50},{"h":4,"c":35}],"ceny_okresy":{"Spišská Nová Ves":[{"h":0,"c":80},{"h":2,"c":40}]},"koniec_h":48,"zadarmo":2,"reklamacia_h":48}');
+reset role; reset request.jwt.claim.sub;
+select okresy, ceny_okresy ? 'Spišská Nová Ves' ma_ceny from kontakty_nastavenie;    -- → {}, t

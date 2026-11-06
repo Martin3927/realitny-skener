@@ -663,6 +663,7 @@
     var r = await sb.rpc("kontakty_sprava");
     if (r.error) { $("#sp").innerHTML = zalozky("ko") + '<p class="sp-nic">Kontakty sa nepodarilo načítať: ' + esc(chybaText(r.error)) + "</p>"; return; }
     var D = r.data, N = D.nastavenie, vybrane = {};
+    var cenyOkr = JSON.parse(JSON.stringify(N.ceny_okresy || {}));   // vlastné ceny okresov (118)
     (N.okresy || []).forEach(function (o) { vybrane[o] = true; });
     var naPredaj = D.trh.filter(function (t) { return !t.predane; }), predane = D.trh.filter(function (t) { return t.predane; });
     var cakaRekl = D.reklamacie.filter(function (x) { return x.stav === "caka"; });
@@ -716,12 +717,14 @@
         '<div class="sp-ko-okresy" id="ko-okresy">' + okresy.map(function (o) {
           var n = (D.pokrytie || {})[o] || 0;
           return '<label data-okres="' + esc(o.toLowerCase()) + '"><input type="checkbox" value="' + esc(o) + '"' + (vybrane[o] ? " checked" : "") + "><span>" + esc(o) +
-            (n ? " <small>" + n + " " + (n === 1 ? "kancelária" : n < 5 ? "kancelárie" : "kancelárií") + "</small>" : "") + "</span></label>";
+            (n ? " <small>" + n + " " + (n === 1 ? "kancelária" : n < 5 ? "kancelárie" : "kancelárií") + "</small>" : "") +
+            (cenyOkr[o] && cenyOkr[o].length ? ' <small class="sp-ko-vl">vlastné ceny</small>' : "") + "</span></label>";
         }).join("") + "</div>" +
         '<p class="sp-pozn">Okres funguje len tam, kde ho má v nastavení aspoň jedna aktívna kancelária s odhadmi – inak žiadosť ide po starom maklérovi.</p></div>' +
-      '<div class="sp-okresy"><span class="sp-okresy-l">Cena kontaktu s DPH – po koľkých hodinách koľko €</span><div class="sp-ko-ceny" id="ko-ceny">' +
-        (N.ceny || []).map(cenaRiadok).join("") + '</div><button type="button" class="btn ghost sp-okr-plus" id="ko-cena-plus"><b>+</b> Ďalšie zlacnenie</button>' +
-        '<p class="sp-pozn">Prvá cena platí od 0 hodín. Keď žiadosť príde v noci (21:00 – 7:00), hodiny sa rátajú od 7:00.</p></div>' +
+      '<div class="sp-okresy"><span class="sp-okresy-l">Spoločná cena kontaktu s DPH – po koľkých hodinách koľko €</span><div class="sp-ko-ceny-blok"><div class="sp-ko-ceny" id="ko-ceny">' +
+        (N.ceny || []).map(cenaRiadok).join("") + '</div><button type="button" class="btn ghost sp-okr-plus" data-cena-plus><b>+</b> Ďalšie zlacnenie</button></div>' +
+        '<p class="sp-pozn">Platí vo všetkých okresoch, ktoré nemajú vlastné ceny. Prvá cena platí od 0 hodín. Keď žiadosť príde v noci (21:00 – 7:00), hodiny sa rátajú od 7:00.</p></div>' +
+      '<div class="sp-okresy"><span class="sp-okresy-l">Ceny podľa okresu</span><div id="ko-okr-ceny"></div></div>' +
       '<div class="sp-ko-cisla">' +
         '<label class="field"><span>Záložnému maklérovi po (hodinách)</span><input id="ko-koniec" type="number" min="1" max="336" value="' + esc(N.koniec_h) + '"></label>' +
         '<label class="field"><span>Kontaktov zadarmo pre kanceláriu</span><input id="ko-zadarmo" type="number" min="0" max="20" value="' + esc(N.zadarmo) + '"></label>' +
@@ -751,17 +754,61 @@
       var q = this.value.trim().toLowerCase();
       $("#ko-okresy").querySelectorAll("label").forEach(function (l) { l.hidden = q && l.dataset.okres.indexOf(q) < 0 && !l.querySelector("input").checked; });
     });
-    $("#ko-cena-plus").addEventListener("click", function () {
-      var rows = $("#ko-ceny").querySelectorAll(".sp-ko-cena"), last = rows[rows.length - 1];
-      var h0 = last ? Number(last.querySelector("[name=h]").value) + 12 : 0, c0 = last ? Math.max(1, Math.round(Number(last.querySelector("[name=c]").value) / 2)) : 50;
-      $("#ko-ceny").insertAdjacentHTML("beforeend", cenaRiadok({ h: h0, c: c0 }));
+    // ceny: pridať / odobrať riadok (spoločné aj okresy)
+    var precitajCeny = function (box) {
+      return Array.from(box.querySelectorAll(".sp-ko-cena")).map(function (r) { return { h: r.querySelector("[name=h]").value.trim(), c: r.querySelector("[name=c]").value.trim() }; });
+    };
+    var spolocne = function () { return precitajCeny($("#ko-ceny")); };
+    var cenyText = function (c) {
+      return (c || []).map(function (x) { return x.c + " €" + (Number(x.h) ? " po " + x.h + " h" : ""); }).join(" → ");
+    };
+    // vlastné ceny z otvorených editorov okresov do cenyOkr (pred prekreslením aj pred uložením)
+    var zberOkr = function () {
+      $("#ko-okr-ceny").querySelectorAll("[data-okr]").forEach(function (b) {
+        var box = b.querySelector(".sp-ko-ceny"); if (box) cenyOkr[b.dataset.okr] = precitajCeny(box);
+      });
+    };
+    var vykresliOkrCeny = function () {
+      var vyb = Array.from($("#ko-okresy").querySelectorAll("input:checked")).map(function (i) { return i.value; });
+      $("#ko-okr-ceny").innerHTML = vyb.length ? vyb.map(function (o) {
+        var vl = cenyOkr[o] && cenyOkr[o].length;
+        return '<div class="sp-ko-okr" data-okr="' + esc(o) + '"><div class="sp-ko-okr-h"><b>' + esc(o) + "</b>" +
+          (vl ? '<button type="button" class="btn ghost" data-okr-spolocne>Späť na spoločné ceny</button>'
+              : '<span class="sp-pozn">spoločné ceny: ' + esc(cenyText(spolocne())) + '</span><button type="button" class="btn ghost" data-okr-vlastne>Nastaviť vlastné ceny</button>') + "</div>" +
+          (vl ? '<div class="sp-ko-ceny-blok"><div class="sp-ko-ceny">' + cenyOkr[o].map(cenaRiadok).join("") + '</div><button type="button" class="btn ghost sp-okr-plus" data-cena-plus><b>+</b> Ďalšie zlacnenie</button></div>' : "") +
+          "</div>";
+      }).join("") : '<p class="sp-pozn">Najprv vyber okresy hore – pri každom potom môžeš nastaviť vlastné ceny.</p>';
+    };
+    vykresliOkrCeny();
+    $("#ko-okresy").addEventListener("change", function () { zberOkr(); vykresliOkrCeny(); });
+    var obnovSpolocne = function () {
+      $("#ko-okr-ceny").querySelectorAll("[data-okr] .sp-pozn").forEach(function (p) { p.textContent = "spoločné ceny: " + cenyText(spolocne()); });
+    };
+    $("#ko-ceny").addEventListener("input", obnovSpolocne);
+    $("#ko-nast").addEventListener("click", function (e) {
+      var plus = e.target.closest("[data-cena-plus]"), x = e.target.closest("[data-cena-x]");
+      var vl = e.target.closest("[data-okr-vlastne]"), sp = e.target.closest("[data-okr-spolocne]");
+      if (plus) {
+        var box = plus.closest(".sp-ko-ceny-blok").querySelector(".sp-ko-ceny"), rows = box.querySelectorAll(".sp-ko-cena"), last = rows[rows.length - 1];
+        var h0 = last ? Number(last.querySelector("[name=h]").value) + 12 : 0, c0 = last ? Math.max(1, Math.round(Number(last.querySelector("[name=c]").value) / 2)) : 50;
+        box.insertAdjacentHTML("beforeend", cenaRiadok({ h: h0, c: c0 }));
+        obnovSpolocne();
+      } else if (x) {
+        var zoz = x.closest(".sp-ko-ceny");
+        if (zoz.children.length > 1) x.closest(".sp-ko-cena").remove();
+        obnovSpolocne();
+      } else if (vl) {
+        zberOkr(); cenyOkr[vl.closest("[data-okr]").dataset.okr] = spolocne(); vykresliOkrCeny();
+      } else if (sp) {
+        zberOkr(); delete cenyOkr[sp.closest("[data-okr]").dataset.okr]; vykresliOkrCeny();
+      }
     });
-    $("#ko-ceny").addEventListener("click", function (e) { var x = e.target.closest("[data-cena-x]"); if (x && $("#ko-ceny").children.length > 1) x.closest(".sp-ko-cena").remove(); });
     $("#ko-nast").addEventListener("submit", async function (e) {
       e.preventDefault();
       var p = {
         okresy: Array.from($("#ko-okresy").querySelectorAll("input:checked")).map(function (i) { return i.value; }),
-        ceny: Array.from($("#ko-ceny").querySelectorAll(".sp-ko-cena")).map(function (r) { return { h: r.querySelector("[name=h]").value.trim(), c: r.querySelector("[name=c]").value.trim() }; }),
+        ceny: spolocne(),
+        ceny_okresy: (zberOkr(), cenyOkr),
         koniec_h: $("#ko-koniec").value, zadarmo: $("#ko-zadarmo").value, reklamacia_h: $("#ko-rekl").value, zaloha_makler: $("#ko-zaloha").value,
       };
       var btn = this.querySelector("[type=submit]"); btn.disabled = true;

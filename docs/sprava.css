@@ -182,3 +182,14 @@ a.sp-riadok:hover { background: var(--surface-2) }
   .sp-ko-akc { justify-content: flex-start }
   .sp-ko-cena { grid-template-columns: 1fr 1fr auto }
 }
+/* ceny podľa okresu (118) */
+.sp-ko-ceny-blok { display: grid; gap: 8px; justify-items: start }
+.sp-ko-ceny-blok .sp-ko-ceny { width: 100% }
+#ko-okr-ceny { display: grid; gap: 8px }
+.sp-ko-okr { display: grid; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2) }
+.sp-ko-okr-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px }
+.sp-ko-okr-h .btn { margin-left: auto }
+.sp-ko-okr-h .sp-pozn { margin: 0 }
+.sp-ko-okresy small.sp-ko-vl { color: var(--gold-strong, #b8740f) }
+.sp-ko-cena + .sp-ko-cena .field > span { display: none }
+.sp-ko-ceny { gap: 6px }
