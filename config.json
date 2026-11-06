@@ -18,5 +18,5 @@
   "pauza_medzi_poziadavkami_s": 1.0,
   "dni_kym_inzerat_zmizne": 3,
 
-  "bazos_celoslovensky": "kontrola"
+  "bazos_celoslovensky": true
 }

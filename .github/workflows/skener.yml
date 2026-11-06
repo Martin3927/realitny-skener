@@ -26,7 +26,7 @@ jobs:
   skenuj:
     # vlastný server (VPS): premenná SKENER_BEZEC = typek (štítok runnera z server/instalacia.sh); inak servery GitHubu
     runs-on: ${{ vars.SKENER_BEZEC || 'ubuntu-latest' }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -39,7 +39,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Kontrola portálov
-        timeout-minutes: 35
+        # plná kontrola (v noci) má so 4 okresmi ~32 min – 35 min nestačilo; bežná a rýchla ostáva 35
+        timeout-minutes: ${{ (github.event.schedule == '17 1 * * *' || inputs.rezim == 'plny') && 55 || 35 }}
         env:
           PYTHONUNBUFFERED: "1"
           # adresa a verejný kľúč databázy (nie sú tajné – práva stráži databáza)
