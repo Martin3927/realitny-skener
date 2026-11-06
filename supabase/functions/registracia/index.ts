@@ -16,6 +16,7 @@ const odpoved = (stav: number, telo: unknown) =>
 const NAZVY: Record<string, string> = {
   skener: "Realitný skener", web: "Osobný web", kancelaria: "Kancelária komplet", ponuky: "Správa ponúk",
   klienti_aml: "Klienti a AML", dokumenty: "Dokumenty", emailing: "Emailing", ai: "AI", pracovny_email: "Pracovný e-mail",
+  kontakty: "Kontakty z odhadov hodnoty",
 };
 const CHYBY: Record<string, string> = {
   neplatny_odkaz: "Odkaz už neplatí. Mohol byť použitý alebo mu vypršala platnosť – napíš nám na info@realitnytypek.sk a pošleme ti nový.",

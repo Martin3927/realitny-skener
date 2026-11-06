@@ -193,3 +193,5 @@ a.sp-riadok:hover { background: var(--surface-2) }
 .sp-ko-okresy small.sp-ko-vl { color: var(--gold-strong, #b8740f) }
 .sp-ko-cena + .sp-ko-cena .field > span { display: none }
 .sp-ko-ceny { gap: 6px }
+.sp-novy-tl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.sp-novy-tl .btn { text-decoration: none; border-radius: 999px }

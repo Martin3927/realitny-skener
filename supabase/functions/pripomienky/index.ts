@@ -200,6 +200,7 @@ function balikZakaznika(m: any) {
   if (x.includes("skener") && x.includes("web")) return "Skener + osobný web";
   if (x.includes("skener")) return "Realitný skener";
   if (x.includes("web")) return "Osobný web";
+  if (x.includes("kontakty")) return "Kontakty z odhadov hodnoty";
   return "";
 }
 // deno-lint-ignore no-explicit-any
@@ -290,16 +291,18 @@ async function registracneEmaily(db: any) {
       const bal = balikZakaznika(z.moduly);
       const sk = Array.isArray(z.moduly) && z.moduly.includes("skener");
       const plati = z.stav === "aktivny";   // platiaci zákazník – bez skúšobnej doby
+      const kont = Array.isArray(z.moduly) && z.moduly.includes("kontakty") && !sk;   // účet len na kontakty z odhadov (migrácia 120)
       const odkaz = WEB_URL + "registracia.html#t=" + kluc;
       const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35;line-height:1.55">
         <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Realitný týpek</b></div>
         <p style="font-size:16px;margin:16px 0 0">Ahoj${meno ? " " + esc(meno.split(" ")[0]) : ""},</p>
         <p style="margin:10px 0 0">ďakujeme za záujem o Realitného týpka${bal ? " (" + esc(bal) + ")" : ""}. Registráciu dokončíš za minútu:
           nastavíš si heslo, telefón${sk ? " a okresy pre skener" : ""}. ${plati ? "Hneď potom sa prihlásiš a môžeš začať." : "Hneď potom sa ti spustí skúšobná doba na <b>14 dní zadarmo</b>."}</p>
+        ${kont ? `<p style="margin:10px 0 0">Kontakty nájdeš v aplikácii v časti <b>Odhady → Kontakty na predaj</b>. Keď príde nová žiadosť o odhad z tvojich okresov, dostaneš upozornenie do mobilu – kontakt dostane kancelária, ktorá ho prevezme prvá. Platíš len za kontakty, ktoré si prevezmeš, žiadny mesačný poplatok.</p>` : ""}
         <p style="margin:22px 0"><a href="${esc(odkaz)}" style="background:#db9522;color:#1e2a35;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">Dokončiť registráciu</a></p>
         <p style="margin:0;font-size:14px;color:#3a4b5a">Odkaz platí 7 dní. Ako si dať Týpka do mobilu a zapnúť upozornenia, nájdeš v <a href="https://realitnytypek.sk/prve-kroky" style="color:#8a5a2b">Prvých krokoch</a>. Ak máš otázku, stačí odpísať na tento e-mail.</p>
         <p style="margin:18px 0 0">Tím Realitného týpka<br><a href="https://realitnytypek.sk/" style="color:#8a5a2b">realitnytypek.sk</a></p>
-        <p style="color:#999;font-size:12px;margin-top:20px">Tento e-mail ti prišiel, lebo si na webe realitnytypek.sk požiadal o skúšobnú verziu Realitného týpka.
+        <p style="color:#999;font-size:12px;margin-top:20px">${plati ? "Tento e-mail ti prišiel, lebo sme sa dohodli na spolupráci s Realitným týpkom." : "Tento e-mail ti prišiel, lebo si na webe realitnytypek.sk požiadal o skúšobnú verziu Realitného týpka."}
           Ak si to nebol ty, správu pokojne ignoruj – bez dokončenia registrácie sa nič nevytvorí.</p></div>`;
       await posli(z.email, plati ? "Dokonči registráciu – Realitný týpek" : "Dokonči registráciu – Realitný týpek na 14 dní zadarmo", html, { odMeno: "Realitný týpek", odpovedat: ODPOVED_TYPEK });
       await db.from("zakaznici").update({ registracia_email: new Date().toISOString() }).eq("id", z.id);

@@ -8,7 +8,11 @@
   var MODULY = [
     ["skener", "Realitný skener"], ["web", "Osobný web"], ["kancelaria", "Kancelária komplet"], ["ponuky", "Správa ponúk"],
     ["klienti_aml", "Klienti a AML"], ["dokumenty", "Dokumenty"], ["emailing", "Emailing"], ["ai", "AI"], ["pracovny_email", "Pracovný e-mail"],
+    ["kontakty", "Kontakty z odhadov"],
   ];
+  // účet len na kontakty z odhadov (migrácia 120): žiadny platený modul, platí sa za prevzaté kontakty z kreditu
+  var PLATENE = ["skener", "web", "kancelaria", "ponuky", "klienti_aml", "dokumenty", "emailing", "ai", "pracovny_email"];
+  function lenKontakty(z) { var m = z.moduly || []; return m.indexOf("kontakty") >= 0 && !m.some(function (x) { return PLATENE.indexOf(x) >= 0; }); }
   var MOD_N = {}; MODULY.forEach(function (m) { MOD_N[m[0]] = m[1]; });
   var STAVY = [["zaujemca", "Záujemca"], ["skusobna", "Skúšobná doba"], ["aktivny", "Platiaci"], ["pozastaveny", "Pozastavený"], ["zruseny", "Zrušený"], ["vlastna", "Vlastná kancelária Týpka (neplatí)"]];
   var TYP = { kancelaria: "Realitná kancelária", makler: "Samostatný maklér" };
@@ -16,7 +20,7 @@
   var S = { zak: [], platby: [], filter: { q: "", typ: "", produkt: "", stav: "pozornost_vsetci" } };
   // prepínače v zozname zákazníkov (typ zákazníka a objednaný produkt) – pamätajú si poslednú voľbu
   var F_TYP = [["", "Všetci"], ["kancelaria", "Realitné kancelárie"], ["makler", "Samostatní makléri"]];
-  var F_PRODUKT = [["", "Všetko"], ["skener", "Skener"], ["web", "Web makléra"], ["oboje", "Skener aj web"]];
+  var F_PRODUKT = [["", "Všetko"], ["skener", "Skener"], ["web", "Web makléra"], ["oboje", "Skener aj web"], ["kontakty", "Len kontakty"]];
   try {
     var ulozeny = JSON.parse(localStorage.getItem("sprava-filter") || "{}");
     if (F_TYP.some(function (o) { return o[0] === ulozeny.typ; })) S.filter.typ = ulozeny.typ;
@@ -54,6 +58,7 @@
       if (m === "skener") c += cenaSkenera(pocetOkresov, web);
       else if (m === "web") c += cenaWebov(pocetWebov);
       else if (web && (m === "ponuky" || m === "ai" || (m === "pracovny_email" && sk))) { /* v cene webu / balíka */ }
+      else if (m === "kontakty") { /* zadarmo – platí sa za prevzaté kontakty */ }
       else nezname.push(MOD_N[m] || m);
     });
     return { cena: c, nezname: nezname };
@@ -65,6 +70,7 @@
     if (z.stav === "zruseny") return { t: "Zrušený", c: "sivy", poradie: 9 };
     if (z.stav === "pozastaveny") return { t: "Pozastavený", c: "zly", poradie: 3, pozor: true };
     if (z.stav === "zaujemca") return { t: "Záujemca", c: "info", poradie: 5 };
+    if (z.stav === "aktivny" && lenKontakty(z)) return { t: "Len kontakty z odhadov", c: "dobry", poradie: 7 };
     if (z.stav === "skusobna") {
       if (!z.skusobna_do) return { t: "Skúšobná doba", c: "info", poradie: 4 };
       var d = rozdielDni(z.skusobna_do);
@@ -122,6 +128,7 @@
     var m = h.match(/^#z\/(\d+)$/);
     if (m) { var z = S.zak.find(function (x) { return x.id === Number(m[1]); }); if (z) return detail(z); }
     if (h === "#novy") return detail(null);
+    if (h === "#novy-kontakty") return detail(null, "kontakty");
     prehlad();
   }
 
@@ -138,7 +145,7 @@
 
     $("#sp").innerHTML = zalozky("zak") +
       '<div class="sp-uvod"><div><h1>Zákazníci</h1><p>Kancelárie a samostatní makléri, ktorí používajú Realitný týpek.</p></div>' +
-        '<a class="btn primary sp-novy" href="#novy">+ Nový zákazník</a></div>' +
+        '<span class="sp-novy-tl"><a class="btn" href="#novy-kontakty">+ Kancelária len na kontakty</a><a class="btn primary sp-novy" href="#novy">+ Nový zákazník</a></span></div>' +
       '<div class="sp-dlazdice">' +
         dlazdica("Zákazníci", aktivni.length, "bez zrušených a vlastnej kancelárie") +
         dlazdica("Na skúšku", skusobna.length, skusobna.filter(function (z) { return z.skusobna_do && rozdielDni(z.skusobna_do) <= 7; }).length + " končí do 7 dní") +
@@ -168,7 +175,7 @@
   }
   function maProdukt(z, p) {
     var m = z.moduly || [], sk = m.indexOf("skener") >= 0, web = m.indexOf("web") >= 0;
-    return p === "skener" ? sk : p === "web" ? web : p === "oboje" ? sk && web : true;
+    return p === "skener" ? sk : p === "web" ? web : p === "oboje" ? sk && web : p === "kontakty" ? lenKontakty(z) : true;
   }
   // zákazník prejde filtrom; „okrem“ = prepínač, pre ktorý práve rátame počty
   function prejdeFiltrom(z, okrem) {
@@ -239,12 +246,14 @@
   function pole(id, n, val, typ, extra) {
     return '<label class="field"><span>' + n + '</span><input type="' + (typ || "text") + '" id="' + id + '" value="' + esc(val == null ? "" : val) + '"' + (extra || "") + "></label>";
   }
-  function detail(z) {
+  function detail(z, predvolba) {
     var novy = !z;
     if (novy) {
       var d = dnes();
-      z = { typ: "kancelaria", nazov: "", stav: "skusobna", moduly: ["skener"], okresy: [], pocet_maklerov: 1, skusobna_od: d, skusobna_do: plusDni(d, 14),
-        platba_obdobie: "mesacne", cena_zamrazena_do: plusMes(d, 36) };
+      z = predvolba === "kontakty"
+        ? { typ: "kancelaria", nazov: "", stav: "aktivny", moduly: ["kontakty"], okresy: [], pocet_maklerov: 1, platba_obdobie: "mesacne", mesacna_cena: 0, zdroj: "kontakty z odhadov" }
+        : { typ: "kancelaria", nazov: "", stav: "skusobna", moduly: ["skener"], okresy: [], pocet_maklerov: 1, skusobna_od: d, skusobna_do: plusDni(d, 14),
+            platba_obdobie: "mesacne", cena_zamrazena_do: plusMes(d, 36) };
     }
     var platby = novy ? [] : S.platby.filter(function (p) { return p.zakaznik_id === z.id; });
     var st = novy ? null : stav(z);
@@ -252,7 +261,8 @@
     $("#sp").innerHTML =
       '<a class="sp-spat" href="#">← Všetci zákazníci</a>' +
       '<div class="sp-uvod"><div><h1>' + (novy ? "Nový zákazník" : esc(z.nazov)) + "</h1>" +
-        (novy ? "<p>Vyplň, čo vieš. Zvyšok doplníš neskôr.</p>" : '<p><i class="sp-stav ' + st.c + '">' + esc(st.t) + "</i> · " + TYP[z.typ] + " · zapísaný " + dat(z.vytvorene) + "</p>") + "</div>" +
+        (novy ? (predvolba === "kontakty" ? "<p>Kancelária alebo maklér, ktorý chce len kontakty z odhadov hodnoty: bez skenera a webu, bez mesačného poplatku, platí z kreditu za prevzaté kontakty. " +
+          "Vyplň názov, e-mail a okresy, z ktorých má kontakty dostávať, ulož a pošli mu odkaz na registráciu.</p>" : "<p>Vyplň, čo vieš. Zvyšok doplníš neskôr.</p>") : '<p><i class="sp-stav ' + st.c + '">' + esc(st.t) + "</i> · " + TYP[z.typ] + " · zapísaný " + dat(z.vytvorene) + "</p>") + "</div>" +
         (novy ? "" : '<div class="sp-sumar"><span>Uhradené spolu</span><b>' + eur(uhradene(z.id)) + "</b></div>") + "</div>" +
       (novy ? "" : rychleAkcie(z)) +
       '<form id="sp-form" class="sp-form" novalidate>' +
@@ -271,9 +281,10 @@
           '<div class="sp-moduly">' + MODULY.map(function (m) {
             return '<label class="chk"><input type="checkbox" name="mod" value="' + m[0] + '"' + ((z.moduly || []).indexOf(m[0]) >= 0 ? " checked" : "") + ">" + m[1] + "</label>";
           }).join("") + '</div><p class="sp-pozn">Kataster a mapa, Kalendár a Chat sú zadarmo pre každého.</p>' +
-          '<div class="sp-okresy"><span class="sp-okresy-l">Okresy pre skener</span><div id="z-okresy" class="sp-okr-zoz"></div>' +
+          '<div class="sp-okresy"><span class="sp-okresy-l">' + (lenKontakty(z) ? "Okresy, z ktorých dostáva kontakty z odhadov" : "Okresy (skener a kontakty z odhadov)") + '</span><div id="z-okresy" class="sp-okr-zoz"></div>' +
             '<button type="button" class="btn ghost sp-okr-plus" id="z-okr-plus"><b aria-hidden="true">+</b> Pridať ďalší okres</button>' +
-            '<p class="sp-pozn">' + (z.stav === "vlastna" ? "Okresy určujú, ktoré inzeráty kancelária vidí v skeneri." : "Prvý je hlavný okres, každý ďalší je +2 € mesačne.") + "</p></div>" +
+            '<p class="sp-pozn">' + (lenKontakty(z) ? "Kontakty na predaj uvidí len z týchto okresov (a len z tých, ktoré máš zapnuté v Kontaktoch na predaj)." :
+              z.stav === "vlastna" ? "Okresy určujú, ktoré inzeráty kancelária vidí v skeneri." : "Prvý je hlavný okres, každý ďalší je +2 € mesačne. Z rovnakých okresov kancelária vidí aj kontakty z odhadov.") + "</p></div>" +
           '<div class="form-grid">' +
             pole("z-pocet", "Počet maklérov", z.pocet_maklerov, "number", ' min="0" step="1"') +
             '<label class="field" id="z-weby-pole"><span>Počet osobných webov maklérov</span><input type="number" id="z-weby" min="1" step="1" value="' + esc(z.pocet_webov || 1) + '"></label>' +
@@ -516,7 +527,10 @@
     var st = z.registracia_poslat ? "E-mail s odkazom na registráciu čaká na odoslanie (odíde do pár minút)." :
       z.registracia_email ? "E-mail s odkazom na registráciu odišiel " + dat(z.registracia_email) + (z.registracia_do ? ", odkaz platí do " + dat(z.registracia_do) : "") + "." :
       "E-mail s odkazom na registráciu zatiaľ neodišiel.";
-    return h + "<p>" + st + " Cez odkaz si zákazník sám nastaví heslo, telefón a najviac 3 okresy a hneď mu začne 14-dňová skúšobná doba.</p>" +
+    return h + "<p>" + st + (z.stav === "aktivny"
+        ? " Cez odkaz si zákazník sám nastaví heslo a telefón" + ((z.moduly || []).indexOf("skener") >= 0 ? " a okresy" : "") + " a môže hneď začať – bez skúšobnej doby." +
+          (lenKontakty(z) ? " Okresy sa prenesú zo zákazníka." : "")
+        : " Cez odkaz si zákazník sám nastaví heslo, telefón a najviac 3 okresy a hneď mu začne 14-dňová skúšobná doba.") + "</p>" +
       (z.email && z.stav !== "zruseny" ? '<div class="sp-akcie" style="margin:0"><button type="button" class="btn" id="z-reg">' +
         (z.registracia_email || z.registracia_poslat ? "Poslať odkaz znova" : "Poslať odkaz na registráciu") + "</button></div>" :
         "<p>" + (z.stav === "zruseny" ? "Zákazník je zrušený." : "Na poslanie odkazu treba vyplniť e-mail.") + "</p>") + "</section>";

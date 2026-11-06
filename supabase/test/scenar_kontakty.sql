@@ -10,7 +10,7 @@
 insert into auth.users (id, email) values (:'A','a@alpha.sk'), (:'K','k@alpha.sk'), (:'B','b@inak.sk'), (:'C','c@tretia.sk') on conflict do nothing;
 insert into makleri (id, meno, email, rola, aktivny, pristup, telefon) values
   (:'A','Martin Alpha','a@alpha.sk','admin',true,'{}','0915 140 759'),
-  (:'K','Kristián Alpha','k@alpha.sk','makler',true,'{inzeraty,nehnutelnosti,odhady}','0905 111 222') on conflict do nothing;
+  (:'K','Kristián Alpha','k@alpha.sk','makler',true,'{inzeraty,nehnutelnosti,odhady,kontakty}','0905 111 222') on conflict do nothing;   -- kontakty = smie preberať (120)
 insert into hlavni_spravcovia (user_id) values (:'A') on conflict do nothing;
 update kontakty_nastavenie set zaloha_makler = :'A', ceny_okresy = '{}' where id = 1;   -- ceny okresov (119) skúša časť 11
 update zakaznici set stav = 'vlastna' where id in (select zakaznik_id from kancelarie where id = 1);
@@ -243,3 +243,34 @@ select r->'Levoča'->0->>'c' levoca, r->'Spišská Nová Ves'->0->>'c' snv, r->'
 select kontakty_ceny_podla_medianu(5);                                                 -- → ERROR Deliteľ musí byť 10 až 200.
 reset role; reset request.jwt.claim.sub;
 select ceny_okresy->'Spišská Nová Ves'->0->>'c' snv_ulozene from kontakty_nastavenie;  -- → 60
+
+\echo '=== 13. právo preberať kontakty (120) a účet len na kontakty'
+update kontakty_nastavenie set okresy = '{Spišská Nová Ves,Poprad}', ceny_okresy = '{}';
+update makleri set pristup = '{inzeraty,nehnutelnosti,odhady}' where id = :'K';
+select :'K' = any(_kontakty_kupci('Spišská Nová Ves')) k_dostane_push, :'A' = any(_kontakty_kupci('Spišská Nová Ves')) a_dostane;   -- → f, t
+set role anon;
+select odhad_ziadost(:'BYT'::jsonb || '{"email":"pravo@example.sk","ulica":"Právna"}', pg_temp.pow(28000000))->>'ok';  -- → true
+reset role;
+select id as "T6" from odhady_hodnoty where email = 'pravo@example.sk' \gset
+set role authenticated; set request.jwt.claim.sub = :'K';
+select kontakty_na_predaj()->>'smiem' k_smie;                                         -- → false
+select kontakt_prevziat(:T6);                                                          -- → ERROR Platené kontakty preberá administrátor kancelárie…
+set request.jwt.claim.sub = :'A';
+select nastavit_pristup_maklera(:'K', '{inzeraty,nehnutelnosti,odhady,kontakty}');
+select nastavit_pristup_maklera(:'K', '{nieco}');                                      -- → ERROR Neznáma sekcia.
+set request.jwt.claim.sub = :'K';
+select kontakty_na_predaj()->>'smiem' k_smie_teraz;                                   -- → true
+reset role; reset request.jwt.claim.sub;
+select :'K' = any(_kontakty_kupci('Spišská Nová Ves')) k_dostane_push;                -- → t
+\echo '--- účet len na kontakty: registrácia bez skúšobnej doby, okresy zo Správy, len sekcia Odhady'
+\set D '00000000-0000-0000-0000-0000000000d1'
+insert into auth.users (id, email) values (:'D', 'd@kontakty.sk') on conflict do nothing;
+insert into zakaznici (id, typ, nazov, email, stav, moduly, okresy, mesacna_cena, registracia_hash, registracia_do) overriding system value
+values (902, 'kancelaria', 'Kontaktová RK', 'd@kontakty.sk', 'aktivny', '{kontakty}', '{Poprad}', 0, 'hash-kontakty', now() + interval '1 day');
+select _registracia_dokoncit('hash-kontakty', :'D', 'Dana Kontaktová', '0905 777 888', 'Kontaktová RK', '{}') ->> 'skusobna_do' skusobna;  -- → null
+select k.okresy, k.sekcie, z.stav, _kancelaria_platna(k.id) platna, k.id in (select _kontakty_kancelarie('Poprad')) kupuje
+  from kancelarie k join zakaznici z on z.id = k.zakaznik_id where z.id = 902;     -- → {Poprad}, {chat,kalendar,odhady}, aktivny, t, t
+set role authenticated; set request.jwt.claim.sub = :'D';
+select r->'okresy' okresy, r->>'smiem' smie, r->>'zadarmo' zadarmo from (select kontakty_na_predaj() r) x;   -- → ["Poprad"], true, 2
+select ma_pristup('inzeraty') skener, ma_pristup('web') web;                          -- → f, f
+reset role; reset request.jwt.claim.sub;

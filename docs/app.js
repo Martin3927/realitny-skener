@@ -1672,7 +1672,7 @@
         // klik na sekciu v hlavičke vráti na zoznam (nie na naposledy otvorený detail)
         if (t.dataset.tab === "nehnutelnosti" && !S.ponukaEdit) { S.ponukaDetail = null; S.ponukaExport = false; if (S.tab === "nehnutelnosti") { zatvorPanely(); history.pushState({ tab: "nehnutelnosti" }, "", "#nehnutelnosti"); vykresliNehnutelnosti(); window.scrollTo(0, 0); return; } }
         if (t.dataset.tab === "provizie") S.provForm = null;
-        if (t.dataset.tab === "odhady") { S.odhadDetail = null; S.odhTrh = false; if (S.tab === "odhady") { zatvorPanely(); history.pushState({ tab: "odhady" }, "", "#odhady"); vykresliOdhady(); window.scrollTo(0, 0); return; } }
+        if (t.dataset.tab === "odhady") { S.odhadDetail = null; S.odhTrh = null; if (S.tab === "odhady") { zatvorPanely(); history.pushState({ tab: "odhady" }, "", "#odhady"); vykresliOdhady(); window.scrollTo(0, 0); return; } }
         if (t.dataset.tab === "historia" && S.tab === "historia") { zatvorPanely(); vykresliHistoriu(); window.scrollTo(0, 0); return; }
         if (t.dataset.tab === "klienti" && !S.dopytEdit) { S.dopytDetail = null; S.predDetail = null; if (S.tab === "klienti") { zatvorPanely(); history.pushState({ tab: "klienti" }, "", "#klienti"); vykresliKlientov(); window.scrollTo(0, 0); return; } }
         prejdi(t.dataset.tab); return;
@@ -3370,7 +3370,9 @@
           '<label class="toggle"><input type="checkbox" data-f="aktivny"' + (m.aktivny ? " checked" : "") + (ja ? " disabled" : "") + "> Aktívny</label>" +
           '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label>" +
           '<label class="toggle" data-nestrazit title="Môže zverejniť svoje ponuky na Facebook a Instagram kancelárie. Ukladá sa hneď."><input type="checkbox" data-pravo="siete"' + (m.rola === "admin" || (m.pristup || []).indexOf("siete") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Zverejňuje na FB a IG</label>" +
-          '<label class="toggle" data-nestrazit title="AI asistent, ✨ Doladiť s AI pri príspevkoch a ✨ Návrh hovoru v skeneri. Hodnotenie AI v skeneri vidia všetci. Ukladá sa hneď."><input type="checkbox" data-pravo="asistent"' + (m.rola === "admin" || (m.pristup || []).indexOf("asistent") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Používa AI</label></div>" +
+          '<label class="toggle" data-nestrazit title="AI asistent, ✨ Doladiť s AI pri príspevkoch a ✨ Návrh hovoru v skeneri. Hodnotenie AI v skeneri vidia všetci. Ukladá sa hneď."><input type="checkbox" data-pravo="asistent"' + (m.rola === "admin" || (m.pristup || []).indexOf("asistent") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Používa AI</label>" +
+          (licDovoli("odhady") ? '<label class="toggle" data-nestrazit title="Môže preberať platené kontakty z odhadov hodnoty (Odhady → Kontakty na predaj) – platí sa z kreditu kancelárie. Dostáva aj upozornenia na nové kontakty. Ukladá sa hneď."><input type="checkbox" data-pravo="kontakty"' +
+            (m.rola === "admin" || (m.pristup || []).indexOf("kontakty") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Preberá platené kontakty</label>" : "") + "</div>" +
           '<div class="mk-pristup"><span class="meta">Vidí sekcie</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor vidí všetko vrátane Výkonu a Maklérov.</span>' :
             SEKCIE.filter(function (x) { return x[0] !== "asistent"; }).map(function (x) { return '<button type="button" class="cip" data-pristup="' + x[0] + '" aria-pressed="' + ((m.pristup || []).indexOf(x[0]) >= 0) + '">' + x[1] + "</button>"; }).join("")) + "</div></div>" +
           '<div class="mk-heslo"><span class="meta">Heslo</span>' + bunkaHeslo(m) + "</div>" +
@@ -3484,12 +3486,14 @@
     });
     // práva makléra (FB a IG kancelárie, AI) – ukladajú sa hneď (ako sekcie), nie tlačidlom Uložiť
     var PRAVA = { siete: [" teraz môže zverejňovať svoje ponuky na Facebook a Instagram kancelárie.", " už nemôže zverejňovať na Facebook a Instagram kancelárie."],
-      asistent: [" teraz môže používať AI (asistent, texty, návrhy hovorov).", " už nemôže používať AI (hodnotenie AI v skeneri vidí ďalej)."] };
+      asistent: [" teraz môže používať AI (asistent, texty, návrhy hovorov).", " už nemôže používať AI (hodnotenie AI v skeneri vidí ďalej)."],
+      kontakty: [" teraz môže preberať platené kontakty z odhadov (platí sa z kreditu kancelárie) a dostáva upozornenia na nové.", " už nemôže preberať platené kontakty – vidí ich, ale prevziať ich musí administrátor."] };
     el.querySelectorAll("[data-pravo]").forEach(function (c) {
       c.onchange = async function () {
         var id = c.closest("[data-m]").dataset.m, m = S.mById[id], pravo = c.dataset.pravo; if (!m || !PRAVA[pravo]) return;
         var nove = (m.pristup || []).filter(function (x) { return x !== pravo; });
         if (c.checked) nove.push(pravo);
+        if (c.checked && pravo === "kontakty" && nove.indexOf("odhady") < 0) nove.push("odhady");   // bez sekcie Odhady by kontakty nevidel
         c.disabled = true;
         try { await rpc("nastavit_pristup_maklera", { p_id: id, p_pristup: nove }); m.pristup = nove;
           toast((m.meno || "Maklér") + PRAVA[pravo][c.checked ? 0 : 1]); }
@@ -7255,6 +7259,8 @@
       return;
     }
     if (S.odhadDetail) return vykresliOdhadDetail();
+    // kancelária bez vlastných žiadostí (napr. účet len na kontakty) otvorí rovno Kontakty na predaj
+    if (S.odhTrh == null && trhAktivny() && S.odhady && !S.odhady.length) S.odhTrh = true;
     if (S.odhTrh) return vykresliTrh();
     if (Date.now() - (S.odhadyCas || 0) > 60000) nacitajOdhadyHodnoty(true).then(function () { if (S.tab === "odhady" && !S.odhadDetail && !$(".odh-detail")) vykresliOdhady(); });
     if (S.trh === undefined) nacitajTrh(true).then(function () { if (S.tab === "odhady" && !S.odhadDetail && !S.odhTrh && trhAktivny()) vykresliOdhady(); });
@@ -7352,11 +7358,14 @@
       '<p class="odh-popis">' + (okresy ? "Žiadosti klientov o odhad hodnoty z okresov <b>" + esc(okresy) + "</b>. " : "") +
       "Kým kontakt neprevezmete, vidíte len údaje o nehnuteľnosti. Meno, telefón, e-mail a adresu klienta dostane kancelária, ktorá klikne <b>Prevziať</b> ako prvá – " +
       "potom je to bežná žiadosť o odhad v zozname vašich žiadostí. Cena je s DPH a časom klesá. Zlý kontakt môžete do " + (T.reklamacia_h || 48) + " hodín reklamovať.</p>" +
+      (T.smiem === false ? '<p class="trh-pozn">Platené kontakty preberá administrátor kancelárie. Ak ich chcete preberať aj vy, požiadajte ho – zapne vám to v časti Tím.</p>' : "") +
       '<div class="trh-kredit"><div><small>Kredit kancelárie</small><b>' + trhEur(kredit) + "</b></div>" +
         (zad ? "<div><small>Ešte zadarmo</small><b>" + trhKontakty(zad) + "</b></div>" : "") +
         '<a class="btn" href="mailto:info@realitnytypek.sk?subject=' + encodeURIComponent("Dobitie kreditu na kontakty – " + nazovKancelarie()) + '">Dobiť kredit</a></div>';
     h += ponuky.length ? '<div class="trh-zoznam">' + ponuky.map(function (p) {
       var c = Number(p.cena) || 0, d = p.dalsia, kup = zad ? "Prevziať zadarmo" : "Prevziať za " + c + " €";
+      var tlacidlo = T.smiem === false ? '<span class="trh-nesmie">Preberá administrátor</span>' :
+        '<button type="button" class="btn primary" data-trh-kup="' + p.id + '" data-cena="' + c + '">' + kup + "</button>";
       var cipy = [p.stav ? '<span class="odh-znak">' + esc(p.stav) + "</span>" : "",
         p.kedy_predat === "Čo najskôr" ? '<span class="odh-znak horuci">🔥 Chce predať čo najskôr</span>' : p.kedy_predat && p.kedy_predat !== "Zatiaľ len zisťujem" ? '<span class="odh-znak">Predať: ' + esc(p.kedy_predat.toLowerCase()) + "</span>" : "",
         /výkup/i.test(p.dovod || "") ? '<span class="odh-znak zlaty">Záujem o výkup</span>' : "",
@@ -7369,7 +7378,7 @@
           '<span class="meta"><span>' + esc(ago(p.vytvorene)) + "</span>" + (p.cast_obce ? "<span>" + esc(p.cast_obce) + "</span>" : "") + "</span>" +
           (cipy ? '<span class="odh-cipy">' + cipy + "</span>" : "") + (detaily ? '<span class="trh-detaily">' + esc(detaily) + "</span>" : "") + odh + "</span>" +
         '<span class="trh-cena"><b>' + (zad ? "0 €" : c + " €") + "</b><small>" + (zad ? "zadarmo (inak " + c + " € s DPH)" : "s DPH" + (d && d.c ? " · " + trhOdpocet(d.kedy) + " " + d.c + " €" : "")) + "</small>" +
-          '<button type="button" class="btn primary" data-trh-kup="' + p.id + '" data-cena="' + c + '">' + kup + "</button></span></div>";
+          tlacidlo + "</span></div>";
     }).join("") + "</div>" :
       '<p class="meta odh-prazdne">Teraz nie je na predaj žiadny kontakt. Keď príde nová žiadosť o odhad z vašich okresov, dostanete upozornenie do mobilu – kto ju prevezme prvý, ten ju má.</p>';
     h += "</div>";
