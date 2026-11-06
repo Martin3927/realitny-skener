@@ -158,3 +158,27 @@ a.sp-riadok:hover { background: var(--surface-2) }
 .sp-kniznica input:checked + img, .sp-kniznica input:checked + .sp-kn-bez { border-color: var(--gold-strong) }
 .sp-kniznica input:focus-visible + img, .sp-kniznica input:focus-visible + .sp-kn-bez { outline: 2px solid var(--ink); outline-offset: 2px }
 @media (max-width: 520px) { .sp-cl { grid-template-columns: 84px minmax(0, 1fr) } .sp-cl img, .sp-cl-bez { width: 84px; height: 60px } .sp-cl .sp-stav { grid-column: 2 } }
+
+/* kontakty na predaj */
+.sp-kontakty { margin-top: 14px }
+.sp-ko-zoz { display: grid }
+.sp-ko-r { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 2px; border-top: 1px solid var(--line) }
+.sp-ko-r:first-child { border-top: 0 }
+.sp-ko-r .sp-meno small b { color: var(--ink) }
+.sp-ko-kl { color: var(--ink) !important }
+.sp-ko-akc { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end }
+.sp-ko-kredit { font-size: 17px; font-variant-numeric: tabular-nums; margin-right: 6px }
+.sp-ko-okresy { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 10px; max-height: 300px; overflow: auto; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2) }
+.sp-ko-okresy label { display: flex; gap: 8px; align-items: center; font-size: 13.5px; cursor: pointer; padding: 3px 2px }
+.sp-ko-okresy label[hidden] { display: none }
+.sp-ko-okresy input { width: 17px; height: 17px; accent-color: var(--ink); flex: none }
+.sp-ko-okresy small { color: var(--good, #1b7a4b); font-weight: 700; font-size: 11.5px }
+#ko-hladaj { max-width: 320px }
+.sp-ko-ceny { display: grid; gap: 8px }
+.sp-ko-cena { display: grid; grid-template-columns: 140px 140px auto; gap: 8px; align-items: end }
+.sp-ko-cisla { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px }
+@media (max-width: 620px) {
+  .sp-ko-r { grid-template-columns: 1fr }
+  .sp-ko-akc { justify-content: flex-start }
+  .sp-ko-cena { grid-template-columns: 1fr 1fr auto }
+}

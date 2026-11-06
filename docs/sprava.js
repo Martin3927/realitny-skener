@@ -115,6 +115,7 @@
   function trasa() {
     var h = location.hash;
     if (h === "#clanky") return clankyPrehlad();
+    if (h === "#kontakty") return kontaktyPrehlad();
     if (h === "#clanok-novy") return clanokEditor(null);
     var mc = h.match(/^#clanok\/(\d+)$/);
     if (mc) return clanokEditor(Number(mc[1]));
@@ -561,7 +562,8 @@
   function zalozky(akt) {
     return '<nav class="sp-zalozky" aria-label="Časti správy">' +
       '<a href="#"' + (akt === "zak" ? ' aria-current="page"' : "") + ">Zákazníci</a>" +
-      '<a href="#clanky"' + (akt === "cl" ? ' aria-current="page"' : "") + ">Články na portáli</a></nav>";
+      '<a href="#clanky"' + (akt === "cl" ? ' aria-current="page"' : "") + ">Články na portáli</a>" +
+      '<a href="#kontakty"' + (akt === "ko" ? ' aria-current="page"' : "") + ">Kontakty na predaj</a></nav>";
   }
   function fotoClanku(f, maly) {
     if (!f) return "";
@@ -646,6 +648,165 @@
       if (r.error) return toast(chybaText(r.error), true);
       await nacitajClanky(); toast("Článok je zmazaný."); location.hash = "#clanky";
     });
+  }
+
+  // ---------------------------------------------------------------- kontakty na predaj (migrácia 117)
+  // žiadosti o odhad z vybraných okresov idú „na predaj“ kanceláriám: nastavenie, čo je na predaji, reklamácie, kredit kancelárií
+  function cas(s) { if (!s) return "–"; var d = new Date(s); return d.getDate() + ". " + (d.getMonth() + 1) + ". " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+  function odpocet(kedy) {
+    var ms = new Date(kedy) - Date.now(); if (ms <= 60000) return "o chvíľu";
+    var h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+    return "o " + (h ? h + " h" + (m ? " " : "") : "") + (m ? m + " min" : "");
+  }
+  async function kontaktyPrehlad() {
+    if (!$(".sp-kontakty")) $("#sp").innerHTML = zalozky("ko") + '<div class="boot">Načítavam kontakty…</div>';
+    var r = await sb.rpc("kontakty_sprava");
+    if (r.error) { $("#sp").innerHTML = zalozky("ko") + '<p class="sp-nic">Kontakty sa nepodarilo načítať: ' + esc(chybaText(r.error)) + "</p>"; return; }
+    var D = r.data, N = D.nastavenie, vybrane = {};
+    (N.okresy || []).forEach(function (o) { vybrane[o] = true; });
+    var naPredaj = D.trh.filter(function (t) { return !t.predane; }), predane = D.trh.filter(function (t) { return t.predane; });
+    var cakaRekl = D.reklamacie.filter(function (x) { return x.stav === "caka"; });
+    var trzba = D.kancelarie.reduce(function (s, k) { return s + Number(k.zaplatene || 0); }, 0);
+    var kredity = D.kancelarie.reduce(function (s, k) { return s + Number(k.kredit || 0); }, 0);
+    var kupene = predane.filter(function (t) { return t.ako === "nakup"; });
+
+    var h = zalozky("ko") +
+      '<div class="sp-uvod"><div><h1>Kontakty na predaj</h1><p>Žiadosti o odhad z vybraných okresov nedostane maklér hneď – kancelárie s týmto okresom vidia náhľad bez osobných údajov ' +
+        "a kontakt dostane tá, ktorá ho prevezme prvá. Cena klesá, prvé kontakty sú zadarmo, potom sa platí z kreditu, ktorý pripíšeš po platbe. " +
+        "Ak ho nikto neprevezme, dostane ho záložný maklér.</p></div></div>" +
+      '<div class="sp-dlazdice sp-kontakty">' +
+        dlazdica("Na predaj teraz", naPredaj.length, (N.okresy || []).length ? (N.okresy || []).length + " " + ((N.okresy || []).length === 1 ? "okres" : (N.okresy || []).length < 5 ? "okresy" : "okresov") + " zapnuté" : "predaj je vypnutý", (N.okresy || []).length ? "" : "pozor") +
+        dlazdica("Prevzaté (60 dní)", kupene.length, predane.length - kupene.length + " dostal záložný maklér") +
+        dlazdica("Reklamácie", cakaRekl.length, "čakajú na vybavenie", cakaRekl.length ? "pozor" : "") +
+        dlazdica("Zaplatené za kontakty", eur(trzba), "spolu, po vrátených reklamáciách") +
+        dlazdica("Kredit kancelárií", eur(kredity), "nevyčerpaný") +
+      "</div>";
+
+    // reklamácie
+    if (D.reklamacie.length) h += '<section class="sp-box"><h3>Reklamácie</h3><div class="sp-ko-zoz">' + D.reklamacie.map(function (x) {
+      return '<div class="sp-ko-r"><span class="sp-meno"><b>' + esc(x.nazov || "Kontakt") + "</b><small>" + esc(x.kancelaria || "") + (x.kto ? " · " + esc(x.kto) : "") +
+          " · prevzaté " + cas(x.predane) + " za " + (x.zadarmo ? "0 € (zadarmo)" : eur(x.cena)) + "</small>" +
+          "<small><b>" + esc(x.dovod) + "</b>" + (x.text ? " – " + esc(x.text) : "") + "</small>" +
+          '<small class="sp-ko-kl">Klient: ' + esc([x.meno, x.telefon, x.email].filter(Boolean).join(", ")) + "</small></span>" +
+        (x.stav === "caka" ? '<span class="sp-ko-akc"><button type="button" class="btn primary" data-rekl-uznat="' + x.id + '">Uznať</button>' +
+          '<button type="button" class="btn ghost" data-rekl-zamietnut="' + x.id + '">Zamietnuť</button></span>'
+          : '<i class="sp-stav ' + (x.stav === "uznana" ? "dobry" : "sivy") + '">' + (x.stav === "uznana" ? "Uznaná" : "Zamietnutá") + (x.odpoved ? " – " + esc(x.odpoved) : "") + "</i>") + "</div>";
+    }).join("") + "</div></section>";
+
+    // na predaj teraz
+    h += '<section class="sp-box"><h3>Na predaj teraz</h3>' + (naPredaj.length ? '<div class="sp-ko-zoz">' + naPredaj.map(function (t) {
+      return '<div class="sp-ko-r"><span class="sp-meno"><b>' + esc(t.nazov || "") + "</b><small>" + esc(t.dovod || "") + " · prišla " + cas(t.vytvorene) +
+          (new Date(t.od) > Date.now() ? " · cena beží od " + cas(t.od) : "") + " · " + t.kupci + " " + (t.kupci === 1 ? "kancelária ju vidí" : t.kupci < 5 ? "kancelárie ju vidia" : "kancelárií ju vidí") + "</small>" +
+          "<small>Teraz <b>" + eur(t.cena) + "</b>" + (t.dalsia ? " · " + odpocet(t.dalsia.kedy) + " " + eur(t.dalsia.c) : "") + " · záložnému maklérovi " + cas(t.koniec) + "</small></span>" +
+        '<span class="sp-ko-akc"><button type="button" class="btn ghost" data-zaloha="' + t.id + '">Dať záložnému maklérovi</button></span></div>';
+    }).join("") + "</div>" : '<p class="sp-pozn">Teraz nie je na predaj nič.</p>') + "</section>";
+
+    // kancelárie a kredit
+    h += '<section class="sp-box"><h3>Kancelárie a kredit</h3><div class="sp-ko-zoz">' + D.kancelarie.map(function (k) {
+      return '<div class="sp-ko-r"><span class="sp-meno"><b>' + esc(k.nazov) + (k.aktivna ? "" : " (neaktívna)") + "</b><small>" + esc((k.okresy || []).join(", ") || "bez okresov") + "</small>" +
+          "<small>Prevzaté " + k.kupene + " · zaplatené " + eur(k.zaplatene) + " · dobité " + eur(k.dobite) + (Number(N.zadarmo) ? " · zadarmo ešte " + k.zadarmo : "") + "</small></span>" +
+        '<span class="sp-ko-akc"><b class="sp-ko-kredit">' + eur(k.kredit) + '</b><button type="button" class="btn" data-dobit="' + k.id + '" data-nazov="' + esc(k.nazov) + '">Pripísať kredit</button></span></div>';
+    }).join("") + "</div></section>";
+
+    // nastavenie
+    var okresy = D.vsetky_okresy || [];
+    h += '<form class="sp-box sp-ko-nast" id="ko-nast" novalidate><h3>Nastavenie</h3>' +
+      '<div class="sp-okresy"><span class="sp-okresy-l">Okresy, v ktorých sa žiadosti o odhad predávajú (ostatné idú maklérovi z obce ako doteraz)</span>' +
+        '<input type="search" id="ko-hladaj" placeholder="Hľadať okres…">' +
+        '<div class="sp-ko-okresy" id="ko-okresy">' + okresy.map(function (o) {
+          var n = (D.pokrytie || {})[o] || 0;
+          return '<label data-okres="' + esc(o.toLowerCase()) + '"><input type="checkbox" value="' + esc(o) + '"' + (vybrane[o] ? " checked" : "") + "><span>" + esc(o) +
+            (n ? " <small>" + n + " " + (n === 1 ? "kancelária" : n < 5 ? "kancelárie" : "kancelárií") + "</small>" : "") + "</span></label>";
+        }).join("") + "</div>" +
+        '<p class="sp-pozn">Okres funguje len tam, kde ho má v nastavení aspoň jedna aktívna kancelária s odhadmi – inak žiadosť ide po starom maklérovi.</p></div>' +
+      '<div class="sp-okresy"><span class="sp-okresy-l">Cena kontaktu s DPH – po koľkých hodinách koľko €</span><div class="sp-ko-ceny" id="ko-ceny">' +
+        (N.ceny || []).map(cenaRiadok).join("") + '</div><button type="button" class="btn ghost sp-okr-plus" id="ko-cena-plus"><b>+</b> Ďalšie zlacnenie</button>' +
+        '<p class="sp-pozn">Prvá cena platí od 0 hodín. Keď žiadosť príde v noci (21:00 – 7:00), hodiny sa rátajú od 7:00.</p></div>' +
+      '<div class="sp-ko-cisla">' +
+        '<label class="field"><span>Záložnému maklérovi po (hodinách)</span><input id="ko-koniec" type="number" min="1" max="336" value="' + esc(N.koniec_h) + '"></label>' +
+        '<label class="field"><span>Kontaktov zadarmo pre kanceláriu</span><input id="ko-zadarmo" type="number" min="0" max="20" value="' + esc(N.zadarmo) + '"></label>' +
+        '<label class="field"><span>Reklamácia do (hodín)</span><input id="ko-rekl" type="number" min="1" max="336" value="' + esc(N.reklamacia_h) + '"></label>' +
+        '<label class="field"><span>Záložný maklér</span><select id="ko-zaloha"><option value="">Hlavný správca</option>' +
+          (D.zalohy || []).map(function (m) { return '<option value="' + m.id + '"' + (m.id === N.zaloha_makler ? " selected" : "") + ">" + esc(m.meno) + "</option>"; }).join("") + "</select></label>" +
+      "</div>" +
+      '<div class="sp-akcie" style="margin:0"><button type="submit" class="btn primary">Uložiť nastavenie</button>' +
+        (N.upravene ? '<span class="sp-pozn">Naposledy zmenené ' + cas(N.upravene) + "</span>" : "") + "</div>" +
+      '<p class="sp-pozn">Zmena cien platí pre nové žiadosti – tie, ktoré už sú na predaji, dobehnú s pôvodnými cenami.</p></form>';
+
+    // predané a pohyby
+    if (predane.length) h += '<section class="sp-box"><h3>Prevzaté za 60 dní</h3><div class="sp-ko-zoz">' + predane.map(function (t) {
+      return '<div class="sp-ko-r"><span class="sp-meno"><b>' + esc(t.nazov || "") + "</b><small>" + (t.ako === "zaloha" ? "Záložný maklér" : esc(t.kancelaria || "")) +
+          (t.kto ? " · " + esc(t.kto) : "") + " · " + cas(t.predane) + (t.reklamacia ? " · reklamácia: " + (t.reklamacia === "caka" ? "čaká" : t.reklamacia === "uznana" ? "uznaná" : "zamietnutá") : "") + "</small></span>" +
+        '<span class="sp-ko-akc"><b>' + (t.ako === "zaloha" ? "–" : t.zadarmo ? "zadarmo" : eur(t.predane_cena)) + "</b></span></div>";
+    }).join("") + "</div></section>";
+    if (D.pohyby.length) h += '<section class="sp-box"><h3>Pohyby kreditu</h3><div class="sp-pl-zoznam">' + D.pohyby.map(function (p) {
+      var n = { dobitie: "Dobitie", nakup: "Prevzatý kontakt", vratenie: "Vrátené", oprava: "Oprava" }[p.druh] || p.druh;
+      return '<div class="sp-pl"><span class="sp-pl-d">' + cas(p.vytvorene) + "</span><b>" + (p.zadarmo && !Number(p.suma) ? (p.druh === "vratenie" ? "+1 zadarmo" : "zadarmo") : (Number(p.suma) > 0 ? "+" : "") + eur(p.suma)) + "</b>" +
+        "<span>" + esc(p.kancelaria || "") + " · " + n + (p.poznamka ? " · " + esc(p.poznamka) : "") + "</span><span>" + esc(p.kto || "") + "</span></div>";
+    }).join("") + "</div></section>";
+
+    $("#sp").innerHTML = h;
+    var znova = function () { kontaktyPrehlad(); };
+    $("#ko-hladaj").addEventListener("input", function () {
+      var q = this.value.trim().toLowerCase();
+      $("#ko-okresy").querySelectorAll("label").forEach(function (l) { l.hidden = q && l.dataset.okres.indexOf(q) < 0 && !l.querySelector("input").checked; });
+    });
+    $("#ko-cena-plus").addEventListener("click", function () {
+      var rows = $("#ko-ceny").querySelectorAll(".sp-ko-cena"), last = rows[rows.length - 1];
+      var h0 = last ? Number(last.querySelector("[name=h]").value) + 12 : 0, c0 = last ? Math.max(1, Math.round(Number(last.querySelector("[name=c]").value) / 2)) : 50;
+      $("#ko-ceny").insertAdjacentHTML("beforeend", cenaRiadok({ h: h0, c: c0 }));
+    });
+    $("#ko-ceny").addEventListener("click", function (e) { var x = e.target.closest("[data-cena-x]"); if (x && $("#ko-ceny").children.length > 1) x.closest(".sp-ko-cena").remove(); });
+    $("#ko-nast").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var p = {
+        okresy: Array.from($("#ko-okresy").querySelectorAll("input:checked")).map(function (i) { return i.value; }),
+        ceny: Array.from($("#ko-ceny").querySelectorAll(".sp-ko-cena")).map(function (r) { return { h: r.querySelector("[name=h]").value.trim(), c: r.querySelector("[name=c]").value.trim() }; }),
+        koniec_h: $("#ko-koniec").value, zadarmo: $("#ko-zadarmo").value, reklamacia_h: $("#ko-rekl").value, zaloha_makler: $("#ko-zaloha").value,
+      };
+      var btn = this.querySelector("[type=submit]"); btn.disabled = true;
+      var x = await sb.rpc("kontakty_nastavit", { p: p });
+      btn.disabled = false;
+      if (x.error) return toast(chybaText(x.error), true);
+      toast(p.okresy.length ? "Uložené – kontakty sa predávajú v " + p.okresy.length + " " + (p.okresy.length === 1 ? "okrese" : "okresoch") + "." : "Uložené – predaj kontaktov je vypnutý.");
+      znova();
+    });
+    $("#sp").querySelectorAll("[data-dobit]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        var suma = prompt("Koľko € pripísať kancelárii " + b.dataset.nazov + "? (s DPH; mínus = oprava)", "100");
+        if (suma === null) return;
+        suma = Number(String(suma).replace(",", ".").replace(/\s|€/g, ""));
+        if (!suma) return toast("Zadaj sumu.", true);
+        var pozn = prompt("Poznámka (napr. číslo faktúry alebo platby):", "") || "";
+        var x = await sb.rpc("kontakty_dobit", { p_kancelaria: Number(b.dataset.dobit), p_suma: suma, p_poznamka: pozn });
+        if (x.error) return toast(chybaText(x.error), true);
+        toast("Kredit kancelárie je teraz " + eur(x.data) + "."); znova();
+      });
+    });
+    $("#sp").querySelectorAll("[data-zaloha]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        if (!confirm("Dať kontakt hneď záložnému maklérovi? Z predaja zmizne a nikto zaň nezaplatí.")) return;
+        var x = await sb.rpc("kontakt_odovzdat_zalohe", { p_id: Number(b.dataset.zaloha) });
+        if (x.error) return toast(chybaText(x.error), true);
+        toast("Kontakt dostal záložný maklér."); znova();
+      });
+    });
+    $("#sp").querySelectorAll("[data-rekl-uznat],[data-rekl-zamietnut]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        var uznat = !!b.dataset.reklUznat, id = Number(b.dataset.reklUznat || b.dataset.reklZamietnut);
+        var odp = prompt(uznat ? "Uznať reklamáciu – kancelárii sa vráti kredit (alebo kontakt zadarmo). Poznámka pre kanceláriu (nepovinné):" :
+          "Prečo reklamáciu zamietaš? Kancelária uvidí tvoju odpoveď.", "");
+        if (odp === null) return;
+        var x = await sb.rpc("kontakt_reklamacia_vybav", { p_id: id, p_uznat: uznat, p_odpoved: odp });
+        if (x.error) return toast(chybaText(x.error), true);
+        toast(uznat ? "Reklamácia je uznaná – kredit sa vrátil." : "Reklamácia je zamietnutá."); znova();
+      });
+    });
+  }
+  function cenaRiadok(c) {
+    return '<div class="sp-ko-cena"><label class="field"><span>Po hodinách</span><input name="h" type="number" min="0" max="336" step="1" value="' + esc(c.h) + '"></label>' +
+      '<label class="field"><span>Cena (€)</span><input name="c" type="number" min="1" max="500" step="1" value="' + esc(c.c) + '"></label>' +
+      '<button type="button" class="btn ghost sp-okr-x" data-cena-x aria-label="Odstrániť">×</button></div>';
   }
 
   start().catch(function (e) { hlaska("Niečo sa pokazilo", chybaText(e)); });
