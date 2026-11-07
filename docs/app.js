@@ -7449,8 +7449,9 @@
       "potom je to bežná žiadosť o odhad v zozname vašich žiadostí. Cena je s DPH a časom klesá. Zlý kontakt môžete do " + (T.reklamacia_h || 48) + " hodín reklamovať. " +
       'Klientovi sa ozvite do 24 hodín. <a href="https://realitnytypek.sk/podmienky#kontakty" target="_blank" rel="noopener">Podmienky kontaktov</a></p>' +
       (T.smiem === false ? '<p class="trh-pozn">Platené kontakty preberá administrátor kancelárie. Ak ich chcete preberať aj vy, požiadajte ho – zapne vám to v časti Tím.</p>' : "") +
+      trhVyhodaHtml(T) +
       '<div class="trh-kredit"><div><small>Kredit kancelárie</small><b>' + trhEur(kredit) + "</b></div>" +
-        (zad ? "<div><small>Ešte zadarmo</small><b>" + trhKontakty(zad) + "</b></div>" : "") +
+        (zad ? "<div><small>Ešte zadarmo</small><b>" + trhKontakty(zad) + "</b>" + (Number(T.zadarmo_mesiac) ? "<small>z toho " + T.zadarmo_mesiac + " tento mesiac</small>" : "") + "</div>" : "") +
         '<a class="btn" href="mailto:info@realitnytypek.sk?subject=' + encodeURIComponent("Dobitie kreditu na kontakty – " + nazovKancelarie()) + '">Dobiť kredit</a></div>';
     h += ponuky.length ? '<div class="trh-zoznam">' + ponuky.map(function (p) {
       var c = Number(p.cena) || 0, d = p.dalsia, kup = zad ? "Prevziať zadarmo" : "Prevziať za " + c + " €";
@@ -7461,13 +7462,15 @@
         /výkup/i.test(p.dovod || "") ? '<span class="odh-znak zlaty">Záujem o výkup</span>' : "",
         p.fotky ? '<span class="odh-znak">📷 ' + p.fotky + "</span>" : ""].join("");
       var detaily = [p.rek ? p.rek.charAt(0).toUpperCase() + p.rek.slice(1) : "", p.dovod, p.kedy_volat ? "Volať: " + p.kedy_volat.toLowerCase() : "", (p.doplnky || []).join(", "), (p.siete || []).length ? "Siete: " + p.siete.join(", ") : ""].filter(Boolean).join(" · ");
+      if (p.len_pre_zakaznikov_do) cipy = '<span class="odh-znak zlaty">⏱ Len pre zákazníkov Týpka ešte ' + trhOdpocet(p.len_pre_zakaznikov_do).replace(/^o /, "") + "</span>" + cipy;
+      var plna = Number(p.cena_plna) || c, zlava = !zad && plna > c ? ' <s class="trh-plna">' + plna + " €</s>" : "";
       var odh = p.odhad && p.odhad.od ? '<span class="trh-odhad">Orientačne ' + odhRozpatie(p.odhad.od, p.odhad.do) + (p.odhad.podla === "median" ? " (medián okresu podľa stavu)" : " (ponuky zo skenera)") + "</span>" : "";
       return '<div class="trh-karta" data-trh="' + p.id + '">' +
         '<span class="odh-ik" aria-hidden="true">' + (ODH_TYP_IK[p.typ] || "🏡") + "</span>" +
         '<span class="odh-telo"><b>' + esc(p.nazov || p.obec) + "</b>" +
           '<span class="meta"><span>' + esc(ago(p.vytvorene)) + "</span>" + (p.cast_obce ? "<span>" + esc(p.cast_obce) + "</span>" : "") + "</span>" +
           (cipy ? '<span class="odh-cipy">' + cipy + "</span>" : "") + (detaily ? '<span class="trh-detaily">' + esc(detaily) + "</span>" : "") + odh + "</span>" +
-        '<span class="trh-cena"><b>' + (zad ? "0 €" : c + " €") + "</b><small>" + (zad ? "zadarmo (inak " + c + " € s DPH)" : "s DPH" + (d && d.c ? " · " + trhOdpocet(d.kedy) + " " + d.c + " €" : "")) + "</small>" +
+        '<span class="trh-cena"><b>' + (zad ? "0 €" : c + " €") + zlava + "</b><small>" + (zad ? "zadarmo (inak " + c + " € s DPH)" : "s DPH" + (d && d.c ? " · " + trhOdpocet(d.kedy) + " " + d.c + " €" : "")) + "</small>" +
           tlacidlo + "</span></div>";
     }).join("") + "</div>" :
       '<p class="meta odh-prazdne">Teraz nie je na predaj žiadny kontakt. Keď príde nová žiadosť o odhad z vašich okresov, dostanete upozornenie do mobilu – kto ju prevezme prvý, ten ju má.</p>';
@@ -7479,6 +7482,7 @@
     }).join("") + "</div></div>";
     if (T.pohyby && T.pohyby.length) h += '<div class="box"><h3>Pohyby kreditu</h3><table class="odh-tab trh-pohyby">' + T.pohyby.map(function (x) {
       var n = { dobitie: "Dobitie", nakup: "Prevzatý kontakt", vratenie: "Vrátené (reklamácia)", oprava: "Oprava" }[x.druh] || x.druh;
+      if (x.zadarmo && x.zadarmo_druh === "mesiac") n += " · mesačný";
       return '<tr><td class="trh-d">' + esc(datum(x.vytvorene, true)) + "</td><td>" + esc(n) + (x.poznamka ? ' <span class="meta">' + esc(x.poznamka) + "</span>" : "") + '</td><td class="trh-suma' + (Number(x.suma) < 0 ? " minus" : "") + '">' +
         (x.zadarmo && !Number(x.suma) ? (x.druh === "vratenie" ? "+1 zadarmo" : "zadarmo") : (Number(x.suma) > 0 ? "+" : "") + trhEur(x.suma)) + "</td></tr>";
     }).join("") + "</table></div>";
@@ -7505,6 +7509,21 @@
         }
       };
     });
+  }
+  // výhody zákazníkov Týpka (migrácia 123): čo kancelária má, alebo čo by mala so skenerom / webom
+  function trhVyhodaHtml(T) {
+    var v = T.vyhoda || {}, n = T.vyhody || {}, pm = Number(v.prednost_min) || 0;
+    var cas = function (m) { return m % 60 === 0 ? (m / 60 === 1 ? "hodinu" : m / 60 + " h") : m + " min"; };
+    if (Number(v.uroven) > 0) {
+      var co = [pm ? "kontakty vidíte " + cas(pm) + " pred ostatnými" : "", Number(v.zlava) ? "máte ich o " + v.zlava + " % lacnejšie" : "",
+        Number(v.mesacne) ? v.mesacne + " " + (Number(v.mesacne) === 1 ? "kontakt" : "kontakty") + " mesačne zadarmo" : ""].filter(Boolean);
+      return co.length ? '<p class="trh-vyhoda">⭐ Ako zákazník Týpka ' + (Number(v.uroven) === 2 ? "so skenerom aj webom" : "so skenerom alebo webom") + ": " + co.join(", ") + ".</p>" : "";
+    }
+    var z1 = Number(n.zlava_jeden) || 0, z2 = Number(n.zlava_oba) || 0, np = Number(n.prednost_min) || 0;
+    if (!z1 && !z2 && !np) return "";
+    return '<p class="trh-vyhoda nie">Zákazníci Týpka so skenerom alebo webom ' + [np ? "vidia kontakty " + cas(np) + " skôr" : "",
+      z1 || z2 ? "majú ich o " + (z1 === z2 || !z1 ? z2 : z1 + " – " + z2) + " % lacnejšie" : ""].filter(Boolean).join(" a ") +
+      '. <a href="https://realitnytypek.sk/skener" target="_blank" rel="noopener">Pozrieť skener</a></p>';
   }
   // detail žiadosti: prevzatý kontakt a reklamácia
   function trhInfoHtml(o) {

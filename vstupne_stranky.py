@@ -743,6 +743,8 @@ stranka('skener.html', 'skener',
             ('Je skener lacnejší, keď mám aj osobný web?',
              'Áno. S osobným webom makléra máš Realitný skener za polovicu – 10,50 € namiesto 21 € mesačne s DPH. '
              'Spolu je to balík Jednotlivec za 67,50 € mesačne. <button ' + WI + ' class="faq-web">Čo je osobný web makléra?</button>'),
+            ('Mám so skenerom výhody aj pri kontaktoch z odhadov?',
+             'Áno. Kontakty na majiteľov, ktorí si nechali odhadnúť hodnotu nehnuteľnosti, vidíš skôr ako ostatní a máš ich lacnejšie. So skenerom aj osobným webom ešte lacnejšie a kontakt zadarmo každý mesiac. Viac na stránke <a href="kontakty.html">Kontakty z odhadov</a>.'),
             ('Musím niečo inštalovať?',
              'Nie. Týpek je webová aplikácia, funguje na počítači aj v mobile. Do mobilu si ho pridáš ako ikonu a upozornenia ti budú chodiť ako správy. Ako na to, je v <a href="prve-kroky.html">Prvých krokoch</a>.'),
             ('Môžem to najprv vyskúšať?',
@@ -767,6 +769,8 @@ stranka('osobny-web.html', 'web',
              'Pripojíš ju k webu, alebo ti vybavíme novú. Doména s HTTPS a hosting 1 GB sú v cene webu.'),
             ('Kam mi prídu správy z webu?',
              'Rovno do Týpka a upozornenie aj do mobilu, takže ti žiadny záujemca neujde.'),
+            ('Mám s webom výhody aj pri kontaktoch z odhadov?',
+             'Áno. Kontakty na majiteľov, ktorí si nechali odhadnúť hodnotu nehnuteľnosti, vidíš skôr ako ostatní a máš ich lacnejšie. S webom aj skenerom ešte lacnejšie a kontakt zadarmo každý mesiac. Viac na stránke <a href="kontakty.html">Kontakty z odhadov</a>.'),
             ('Môžem mať k webu aj Realitný skener?',
              'Áno, s osobným webom máš Realitný skener za polovicu – od 10,50 € mesačne s DPH. Spolu je to balík Jednotlivec.'),
             ('Je web pripravený podľa GDPR?',
@@ -823,7 +827,7 @@ KT_CSS = """/* ===== /kontakty */
 .kt-box li{display:flex;gap:10px;font-size:16px;line-height:1.5;color:#3A4B5A}
 .kt-box li svg{flex:none;margin-top:3px;color:#1F6B57}
 .kt-box.tmavy{background:#1E2A35;color:#F7F2E8}.kt-box.tmavy li{color:#C9D4DD}.kt-box.tmavy li svg{color:#DB9522}
-.kt-cena{margin-top:48px;border-radius:32px;background:#EEE6D6;padding:clamp(24px,4vw,44px);display:grid;gap:26px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start}
+.kt-cena{margin-top:48px;border-radius:32px;background:#EEE6D6;padding:clamp(24px,4vw,44px);display:grid;gap:26px;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));align-items:start}
 .kt-cena label{display:block;font-size:14px;font-weight:700;color:#4A6074;margin-bottom:8px}
 .kt-sel{width:100%;min-height:52px;border-radius:16px;border:1.5px solid #4A6074;background:#FFFDF8;padding:0 16px;font:inherit;font-size:16px;color:#1E2A35}
 .kt-sel:focus{outline:3px solid #DB9522;outline-offset:2px}
@@ -852,6 +856,9 @@ KT_CSS = """/* ===== /kontakty */
 .kt-form .btn{min-height:54px;font-size:16px;border:0;cursor:pointer}
 .kt-note{margin:0;font-size:14px;line-height:1.55;color:#C9D4DD}.kt-note a{color:#F2E4C6}
 .kt-note.ok{color:#B7E4C7;font-weight:600}.kt-note.chyba{color:#F7B2A0;font-weight:600}
+.kt-vyh{grid-column:1/-1;background:#1E2A35;color:#F7F2E8}.kt-vyh h3{color:#F7F2E8}.kt-vyh ul{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.kt-vyh li{position:relative;padding-left:26px;font-size:16px;line-height:1.5;color:#C9D4DD}.kt-vyh li::before{content:"★";position:absolute;left:0;color:#DB9522}
+.kt-vyh li b{color:#F7F2E8}.kt-vyh p a{color:#F2E4C6;font-weight:700}
 .kt-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 @media (max-width:640px){.kt-hero{gap:40px;padding-bottom:60px}.kt-sec{padding-top:70px}}
 """
@@ -944,12 +951,17 @@ def kontakty_telo():
 <div class="kt-vel">4 500 €</div>
 <p>Aj keby sa zákazkou stal len každý desiaty kontakt, pri cene 60 € ťa jedna zákazka stojí 600 €. Bez paušálu a bez podielu z provízie – čo zarobíš, je tvoje.</p>
 </div>
+<div class="kt-priklad kt-vyh">
+<h3>⭐ Máš u nás skener alebo web?</h3>
+<ul id="kt-vyhody"><li>Kontakty vidíš skôr ako ostatní.</li><li>Máš ich lacnejšie.</li><li>Viac kontaktov zadarmo, so skenerom aj webom aj každý mesiac.</li></ul>
+<p><a href="skener.html">Realitný skener</a> · <a href="osobny-web.html">Osobný web makléra</a></p>
+</div>
 </div>
 </section>
 
 """ + otazky([
         ('Je kontakt naozaj len môj?', 'Áno. Kontakt dostane jediná kancelária – tá, ktorá ho prevezme ako prvá. Ostatným z ponuky zmizne a nikomu inému ho nepredáme.'),
-        ('Musím mať Realitného týpka?', 'Nie. Účet len na kontakty je bez mesačného poplatku – platíš len za kontakty, ktoré si prevezmeš. Ak Týpka už máš, kontakty nájdeš v časti Odhady → Kontakty na predaj.'),
+        ('Musím mať Realitného týpka?', 'Nie. Účet len na kontakty je bez mesačného poplatku – platíš len za kontakty, ktoré si prevezmeš. Ak máš u nás Realitný skener alebo osobný web, kontakty nájdeš v časti Odhady → Kontakty na predaj a máš pri nich výhody: vidíš ich skôr, máš ich lacnejšie a viac zadarmo.'),
         ('Odkiaľ sú kontakty?', 'Z našej stránky realitnytypek.sk/odhad, na ktorú robíme reklamu. Majiteľ pri žiadosti berie na vedomie, že ju môže dostať maklér alebo kancelária z jeho okolia.'),
         ('Čo ak je kontakt zlý?', 'Do 48 hodín ho reklamuješ priamo v aplikácii – napríklad keď telefón aj e-mail neexistujú alebo klient o odhad nežiadal. Uznanú reklamáciu ti vrátime do kreditu.'),
         ('Ako platím?', 'Kredit si dobiješ vopred prevodom na faktúru. Pri každom prevzatí sa odpíše cena kontaktu. Nevyčerpaný kredit ti pri skončení vrátime.'),
@@ -1003,6 +1015,14 @@ KT_JS = """<script>
     var c=(C.okresy||{})[sel.value]||C.spolocne||[];
     reb.innerHTML=c.map(function(x,i){return '<li><span>'+(i===0?'Hneď po žiadosti':'Po '+hod(x.h))+'</span><b>'+x.c+' €</b></li>';}).join('');
     var z=Number(C.zadarmo)||0;
+    var v=C.vyhody||{},vy=d.getElementById('kt-vyhody'),pm=Number(v.prednost_min)||0,z1=Number(v.zlava_jeden)||0,z2=Number(v.zlava_oba)||0,
+        za1=Number(v.zadarmo_jeden)||0,za2=Number(v.zadarmo_oba)||0,mes=Number(v.mesacne_oba)||0,ca=function(m){return m%60===0?(m===60?'hodinu':(m/60)+' h'):m+' min';};
+    if(vy&&(pm||z1||z2)){
+      var cz=function(z){return z?Math.max(1,Math.round(c[0].c*(100-z)/100))+' €':c[0].c+' €';};
+      vy.innerHTML=[pm?'Kontakty vidíš <b>'+ca(pm)+' pred ostatnými</b> – kým oni čakajú, ty už voláš.':'',
+        (z1||z2)?'So skenerom alebo webom <b>−'+z1+' %</b>, so skenerom aj webom <b>−'+z2+' %</b> (v okrese '+sel.value+' hneď po žiadosti '+cz(z1)+' / '+cz(z2)+').':'',
+        (za1||za2)?'Na začiatok <b>'+Math.max(za1,za2)+' kontaktov zadarmo</b>'+(mes?', so skenerom aj webom navyše <b>'+mes+' '+(mes===1?'kontakt':'kontakty')+' každý mesiac</b>':'')+'.':''].filter(Boolean).map(function(t){return '<li>'+t+'</li>';}).join('');
+    }
     pp.textContent='Ceny sú s DPH.'+(z?' Prvé '+(z===1?'kontakt máš':z+' kontakty máš')+' zadarmo.':'')+' Kto kontakt neprevezme do '+hod(C.koniec_h||48)+', vybaví ho náš maklér.';
   }
   if(sel){sel.addEventListener('change',ukaz);

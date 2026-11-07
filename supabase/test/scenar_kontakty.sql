@@ -17,6 +17,8 @@ update zakaznici set stav = 'vlastna' where id in (select zakaznik_id from kance
 -- druhá kancelária (Poprad aj Spišská Nová Ves) a tretia (len Poprad)
 insert into zakaznici (id, nazov, email, stav, moduly) overriding system value values
   (900, 'Iná RK', 'b@inak.sk', 'aktivny', array['skener', 'web']), (901, 'Tretia RK', 'c@tretia.sk', 'aktivny', array['web']) on conflict do nothing;
+-- výhody zákazníkov Týpka (123) skúša časť 15 – dovtedy bez výhod (žiadna prednosť ani zľava, 2 zadarmo pre všetkých)
+update kontakty_nastavenie set vyhody = '{"prednost_min":0,"zlava_jeden":0,"zlava_oba":0,"zadarmo_jeden":2,"zadarmo_oba":2,"mesacne_oba":0}';
 insert into kancelarie (id, nazov, typ, zakaznik_id, okresy, sekcie, aktivna, slug) values
   (20, 'Iná RK', 'kancelaria', 900, '{Poprad,Spišská Nová Ves}', _sekcie_z_modulov(array['skener', 'web']), true, 'ina'),
   (30, 'Tretia RK', 'kancelaria', 901, '{Poprad}', _sekcie_z_modulov(array['web']), true, 'tretia') on conflict do nothing;
@@ -301,3 +303,65 @@ select jsonb_array_length(kontakty_sprava()->'vsetky_okresy') v_sprave;         
 select kontakty_nastavit('{"okresy":["Košice I","Bratislava V"],"ceny":[{"h":0,"c":50}],"ceny_okresy":{"Košice II":[{"h":0,"c":70}]},"koniec_h":48,"zadarmo":2,"reklamacia_h":48}');
 reset role; reset request.jwt.claim.sub;
 select okresy from kontakty_nastavenie;                                               -- → {"Bratislava V","Košice I"}
+
+\echo '=== 15. výhody pre zákazníkov Týpka (123): prednosť, zľava, viac zadarmo a mesačný kontakt'
+update zakaznici set stav = 'aktivny', moduly = '{skener,web}' where id = 900;   -- Iná RK: skener aj web → úroveň 2
+update zakaznici set stav = 'aktivny', moduly = '{web}' where id = 901;          -- Tretia RK: len web → úroveň 1
+update kancelarie set sekcie = _sekcie_z_modulov(array['skener', 'web']) where id = 20;
+update kancelarie set sekcie = _sekcie_z_modulov(array['web']) where id = 30;
+update kontakty_nastavenie set okresy = '{Poprad}', ceny_okresy = '{}', ceny = '[{"h":0,"c":60},{"h":6,"c":40}]', koniec_h = 48,
+  vyhody = '{"prednost_min":60,"zlava_jeden":10,"zlava_oba":20,"zadarmo_jeden":5,"zadarmo_oba":5,"mesacne_oba":1}';   -- predvolené výhody
+insert into push_odbery (makler_id, endpoint, p256dh, auth) values (:'D', 'https://p/d', 'x', 'x') on conflict do nothing;
+select k.nazov, _kontakty_uroven(k.id) u, _kontakty_vyhoda(k.id)->>'zlava' zlava, _kontakty_zadarmo_start(k.id) start, _kontakty_zadarmo_mesiac(k.id) mesiac
+  from kancelarie k where k.id in (1, 20, 30) or k.zakaznik_id = 902 order by k.id;
+-- → Alpha 2 (vlastná so skenerom aj webom), 20, 5, 1; Kontaktová RK 0, 0, 2, 0; Iná RK 2, 20, 4 (5 − použitý 1, druhý vrátený), 1; Tretia RK 1, 10, 5, 0
+set role anon;
+select odhad_ziadost('{"typ":"dom","obec":"Svit","okres":"Poprad","ulica":"Výhodná","plocha":"140","pozemok":"600","izby":"4","stav":"Novostavba","dovod":"Zvažujem predaj","meno":"Vlasta","telefon":"0905 321 321","email":"vyhoda@example.sk"}'::jsonb, pg_temp.pow(30000000))->>'ok';  -- → true
+select odhad_ziadost('{"typ":"dom","obec":"Svit","okres":"Poprad","ulica":"Druhá","plocha":"120","pozemok":"500","izby":"4","stav":"Novostavba","dovod":"Zvažujem predaj","meno":"Vlasta","telefon":"0905 321 322","email":"vyhoda2@example.sk"}'::jsonb, pg_temp.pow(32000000))->>'ok';  -- → true
+reset role;
+select id as "V1" from odhady_hodnoty where email = 'vyhoda@example.sk' \gset
+select id as "V2" from odhady_hodnoty where email = 'vyhoda2@example.sk' \gset
+update odhady_hodnoty set trh_od = now() - interval '10 minutes', trh_koniec = now() + interval '47 hours', trh_oznamena = null, trh_oznamena0 = null, trh_ceny = '[{"h":0,"c":60},{"h":6,"c":40}]' where id in (:V1, :V2);
+delete from push_fronta;
+select _kontakt_oznam(:V1) > 0 or extract(hour from now() at time zone 'Europe/Bratislava') not between 7 and 20 oznam_ok;  -- → t
+select m.meno, p.titul from push_fronta p join makleri m on m.id = p.makler_id where p.tag = 'typek-trh-' || :V1 order by m.meno;
+-- → cez deň: Beáta Iná „💰 Nový kontakt na predaj · 48 €“, Cyril Tretí „… · 54 €“ (Dana Kontaktová zatiaľ nie)
+set role authenticated; set request.jwt.claim.sub = :'D';
+select jsonb_array_length(kontakty_na_predaj()->'ponuky') d_vidi;                    -- → 0 (prednosť 60 min)
+select kontakt_prevziat(:V1);                                                          -- → ERROR Kontakt môžete prevziať od HH:MM – zákazníci Týpka…
+set request.jwt.claim.sub = :'C';
+select p->>'cena' cena, p->>'cena_plna' plna, p->'dalsia'->>'c' dalsia, p->>'len_pre_zakaznikov_do' is not null len_pre_nas
+  from jsonb_array_elements(kontakty_na_predaj()->'ponuky') p where (p->>'id')::bigint = :V1;   -- → 54, 60, 36, t
+set request.jwt.claim.sub = :'B';
+select r->>'cena' cena, r->>'zadarmo' zadarmo, r->>'zlava' zlava from (select kontakt_prevziat(:V1, 48) r) x;   -- → 0, true, 20 (mesačný zadarmo)
+reset role; reset request.jwt.claim.sub;
+select zadarmo_druh from kontakty_pohyby where odhad_id = :V1;                         -- → mesiac
+select _kontakty_zadarmo_mesiac(20) mesiac, _kontakty_zadarmo_start(20) start;        -- → 0, 4
+\echo '--- po prednosti: kontakt vidí aj účet len na kontakty, mobil dostane až teraz'
+update odhady_hodnoty set trh_od = now() - interval '61 minutes' where id = :V2;
+select _kontakt_oznam(:V2) >= 0 ok;
+select m.meno, p.titul from push_fronta p join makleri m on m.id = p.makler_id where p.tag = 'typek-trh-' || :V2 order by m.meno;
+-- → cez deň Beáta, Cyril (prednosť) a Dana Kontaktová „💰 Nový kontakt na predaj · 60 €“
+set role authenticated; set request.jwt.claim.sub = :'D';
+select p->>'cena' cena from jsonb_array_elements(kontakty_na_predaj()->'ponuky') p where (p->>'id')::bigint = :V2;   -- → 60
+set request.jwt.claim.sub = :'C';
+select r->>'cena' cena, r->>'zadarmo' zadarmo from (select kontakt_prevziat(:V2) r) x;   -- → 0, true (Tretia RK má úvodných 5 zadarmo)
+reset role; reset request.jwt.claim.sub;
+\echo '--- uznaná reklamácia mesačného kontaktu ho vráti do mesačných; nastavenie výhod'
+set role authenticated; set request.jwt.claim.sub = :'B';
+select kontakt_reklamovat(:V1, 'Klient o odhad nežiadal');
+reset role; reset request.jwt.claim.sub;
+select id as "RV" from kontakty_reklamacie where odhad_id = :V1 \gset
+set role authenticated; set request.jwt.claim.sub = :'A';
+select kontakt_reklamacia_vybav(:RV, true, null);
+reset role; reset request.jwt.claim.sub;
+select zadarmo_druh, druh from kontakty_pohyby where odhad_id = :V1 order by id;     -- → mesiac nakup, mesiac vratenie
+select _kontakty_zadarmo_mesiac(20) mesiac_spat;                                      -- → 1
+set role authenticated; set request.jwt.claim.sub = :'A';
+select kontakty_nastavit('{"okresy":["Poprad"],"ceny":[{"h":0,"c":60}],"koniec_h":48,"zadarmo":2,"reklamacia_h":48,"vyhody":{"prednost_min":30,"zlava_jeden":5,"zlava_oba":15,"zadarmo_jeden":3,"zadarmo_oba":4,"mesacne_oba":2}}');
+select kontakty_sprava()->'nastavenie'->'vyhody' vyhody, (select k->>'uroven' from jsonb_array_elements(kontakty_sprava()->'kancelarie') k where k->>'nazov' = 'Iná RK') uroven_ina;
+-- → {"zlava_oba": 15, …}, 2
+select kontakty_nastavit('{"okresy":["Poprad"],"ceny":[{"h":0,"c":60}],"koniec_h":48,"zadarmo":2,"reklamacia_h":48,"vyhody":{"prednost_min":30,"zlava_jeden":95,"zlava_oba":15,"zadarmo_jeden":3,"zadarmo_oba":4,"mesacne_oba":2}}');  -- → ERROR Zľava môže byť najviac 90 %.
+select kontakty_nastavit('{"okresy":["Poprad"],"ceny":[{"h":0,"c":60}],"koniec_h":48,"zadarmo":2,"reklamacia_h":48,"vyhody":{"prednost_min":"x"}}');  -- → ERROR Výhody: zadajte celé čísla.
+reset role; reset request.jwt.claim.sub;
+set role anon; select kontakty_cennik()->'vyhody'->>'zlava_oba' verejne; reset role;  -- → 15

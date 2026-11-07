@@ -678,6 +678,7 @@
     if (r.error) { $("#sp").innerHTML = zalozky("ko") + '<p class="sp-nic">Kontakty sa nepodarilo načítať: ' + esc(chybaText(r.error)) + "</p>"; return; }
     var D = r.data, N = D.nastavenie, vybrane = {};
     var cenyOkr = JSON.parse(JSON.stringify(N.ceny_okresy || {}));   // vlastné ceny okresov (118)
+    var VY = N.vyhody || { prednost_min: 60, zlava_jeden: 10, zlava_oba: 20, zadarmo_jeden: 5, zadarmo_oba: 5, mesacne_oba: 1 };   // výhody (123)
     (N.okresy || []).forEach(function (o) { vybrane[o] = true; });
     var naPredaj = D.trh.filter(function (t) { return !t.predane; }), predane = D.trh.filter(function (t) { return t.predane; });
     var cakaRekl = D.reklamacie.filter(function (x) { return x.stav === "caka"; });
@@ -718,7 +719,8 @@
 
     // kancelárie a kredit
     h += '<section class="sp-box"><h3>Kancelárie a kredit</h3><div class="sp-ko-zoz">' + D.kancelarie.map(function (k) {
-      return '<div class="sp-ko-r"><span class="sp-meno"><b>' + esc(k.nazov) + (k.aktivna ? "" : " (neaktívna)") + "</b><small>" + esc((k.okresy || []).join(", ") || "bez okresov") + "</small>" +
+      var ur = Number(k.uroven) === 2 ? "⭐ Skener aj web" : Number(k.uroven) === 1 ? "⭐ Skener alebo web" : "Bez výhod";
+      return '<div class="sp-ko-r"><span class="sp-meno"><b>' + esc(k.nazov) + (k.aktivna ? "" : " (neaktívna)") + "</b><small>" + esc((k.okresy || []).join(", ") || "bez okresov") + " · " + ur + "</small>" +
           "<small>Prevzaté " + k.kupene + " · zaplatené " + eur(k.zaplatene) + " · dobité " + eur(k.dobite) + (Number(N.zadarmo) ? " · zadarmo ešte " + k.zadarmo : "") + "</small></span>" +
         '<span class="sp-ko-akc"><b class="sp-ko-kredit">' + eur(k.kredit) + '</b><button type="button" class="btn" data-dobit="' + k.id + '" data-nazov="' + esc(k.nazov) + '">Pripísať kredit</button></span></div>';
     }).join("") + "</div></section>";
@@ -744,11 +746,23 @@
         '<span class="sp-pozn">Začiatočná cena = medián bytov €/m² ÷ 35 (40 – 150 €), zlacnenia v pomere spoločných cien. Prepíše vlastné ceny všetkých okresov.</span></div></div>' +
       '<div class="sp-ko-cisla">' +
         '<label class="field"><span>Záložnému maklérovi po (hodinách)</span><input id="ko-koniec" type="number" min="1" max="336" value="' + esc(N.koniec_h) + '"></label>' +
-        '<label class="field"><span>Kontaktov zadarmo pre kanceláriu</span><input id="ko-zadarmo" type="number" min="0" max="20" value="' + esc(N.zadarmo) + '"></label>' +
+        '<label class="field"><span>Kontaktov zadarmo – len kontakty a skúšobná doba</span><input id="ko-zadarmo" type="number" min="0" max="20" value="' + esc(N.zadarmo) + '"></label>' +
         '<label class="field"><span>Reklamácia do (hodín)</span><input id="ko-rekl" type="number" min="1" max="336" value="' + esc(N.reklamacia_h) + '"></label>' +
         '<label class="field"><span>Záložný maklér</span><select id="ko-zaloha"><option value="">Hlavný správca</option>' +
           (D.zalohy || []).map(function (m) { return '<option value="' + m.id + '"' + (m.id === N.zaloha_makler ? " selected" : "") + ">" + esc(m.meno) + "</option>"; }).join("") + "</select></label>" +
       "</div>" +
+      '<div class="sp-okresy"><span class="sp-okresy-l">Výhody pre zákazníkov Týpka</span>' +
+        '<p class="sp-pozn" style="margin:0">Platí pre platiacich zákazníkov (a vlastné kancelárie) so skenerom alebo webom. Web = osobný web alebo Kancelária komplet. ' +
+          'Účet len na kontakty a skúšobná doba výhody nemajú.</p>' +
+        '<div class="sp-ko-cisla">' +
+          vyhodaPole("ko-v-prednost", "Prednosť – vidia kontakt skôr o (minút)", VY.prednost_min, 1440) +
+          vyhodaPole("ko-v-zl1", "Zľava – skener alebo web (%)", VY.zlava_jeden, 90) +
+          vyhodaPole("ko-v-zl2", "Zľava – skener aj web (%)", VY.zlava_oba, 90) +
+          vyhodaPole("ko-v-za1", "Zadarmo na začiatok – skener alebo web", VY.zadarmo_jeden, 50) +
+          vyhodaPole("ko-v-za2", "Zadarmo na začiatok – skener aj web", VY.zadarmo_oba, 50) +
+          vyhodaPole("ko-v-mes", "Každý mesiac zadarmo – skener aj web", VY.mesacne_oba, 10) +
+        '</div><p class="sp-pozn">Zľava sa počíta z aktuálnej ceny okresu a zaokrúhľuje na celé eurá. Mesačný kontakt zadarmo sa do ďalšieho mesiaca neprenáša. ' +
+        "Bez prednosti vidia ostatní kontakt až po tomto čase od začiatku ceny (v noci od 7:00).</p></div>" +
       '<div class="sp-akcie" style="margin:0"><button type="submit" class="btn primary">Uložiť nastavenie</button>' +
         (N.upravene ? '<span class="sp-pozn">Naposledy zmenené ' + cas(N.upravene) + "</span>" : "") + "</div>" +
       '<p class="sp-pozn">Zmena cien platí pre nové žiadosti – tie, ktoré už sú na predaji, dobehnú s pôvodnými cenami.</p></form>';
@@ -827,6 +841,8 @@
         ceny: spolocne(),
         ceny_okresy: (zberOkr(), cenyOkr),
         koniec_h: $("#ko-koniec").value, zadarmo: $("#ko-zadarmo").value, reklamacia_h: $("#ko-rekl").value, zaloha_makler: $("#ko-zaloha").value,
+        vyhody: { prednost_min: $("#ko-v-prednost").value.trim(), zlava_jeden: $("#ko-v-zl1").value.trim(), zlava_oba: $("#ko-v-zl2").value.trim(),
+          zadarmo_jeden: $("#ko-v-za1").value.trim(), zadarmo_oba: $("#ko-v-za2").value.trim(), mesacne_oba: $("#ko-v-mes").value.trim() },
       };
       var btn = this.querySelector("[type=submit]"); btn.disabled = true;
       var x = await sb.rpc("kontakty_nastavit", { p: p });
@@ -872,6 +888,9 @@
         toast(uznat ? "Reklamácia je uznaná – kredit sa vrátil." : "Reklamácia je zamietnutá."); znova();
       });
     });
+  }
+  function vyhodaPole(id, nazov, hodnota, max) {
+    return '<label class="field"><span>' + nazov + '</span><input id="' + id + '" type="number" min="0" max="' + max + '" step="1" value="' + esc(hodnota == null ? "" : hodnota) + '"></label>';
   }
   function cenaRiadok(c) {
     return '<div class="sp-ko-cena"><label class="field"><span>Po hodinách</span><input name="h" type="number" min="0" max="336" step="1" value="' + esc(c.h) + '"></label>' +
