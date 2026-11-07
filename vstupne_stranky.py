@@ -71,7 +71,7 @@ MENU = '''<!-- NAV -->
 <header id="top" class="hdr">
 <nav aria-label="Hlavné menu" style="max-width: 1200px; margin: 0 auto; padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px">
 <a href="./" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #1E2A35" title="Hlavná stránka Realitného týpka">
-<img src="typek-head.png?v=202610251300" alt="" width="50" height="50" style="display: block; flex: none; width: 50px; height: 50px">
+<img src="typek-head.webp?v=202611071830" alt="" width="50" height="50" style="display: block; flex: none; width: 50px; height: 50px">
 <span class="wm lp-wm" style="font-size: 24px"><span class="wm-a">Realitný</span> <span class="wm-b">týpek</span></span>
 </a>
 <a class="btn btn-ink lp-cta" href="#pristup">Vyskúšať zadarmo</a>
@@ -83,7 +83,7 @@ MENU = '''<!-- NAV -->
 PATA = '''<!-- FOOTER -->
 <footer style="max-width: 1200px; margin: 0 auto; padding: 10px 24px 48px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; font-size: 14px; color: #4A6074">
 <div style="display: flex; align-items: center; gap: 12px">
-<img src="typek-head.png?v=202610251300" alt="" width="40" height="40" style="display: block; flex: none; width: 40px; height: 40px">
+<img src="typek-head.webp?v=202611071830" alt="" width="40" height="40" style="display: block; flex: none; width: 40px; height: 40px">
 <span><span class="wm" style="font-size: 15px"><span class="wm-a">Realitný</span> <span class="wm-b">týpek</span></span> – softvér od realitnej kancelárie <a href="https://www.alphareality.sk/">Alpha Reality</a></span>
 </div>
 <div class="soc">
@@ -202,7 +202,7 @@ def skener_sekcia():
     s = S['skener']
     # bez správy od Tiny – na zamknutom mobile je len upozornenie skenera
     s = re.sub(r'<div class="zm-n zm-n2">.*?</div>\n', '', s, count=1, flags=re.S)
-    s = nahrad(s, 'Zamknutý mobil s dvoma upozorneniami z Realitného týpka: nový súkromný inzerát na 2-izbový byt v centre mesta a správa od Tiny.',
+    s = nahrad(s, 'Zamknutý mobil s dvoma upozorneniami z Realitného týpka: nový súkromný inzerát na 2-izbový byt v centre mesta a správa od Zuzany.',
                'Zamknutý mobil s upozornením z Realitného týpka: nový súkromný inzerát na 2-izbový byt v centre mesta.')
     assert 'Tina' not in s and 'Tiny' not in s, 'zostala zmienka o Tine'
     # 3. krok bez kolegov: si prvý pred konkurenciou
