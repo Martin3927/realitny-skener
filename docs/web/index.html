@@ -448,8 +448,12 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .oc-plus{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,max-content));gap:10px 22px;font-size:14.5px;font-weight:600;color:#1E2A35}
 .oc-plus li{display:flex;align-items:center;gap:9px}
 .oc-plus li>span{flex:none;width:22px;height:22px;border-radius:999px;background:#E3EFE8;color:#2E7D5B;display:grid;place-items:center}
-.oc-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:2px}
-.oc-cena{margin:-4px 0 0;font-size:14px;line-height:1.5;color:#4A6074}
+.oc-cta{display:flex;flex-wrap:wrap;gap:12px}
+.oc-rychlo{display:flex;gap:14px;align-items:flex-start;padding:15px 18px;border-radius:18px;background:#F2E4C6;font-size:14.5px;line-height:1.5;color:#3A4B5A}
+.oc-rychlo strong{display:block;font-size:16px;line-height:1.35;color:#1E2A35;margin-bottom:3px}
+.oc-rychlo-ic{flex:none;width:40px;height:40px;border-radius:13px;background:#DB9522;color:#1E2A35;display:grid;place-items:center}
+.oc-nahlo{display:flex;align-items:center;justify-content:center;gap:6px;margin:2px 0 -4px;font-size:12.5px;font-weight:800;color:#8A5A2B}
+.oc-nahlo svg{color:#DB9522}
 .oc-vis{flex:0 1 380px;min-width:0;margin-inline:auto;position:relative;border-radius:30px;background:#F2E4C6;padding:84px clamp(18px,3vw,34px) 20px;display:flex;flex-direction:column;align-items:center;gap:16px}
 .oc-push{position:absolute;top:16px;left:50%;z-index:3;box-sizing:border-box;display:flex;align-items:center;gap:10px;width:min(330px,calc(100% - 28px));margin-left:calc(min(330px,calc(100% - 28px)) / -2);padding:10px 14px;border-radius:18px;background:#1E2A35;color:#F7F2E8;box-shadow:0 24px 44px -20px rgba(30,42,53,.75);animation:zvPush 7s ease infinite}
 .oc-push-ic{flex:none;width:34px;height:34px;border-radius:10px;background:#F7F2E8;display:grid;place-items:center;overflow:hidden}
@@ -786,11 +790,11 @@ Kataster pri každom inzeráte
 <h2 class="oc-h2">Kúp si overeného predávajúceho. Získaj <span class="oc-zv">exkluzívnu ponuku.<svg class="oc-ciara" viewBox="0 0 200 22" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M4 15 C 52 5, 128 4, 196 11"></path></svg></span></h2>
 <p class="oc-lead">Majitelia si na realitnytypek.sk/odhad nechávajú zadarmo odhadnúť hodnotu bytu, domu alebo pozemku. Týpek tieto žiadosti zbiera a ponúkne ich maklérom v okrese. Kto si kontakt vezme prvý, má predávajúceho <strong>len pre seba</strong> – zavolá mu s odhadom a môže z toho byť exkluzívna zmluva na predaj.</p>
 <ul class="oc-plus"><li><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>Bez mesačného poplatku</li><li><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>Bez podielu z provízie</li><li><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>Prvé 2 kontakty zadarmo</li><li><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>Kontakt nikomu inému nepredáme</li></ul>
+<div class="oc-rychlo"><span class="oc-rychlo-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"></path></svg></span><span><strong>Rýchlo prevezmi kontakt, kým ťa niekto nepredbehne.</strong>Cena závisí od okresu a s časom klesá. Lenže kontakt dostane len ten, kto klikne prvý – čakaním môžeš ušetriť pár eur a prísť o celú zákazku.</span></div>
 <div class="oc-cta">
 <a class="btn btn-acc" href="kontakty">Chcem kontakty na predávajúcich<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
 <a class="btn btn-ghost" href="odhad/" target="_blank" rel="noopener">Pozri formulár odhadu</a>
 </div>
-<p class="oc-cena">Cena kontaktu závisí od okresu a klesá, kým si ho niekto nevezme. Platíš len za tých, ktorých si vezmeš.</p>
 </div>
 <div class="oc-vis">
 <div class="oc-push" aria-hidden="true"><span class="oc-push-ic"><img src="typek-head.png?v=202610251300" alt="" width="30" height="30"></span><span><small>REALITNÝ TÝPEK · teraz</small><b>Nový predávajúci · 60 €</b><i>3-izbový byt, 68 m² – chce predať čo najskôr</i></span></div>
@@ -804,6 +808,7 @@ Kataster pri každom inzeráte
 <div class="oc-odh"><small>ORIENTAČNÁ HODNOTA</small><b>136 000 – 150 000 €</b><span>medián okresu podľa stavu</span></div>
 <div class="oc-skryte"><span><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Meno</small><i>J•••• K••••••</i></span><span><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Telefón</small><i>09•• ••• •••</i></span><span><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>E-mail</small><i>•••••@•••••.sk</i></span><span><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Adresa</small><i>•••••••• 12</i></span></div>
 <div class="oc-pad"><small>Cena klesá, kým si ho niekto nevezme</small><ol><li class="on"><b>60 €</b><i>teraz</i></li><li><b>50 €</b><i>o 6 h</i></li><li><b>40 €</b><i>o 12 h</i></li><li><b>20 €</b><i>o 24 h</i></li></ol></div>
+<span class="oc-nahlo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"></path></svg>Ber rýchlo, kým ťa niekto nepredbehne</span>
 <span class="oc-btn">Prevziať za 60 €</span>
 </div>
 </div>
