@@ -637,6 +637,9 @@
     var odhAdresa = location.hash.match(/^#odhady\/(\d+)$/);   // upozornenie na novú žiadosť o odhad
     if (odhAdresa && S.tab === "odhady") { S.odhadDetail = Number(odhAdresa[1]); stavAdresy.odhad = S.odhadDetail; }
     if (location.hash === "#odhady/trh" && S.tab === "odhady") S.odhTrh = true;   // upozornenie na kontakt na predaj
+    // návrat z prihlásenia Facebookom (funkcia meta) – výsledok ukáže Vzhľad → Facebook a Instagram kancelárie
+    var metaAdresa = location.hash.match(/^#vzhlad\/meta-(ok|vyber|chyba)(?:-([a-z_]+))?$/);
+    if (metaAdresa && S.tab === "vzhlad") S.metaNavrat = { vysledok: metaAdresa[1], kod: metaAdresa[2] || "" };
     history.replaceState(stavAdresy, "", "#" + S.tab);
   }
 
@@ -1781,7 +1784,7 @@
     else if (S.tab === "kalendar") { if (!S.kalForm && !(document.activeElement && document.activeElement.closest && document.activeElement.closest("#obsah"))) vykresliKalendar(); }
     else if (S.tab === "mapa") { if (!$("#realitna-mapa")) vykresliMapu(); else kresliRealitnuMapu(false, true); }
     else if (S.tab === "kataster") { if (!$("#kat-mapa")) vykresliKataster(); }
-    else if (S.tab === "vzhlad") { if (!$(".vz-box")) vykresliVzhlad(); }
+    else if (S.tab === "vzhlad") { if (!$(".vz-box")) { S.sieteStav = null; vykresliVzhlad(); } }
     else if (S.tab === "provizie") { if (!$(".prov-form") && !$(".prov-box")) vykresliProvizie(); }
     else if (S.tab === "historia") { if (!$(".hist-box")) vykresliHistoriu(); }
     else if (S.tab === "asistent") { if (!$("#ai-spravy")) vykresliAsistenta(); }
@@ -6642,6 +6645,7 @@
         '<div class="form-grid"><label class="field"><span>Google Analytics <small class="meta">ID v tvare G-…</small></span><input type="text" data-vz-meranie="ga" maxlength="20" value="' + esc((D.meranie || {}).ga || "") + '" placeholder="G-XXXXXXXXXX"></label>' +
         '<label class="field"><span>Meta Pixel <small class="meta">číslo pixelu z Facebooku</small></span><input type="text" inputmode="numeric" data-vz-meranie="fb" maxlength="20" value="' + esc((D.meranie || {}).fb || "") + '" placeholder="napr. 123456789012345"></label></div>' +
         '<p class="meta">Na stránkach ponúk sa zapnú až vtedy, keď návštevník súhlasí s cookies. Hodí sa na reklamu na Facebooku a Instagrame – oslovíte znova ľudí, ktorí si ponuku pozreli.</p></section>' +
+      (maSekciu("nehnutelnosti") ? '<section class="vz-sekcia" id="vz-siete">' + sieteBoxHtml() + "</section>" : "") +
       '<section class="vz-sekcia"><h4>Vodotlač na fotky</h4><div class="vz-vodoznak"><div class="vz-ovladanie">' +
         '<span class="meta">Kde bude logo</span><div class="vz-pozicie">' + POZICIE.map(function (p) {
           return '<button type="button" class="vz-poz p-' + p[0] + '" data-poz="' + p[0] + '" aria-pressed="' + (w.pozicia === p[0]) + '" title="' + p[1] + '" aria-label="' + p[1] + '"><i></i></button>';
@@ -6657,6 +6661,91 @@
     el.innerHTML = h;
     napojVzhlad();
     kresliNahladVodoznaku();
+    if ($("#vz-siete")) napojSieteVzhlad();
+  }
+
+  // ------------------------------------------------------------ FACEBOOK A INSTAGRAM KANCELÁRIE (priame prepojenie s Meta, funkcia meta)
+  // stav: S.sieteStav = { meta: {stranka, instagram, ma_instagram, pripojil, pripojene, chyba…} | null, make: true/false }
+  async function nacitajSieteStav() {
+    try { S.sieteStav = await rpc("siete_prepojenie", {}); } catch (e) { S.sieteStav = S.sieteStav || { meta: null, make: false, chybaNacitania: true }; }
+    return S.sieteStav;
+  }
+  var META_CHYBY = {
+    zrusene: "Prihlásenie do Facebooku sa nedokončilo – nič sa nepripojilo.",
+    vyprsalo: "Prihlásenie vypršalo – klikni znova na Pripojiť Facebook a Instagram.",
+    ziadna_stranka: "Na tomto Facebooku nie je stránka, ktorú by si mohol spravovať. Zverejňovať sa dá len na Facebook stránku (nie na osobný profil) – založ ju alebo požiadaj správcu stránky o plný prístup.",
+    facebook: "Facebook prihlásenie nepotvrdil. Skús to o chvíľu znova; ak to nepôjde, napíš na info@realitnytypek.sk."
+  };
+  function sieteBoxHtml() {
+    var st = S.sieteStav, h = "<h4>Facebook a Instagram kancelárie</h4>";
+    if (!st) return h + '<p class="meta">Načítavam…</p>';
+    if (S.sieteVyber) {
+      return h + "<p>Vo Facebooku spravuješ viac stránok. Vyber stránku kancelárie:</p>" +
+        '<div class="vz-siete-stranky">' + S.sieteVyber.map(function (s) {
+          return '<button class="btn" type="button" data-siete-vyber="' + esc(s.id) + '"><b>' + esc(s.nazov) + '</b><span class="meta">' + (s.instagram ? "Instagram @" + esc(s.instagram) : "bez Instagramu") + "</span></button>";
+        }).join("") + '</div><div class="form-actions"><button class="btn ghost" type="button" data-siete-akcia="zrusit-vyber">Zrušiť</button></div>';
+    }
+    var mt = st.meta;
+    if (mt) {
+      h += '<div class="vz-siete-stav"><span class="chip won">✓ Pripojené</span> <b>' + esc(mt.stranka || "Facebook stránka") + "</b>" +
+        (mt.ma_instagram ? " · Instagram" + (mt.instagram ? " @" + esc(mt.instagram) : "") : "") + "</div>" +
+        '<p class="meta">Pripojil ' + esc(mt.pripojil || "–") + " · " + datum(mt.pripojene, true) + ". Príspevky z ponúk idú priamo na Facebook" + (mt.ma_instagram ? " a Instagram" : "") + ".</p>";
+      if (!mt.ma_instagram) h += '<p class="meta">⚠️ Stránka nemá prepojený Instagram, príspevky pôjdu len na Facebook. Prepoj Instagram so stránkou vo Facebooku (stránka → Prepojené účty) a potom klikni Pripojiť znova.</p>';
+      if (mt.chyba) h += '<p class="vz-siete-chyba">⚠️ Facebook prestal prepojenie prijímať (' + datum(mt.chyba_kedy, true) + "), napríklad po zmene hesla alebo odobratí roly na stránke. Klikni Pripojiť znova.</p>";
+      h += '<div class="form-actions"><button class="btn' + (mt.chyba ? " primary" : "") + '" type="button" data-siete-akcia="pripojit">Pripojiť znova alebo zmeniť stránku</button>' +
+        '<button class="btn ghost" type="button" data-siete-akcia="odpojit">Odpojiť</button></div>';
+    } else {
+      h += '<p class="meta">Pripoj Facebook stránku kancelárie a Instagram, ktorý je s ňou prepojený. Príspevky z ponúk potom zverejníš jedným klikom (Nehnuteľnosti → ponuka → Príspevok na siete).</p>' +
+        (st.make ? '<p class="meta">Teraz sa zverejňuje starším spôsobom (cez Make). Po pripojení pôjde všetko priamo.</p>' : "") +
+        '<div class="form-actions"><button class="btn primary" type="button" data-siete-akcia="pripojit">Pripojiť Facebook a Instagram</button></div>' +
+        '<p class="meta">Prihlásiš sa na stránke Facebooku – heslo Týpek nevidí. Treba Facebook stránku (nie osobný profil) a na Instagram profesionálny účet prepojený s touto stránkou.</p>';
+    }
+    return h;
+  }
+  async function napojSieteVzhlad() {
+    var box = $("#vz-siete"); if (!box) return;
+    function prekresli() { var b = $("#vz-siete"); if (b) { b.innerHTML = sieteBoxHtml(); napojSieteVzhlad(); } }
+    if (!S.sieteStav) { await nacitajSieteStav(); return prekresli(); }
+    // návrat z Facebooku
+    var nv = S.metaNavrat; S.metaNavrat = null;
+    if (nv) {
+      if (nv.vysledok === "ok") { await nacitajSieteStav(); prekresli(); toast("✅ Facebook" + (S.sieteStav.meta && S.sieteStav.meta.ma_instagram ? " a Instagram sú pripojené." : " je pripojený.")); konfety({ pocet: 70 }); }
+      else if (nv.vysledok === "vyber") {
+        try { S.sieteVyber = (await volajFunkciu("meta", { akcia: "stranky" })).stranky || []; } catch (e) { toast(chybaText(e), true); }
+        prekresli();
+      } else { toast(META_CHYBY[nv.kod] || META_CHYBY.facebook, true); prekresli(); }
+      var vb = $("#vz-siete"); if (vb) vb.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    box.querySelectorAll("[data-siete-vyber]").forEach(function (b) {
+      b.onclick = async function () {
+        box.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
+        try {
+          var d = await volajFunkciu("meta", { akcia: "vyber", stranka: b.dataset.sieteVyber });
+          S.sieteVyber = null; await nacitajSieteStav(); prekresli();
+          toast("✅ Pripojené: " + d.stranka + (d.instagram ? " a Instagram @" + d.instagram : "") + "."); konfety({ pocet: 70 });
+        } catch (e) { toast(chybaText(e), true); S.sieteVyber = null; prekresli(); }
+      };
+    });
+    box.querySelectorAll("[data-siete-akcia]").forEach(function (b) {
+      b.onclick = async function () {
+        var a = b.dataset.sieteAkcia;
+        if (a === "zrusit-vyber") { S.sieteVyber = null; return prekresli(); }
+        if (a === "odpojit") {
+          if (!confirm2("Odpojiť Facebook a Instagram kancelárie? Príspevky z ponúk sa potom nebudú dať zverejniť, kým ich znova nepripojíš.\n\nÚplne odobrať prístup môžeš aj vo Facebooku: Nastavenia → Firemné integrácie.")) return;
+          b.disabled = true;
+          try { await volajFunkciu("meta", { akcia: "odpojit" }); await nacitajSieteStav(); prekresli(); toast("Facebook a Instagram sú odpojené."); }
+          catch (e) { toast(chybaText(e), true); b.disabled = false; }
+          return;
+        }
+        // pripojiť – prechod na Facebook; neuložené zmeny vo vzhľade by sa stratili
+        var ul = $('[data-vz="ulozit"]');
+        if (ul && !ul.disabled && !confirm2("Neuložené zmeny vo vzhľade sa stratia. Pokračovať na Facebook?")) return;
+        b.disabled = true; b.textContent = "Otváram Facebook…";
+        try { location.href = (await volajFunkciu("meta", { akcia: "zacat" })).url; }
+        catch (e) { toast(chybaText(e), true); b.disabled = false; b.textContent = "Pripojiť Facebook a Instagram"; }
+      };
+    });
   }
   function nahladVzhladu() { aplikujVzhlad(S.vzhladDraft); }
   async function kresliNahladVodoznaku() {
@@ -7741,8 +7830,11 @@
     var mk = S.mById[p.makler_id] || S.me, par = [];
     if (p.plocha_uzitkova) par.push("📐 " + nf.format(p.plocha_uzitkova) + " m²"); if (p.plocha_pozemku) par.push("🌳 pozemok " + nf.format(p.plocha_pozemku) + " m²");
     if (p.izby) par.push("🛏️ " + p.izby + (p.izby === 1 ? " izba" : p.izby <= 4 ? " izby" : " izieb")); if (p.stav_objektu) par.push("✨ " + p.stav_objektu);
-    var tagy = ["#AlphaReality", "#reality", p.transakcia === "prenajom" ? "#prenajom" : "#predaj", "#" + String(p.obec || "Spis").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z]/g, ""),
-      { byty: "#byt", domy: "#rodinnydom", pozemky: "#pozemok", chaty: "#chata", garaze: "#garaz", priestory: "#priestory", objekty: "#objekt" }[p.kategoria] || "#nehnutelnost"];
+    // hashtag kancelárie podľa názvu vo Vzhľade (Alpha Reality → #AlphaReality), obec len keď je zadaná
+    var tag = function (t) { return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]/g, ""); };
+    var kanc = tag((S.vzhlad && S.vzhlad.nazov) || (S.me && S.me.kancelaria_id > 1 ? "" : "Alpha Reality"));   // iná kancelária bez názvu – bez hashtagu Alphy
+    var tagy = [kanc ? "#" + kanc : "", "#reality", p.transakcia === "prenajom" ? "#prenajom" : "#predaj", tag(p.obec) ? "#" + tag(p.obec) : "",
+      { byty: "#byt", domy: "#rodinnydom", pozemky: "#pozemok", chaty: "#chata", garaze: "#garaz", priestory: "#priestory", objekty: "#objekt" }[p.kategoria] || "#nehnutelnost"].filter(Boolean);
     // návrh od AI (✨ Doladiť s AI): ďalšie výhody z popisu a doladený úvod; zvyšok príspevku ostáva podľa šablóny
     var ai = S.sieteAi && S.sieteAi.id === p.id ? S.sieteAi : null, uvod = ai && ai.uvod ? ai.uvod : p.intro;
     if (ai) par = par.concat(ai.vyhody || []);
@@ -8038,6 +8130,7 @@
     var V = S.sieteFotky.v;
     return '<div class="siete-priamo" id="siete-priamo"><h5>🚀 Zverejniť na Facebook a Instagram kancelárie</h5>' +
       '<p class="meta">Príspevok s textom vyššie a vybranými fotkami pošleme na Facebook stránku a Instagram kancelárie. Nič sa nezverejní samo – len po kliknutí na tlačidlo.</p>' +
+      '<p class="meta" id="sp-kam"></p>' +
       '<div class="siete-volby"><label class="toggle"><input type="checkbox" id="sp-fb" checked> Facebook</label><label class="toggle"><input type="checkbox" id="sp-ig" checked> Instagram</label></div>' +
       (F.length ? '<div class="sp-fotky">' + F.map(function (f, i) {
         var izba = S.sieteAi && S.sieteAi.id === p.id && V.indexOf(i) >= 0 ? (S.sieteAi.miestnosti || {})[String(i)] : "";
@@ -8062,6 +8155,19 @@
       };
     });
     $("#sp-ig").onchange = info; info();
+    // kam príspevok pôjde: priame prepojenie s Meta, starší spôsob cez Make, alebo ešte nič
+    (S.sieteStav ? Promise.resolve(S.sieteStav) : nacitajSieteStav()).then(function (st) {
+      var kam = $("#sp-kam"), mt = st && st.meta; if (!kam || !$("#siete-priamo")) return;
+      if (mt) {
+        kam.innerHTML = "Zverejní sa na stránke <b>" + esc(mt.stranka || "kancelárie") + "</b>" + (mt.ma_instagram ? " a na Instagrame" + (mt.instagram ? " @" + esc(mt.instagram) : "") + "." : ". Instagram nie je so stránkou prepojený.") +
+          (mt.chyba ? ' <b class="vz-siete-chyba">⚠️ Facebook prestal prepojenie prijímať – ' + (admin() ? "pripoj ho znova vo Vzhľade." : "administrátor ho musí pripojiť znova vo Vzhľade.") + "</b>" : "");
+        if (!mt.ma_instagram) { $("#sp-ig").checked = false; $("#sp-ig").disabled = true; info(); }
+      } else if (st && !st.make && !st.chybaNacitania) {
+        kam.innerHTML = "<b>Facebook a Instagram kancelárie ešte nie sú pripojené.</b> " + (admin() ? '<button class="btn ghost" type="button" id="sp-pripojit">Pripojiť vo Vzhľade</button>' : "Pripojí ich administrátor vo Vzhľade.");
+        $("#sp-posli").disabled = true;
+        var pb = $("#sp-pripojit"); if (pb) pb.onclick = function () { prejdi("vzhlad"); };
+      }
+    });
     $("#sp-posli").onclick = async function () {
       var siete = [], b = this;
       if ($("#sp-fb").checked) siete.push("fb"); if ($("#sp-ig").checked) siete.push("ig");
@@ -8102,7 +8208,11 @@
       if (!z || !z.siete.every(function (s) { return (z.vysledok || {})[s]; })) return;
       clearInterval(S.spT);
       var zle = z.siete.filter(function (s) { return !z.vysledok[s].ok; });
-      if (zle.length) toast("Na " + zle.map(nazovSiete).join(" a ") + " sa príspevok nepodarilo zverejniť. Skúste to znova; ak to nepôjde, treba v Make obnoviť prepojenie s Facebookom.", true);
+      var preco = zle.map(function (s) { return z.vysledok[s].chyba; }).filter(Boolean).filter(function (x, i, a) { return a.indexOf(x) === i; }).join(" ");
+      if (zle.length) {
+        toast("Na " + zle.map(nazovSiete).join(" a ") + " sa príspevok nepodarilo zverejniť. " + (preco || "Skúste to znova; ak to nepôjde, administrátor znova pripojí Facebook vo Vzhľade."), true);
+        S.sieteStav = null;   // prepojenie mohlo prestať platiť – pri ďalšom otvorení sa stav načíta znova
+      }
       else { toast("✅ Príspevok je zverejnený."); konfety({ pocet: 70 }); }
     }, 4000);
   }

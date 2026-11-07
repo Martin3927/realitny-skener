@@ -1569,6 +1569,12 @@ body.menu-otvorene { overflow: hidden }
 .vz-typek img { width: 90px; height: auto }
 .vz-typek div { display: grid; gap: 2px }
 @media (max-width: 760px) { .vz-vodoznak { grid-template-columns: minmax(0, 1fr) } }
+/* Facebook a Instagram kancelárie (priame prepojenie s Meta) */
+.vz-siete-stav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px }
+.vz-siete-stranky { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px }
+.vz-siete-stranky .btn { display: grid; gap: 2px; justify-items: start; text-align: left; padding: 10px 14px; height: auto }
+.vz-siete-chyba { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--soft); color: var(--ink); font-size: 14px }
+#sp-kam .vz-siete-chyba { display: inline; padding: 2px 6px }
 
 /* ---------- makléri: zoznam a detail */
 .mk-zoznam-box { gap: 10px }
