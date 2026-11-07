@@ -165,6 +165,13 @@
   // ---------------------------------------------------------------- kroky
   var form, kroky, cur = 0, typ = "byt", dalejBtn, spatBtn;
   function el(id) { return document.getElementById(id); }
+  // telefón: rovnaké pravidlá ako v databáze (_odhad_tel, migrácia 124) – slovenské číslo, české alebo iné zahraničné s predvoľbou
+  function telOk(v) {
+    var r = String(v || "").replace(/[\s\/.()-]/g, "");
+    if (/^(\+|00)4210?\d{9}$/.test(r) || /^0[1-9]\d{8}$/.test(r) || /^9\d{8}$/.test(r) || /^(\+|00)420\d{9}$/.test(r)) return true;
+    if (/^(\+|00)42[01]/.test(r)) return false;
+    return /^(\+|00)[1-9]\d{6,13}$/.test(r);
+  }
   function chyba(text, pole) {
     var c = el("chyba"); c.textContent = text; c.hidden = false;
     if (pole) {
@@ -282,8 +289,8 @@
     if (k === "Kontakt") {
       var m = el("meno"), t = el("telefon"), e = el("email");
       if (m.value.trim().length < 2) return chyba("Napíšte svoje meno.", m);
-      var tc = t.value.replace(/[\s\/.-]/g, "");
-      if (!/^(\+|00)?\d{9,15}$/.test(tc)) return chyba(t.value.trim() ? "Telefónne číslo nemá správny tvar." : "Napíšte telefónne číslo.", t);
+      if (!t.value.trim()) return chyba("Napíšte telefónne číslo.", t);
+      if (!telOk(t.value)) return chyba("Skontrolujte telefónne číslo – napríklad 0905 123 456 alebo +421 905 123 456.", t);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.value.trim())) return chyba(e.value.trim() ? "E-mail nemá správny tvar." : "Napíšte e-mail.", e);
       if (!el("podmienky-suhlas").checked) return chyba("Potvrďte súhlas s podmienkami odhadu.", el("podmienky-suhlas"));
       return true;

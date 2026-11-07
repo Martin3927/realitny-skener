@@ -7682,6 +7682,24 @@
     if (p && (p.zrusena || p.hotovo)) return "";
     return '<p class="meta odh-neskor">🔔 ' + (p ? "Pripomeniem vám klienta " + esc(datum(p.cas)) : "Klienta vám pripomeniem o 3 mesiace") + " – ak sa medzitým nerozhodne predávať s vami. Pripomienku zmeníte v zvončeku.</p>";
   }
+  // „Nedvíha“ (migrácia 124): tlačidlo + stav – koľkokrát nedvíhal, kedy zavolať znova, či odišiel e-mail klientovi
+  function odhNedvihaHtml(o) {
+    var smie = !!o.telefon && ["nova", "kontaktovany"].indexOf(o.stav) >= 0, n = o.nedviha_pocet || 0;
+    if (!smie && !n) return "";
+    var p = (S.prip || []).filter(function (x) { return x.odhad_id === o.id && x.druh === "volat" && !x.hotovo && !x.zrusena; })
+      .sort(function (a, b) { return new Date(a.cas) - new Date(b.cas); })[0];
+    var t = [];
+    if (n) t.push("📵 Nedvíhal(a) " + n + "× – naposledy " + esc(datum(o.nedviha_posledne, true)) + ".");
+    if (p && smie) t.push("🔔 Zavolať znova vám pripomeniem " + esc(datum(p.cas, true)) + " (zvonček aj mobil).");
+    if (o.nedviha_email_chyba) t.push('<span class="error">E-mail klientovi sa nepodarilo poslať' + (/535|Invalid login|nie je nastaven/i.test(o.nedviha_email_chyba) ? " – Týpek teraz nevie posielať e-maily" : ": " + esc(o.nedviha_email_chyba)) + ". Pri ďalšom „Nedvíha“ sa pokúsim znova.</span>");
+    else if (o.nedviha_email_odoslane) t.push("✓ E-mail „nevieme sa vám dovolať“ odišiel klientovi " + esc(datum(o.nedviha_email_odoslane, true)) + ".");
+    else if (o.nedviha_email_poslat) t.push("✉️ E-mail klientovi sa odosiela…");
+    else if (n && !o.email) t.push("Klient nezadal e-mail – skúste mu poslať SMS.");
+    if (n >= 2 && smie) t.push("Skúste aj SMS – niektorí ľudia neznáme čísla nedvíhajú.");
+    var pomoc = !n ? (o.email ? "Klientovi odíde od vášho mena e-mail, že sa mu nedá dovolať, a o 2 hodiny vám pripomeniem zavolať znova." : "O 2 hodiny vám pripomeniem zavolať znova.") : "";
+    return (smie ? '<div class="odh-nedviha-r"><button type="button" class="btn" data-odh-nedviha>📵 Nedvíha</button>' + (pomoc ? '<span class="meta">' + pomoc + "</span>" : "") + "</div>" : "") +
+      (t.length ? '<p class="meta odh-nedviha-st">' + t.join(" ") + "</p>" : "");
+  }
   function nacitajPripomienkyTicho() {
     return typeof nacitajPripomienky === "function" ? Promise.resolve(nacitajPripomienky()).catch(function () {}) : Promise.resolve();
   }
@@ -7736,7 +7754,8 @@
       '<div class="odh-stlpce"><div class="odh-lavy">' + trhInfoHtml(o) +
       '<div class="box"><h3>👤 Klient</h3><div class="odh-klient"><b>' + esc(o.meno) + "</b>" +
         (o.telefon ? '<a href="tel:' + esc(telCislo(o.telefon)) + '">' + esc(o.telefon) + "</a>" : "") + (o.email ? '<a href="mailto:' + esc(o.email) + '">' + esc(o.email) + "</a>" : "") + "</div>" +
-        '<div class="prip-odp odh-odp">' + odp + (o.email && o.telefon ? '<a class="btn" data-odpoved="email" href="' + esc(odkazSpravy("email", "", "Dobrý deň, " + o.meno + ",\n\n", "Odhad hodnoty – " + (o.nazov || ""), o.email)) + '">E-mail</a>' : "") + "</div></div>" +
+        '<div class="prip-odp odh-odp">' + odp + (o.email && o.telefon ? '<a class="btn" data-odpoved="email" href="' + esc(odkazSpravy("email", "", "Dobrý deň, " + o.meno + ",\n\n", "Odhad hodnoty – " + (o.nazov || ""), o.email)) + '">E-mail</a>' : "") + "</div>" +
+        '<div class="odh-nedviha" id="odh-nedviha">' + odhNedvihaHtml(o) + "</div></div>" +
       '<div class="box"><h3>🏠 Nehnuteľnosť</h3><table class="odh-tab">' + riadky.join("") + "</table></div>" +
       (o.fotky_cesta ? '<div class="box"><h3>📷 Fotky od klienta</h3><div id="odh-fotky" class="odh-fotky"><span class="meta">Načítavam fotky…</span></div></div>' : "") +
       '<div class="box"><h3>🔎 Čo o klientovi vieme</h3><div id="odh-zhody">' + odhZhodyHtml(o) + "</div></div>" +
@@ -7778,7 +7797,7 @@
     async function stav(k, tichy) {
       try { aktualizuj(await rpc("odhad_ulozit", { p_id: o.id, p: { stav: k } }));
         el.querySelectorAll("[data-odh-stav]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.odhStav === o.stav)); });
-        nacitajPripomienkyTicho().then(function () { var n = $("#odh-neskor"); if (n) n.innerHTML = odhNeskorHtml(o); });
+        nacitajPripomienkyTicho().then(function () { var n = $("#odh-neskor"); if (n) n.innerHTML = odhNeskorHtml(o); var nd = $("#odh-nedviha"); if (nd) { nd.innerHTML = odhNedvihaHtml(o); napojNedviha(); } });
         if (!tichy) toast(odhStav(k)[2] + " " + odhStav(k)[1]);
       } catch (e) { toast(chybaText(e), true); }
     }
@@ -7789,6 +7808,28 @@
     el.querySelector("[data-odh-pozn]").onclick = async function () {
       try { aktualizuj(await rpc("odhad_ulozit", { p_id: o.id, p: { poznamka_maklera: $("#odh-pozn").value } })); toast("Poznámka je uložená."); } catch (e) { toast(chybaText(e), true); }
     };
+    function napojNedviha() {
+      var nb = el.querySelector("[data-odh-nedviha]");
+      if (!nb) return;
+      nb.onclick = async function () {
+        if (nb.disabled) return;
+        nb.disabled = true;
+        try {
+          var r = await rpc("odhad_nedviha", { p_id: o.id });
+          aktualizuj(r);
+          toast("📵 Zapísané. Zavolať znova vám pripomeniem " + datum(r.volat_znova, true) + (r.email_posle ? " a klientovi odíde e-mail." : "."));
+          await nacitajPripomienkyTicho();
+          // e-mail odchádza do pár minút – stav ešte raz obnovíme
+          if (r.email_posle) setTimeout(function () {
+            sb.from("odhady_hodnoty").select("id, nedviha_email_poslat, nedviha_email_odoslane, nedviha_email_chyba").eq("id", o.id).maybeSingle().then(function (q) {
+              if (q && q.data) { aktualizuj(q.data); var b = $("#odh-nedviha"); if (b && S.odhadDetail === o.id) { b.innerHTML = odhNedvihaHtml(o); napojNedviha(); } }
+            });
+          }, 90000);
+        } catch (e) { toast(chybaText(e), true); }
+        var b = $("#odh-nedviha"); if (b && S.odhadDetail === o.id) { b.innerHTML = odhNedvihaHtml(o); napojNedviha(); }
+      };
+    }
+    napojNedviha();
     var pb = el.querySelector("[data-odh-priradit]");
     if (pb) pb.onclick = async function () {
       var komu = $("#odh-komu").value; if (komu === o.makler_id) return toast("Žiadosť už má tento maklér.");
@@ -7830,7 +7871,7 @@
       try {
         aktualizuj(await rpc("odhad_poslat", { p_id: o.id, p_od: c.od, p_do: c.d, p_text: f.text.value }));
         $("#odh-email-stav").innerHTML = odhEmailStav(o);
-        nacitajPripomienkyTicho().then(function () { var n = $("#odh-neskor"); if (n) n.innerHTML = odhNeskorHtml(o); });
+        nacitajPripomienkyTicho().then(function () { var n = $("#odh-neskor"); if (n) n.innerHTML = odhNeskorHtml(o); var nd = $("#odh-nedviha"); if (nd) { nd.innerHTML = odhNedvihaHtml(o); napojNedviha(); } });
         el.querySelectorAll("[data-odh-stav]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.odhStav === o.stav)); });
         toast("✉️ Odhad sa odosiela klientovi.");
         [6000, 20000].forEach(function (t) {
@@ -10753,6 +10794,14 @@
           }
         }
       }
+      // „Znova zavolať“ klientovi z odhadu (migrácia 124): odkaz na žiadosť a tlačidlo Zavolať
+      var odhTel = "";
+      if (p.odhad_id && maSekciu("odhady")) {
+        ciel = '<a href="#odhady" data-prip-odhad="' + p.odhad_id + '">📈 Otvoriť žiadosť o odhad</a>';
+        var po2 = (S.odhady || []).find(function (x) { return x.id === p.odhad_id; });
+        if (po2) odhTel = po2.telefon || "";
+        else if (!S.odhadyNacitavam && !(S.odhZvon = S.odhZvon || {})["o" + p.odhad_id]) { S.odhZvon["o" + p.odhad_id] = 1; nacitajOdhadyHodnoty(true).then(vykresliZvoncek); }
+      }
       if (p.druh === "web" && !p.web_kontakt_id && /^(Žiadosť o adresu|Pripojiť doménu)/.test(p.poznamka || "")) ciel = '<a href="#" data-prip-web>🌐 Otvoriť Osobný web</a>';
       // nová objednávka z predajného webu → zákazník v Správe zákazníkov
       if (p.zakaznik_id) ciel = '<a href="sprava.html#z/' + encodeURIComponent(p.zakaznik_id) + '" data-prip-zak>👥 Otvoriť v Správe zákazníkov</a>';
@@ -10764,6 +10813,7 @@
         (p.vytvoril && p.vytvoril !== p.makler_id ? '<div class="meta">Nastavil: ' + esc(meno(p.vytvoril)) + "</div>" : "") +
         (p.email_chyba ? '<div class="error">Email sa nepodarilo odoslať: ' + esc(p.email_chyba) + "</div>" : p.email_odoslany && p.druh !== "volat" && !p.zakaznik_id ? '<div class="meta">✓ Email odoslaný</div>' : "") + "</div>" +
         '<div class="prip-akcie">' + (p.druh === "volat" && !cudzia && S.tel[p.inzerat_id] ? '<a class="btn primary" href="tel:' + esc(String(S.tel[p.inzerat_id].telefon).replace(/[^\d+]/g, "")) + '">📞 Zavolať</a>' : "") +
+        (p.druh === "volat" && !cudzia && odhTel ? '<a class="btn primary" href="tel:' + esc(telCislo(odhTel)) + '">📞 Zavolať</a>' : "") +
         '<button class="btn" type="button" data-prip-act="hotovo">✓ Hotovo</button>' +
         (!p.druh || p.druh === "pripomienka" ? '<button class="btn ghost" type="button" data-prip-act="upravit">Upraviť</button>' : "") +
         '<button class="btn ghost danger" type="button" data-prip-act="zrusit">Zrušiť</button></div></div>';

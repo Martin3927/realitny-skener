@@ -56,7 +56,7 @@ select _kontakt_cena(c, now() - interval '1 hour') h1, _kontakt_cena(c, now() - 
 
 \echo '=== 2. predaj vypnutý (žiadny okres) → po starom maklérovi z obce'
 set role anon;
-select odhad_ziadost(:'BYT'::jsonb || '{"email":"stara@example.sk"}', :'P1')->>'ok' ok;  -- → true
+select odhad_ziadost(:'BYT'::jsonb || '{"email":"stara@example.sk","telefon":"0905 100 200"}', :'P1')->>'ok' ok;  -- → true (iné číslo – 124: ten istý klient by do 30 dní nešiel na predaj)
 reset role;
 select makler_id = :'K' kristian, trh_od is null mimo_predaja, kancelaria_id from odhady_hodnoty where email = 'stara@example.sk';  -- → t, t, 1
 
@@ -70,7 +70,7 @@ select id as "T1" from odhady_hodnoty where email = 'jana@example.sk' \gset
 select kancelaria_id = (select kancelaria_trh from kontakty_nastavenie) skryta, makler_id, web_kontakt_id, potvrdenie_poslat,
        trh_ceny->0->>'c' prva, round(extract(epoch from trh_koniec - trh_od) / 3600) hodin from odhady_hodnoty where id = :T1;   -- → t, null, null, t, 50, 48
 select count(*) pripomienky from pripomienky where poznamka like '%Jana%';              -- → 1 (len zo žiadosti v 2.)
-select count(*) predajcovia from predajcovia where telefon = '0905123456';             -- → 1 (zo žiadosti v 2., Alpha)
+select count(*) predajcovia from predajcovia where telefon in ('0905123456', '0905100200');   -- → 1 (zo žiadosti v 2., Alpha)
 select makler_id = :'K' k, makler_id = :'B' b, makler_id = :'A' a, titul from push_fronta order by makler_id;
 -- → cez deň 3 riadky (A, K, B – nie Tretia RK), „💰 Nový kontakt na predaj · 50 €“; v noci 0
 
@@ -108,14 +108,14 @@ reset role; reset request.jwt.claim.sub;
 select kancelaria_id, makler_id = :'B' beata, predane_cena, predane_zadarmo, predane_ako, predane_kancelaria from odhady_hodnoty where id = :T1;  -- → 20, t, 0, t, nakup, 20
 select w.kancelaria_id, w.makler_id = :'B' beata, w.zdroj, left(w.co, 40) from web_kontakty w join odhady_hodnoty o on o.web_kontakt_id = w.id where o.id = :T1;  -- → 20, t, odhad, Odhad hodnoty: 3-izbový byt, 70 m², Smiža…
 select kancelaria_id, makler_id = :'B' beata, druh, left(poznamka, 45) from pripomienky where web_kontakt_id = (select web_kontakt_id from odhady_hodnoty where id = :T1);  -- → 20, t, web, Prevzatý kontakt – odhad hodnoty – 3-izbový…
-select kancelaria_id, makler_id = :'B' beata from predajcovia where telefon = '0905123456' order by kancelaria_id;  -- → 1 (K) a 20 (t)
+select kancelaria_id, makler_id = :'B' beata from predajcovia where telefon in ('0905123456', '0905100200') order by kancelaria_id;  -- → 1 (K) a 20 (t)
 select count(*) push_kupujucemu from push_fronta where tag like 'typek-kontakt-%' and odoslane is null;            -- → 0 (je v aplikácii)
 select count(*) push_trh_cakajuce from push_fronta where tag = 'typek-trh-' || :T1 and odoslane is null;         -- → 0
 select kancelaria_id, druh, suma, zadarmo from kontakty_pohyby order by id;            -- → 20, nakup, 0.00, t
 
 \echo '=== 6. ďalšie kontakty: druhý zadarmo, tretí bez kreditu nejde, po dobití za 50 €'
 set role anon;
-select odhad_ziadost(:'BYT'::jsonb || '{"email":"druhy@example.sk","ulica":"Hlavná"}', :'P3')->>'ok',
+select odhad_ziadost(:'BYT'::jsonb || '{"email":"druhy@example.sk","ulica":"Hlavná","telefon":"0905 222 333"}', :'P3')->>'ok',
        odhad_ziadost(:'BYT'::jsonb || '{"email":"treti@example.sk","ulica":"Nová","telefon":"0905 999 888"}', :'P4')->>'ok';   -- → true, true
 reset role;
 select id as "T2" from odhady_hodnoty where email = 'druhy@example.sk' \gset
@@ -225,7 +225,7 @@ select kontakty_sprava()->'nastavenie'->'ceny_okresy' ceny_okresy;              
 reset role; reset request.jwt.claim.sub;
 select _kontakty_ceny('Spišská Nová Ves') snv, _kontakty_ceny('Levoča') levoca;      -- → [80 od 0 h, 40 od 2 h], [50, 35] (spoločné)
 set role anon;
-select odhad_ziadost(:'BYT'::jsonb || '{"email":"okres@example.sk","ulica":"Okresná"}', pg_temp.pow(26000000))->>'ok';  -- → true
+select odhad_ziadost(:'BYT'::jsonb || '{"email":"okres@example.sk","ulica":"Okresná","telefon":"0905 333 444"}', pg_temp.pow(26000000))->>'ok';  -- → true
 reset role;
 select trh_ceny from odhady_hodnoty where email = 'okres@example.sk';                 -- → [{"c": 80, "h": 0}, {"c": 40, "h": 2}]
 set role authenticated; set request.jwt.claim.sub = :'K';
@@ -251,7 +251,7 @@ update kontakty_nastavenie set okresy = '{Spišská Nová Ves,Poprad}', ceny_okr
 update makleri set pristup = '{inzeraty,nehnutelnosti,odhady}' where id = :'K';
 select :'K' = any(_kontakty_kupci('Spišská Nová Ves')) k_dostane_push, :'A' = any(_kontakty_kupci('Spišská Nová Ves')) a_dostane;   -- → f, t
 set role anon;
-select odhad_ziadost(:'BYT'::jsonb || '{"email":"pravo@example.sk","ulica":"Právna"}', pg_temp.pow(28000000))->>'ok';  -- → true
+select odhad_ziadost(:'BYT'::jsonb || '{"email":"pravo@example.sk","ulica":"Právna","telefon":"0905 666 777"}', pg_temp.pow(28000000))->>'ok';  -- → true
 reset role;
 select id as "T6" from odhady_hodnoty where email = 'pravo@example.sk' \gset
 set role authenticated; set request.jwt.claim.sub = :'K';

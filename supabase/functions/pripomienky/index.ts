@@ -601,6 +601,7 @@ async function sha256(t: string) {
 // ---------------------------------------------------------------- Odhad hodnoty (realitnytypek.sk/odhad, migrácia 108)
 // 1) potvrdenie klientovi hneď po odoslaní žiadosti (od „Týpkove nehnuteľnosti“, odpoveď ide maklérovi)
 // 2) odhad od makléra (tlačidlo „Poslať klientovi e-mailom“ v sekcii Odhady) – od mena makléra, odpoveď ide maklérovi
+// 2b) klient nedvíha (tlačidlo „Nedvíha“, migrácia 124) – raz e-mail „nevieme sa vám dovolať“ od makléra, odpoveď ide maklérovi
 // Pri chybe sa nič neopakuje samo: potvrdenie nie je nutné a maklér vidí chybu pri žiadosti a môže odhad poslať znova alebo vlastným e-mailom.
 const SVIATKY = ["01-01", "01-06", "05-01", "05-08", "07-05", "08-29", "09-15", "11-01", "12-24", "12-25", "12-26"];
 const POZASTAVENE: Record<number, string[]> = { 2026: ["05-08", "09-15"] };   // v roku 2026 sa tieto sviatky nečerpajú (konsolidácia)
@@ -632,7 +633,7 @@ function menoMaklera(m: { titul_pred?: string; meno?: string; titul_za?: string 
 const ODHAD_PODMIENKY = "https://realitnytypek.sk/odhad/#podmienky";
 // deno-lint-ignore no-explicit-any
 async function odhadEmaily(db: any) {
-  const ted = new Date().toISOString(), vysl = { potvrdenia: 0, odhady: 0, chyby: [] as string[] };
+  const ted = new Date().toISOString(), vysl = { potvrdenia: 0, odhady: 0, nedviha: 0, chyby: [] as string[] };
   const kancelarie = await nazvyKancelarii(db);
   // deno-lint-ignore no-explicit-any
   const makleri = new Map<string, any>();
@@ -713,6 +714,45 @@ async function odhadEmaily(db: any) {
       const t = String((e as Error).message || e).slice(0, 300);
       vysl.chyby.push(t);
       await db.from("odhady_hodnoty").update({ email_odoslany: null, email_chyba: t }).eq("id", o.id);
+    }
+  }
+  // 2b) klient nedvíha – e-mail len raz na žiadosť (opakované „Nedvíha“ už e-mail nepošle)
+  const { data: ndv } = await db.from("odhady_hodnoty")
+    .update({ nedviha_email_poslat: false, nedviha_email_odoslane: ted })
+    .eq("nedviha_email_poslat", true).is("nedviha_email_odoslane", null)
+    .select("id, meno, email, telefon, nazov, ulica, cislo, makler_id, nedviha_email_kto, nedviha_posledne, kancelaria_id");
+  // deno-lint-ignore no-explicit-any
+  for (const o of (ndv as any[]) ?? []) {
+    try {
+      if (!o.email) throw new Error("klient nemá e-mail");
+      const m = await makler(o.nedviha_email_kto || o.makler_id) || await makler(o.makler_id);
+      const kn = nazovK(kancelarie, m?.kancelaria_id ?? o.kancelaria_id);
+      const mm = m ? menoMaklera(m) : kn;
+      const tel = String(m?.telefon || "").trim();
+      const kedy = new Date(o.nedviha_posledne || Date.now());
+      const den = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Europe/Bratislava" });
+      const hod = kedy.toLocaleTimeString("sk-SK", { timeZone: "Europe/Bratislava", hour: "2-digit", minute: "2-digit" });
+      const kedyT = (den(kedy) === den(new Date()) ? "dnes" : kedy.toLocaleDateString("sk-SK", { timeZone: "Europe/Bratislava", day: "numeric", month: "numeric" })) + " o " + hod;
+      const volal = m ? (m.pohlavie === "zena" ? "volala som vám" : "volal som vám") : "volali sme vám";
+      const html = `<div style="background:#f7f2e8;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#1e2a35">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:540px;width:100%;margin:0 auto"><tr><td>
+        <p style="margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a5a2b">Odhad hodnoty nehnuteľnosti</p>
+        <p style="margin:0 0 18px;font-size:20px;font-weight:800;line-height:1.3">${esc(o.nazov || "Vaša nehnuteľnosť")}${o.ulica ? `<br><span style="font-size:15px;font-weight:400;color:#3a4b5a">${esc([o.ulica, o.cislo].filter(Boolean).join(" "))}</span>` : ""}</p>
+        <div style="background:#fffdf8;border-radius:18px;padding:18px 22px;font-size:15px;line-height:1.6;margin:0 0 20px">
+          <p style="margin:0 0 10px">Dobrý deň${o.meno ? ", " + esc(String(o.meno).split(" ")[0]) : ""},</p>
+          <p style="margin:0 0 10px">${esc(kedyT)} ${volal} kvôli odhadu hodnoty vašej nehnuteľnosti${o.telefon ? " na číslo " + esc(o.telefon) : ""}, ale nepodarilo sa nám spojiť.</p>
+          <p style="margin:0">Skúsim vám zavolať znova. Ak sa vám to viac hodí, zavolajte mi alebo odpíšte na tento e-mail, kedy vám môžem zavolať – prípadne opravte číslo, ak je nesprávne.</p></div>
+        ${tel ? `<p style="margin:0 0 22px"><a href="tel:${esc(tel.replace(/[^\d+]/g, ""))}" style="display:inline-block;background:#db9522;color:#1e2a35;font-weight:700;font-size:15px;padding:12px 22px;border-radius:999px;text-decoration:none">Zavolať ${esc(tel)}</a></p>` : ""}
+        <p style="margin:0;font-size:15px;line-height:1.5"><b>${esc(mm)}</b><br>${esc(kn)}${tel ? `<br><a href="tel:${esc(tel.replace(/[^\d+]/g, ""))}" style="color:#1e2a35">${esc(tel)}</a>` : ""}${m?.email ? `<br><a href="mailto:${esc(m.email)}" style="color:#1e2a35">${esc(m.email)}</a>` : ""}</p>
+        <p style="font-size:12px;line-height:1.5;color:#7a828c;margin:26px 0 0;border-top:1px solid #e6dccb;padding-top:12px">Tento e-mail vám prišiel, lebo ste na realitnytypek.sk/odhad požiadali o odhad hodnoty nehnuteľnosti. Ak už odhad nepotrebujete, stačí odpísať – viac vás nebudeme kontaktovať. <a href="${ODHAD_PODMIENKY}" style="color:#7a828c">Podmienky odhadu</a>.</p>
+        </td></tr></table></div>`;
+      await posli(o.email, "Nevieme sa vám dovolať – odhad hodnoty: " + String(o.nazov || "vaša nehnuteľnosť").slice(0, 90), html,
+        { odMeno: (mm + (kn && kn !== mm ? " · " + kn : "")).slice(0, 70), odpovedat: m?.email || PORTAL_ODPOVED });
+      vysl.nedviha++;
+    } catch (e) {
+      const t = String((e as Error).message || e).slice(0, 300);
+      vysl.chyby.push(t);
+      await db.from("odhady_hodnoty").update({ nedviha_email_odoslane: null, nedviha_email_chyba: t }).eq("id", o.id);
     }
   }
   // 3) fotky žiadostí starších ako 2 roky – zmazať z úložiska (žiadosť potom v noci zmaže databáza)

@@ -672,11 +672,22 @@
     var h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
     return "o " + (h ? h + " h" + (m ? " " : "") : "") + (m ? m + " min" : "");
   }
+  function nedvihaInfo(n) {
+    if (!n) return "";
+    return "<small>📵 Kancelária zapísala „Nedvíha“ " + n.pocet + "× (naposledy " + cas(n.posledne) + ") · " +
+      (n.email ? "e-mail klientovi odišiel " + cas(n.email) : n.email_chyba ? "e-mail klientovi sa nepodaril: " + esc(n.email_chyba) : "e-mail klientovi neodišiel") + "</small>";
+  }
   async function kontaktyPrehlad() {
     if (!$(".sp-kontakty")) $("#sp").innerHTML = zalozky("ko") + '<div class="boot">Načítavam kontakty…</div>';
     var r = await sb.rpc("kontakty_sprava");
     if (r.error) { $("#sp").innerHTML = zalozky("ko") + '<p class="sp-nic">Kontakty sa nepodarilo načítať: ' + esc(chybaText(r.error)) + "</p>"; return; }
     var D = r.data, N = D.nastavenie, vybrane = {};
+    // „Nedvíha“ pri reklamovaných kontaktoch (124) – len informácia, dôvodom reklamácie to nie je
+    var NDV = {};
+    if (D.reklamacie.length) {
+      var ri = await sb.rpc("kontakty_nedviha_info", { p_ids: D.reklamacie.map(function (x) { return x.odhad_id; }).filter(Boolean) });
+      if (!ri.error && ri.data) NDV = ri.data;
+    }
     var cenyOkr = JSON.parse(JSON.stringify(N.ceny_okresy || {}));   // vlastné ceny okresov (118)
     var VY = N.vyhody || { prednost_min: 60, zlava_jeden: 10, zlava_oba: 20, zadarmo_jeden: 5, zadarmo_oba: 5, mesacne_oba: 1 };   // výhody (123)
     (N.okresy || []).forEach(function (o) { vybrane[o] = true; });
@@ -703,7 +714,7 @@
       return '<div class="sp-ko-r"><span class="sp-meno"><b>' + esc(x.nazov || "Kontakt") + "</b><small>" + esc(x.kancelaria || "") + (x.kto ? " · " + esc(x.kto) : "") +
           " · prevzaté " + cas(x.predane) + " za " + (x.zadarmo ? "0 € (zadarmo)" : eur(x.cena)) + "</small>" +
           "<small><b>" + esc(x.dovod) + "</b>" + (x.text ? " – " + esc(x.text) : "") + "</small>" +
-          '<small class="sp-ko-kl">Klient: ' + esc([x.meno, x.telefon, x.email].filter(Boolean).join(", ")) + "</small></span>" +
+          '<small class="sp-ko-kl">Klient: ' + esc([x.meno, x.telefon, x.email].filter(Boolean).join(", ")) + "</small>" + nedvihaInfo(NDV[x.odhad_id]) + "</span>" +
         (x.stav === "caka" ? '<span class="sp-ko-akc"><button type="button" class="btn primary" data-rekl-uznat="' + x.id + '">Uznať</button>' +
           '<button type="button" class="btn ghost" data-rekl-zamietnut="' + x.id + '">Zamietnuť</button></span>'
           : '<i class="sp-stav ' + (x.stav === "uznana" ? "dobry" : "sivy") + '">' + (x.stav === "uznana" ? "Uznaná" : "Zamietnutá") + (x.odpoved ? " – " + esc(x.odpoved) : "") + "</i>") + "</div>";
