@@ -9,8 +9,8 @@
 //
 // Kľúč stránky (bez dátumu konca, ak vznikol z dlhodobého kľúča) ukladáme zašifrovaný (AES-GCM);
 // kľúč na šifrovanie je SIETE_KLUC, inak odvodený z META_APP_SECRET. Aplikácia kľúče nikdy nedostane.
-// Tajomstvá funkcií: META_APP_ID, META_APP_SECRET, voliteľne META_CONFIG_ID (Facebook Login for Business)
-// a APP_URL (predvolene https://app.realitnytypek.sk/).
+// Tajomstvo funkcií: META_APP_SECRET. Číslo aplikácie a konfigurácie (Facebook Login for Business) sú v spoločných
+// nastaveniach (nastavenia.meta_app_id, meta_config_id) alebo v tajomstvách META_APP_ID, META_CONFIG_ID; APP_URL voliteľne.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const G = "https://graph.facebook.com/v25.0";
@@ -68,8 +68,13 @@ Deno.serve(async (req) => {
   const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
   const URL_DB = Deno.env.get("SUPABASE_URL")!;
   const NAVRAT = URL_DB + "/functions/v1/meta";   // presne táto adresa musí byť v aplikácii Meta (Valid OAuth Redirect URIs)
-  const APP_ID = Deno.env.get("META_APP_ID") || "", APP_SECRET = Deno.env.get("META_APP_SECRET") || "", CONFIG = Deno.env.get("META_CONFIG_ID") || "";
   const db = createClient(URL_DB, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  // číslo aplikácie a konfigurácie nie sú tajné – stačí ich mať v spoločných nastaveniach (meta_app_id, meta_config_id);
+  // tajné je len META_APP_SECRET (tajomstvo funkcií)
+  const { data: nast } = await db.from("nastavenia").select("kluc, hodnota").in("kluc", ["meta_app_id", "meta_config_id"]);
+  const zNast = (k: string) => String((nast || []).find((x: { kluc: string }) => x.kluc === k)?.hodnota || "").trim();
+  const APP_ID = Deno.env.get("META_APP_ID") || zNast("meta_app_id"), APP_SECRET = Deno.env.get("META_APP_SECRET") || "";
+  const CONFIG = Deno.env.get("META_CONFIG_ID") || zNast("meta_config_id");
 
   // uloží vybranú stránku ako prepojenie kancelárie
   async function ulozPrepojenie(kancelaria: number, makler: string, s: Stranka, fbUser: { id?: string; meno?: string }) {
