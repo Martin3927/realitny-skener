@@ -277,6 +277,15 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 /* pás textu, ktorý ide do strán podľa skrolovania */
 @media (prefers-reduced-motion: reduce){html:not(.pohyb-vzdy) .pas-r1,html:not(.pohyb-vzdy) .pas-r2{transform:none}html:not(.pohyb-vzdy) .hdr,html:not(.pohyb-vzdy) .hdr nav{transition:none}}
 
+/* ===== nadpisy kategórií hore na kartách (skener, kontakty, osobný web, ponuky, zvonček) */
+.kat{flex:1 1 100%;display:flex;align-items:center;gap:14px;padding-bottom:18px;border-bottom:1px solid rgba(30,42,53,.1)}
+.kat-ic{flex:none;width:48px;height:48px;border-radius:15px;background:#1E2A35;color:#DB9522;display:grid;place-items:center}
+.kat-t{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(21px,2.1vw,26px);line-height:1.15;font-weight:800;letter-spacing:-.015em;color:#1E2A35}
+.kat--tm{border-bottom-color:rgba(247,242,232,.16)}
+.kat--tm .kat-t{color:#F7F2E8}
+.kat--zl .kat-ic{background:#DB9522;color:#1E2A35}
+#p-skener>.kat,#p-web>.kat,.zv>.kat,.oc>.kat{margin-bottom:-10px}
+@media (max-width: 640px){.kat{gap:12px;padding-bottom:16px}.kat-ic{width:42px;height:42px;border-radius:13px}.kat-ic svg{width:21px;height:21px}}
 /* ===== úvod: zlatá čiara pod „prvý.“ a striedanie nových inzerátov v bubline */
 .prvy{position:relative;display:inline-block;color:#4A6074}
 .prvy-ciara{position:absolute;left:-2%;bottom:-.14em;width:104%;height:.26em;overflow:visible}
@@ -407,7 +416,6 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 /* ===== zvonček: vlastné pripomienky */
 .zv{border-radius:36px;background:#F2E4C6;padding:clamp(26px,4.5vw,56px);display:flex;flex-wrap:wrap;align-items:center;gap:44px 56px}
 .zv-tx{flex:1 1 440px;min-width:0;display:flex;flex-direction:column;gap:18px}
-.zv-ey{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:#1E2A35;color:#DB9522;font-size:12px;font-weight:700;letter-spacing:.1em}
 .zv-ul{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 @media (min-width: 640px){.zv-ul{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .zv-li{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:18px;background:rgba(255,253,248,.7);font-size:14px;line-height:1.45;color:#4A6074}
@@ -909,8 +917,8 @@ Kataster pri každom inzeráte
 <!-- SKENER -->
 <section id="skener" style="max-width: 1200px; margin: 0 auto; padding: 0 24px 110px">
 <div id="p-skener" class="pcard" style="border-radius: 36px; background: #1E2A35; color: #F7F2E8; padding: clamp(24px, 4.5vw, 56px); display: flex; flex-wrap: wrap; align-items: center; gap: 40px 56px; overflow: hidden">
+<div class="kat kat--tm kat--zl"><span class="kat-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg></span><span class="kat-t">Realitný skener</span></div>
 <div style="flex: 1 1 400px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
-<span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(247,242,232,.1); color: #DB9522; font-size: 12px; font-weight: 700; letter-spacing: 0.1em"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 12 L18 6"></path></svg>REALITNÝ SKENER</span>
 <h2 style="margin: 0; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.04; letter-spacing: -0.03em; font-weight: 800">Nové inzeráty súkromníkov skôr ako konkurencia</h2>
 <p style="margin: 0; font-size: 18px; line-height: 1.6; color: #C9D4DD">Cez deň Týpek každých 10 minút prejde Bazoš, Nehnuteľnosti.sk, Reality.sk a TopReality v okresoch, ktoré si vyberieš. Keď súkromník pridá inzerát, máš ho navrchu skenera aj ako upozornenie v mobile.</p>
 <ol class="kst" aria-label="Ako skener funguje">
@@ -1389,7 +1397,7 @@ Kataster pri každom inzeráte
   $$('#rano > div:nth-of-type(2) > div').forEach(function(e){mark(e,'hore');});
   var okno=d.querySelector('#nahlad .tabs-x');okno=okno&&okno.nextElementSibling;
   if(okno){okno.classList.add('okno-3d');mark(okno,'okno');}
-  $$('.feat,.kst-i,.wfeat,.zv-li,.oc-krok,.oc-over,.cpay-in,.pk-perks > span,.pk-kontakt,.tabs-x').forEach(function(e){mark(e,'hore');});
+  $$('.kat,.feat,.kst-i,.wfeat,.zv-li,.oc-krok,.oc-over,.cpay-in,.pk-perks > span,.pk-kontakt,.tabs-x').forEach(function(e){mark(e,'hore');});
   $$('.tel-wrap,.zv-vis,.oc-vis').forEach(function(e){mark(e,'zoom');});
   $$('#pristup img.mfloat').forEach(function(e){mark(e.parentElement,'zoom');});
   if(pas)mark(pas,'hore');
