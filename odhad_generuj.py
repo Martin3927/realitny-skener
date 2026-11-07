@@ -104,7 +104,7 @@ for sl, nazov, v_kom, kraj, okr, obce, priklad, nazov_okresu in stranky:
     url = WEB + sl + "/"
     titul = f"Odhad hodnoty nehnuteľnosti {nazov} – zadarmo | Týpkove nehnuteľnosti"
     popis = (f"Koľko stojí byt, dom alebo pozemok {v_kom}? Vyplňte pár údajov a maklér, ktorý tu pôsobí, vám približnú hodnotu "
-             "oznámi do 24 hodín v pracovné dni. Zadarmo a nezáväzne.")
+             "oznámi do 2 pracovných dní. Zadarmo a nezáväzne.")
     t = re.sub(r"<title>[^<]*</title>", "<title>" + html.escape(titul) + "</title>", t, count=1)
     t = re.sub(r'<meta name="description" content="[^"]*">', '<meta name="description" content="' + html.escape(popis) + '">', t, count=1)
     t = re.sub(r'<link rel="canonical" href="[^"]*">', f'<link rel="canonical" href="{url}">', t, count=1)

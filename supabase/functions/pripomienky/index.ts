@@ -620,9 +620,9 @@ function pracovnyDen(d: Date) {   // d = dátum v UTC predstavujúci deň v Brat
 function kedySaOzve(od: Date) {
   const s = od.toLocaleDateString("en-CA", { timeZone: "Europe/Bratislava" });   // YYYY-MM-DD
   const dnes = new Date(s + "T00:00:00Z"), zajtra = new Date(dnes.getTime() + 864e5);
-  if (pracovnyDen(dnes) && pracovnyDen(zajtra)) return "do 24 hodín";
-  const d = new Date(dnes.getTime() + 864e5);
-  while (!pracovnyDen(d)) d.setUTCDate(d.getUTCDate() + 1);
+  // 2 pracovné dni od zajtra (žiadosť môže ísť najprv kanceláriám v okrese)
+  const d = new Date(zajtra.getTime()); let n = 0;
+  while (true) { while (!pracovnyDen(d)) d.setUTCDate(d.getUTCDate() + 1); if (++n === 2) break; d.setUTCDate(d.getUTCDate() + 1); }
   const dni = ["v nedeľu", "v pondelok", "v utorok", "v stredu", "vo štvrtok", "v piatok", "v sobotu"];
   return "najneskôr " + dni[d.getUTCDay()] + " " + d.getUTCDate() + ". " + (d.getUTCMonth() + 1) + ".";
 }

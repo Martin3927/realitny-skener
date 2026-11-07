@@ -336,8 +336,9 @@
   }
   function kedy() {
     var dnes = new Date(), zajtra = new Date(dnes.getFullYear(), dnes.getMonth(), dnes.getDate() + 1);
-    if (pracovny(dnes) && pracovny(zajtra)) return "do 24 hodín";
-    var d = new Date(zajtra); while (!pracovny(d)) d.setDate(d.getDate() + 1);
+    // 2 pracovné dni od zajtra (odhad môže ísť najprv kanceláriám v okrese)
+    var d = new Date(zajtra), n = 0;
+    while (true) { while (!pracovny(d)) d.setDate(d.getDate() + 1); if (++n === 2) break; d.setDate(d.getDate() + 1); }
     return "najneskôr " + DNI[d.getDay()] + " " + d.getDate() + ". " + (d.getMonth() + 1) + ".";
   }
   function hotovo(r, u) {
