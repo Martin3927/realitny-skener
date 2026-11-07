@@ -274,3 +274,30 @@ set role authenticated; set request.jwt.claim.sub = :'D';
 select r->'okresy' okresy, r->>'smiem' smie, r->>'zadarmo' zadarmo from (select kontakty_na_predaj() r) x;   -- → ["Poprad"], true, 2
 select ma_pristup('inzeraty') skener, ma_pristup('web') web;                          -- → f, f
 reset role; reset request.jwt.claim.sub;
+
+\echo '=== 14. verejný cenník a formulár „Mám záujem o kontakty“ (121)'
+set role anon;
+select r->>'zadarmo' zadarmo, r->'okresy'->'Poprad'->0->>'c' poprad, jsonb_typeof(r->'okresy'->'Bratislava I') ba1, r->'okresy' ? 'Košice' mesto_ke,
+       (select count(*) from jsonb_object_keys(r->'okresy')) okresov from (select kontakty_cennik() r) x;   -- → 2, 90 (podľa mediánu), array, f, 79
+select kontakty_zaujem('zle', 'Peter', '0905 111 222');                               -- → ERROR neplatny_email
+select kontakty_zaujem('p@rk.sk', 'P', '0905 111 222');                               -- → ERROR chyba_meno
+select kontakty_zaujem('p@rk.sk', 'Peter Pilot', '12');                               -- → ERROR chyba_telefon
+select kontakty_zaujem('p@rk.sk', 'Peter Pilot', '0905 111 222', 'Pilot Reality', array['Poprad', 'Kežmarok', 'Neexistuje', 'Poprad'], 'chcem skúsiť', 'facebook / cpc');  -- → ok
+select kontakty_zaujem('robot@rk.sk', 'Robot', '0905 111 222', null, '{}', null, null, 'vyplnene');  -- → ok (nič sa neuloží)
+reset role;
+select typ, nazov, stav, moduly, okresy, mesacna_cena, registracia_poslat is null bez_odkazu, left(poznamky, 60) pozn from zakaznici where email = 'p@rk.sk';
+-- → kancelaria, Pilot Reality, zaujemca, {kontakty}, {Poprad,Kežmarok}, 0, t, Záujem o kontakty z odhadov z webu …
+select count(*) robot from zakaznici where email = 'robot@rk.sk';                     -- → 0
+select left(poznamka, 50), druh from pripomienky where zakaznik_id = (select id from zakaznici where email = 'p@rk.sk');   -- → Záujem o kontakty z odhadov – Kontakty z odhadov · …, web
+select titul from push_fronta where tag = 'typek-zakaznik-' || (select id from zakaznici where email = 'p@rk.sk');  -- → 💰 Záujem o kontakty z odhadov
+\echo '--- existujúci zákazník: len poznámka, žiadny odkaz'
+update zakaznici set upravene = now() - interval '1 hour' where email = 'p@rk.sk';
+set role anon; select kontakty_zaujem('P@RK.sk', 'Peter Pilot', '0905 111 222', null, array['Levoča']); reset role;
+select moduly, okresy, registracia_poslat is null bez_odkazu from zakaznici where email = 'p@rk.sk';  -- → {kontakty}, {Poprad,Kežmarok}, t (poznámka sa do 10 minút znova nezapisuje)
+\echo '--- Bratislava a Košice: okresy z mestských častí'
+select count(*) okresov, count(*) filter (where o like 'Košice %' or o like 'Bratislava %') ba_ke from _okresy_sr() o;   -- → 79, 9
+set role authenticated; set request.jwt.claim.sub = :'A';
+select jsonb_array_length(kontakty_sprava()->'vsetky_okresy') v_sprave;                -- → 79
+select kontakty_nastavit('{"okresy":["Košice I","Bratislava V"],"ceny":[{"h":0,"c":50}],"ceny_okresy":{"Košice II":[{"h":0,"c":70}]},"koniec_h":48,"zadarmo":2,"reklamacia_h":48}');
+reset role; reset request.jwt.claim.sub;
+select okresy from kontakty_nastavenie;                                               -- → {"Bratislava V","Košice I"}

@@ -7357,7 +7357,8 @@
     var h = odhPrepinac() + '<div class="box trh-box"><div class="vykon-hlava"><h3>💰 Kontakty na predaj</h3></div>' +
       '<p class="odh-popis">' + (okresy ? "Žiadosti klientov o odhad hodnoty z okresov <b>" + esc(okresy) + "</b>. " : "") +
       "Kým kontakt neprevezmete, vidíte len údaje o nehnuteľnosti. Meno, telefón, e-mail a adresu klienta dostane kancelária, ktorá klikne <b>Prevziať</b> ako prvá – " +
-      "potom je to bežná žiadosť o odhad v zozname vašich žiadostí. Cena je s DPH a časom klesá. Zlý kontakt môžete do " + (T.reklamacia_h || 48) + " hodín reklamovať.</p>" +
+      "potom je to bežná žiadosť o odhad v zozname vašich žiadostí. Cena je s DPH a časom klesá. Zlý kontakt môžete do " + (T.reklamacia_h || 48) + " hodín reklamovať. " +
+      'Klientovi sa ozvite do 24 hodín. <a href="https://realitnytypek.sk/podmienky#kontakty" target="_blank" rel="noopener">Podmienky kontaktov</a></p>' +
       (T.smiem === false ? '<p class="trh-pozn">Platené kontakty preberá administrátor kancelárie. Ak ich chcete preberať aj vy, požiadajte ho – zapne vám to v časti Tím.</p>' : "") +
       '<div class="trh-kredit"><div><small>Kredit kancelárie</small><b>' + trhEur(kredit) + "</b></div>" +
         (zad ? "<div><small>Ešte zadarmo</small><b>" + trhKontakty(zad) + "</b></div>" : "") +
@@ -7400,6 +7401,7 @@
         var id = Number(b.dataset.trhKup), c = Number(b.dataset.cena), p = ponuky.find(function (x) { return x.id === id; }) || {};
         var otazka = zad ? "Prevziať kontakt zadarmo?\n\n" + (p.nazov || "") + "\n\nPotom vám zostane " + trhKontakty(zad - 1) + " zadarmo."
           : "Prevziať kontakt za " + c + " € s DPH?\n\n" + (p.nazov || "") + "\n\nSuma sa odpíše z kreditu kancelárie (zostatok " + trhEur(kredit) + ").";
+        otazka += "\n\nPrevzatím súhlasíte s podmienkami kontaktov (ozvať sa klientovi do 24 hodín, kontakt nepredať ďalej).";
         if (!confirm(otazka)) return;
         b.disabled = true; b.textContent = "Preberám…"; el.querySelector(".trh-box").classList.add("trh-kupujem");
         try {

@@ -144,14 +144,14 @@ def zadarmo_bez_viac():
     return z.replace('padding: 110px 24px 0">', 'padding: 0 24px 0">', 1)
 
 
-def stranka(subor, bal, nazov, popis, adresa, telo, cta=None, css='', js=''):
+def stranka(subor, bal, nazov, popis, adresa, telo, cta=None, css='', js='', menu=None):
     skripty = SKRIPTY
     if js:
         k = skripty.rindex('</body>')
         skripty = skripty[:k] + js + skripty[k:]
     html = (hlavicka(HEAD, nazov, popis, adresa, css)
             + TELO_ZAC.replace('<body>', '<body data-bal="%s">' % bal, 1)
-            + MENU + telo + (S['cta'] if cta is None else cta) + PATA + COOKIES + skripty)
+            + (MENU if menu is None else menu) + telo + (S['cta'] if cta is None else cta) + PATA + COOKIES + skripty)
     # na samostatnej stránke nie sú odkazy na časti hlavnej stránky
     for chyba in ['href="#osobny-web"', 'href="#nahlad"', 'href="#pribeh"', 'href="#pripravujeme"', 'href="#funkcie"', 'href="#zadarmo"']:
         if chyba in telo and chyba[7:-1] not in re.findall(r'<section id="([^"]+)"', telo):
@@ -774,3 +774,269 @@ stranka('osobny-web.html', 'web',
             ('Môžem to najprv vyskúšať?',
              'Áno, 14 dní zadarmo. Potom platíš mesačne, ceny sú vždy s DPH. Keď zaplatíš na rok dopredu, máš mesiac zdarma.'),
         ]))
+
+
+# ---------------------------------------------------------------- Kontakty z odhadov hodnoty (7. 11. 2026)
+# Stránka pre maklérov a kancelárie, ktorým predávame kontakty z realitnytypek.sk/odhad (Správa zákazníkov → Kontakty na predaj).
+# Ceny podľa okresu sa načítajú naživo z databázy (kontakty_cennik), formulár „Mám záujem“ volá kontakty_zaujem –
+# záujemca príde do Správy zákazníkov bez automatického odkazu na registráciu (kanceláriu najprv overíme).
+KT_CSS = """/* ===== /kontakty */
+.kt-hero{max-width:1200px;margin:0 auto;padding:30px 24px 90px;display:flex;flex-wrap:wrap;align-items:center;gap:56px}
+.kt-ey{display:inline-flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;border-radius:999px;background:#EEE6D6;font-size:14px;font-weight:600;color:#4A6074}
+.kt-ey b{display:inline-flex;padding:4px 10px;border-radius:999px;background:#1E2A35;color:#F7F2E8;font-size:12px;letter-spacing:.06em}
+.kt-h1{margin:24px 0 0;font-size:clamp(40px,5.6vw,78px);line-height:.98;letter-spacing:-.035em;font-weight:800}
+.kt-h1 em{font-style:normal;color:#B8740F}
+.kt-lead{margin:24px 0 0;font-size:20px;line-height:1.55;color:#3A4B5A;max-width:560px}
+.kt-plusy{margin:30px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:10px 24px;font-size:15px;font-weight:500;color:#4A6074}
+.kt-plusy li{display:inline-flex;align-items:center;gap:8px}
+.kt-karta{flex:1 1 380px;max-width:470px;margin:0 auto;border-radius:30px;background:#1E2A35;padding:22px;box-shadow:0 40px 70px -40px rgba(30,42,53,.7)}
+.kt-karta-h{display:flex;justify-content:space-between;align-items:center;color:#C9D4DD;font-size:13px;font-weight:600;padding:2px 6px 14px}
+.kt-karta-h b{color:#DB9522}
+.kt-k{background:#FFFDF8;border-radius:20px;padding:18px;border-left:5px solid #DB9522;display:grid;gap:10px}
+.kt-k h3{margin:0;font-size:19px;line-height:1.25;font-weight:800;letter-spacing:-.01em}
+.kt-k .kt-m{font-size:13px;color:#4A6074}
+.kt-cipy{display:flex;flex-wrap:wrap;gap:6px}
+.kt-cip{display:inline-flex;padding:4px 10px;border-radius:999px;background:#EEE6D6;font-size:12.5px;font-weight:600;color:#3A4B5A}
+.kt-cip.hot{background:#FBE3CF;color:#9A4A12}.kt-cip.zl{background:#F2E4C6;color:#8A5A2B}
+.kt-odh{font-size:14px;font-weight:700;color:#1F6B57}
+.kt-skryte{display:flex;flex-wrap:wrap;gap:6px;font-size:13px;color:#4A6074}
+.kt-skryte span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:#EEF1F4}
+.kt-kup{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #E4DCCB;padding-top:12px}
+.kt-kup b{font-family:'Bricolage Grotesque',sans-serif;font-size:30px;line-height:1}
+.kt-kup small{display:block;font-size:12px;color:#4A6074;margin-top:4px}
+.kt-kup span.btn{min-height:42px;font-size:14px;pointer-events:none}
+.kt-karta-p{margin:14px 6px 2px;font-size:13px;color:#8EA2B3;text-align:center}
+.kt-sec{max-width:1200px;margin:0 auto;padding:90px 24px 0}
+.kt-sec-h{text-align:center;max-width:760px;margin:0 auto}
+.kt-sec-h .kt-o{font-size:13px;font-weight:700;letter-spacing:.12em;color:#4A6074}
+.kt-sec-h h2{margin:14px 0 0;font-size:clamp(32px,4.2vw,54px);line-height:1.03;letter-spacing:-.03em;font-weight:800}
+.kt-sec-h p{margin:18px 0 0;font-size:18px;line-height:1.55;color:#3A4B5A}
+.kt-kroky{margin:48px 0 0;padding:0;list-style:none;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));counter-reset:k}
+.kt-kroky li{background:#FFFDF8;border-radius:26px;padding:26px 24px;box-shadow:0 1px 0 rgba(30,42,53,.05),0 24px 44px -34px rgba(30,42,53,.45);counter-increment:k}
+.kt-kroky li::before{content:counter(k);display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#1E2A35;color:#DB9522;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px}
+.kt-kroky strong{display:block;margin-top:16px;font-size:19px;font-weight:800;color:#1E2A35;letter-spacing:-.01em}
+.kt-kroky span{display:block;margin-top:8px;font-size:15.5px;line-height:1.55;color:#3A4B5A}
+.kt-2{margin-top:48px;display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.kt-box{background:#FFFDF8;border-radius:28px;padding:clamp(24px,3.4vw,36px);box-shadow:0 1px 0 rgba(30,42,53,.05),0 24px 44px -34px rgba(30,42,53,.45)}
+.kt-box h3{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.kt-box ul{margin:16px 0 0;padding:0;list-style:none;display:grid;gap:10px}
+.kt-box li{display:flex;gap:10px;font-size:16px;line-height:1.5;color:#3A4B5A}
+.kt-box li svg{flex:none;margin-top:3px;color:#1F6B57}
+.kt-box.tmavy{background:#1E2A35;color:#F7F2E8}.kt-box.tmavy li{color:#C9D4DD}.kt-box.tmavy li svg{color:#DB9522}
+.kt-cena{margin-top:48px;border-radius:32px;background:#EEE6D6;padding:clamp(24px,4vw,44px);display:grid;gap:26px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start}
+.kt-cena label{display:block;font-size:14px;font-weight:700;color:#4A6074;margin-bottom:8px}
+.kt-sel{width:100%;min-height:52px;border-radius:16px;border:1.5px solid #4A6074;background:#FFFDF8;padding:0 16px;font:inherit;font-size:16px;color:#1E2A35}
+.kt-sel:focus{outline:3px solid #DB9522;outline-offset:2px}
+.kt-rebrik{margin:18px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.kt-rebrik li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 16px;border-radius:14px;background:#FFFDF8;font-size:15px;color:#3A4B5A}
+.kt-rebrik li b{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;color:#1E2A35}
+.kt-rebrik li:first-child{background:#1E2A35;color:#C9D4DD}.kt-rebrik li:first-child b{color:#DB9522}
+.kt-cena-p{font-size:14px;line-height:1.55;color:#4A6074;margin:14px 0 0}
+.kt-priklad{border-radius:22px;background:#FFFDF8;padding:22px 24px}
+.kt-priklad h3{margin:0;font-size:20px;font-weight:800}
+.kt-priklad p{margin:10px 0 0;font-size:15.5px;line-height:1.6;color:#3A4B5A}
+.kt-priklad .kt-vel{font-family:'Bricolage Grotesque',sans-serif;font-size:34px;font-weight:800;color:#1E2A35;line-height:1.1;margin-top:12px}
+.kt-form-obal{max-width:1200px;margin:0 auto;padding:100px 24px 90px}
+.kt-form-in{border-radius:40px;background:#1E2A35;color:#F7F2E8;padding:clamp(28px,5vw,60px);display:grid;gap:36px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));align-items:start}
+.kt-form-in h2{margin:14px 0 0;font-size:clamp(32px,4vw,52px);line-height:1.02;letter-spacing:-.035em;font-weight:800}
+.kt-form-in p{color:#C9D4DD;font-size:17px;line-height:1.55}
+.kt-badge{display:inline-flex;padding:6px 14px;border-radius:999px;background:#DB9522;color:#1E2A35;font-size:13px;font-weight:800;letter-spacing:.08em}
+.kt-form{display:grid;gap:14px}
+.kt-form label{display:grid;gap:6px;font-size:14px;font-weight:600;color:#C9D4DD}
+.kt-form input,.kt-form select{min-height:50px;border-radius:14px;border:1.5px solid #4A6074;background:#FFFDF8;padding:0 16px;font:inherit;font-size:16px;color:#1E2A35}
+.kt-form input:focus,.kt-form select:focus{outline:3px solid #DB9522;outline-offset:2px}
+.kt-form .kt-r2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.kt-okr{display:grid;gap:8px}
+.kt-plus{justify-self:start;background:none;border:0;color:#F2E4C6;font:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:4px 0}
+.kt-plus:hover{color:#DB9522}
+.kt-form .btn{min-height:54px;font-size:16px;border:0;cursor:pointer}
+.kt-note{margin:0;font-size:14px;line-height:1.55;color:#C9D4DD}.kt-note a{color:#F2E4C6}
+.kt-note.ok{color:#B7E4C7;font-weight:600}.kt-note.chyba{color:#F7B2A0;font-weight:600}
+.kt-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+@media (max-width:640px){.kt-hero{gap:40px;padding-bottom:60px}.kt-sec{padding-top:70px}}
+"""
+
+KT_MENU = MENU.replace('<a class="btn btn-ink lp-cta" href="#pristup">Vyskúšať zadarmo</a>', '<a class="btn btn-ink lp-cta" href="#zaujem">Mám záujem</a>')
+assert KT_MENU != MENU
+F = FAJKA % (18, 18, '2.4')
+OKO = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>'
+
+
+def kt_li(t):
+    return '<li>' + F + '<span>' + t + '</span></li>'
+
+
+def kontakty_telo():
+    okr = ''.join('<optgroup label="%s">%s</optgroup>' % (k, ''.join('<option%s>%s</option>' % (' selected' if o == 'Poprad' else '', o) for o in o_)) for k, o_ in KRAJE)
+    return """<!-- HERO -->
+<section class="kt-hero">
+<div style="flex: 1 1 480px; min-width: 0">
+<div class="kt-ey rise d1"><b>KONTAKTY Z ODHADOV</b>pre maklérov a realitné kancelárie</div>
+<h1 class="kt-h1 rise d2">Ľudia, ktorí zvažujú predaj. <em>Platíš len za tých, ktorých si vezmeš.</em></h1>
+<p class="kt-lead rise d3">Na realitnytypek.sk/odhad si majitelia nechávajú odhadnúť hodnotu bytu, domu alebo pozemku. Nechajú adresu, stav, dôvod, kedy chcú predať, a telefón. Keď príde žiadosť z tvojho okresu, dostaneš upozornenie do mobilu a kontakt si prevezmeš jedným klikom.</p>
+<div class="rise d4" style="margin-top: 32px; display: flex; flex-wrap: wrap; gap: 14px">
+<a class="btn btn-acc" href="#zaujem">Mám záujem o kontakty""" + SIPKA + """</a>
+<a class="btn btn-ghost" href="#ako">Ako to funguje</a>
+</div>
+<ul class="kt-plusy rise d5">""" + ''.join('<li>' + (FAJKA % (20, 20, '2')) + t + '</li>' for t in ['Bez mesačného poplatku', 'Bez podielu z provízie', 'Prvé 2 kontakty zadarmo', 'Kontakt je len tvoj']) + """</ul>
+</div>
+<div class="kt-karta rise d3" aria-label="Ukážka kontaktu na predaj v aplikácii">
+<div class="kt-karta-h"><span>💰 Kontakty na predaj · Poprad</span><b>práve prišiel</b></div>
+<div class="kt-k">
+<h3>3-izbový byt, 68 m², Poprad</h3>
+<span class="kt-m">Juh · 4. poschodie z 8 · pred 12 min</span>
+<div class="kt-cipy"><span class="kt-cip">Čiastočne zrekonštruovaný</span><span class="kt-cip hot">🔥 Chce predať čo najskôr</span><span class="kt-cip">📷 4</span></div>
+<span class="kt-m">Nové: kuchynská linka, podlahy · Zvažujem predaj · Volať poobede · Balkón, pivnica</span>
+<span class="kt-odh">Orientačne 196 000 – 216 000 € (medián okresu podľa stavu)</span>
+<div class="kt-skryte"><span>""" + OKO + """Meno</span><span>""" + OKO + """Telefón</span><span>""" + OKO + """E-mail</span><span>""" + OKO + """Adresa</span></div>
+<div class="kt-kup"><div><b>90 €</b><small>s DPH · o 5 h 48 min 70 €</small></div><span class="btn btn-acc">Prevziať za 90 €</span></div>
+</div>
+<p class="kt-karta-p">Ukážka z aplikácie. Údaje a cena sú vymyslené.</p>
+</div>
+</section>
+
+<!-- AKO TO FUNGUJE -->
+<section id="ako" class="kt-sec">
+<div class="kt-sec-h"><div class="kt-o">AKO TO FUNGUJE</div><h2>Od žiadosti k telefonátu za pár minút</h2>
+<p>Reklamu na odhad hodnoty platíme my. Ty len vyberieš, ktoré kontakty chceš.</p></div>
+<ol class="kt-kroky">
+<li><strong>Majiteľ vyplní odhad</strong><span>Šesť krokov: adresa, výmera, stav a čo je prerobené, dôvod, kedy chce predať a kedy mu môžete zavolať. Môže pridať aj fotky.</span></li>
+<li><strong>Príde ti upozornenie</strong><span>V mobile vidíš, čo sa predáva, kde a za koľko je kontakt. Meno a telefón zatiaľ nie – tie dostane ten, kto kontakt prevezme.</span></li>
+<li><strong>Prevezmeš ho ako prvý</strong><span>Jedno kliknutie a kontakt je len tvoj. Nikomu inému ho nepredáme ani neukážeme.</span></li>
+<li><strong>Zavoláš a pošleš odhad</strong><span>Týpek ti ukáže medián okresu a podobné ponuky. Odhad pošleš klientovi e-mailom aj v PDF so svojím logom.</span></li>
+</ol>
+</section>
+
+<!-- ČO DOSTANEŠ -->
+<section class="kt-sec" style="padding-top: 70px">
+<div class="kt-2">
+<div class="kt-box"><h3>Čo je v kontakte</h3><ul>""" + ''.join(kt_li(t) for t in [
+        'Druh nehnuteľnosti, obec, ulica a číslo, výmera, izby, poschodie',
+        'Stav – pri byte aj elektroinštalácia, jadro, podlahy, kuchyňa a kedy sa robili',
+        'Dôvod: predaj, záujem o výkup, vyporiadanie majetku',
+        'Kedy chce predať a kedy mu môžete zavolať',
+        'Meno, telefón, e-mail a fotky od klienta',
+        'Orientačná cena podľa mediánu okresu a podobných ponúk']) + """</ul></div>
+<div class="kt-box tmavy"><h3>Na čom sa dohodneme</h3><ul>""" + ''.join(kt_li(t) for t in [
+        'Platíš z kreditu, ktorý si dobiješ vopred na faktúru',
+        'Zlý kontakt reklamuješ do 48 hodín – uznanú reklamáciu ti vrátime do kreditu',
+        'Klientovi sa ozveš do 24 hodín – tak sme mu to sľúbili',
+        'Kontakt použiješ len na odhad a ponuku svojich služieb, ďalej ho nepredáš',
+        'V kancelárii preberá kontakty administrátor, maklérom to môže povoliť',
+        'Podrobnosti sú v <a href="podmienky.html#kontakty" style="color: #F2E4C6">podmienkach, časť 10</a>']) + """</ul></div>
+</div>
+</section>
+
+<!-- CENA -->
+<section id="cena" class="kt-sec" style="padding-top: 90px">
+<div class="kt-sec-h"><div class="kt-o">CENA</div><h2>Cena klesá, kým si kontakt niekto nevezme</h2>
+<p>Hneď po žiadosti je kontakt najdrahší, potom lacnie. Cena závisí od okresu – v drahších okresoch je aj provízia vyššia.</p></div>
+<div class="kt-cena">
+<div>
+<label for="kt-okres">Vyber okres</label>
+<select id="kt-okres" class="kt-sel">""" + okr + """</select>
+<ul class="kt-rebrik" id="kt-rebrik" aria-live="polite"><li><span>Načítavam ceny…</span></li></ul>
+<p class="kt-cena-p" id="kt-cena-p">Ceny sú s DPH. Prvé 2 kontakty máš zadarmo.</p>
+</div>
+<div class="kt-priklad">
+<h3>Oplatí sa to?</h3>
+<p>Príklad: byt za 150 000 € a provízia 3 %. Z jednej zákazky máš</p>
+<div class="kt-vel">4 500 €</div>
+<p>Aj keby sa zákazkou stal len každý desiaty kontakt, pri cene 60 € ťa jedna zákazka stojí 600 €. Bez paušálu a bez podielu z provízie – čo zarobíš, je tvoje.</p>
+</div>
+</div>
+</section>
+
+""" + otazky([
+        ('Je kontakt naozaj len môj?', 'Áno. Kontakt dostane jediná kancelária – tá, ktorá ho prevezme ako prvá. Ostatným z ponuky zmizne a nikomu inému ho nepredáme.'),
+        ('Musím mať Realitného týpka?', 'Nie. Účet len na kontakty je bez mesačného poplatku – platíš len za kontakty, ktoré si prevezmeš. Ak Týpka už máš, kontakty nájdeš v časti Odhady → Kontakty na predaj.'),
+        ('Odkiaľ sú kontakty?', 'Z našej stránky realitnytypek.sk/odhad, na ktorú robíme reklamu. Majiteľ pri žiadosti berie na vedomie, že ju môže dostať maklér alebo kancelária z jeho okolia.'),
+        ('Čo ak je kontakt zlý?', 'Do 48 hodín ho reklamuješ priamo v aplikácii – napríklad keď telefón aj e-mail neexistujú alebo klient o odhad nežiadal. Uznanú reklamáciu ti vrátime do kreditu.'),
+        ('Ako platím?', 'Kredit si dobiješ vopred prevodom na faktúru. Pri každom prevzatí sa odpíše cena kontaktu. Nevyčerpaný kredit ti pri skončení vrátime.'),
+        ('Kto v kancelárii môže kontakty preberať?', 'Administrátor kancelárie. Maklérom to môže povoliť v aplikácii – potom im chodia aj upozornenia na nové kontakty.'),
+        ('V ktorých okresoch to funguje?', 'Začíname postupne. Napíš, ktoré okresy ťa zaujímajú – ozveme sa ti a dohodneme sa.'),
+    ])
+
+
+def kontakty_cta():
+    okr = '<option value="">Vyber okres</option>' + ''.join('<optgroup label="%s">%s</optgroup>' % (k, ''.join('<option>%s</option>' % o for o in o_)) for k, o_ in KRAJE)
+    return """<!-- MÁM ZÁUJEM -->
+<section id="zaujem" class="kt-form-obal">
+<div class="kt-form-in">
+<div>
+<span class="kt-badge">PRVÉ 2 KONTAKTY ZADARMO</span>
+<h2>Chceš kontakty z&nbsp;tvojho okresu?</h2>
+<p>Nechaj nám kontakt a okresy, ktoré ťa zaujímajú. Ozveme sa ti do pracovného dňa, overíme kanceláriu a pošleme ti odkaz na registráciu.</p>
+<p style="margin-top: 18px; font-size: 16px">Radšej voláš? <a href="tel:+421915140759" style="color: #F2E4C6; font-weight: 700">+421 915 140 759</a> · <a href="mailto:info@realitnytypek.sk" style="color: #F2E4C6; font-weight: 700">info@realitnytypek.sk</a></p>
+</div>
+<form id="kt-form" class="kt-form" novalidate aria-label="Záujem o kontakty z odhadov">
+<div class="kt-r2">
+<label>Meno a priezvisko<input name="meno" autocomplete="name" maxlength="120" required></label>
+<label>Realitná kancelária <span style="font-weight: 400">(nepovinné)</span><input name="kancelaria" autocomplete="organization" maxlength="160"></label>
+</div>
+<div class="kt-r2">
+<label>Telefón<input name="telefon" type="tel" autocomplete="tel" maxlength="30" placeholder="0900 123 456" required></label>
+<label>E-mail<input name="email" type="email" autocomplete="email" maxlength="200" placeholder="meno@realitka.sk" required></label>
+</div>
+<div class="kt-okr" data-kt-okresy><label>Okres<select name="okres">""" + okr + """</select></label></div>
+<button type="button" class="kt-plus" data-kt-plus>+ Pridať ďalší okres</button>
+<label class="kt-hp" aria-hidden="true">Web<input name="web" tabindex="-1" autocomplete="off"></label>
+<button type="submit" class="btn btn-acc">Mám záujem o kontakty</button>
+<p class="kt-note" id="kt-note" aria-live="polite">Údaje použijeme len na to, aby sme sa ti ozvali – viac v <a href="ochrana-udajov.html">Ochrane osobných údajov</a>.</p>
+</form>
+</div>
+</section>
+
+"""
+
+
+KT_JS = """<script>
+/* /kontakty: ceny podľa okresu (kontakty_cennik) a formulár „Mám záujem“ (kontakty_zaujem) */
+(function(){
+  var SB='https://uwxziqapghlyktwpipjd.supabase.co',SBK='sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf',d=document;
+  function rpc(f,b){return fetch(SB+'/rest/v1/rpc/'+f,{method:'POST',headers:{'apikey':SBK,'Content-Type':'application/json'},body:JSON.stringify(b||{})})
+    .then(function(r){return r.text().then(function(t){var j=null;try{j=t?JSON.parse(t):null;}catch(e){}if(!r.ok)throw new Error((j&&j.message)||r.status);return j;});});}
+  function hod(h){return Number(h)+' h';}
+  var sel=d.getElementById('kt-okres'),reb=d.getElementById('kt-rebrik'),pp=d.getElementById('kt-cena-p'),C=null;
+  function ukaz(){
+    if(!C||!sel)return;
+    var c=(C.okresy||{})[sel.value]||C.spolocne||[];
+    reb.innerHTML=c.map(function(x,i){return '<li><span>'+(i===0?'Hneď po žiadosti':'Po '+hod(x.h))+'</span><b>'+x.c+' €</b></li>';}).join('');
+    var z=Number(C.zadarmo)||0;
+    pp.textContent='Ceny sú s DPH.'+(z?' Prvé '+(z===1?'kontakt máš':z+' kontakty máš')+' zadarmo.':'')+' Kto kontakt neprevezme do '+hod(C.koniec_h||48)+', vybaví ho náš maklér.';
+  }
+  if(sel){sel.addEventListener('change',ukaz);
+    rpc('kontakty_cennik').then(function(j){C=j;ukaz();}).catch(function(){reb.innerHTML='<li><span>Ceny sa nepodarilo načítať – od 40 € na vidieku po 150 € v centre Bratislavy, s DPH.</span></li>';});}
+
+  var f=d.getElementById('kt-form'),n=d.getElementById('kt-note'),box=f&&f.querySelector('[data-kt-okresy]'),plus=f&&f.querySelector('[data-kt-plus]'),BUSY=false;
+  if(!f)return;
+  plus.addEventListener('click',function(){
+    var p=box.querySelectorAll('select');if(p.length>=5)return;
+    var l=d.createElement('label');l.innerHTML='Ďalší okres';var s=p[0].cloneNode(true);s.value='';l.appendChild(s);box.appendChild(l);s.focus();
+    if(p.length+1>=5)plus.hidden=true;
+  });
+  function chyba(t,el){n.className='kt-note chyba';n.textContent=t;if(el)el.focus();}
+  f.addEventListener('submit',function(e){
+    e.preventDefault();if(BUSY)return;
+    var m=f.meno,t=f.telefon,em=f.email;
+    if(m.value.trim().length<2)return chyba('Napíš svoje meno.',m);
+    if(t.value.replace(/[^0-9]/g,'').length<9)return chyba('Skontroluj telefónne číslo.',t);
+    if(!em.value||!em.checkValidity())return chyba('Zadaj platný e-mail, napríklad meno@realitka.sk.',em);
+    var okr=Array.prototype.map.call(box.querySelectorAll('select'),function(s){return s.value;}).filter(Boolean);
+    var btn=f.querySelector('[type=submit]');BUSY=true;btn.disabled=true;n.className='kt-note';n.textContent='Odosielam…';
+    rpc('kontakty_zaujem',{p_email:em.value.trim(),p_meno:m.value.trim(),p_telefon:t.value.trim(),p_kancelaria:f.kancelaria.value.trim()||null,
+      p_okresy:okr,p_odkial:window.TYPEK_ODKIAL||null,p_med:f.web.value||null})
+    .then(function(){n.className='kt-note ok';n.textContent='Ďakujeme! Ozveme sa ti do pracovného dňa. Potvrdenie sme ti poslali aj e-mailom.';f.reset();
+      Array.prototype.slice.call(box.querySelectorAll('label'),1).forEach(function(l){l.remove();});plus.hidden=false;})
+    .catch(function(){chyba('Nepodarilo sa odoslať. Skús to znova alebo nám napíš na info@realitnytypek.sk.');})
+    .then(function(){BUSY=false;btn.disabled=false;});
+  });
+})();
+</script>
+"""
+
+stranka('kontakty.html', 'kontakty',
+        'Kontakty z odhadov hodnoty pre maklérov | Realitný týpek',
+        'Majitelia, ktorí zvažujú predaj, si nechávajú odhadnúť hodnotu nehnuteľnosti. Kontakt dostane jediná kancelária, platíš len za tie, ktoré si prevezmeš. Bez paušálu, prvé 2 zadarmo.',
+        'https://realitnytypek.sk/kontakty',
+        kontakty_telo(), cta=kontakty_cta(), css=KT_CSS, js=KT_JS, menu=KT_MENU)

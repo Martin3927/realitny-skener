@@ -221,21 +221,23 @@ async function webZiadosti(db: any) {
   for (const z of rows as any[]) {
     const riadok = String(z.poznamky || "").trim().split("\n").pop() || "";
     const obj = /^Objednávka/.test(riadok);
+    const kont = /^Záujem o kontakty/.test(riadok);   // formulár realitnytypek.sk/kontakty (migrácia 121)
     const bal = balikZakaznika(z.moduly);
     const meno = String(z.kontakt_meno || "").trim();
     const tel = String(z.telefon || "").trim();
     const detail = ((riadok.match(/\d{2}:\d{2}\.\s*(.*)$/) || [])[1] || "").replace(/\s*Kontakt: .*$/, "");
     const r = (k: string, v: string) => v ? `<tr><td style="padding:5px 14px 5px 0;color:#4a6074;vertical-align:top">${k}</td><td style="padding:5px 0"><b>${v}</b></td></tr>` : "";
     const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35">
-      <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>${obj ? "Nová objednávka z webu" : "Nová žiadosť o bezplatnú verziu"}</b></div>
+      <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>${kont ? "Záujem o kontakty z odhadov" : obj ? "Nová objednávka z webu" : "Nová žiadosť o bezplatnú verziu"}</b></div>
       <table style="border-collapse:collapse;font-size:15px;margin:14px 0 0">
         ${r("Balík", esc(bal))}${r("Meno", esc(meno))}
         ${r("Telefón", tel ? `<a href="tel:${esc(tel.replace(/[^\d+]/g, ""))}" style="color:#1e2a35">${esc(tel)}</a>` : "")}
         ${r("E-mail", `<a href="mailto:${esc(z.email)}" style="color:#1e2a35">${esc(z.email)}</a>`)}</table>
       ${detail ? `<p style="margin:12px 0 0;font-size:14px;color:#3a4b5a">${esc(detail)}</p>` : ""}
+      ${kont ? `<p style="margin:12px 0 0;font-size:14px;color:#3a4b5a">Odkaz na registráciu sa neposlal. Over kanceláriu, v Správe skontroluj okresy a stav nastav na Platiaci (cena 0 €), potom „Poslať odkaz na registráciu“.</p>` : ""}
       <p style="margin:22px 0"><a href="${esc(WEB_URL + "sprava.html#z/" + z.id)}" style="background:#db9522;color:#1e2a35;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700">Otvoriť v Správe zákazníkov</a></p>
       <p style="color:#999;font-size:12px">Realitný týpek · posiela sa len hlavnému správcovi · odpoveď na tento e-mail ide záujemcovi</p></div>`;
-    const predmet = (obj ? "Nová objednávka z webu: " : "Nová žiadosť o bezplatnú verziu: ") + [bal, meno || z.email].filter(Boolean).join(" – ");
+    const predmet = (kont ? "Záujem o kontakty z odhadov: " : obj ? "Nová objednávka z webu: " : "Nová žiadosť o bezplatnú verziu: ") + [kont ? "" : bal, meno || z.email].filter(Boolean).join(" – ");
     for (const e of komu) {
       try { await posli(e, predmet.slice(0, 140), html, { odMeno: "Realitný týpek", odpovedat: z.email }); odoslane++; }
       catch { /* objednávka ostáva v Správe zákazníkov aj v zvončeku */ }
@@ -245,14 +247,14 @@ async function webZiadosti(db: any) {
     const potvrdenie = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1e2a35;line-height:1.55">
       <div style="border-bottom:3px solid #db9522;padding-bottom:8px;font-size:18px"><b>Realitný týpek</b></div>
       <p style="font-size:16px;margin:16px 0 0">Ahoj${meno ? " " + esc(meno.split(" ")[0]) : ""},</p>
-      <p style="margin:10px 0 0">ďakujeme za záujem o Realitného týpka. ${obj
+      <p style="margin:10px 0 0">${kont ? "ďakujeme za záujem o kontakty z odhadov hodnoty. Ozveme sa ti do pracovného dňa, dohodneme okresy a pošleme ti odkaz na registráciu. Účet je bez mesačného poplatku – platíš len za kontakty, ktoré si prevezmeš, a prvé sú zadarmo." : "ďakujeme za záujem o Realitného týpka. " + (obj
         ? "Tvoju objednávku" + (bal ? " (" + esc(bal) + ")" : "") + " máme. Prvých 14 dní je zadarmo."
-        : "Tvoju žiadosť o bezplatnú verziu na 14 dní máme."}</p>
-      <p style="margin:10px 0 0">Ozveme sa ti osobne, nastavíme ti všetko, čo potrebuješ, a pomôžeme ti so začiatkom.</p>
+        : "Tvoju žiadosť o bezplatnú verziu na 14 dní máme.")}</p>
+      ${kont ? `<p style="margin:10px 0 0">Ako to funguje a podmienky nájdeš na <a href="https://realitnytypek.sk/kontakty" style="color:#8a5a2b">realitnytypek.sk/kontakty</a>.</p>` : `<p style="margin:10px 0 0">Ozveme sa ti osobne, nastavíme ti všetko, čo potrebuješ, a pomôžeme ti so začiatkom.</p>`}
       <p style="margin:10px 0 0">Ak máš otázku, stačí odpísať na tento e-mail.</p>
       <p style="margin:18px 0 0">Tím Realitného týpka<br><a href="https://realitnytypek.sk/" style="color:#8a5a2b">realitnytypek.sk</a></p>
-      <p style="color:#999;font-size:12px;margin-top:20px">Tento e-mail ti prišiel, lebo si na webe realitnytypek.sk ${obj ? "objednal Realitného týpka" : "požiadal o bezplatnú verziu"}. Ak si to nebol ty, správu pokojne ignoruj.</p></div>`;
-    try { await posli(z.email, obj ? "Tvoja objednávka Realitného týpka" : "Tvoja žiadosť o Realitného týpka", potvrdenie, { odMeno: "Realitný týpek", odpovedat: ODPOVED_TYPEK }); }
+      <p style="color:#999;font-size:12px;margin-top:20px">Tento e-mail ti prišiel, lebo si na webe realitnytypek.sk ${kont ? "prejavil záujem o kontakty z odhadov" : obj ? "objednal Realitného týpka" : "požiadal o bezplatnú verziu"}. Ak si to nebol ty, správu pokojne ignoruj.</p></div>`;
+    try { await posli(z.email, kont ? "Kontakty z odhadov – ozveme sa ti" : obj ? "Tvoja objednávka Realitného týpka" : "Tvoja žiadosť o Realitného týpka", potvrdenie, { odMeno: "Realitný týpek", odpovedat: ODPOVED_TYPEK }); }
     catch { /* potvrdenie nie je nutné */ }
   }
   return odoslane;
