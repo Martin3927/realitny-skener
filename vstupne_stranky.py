@@ -26,7 +26,7 @@ HEAD = t[:t.index('</head>')]
 TELO_ZAC = t[t.index('<body>'):t.index('<!-- NAV -->')]
 S = {
     'hero': medzi('<!-- HERO -->', '<!-- SKENER -->'),
-    'skener': medzi('<!-- SKENER -->', '<!-- OSOBNY WEB -->'),
+    'skener': medzi('<!-- SKENER -->', '<!-- OCENENIE -->'),
     'web': medzi('<!-- OSOBNY WEB -->', '<!-- SPRÁVA PONÚK A SOCIÁLNE SIETE -->'),
     'funkcie': medzi('<!-- SPRÁVA PONÚK A SOCIÁLNE SIETE -->', '<!-- ZVONČEK -->'),
     'cennik': medzi('<!-- CENNÍK: BALÍKY -->', '<!-- OD ZACIATKU -->'),
