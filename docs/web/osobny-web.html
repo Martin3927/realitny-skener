@@ -183,6 +183,8 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .rt section{padding-left:16px !important;padding-right:16px !important}
 #pribeh,#nahlad,#zadarmo,#vyskladaj,#pristup,#od-zaciatku,#pripravujeme{padding-top:64px !important}
 #pribeh,#nahlad,#funkcie,#zvoncek,#pristup{padding-bottom:64px !important}
+#skener,#ocenenie,#osobny-web,#funkcie,#zvoncek{padding-bottom:40px !important}
+#rano{padding-bottom:64px !important}
 .pcard{border-radius:28px !important;gap:32px !important}
 .shot{aspect-ratio:auto !important;overflow-x:auto !important;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
 .shot img{width:860px !important;max-width:none !important}
@@ -278,6 +280,33 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 /* pás textu, ktorý ide do strán podľa skrolovania */
 @media (prefers-reduced-motion: reduce){html:not(.pohyb-vzdy) .pas-r1,html:not(.pohyb-vzdy) .pas-r2{transform:none}html:not(.pohyb-vzdy) .hdr,html:not(.pohyb-vzdy) .hdr nav{transition:none}}
 
+/* ===== hlavné tlačidlo v kartách produktov */
+.kcta{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin-top:4px}
+.kcta-l{font-size:15px;font-weight:700;color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;opacity:.88}
+.kcta-l:hover{opacity:1;text-decoration-thickness:2px}
+/* ===== mobil: dlhé zoznamy ako posúvacie pásy, cenník so záložkami */
+.mdots,.mtabs{display:none}
+@media (max-width: 640px){
+.kcta .btn{width:100%;box-sizing:border-box;padding:0 18px;text-align:center}
+:is(.oc-flow,.zv-ul,#zadarmo .feat-grid,#pripravujeme .sk-grid,.wf-grid){display:flex !important;flex-wrap:nowrap !important;gap:12px !important;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;padding:2px 2px 16px !important;margin-bottom:-4px}
+:is(.oc-flow,.zv-ul,#zadarmo .feat-grid,#pripravujeme .sk-grid,.wf-grid)::-webkit-scrollbar{display:none}
+:is(.oc-flow,.zv-ul,#zadarmo .feat-grid,#pripravujeme .sk-grid,.wf-grid)>*{flex:0 0 86% !important;scroll-snap-align:start;min-width:0;grid-column:auto !important;box-sizing:border-box}
+.oc-flow>.oc-krok::after{display:none}
+#pripravujeme :is(.em-nahlad,.ai-post){display:none}
+#pribeh .photo-ph{display:none !important}
+.pk-grid{display:grid !important;grid-template-columns:none !important;grid-auto-flow:column;grid-auto-columns:86%;gap:12px !important;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;padding:2px 2px 18px;margin-top:14px !important}
+.pk-grid::-webkit-scrollbar{display:none}
+.pk-grid>.pk{scroll-snap-align:start;grid-column:auto !important}
+.mdots{display:flex;justify-content:center;gap:4px;margin-top:2px}
+.mdots button{width:26px;height:26px;padding:0;border:0;background:none;display:grid;place-items:center;cursor:pointer}
+.mdots button::before{content:"";width:8px;height:8px;border-radius:99px;background:currentColor;opacity:.28;transition:width .25s,opacity .25s}
+.mdots button[aria-current="true"]::before{width:22px;opacity:.9}
+.mtabs{display:flex;gap:6px;margin-top:16px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.mtabs::-webkit-scrollbar{display:none}
+.mtabs button{flex:1 0 auto;min-height:40px;padding:0 12px;border:0;border-radius:999px;background:#EEE6D6;color:#1E2A35;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.mtabs button[aria-current="true"]{background:#1E2A35;color:#F7F2E8}
+}
+@supports (grid-template-rows: subgrid){@media (max-width: 640px){.pk-grid>.pk{display:grid;grid-row:span 4;grid-template-rows:subgrid;row-gap:18px;align-content:start}.pk-zoz{align-self:start}}}
 /* ===== nadpisy kategórií hore na kartách (skener, kontakty, osobný web, ponuky, zvonček) */
 .kat{flex:1 1 100%;display:flex;align-items:center;gap:14px;padding-bottom:18px;border-bottom:1px solid rgba(30,42,53,.1)}
 .kat-ic{flex:none;width:48px;height:48px;border-radius:15px;background:#1E2A35;color:#DB9522;display:grid;place-items:center}
@@ -681,6 +710,10 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 <p style="margin: 0; font-size: 18px; line-height: 1.6; color: #E3E9EE">Vyber si šablónu a farbu, pridaj fotku a pár viet o sebe. Ponuky, recenzie aj kontakt sa naplnia samé z Týpka a web vyzerá skvele na počítači aj v mobile.</p>
 <p style="margin: -6px 0 0; align-self: flex-start; padding: 8px 14px; border-radius: 999px; background: #1E2A35; font-size: 15px; font-weight: 700; color: #F7F2E8"><span style="color: #DB9522">57 € mesačne</span> s DPH · alebo <span style="color: #DB9522">627 € ročne</span> <span style="white-space: nowrap">(mesiac zdarma)</span></p>
 <p class="web-zl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12l-8 8-9-9V3h8z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg><span><strong>S webom máš Realitný skener o 50 % lacnejší</strong> – od 10,50 € mesačne s DPH.</span></p>
+<div class="kcta">
+<a class="btn btn-acc" href="#pristup" data-bal="web">Vyskúšať 14 dní zadarmo<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+<a class="kcta-l" href="#vyskladaj">pozri cenník</a>
+</div>
 
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #E3E9EE">ŠABLÓNA</div>
@@ -727,7 +760,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 <span class="wbx-nazov" aria-live="polite">Susedská · Zlatá</span>
 </div>
 </div>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px">
+<div class="wf-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px">
 <div class="wfeat"><span class="wfeat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"></path></svg></span><span><strong>Vlastná bezpečná doména a hosting 1 GB</strong><span>www.tvojemeno.sk s HTTPS, v cene webu. O všetko sa postaráme my</span></span></div>
 <div class="wfeat"><span class="wfeat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4"></path></svg></span><span><strong>Správa nehnuteľností v cene</strong><span>Ponuky spravuješ v Týpkovi a hneď sú aj na webe</span></span></div>
 <div class="wfeat"><span class="wfeat-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"></path><path d="M5 5h14l1 8v6H4v-6z"></path></svg></span><span><strong>Dopyty rovno do mobilu</strong><span>Webová aplikácia ti dá hneď vedieť, keď ti niekto napíše</span></span></div>
@@ -1078,6 +1111,27 @@ a{color:#4A6074}a:hover{color:#1E2A35}
   window.addEventListener('scroll',onScroll,{passive:true});window.addEventListener('resize',onScroll,{passive:true});
   if(mnav)mnav.addEventListener('toggle',onScroll);
   tick();
+
+  // ---------- mobil: posúvacie pásy (bodky) a cenník (záložky)
+  (function(){
+    var mq=window.matchMedia('(max-width: 640px)'),hladko=!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.querySelectorAll('.oc-flow,.zv-ul,#zadarmo .feat-grid,#pripravujeme .sk-grid,.wf-grid,.pk-grid').forEach(function(g){
+      var kids=[].slice.call(g.children).filter(function(k){return k.nodeType===1;});if(kids.length<2)return;
+      var tab=g.classList.contains('pk-grid'),nav=document.createElement('div');
+      nav.className=tab?'mtabs':'mdots';nav.setAttribute('aria-label',tab?'Balíky':'Posunúť na položku');
+      var bb=kids.map(function(k,i){var b=document.createElement('button');b.type='button';
+        if(tab){var h=k.querySelector('h3'),tx=h?h.textContent.trim():String(i+1);b.textContent=({'Realitný skener':'Skener','Osobný web':'Web','Realitná kancelária':'Kancelária'})[tx]||tx;b.setAttribute('aria-label',tx);}else b.setAttribute('aria-label',(i+1)+'. z '+kids.length);
+        b.addEventListener('click',function(){g.scrollTo({left:k.offsetLeft-kids[0].offsetLeft,behavior:hladko?'smooth':'auto'});});
+        nav.appendChild(b);return b;});
+      if(tab)g.parentNode.insertBefore(nav,g);else g.parentNode.insertBefore(nav,g.nextSibling);
+      var ak=-1;function obnov(){var w=kids[1].offsetLeft-kids[0].offsetLeft||1,i=Math.max(0,Math.min(kids.length-1,Math.round(g.scrollLeft/w)));
+        if(g.scrollLeft+g.clientWidth>=g.scrollWidth-4)i=kids.length-1;
+        if(i===ak)return;ak=i;bb.forEach(function(b,j){b.setAttribute('aria-current',j===i?'true':'false');});
+        if(tab&&nav.scrollWidth>nav.clientWidth)nav.scrollLeft=bb[i].offsetLeft-nav.offsetLeft-12;}
+      var ra=0;g.addEventListener('scroll',function(){if(!ra)ra=requestAnimationFrame(function(){ra=0;obnov();});},{passive:true});
+      obnov();
+    });
+  })();
   if(!on)return;
 
   // ---------- odkrývanie pri skrolovaní (prvky, ktoré sa ukážu naraz, idú krátko po sebe)
@@ -1094,6 +1148,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
     var a=el.parentElement&&el.parentElement.closest('[data-rv]');if(a&&a.dataset.rv!=='karta')return;
     if(k==='slova')slova(el);el.dataset.rv=k;
   }
+  if(window.matchMedia('(max-width: 640px)').matches)$$('.oc-flow,.zv-ul,#zadarmo .feat-grid,#pripravujeme .sk-grid,.wf-grid,.pk-grid').forEach(function(e){mark(e,'hore');});
   $$('.pcard,.pk').forEach(function(e){mark(e,'karta');});
   $$('.rt section h2:not(#wip-t), .pcard h3, #vyskladaj h3').forEach(function(h){
     mark(h,'slova');
