@@ -398,6 +398,17 @@ jobs:
             || { tail -30 start.log; exit 1; }
           DB=postgresql://postgres:postgres@127.0.0.1:54322/postgres
           z="$RUNNER_TEMP/z/databaza"
+          # Supabase v cloude môže mať novšie systémové tabuľky (auth, storage) ako lokálna skúšobná inštancia –
+          # chýbajúce stĺpce sa doplnia (ako text), aby sa dáta dali nahrať; týka sa len skúšky, nie zálohy
+          python3 - "$z/data.sql" > doplnit.sql <<'PY'
+          import re, sys
+          for r in open(sys.argv[1], encoding="utf-8", errors="replace"):
+              m = re.match(r'COPY "?(auth|storage)"?\."?([\w]+)"? \((.*)\) FROM stdin;', r)
+              if m:
+                  for c in [x.strip().strip('"') for x in m.group(3).split(",")]:
+                      print(f'alter table if exists "{m.group(1)}"."{m.group(2)}" add column if not exists "{c}" text;')
+          PY
+          psql "$DB" -q -o /dev/null -f doplnit.sql 2>/dev/null || true
           if ! psql "$DB" --single-transaction -v ON_ERROR_STOP=1 -q -o /dev/null \
                 -f "$z/roles.sql" -f "$z/schema.sql" -c 'SET session_replication_role = replica' -f "$z/data.sql" 2> obnova.err; then
             echo "::error::Obnova zlyhala:"
