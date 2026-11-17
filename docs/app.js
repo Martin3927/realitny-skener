@@ -280,7 +280,9 @@
   sb.auth.onAuthStateChange(function (udalost) { if (udalost === "SIGNED_OUT" && S.me) setTimeout(odhlasenyInde, 300); });
   async function funkcia(telo) {
     var ses = (await sb.auth.getSession()).data.session;
-    var r = await fetch(CFG.supabaseUrl + "/functions/v1/makleri", {
+    // funkcia beží vždy v európskom regióne (pri databáze): e-mail s odkazom na nové heslo sa posiela zo schránky
+    // na Websupporte a tá prihlásenie zo zámoria odmieta (overené 17. 11. 2026 – maklér na dovolenke by odkaz nedostal)
+    var r = await fetch(CFG.supabaseUrl + "/functions/v1/makleri?forceFunctionRegion=eu-central-1", {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: CFG.supabaseKey,
         Authorization: "Bearer " + (ses ? ses.access_token : CFG.supabaseKey) },
