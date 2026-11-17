@@ -618,3 +618,70 @@
   .site .mkp-f .av{width:120px!important;height:120px!important;font-size:36px}
   .site .mkp-f .dkont{width:auto;flex:1 1 200px}
 }
+
+/* ---------------------------------------------------------------- WhatsApp, obľúbené, časté otázky */
+.site .btn.wa{background:#0F7A5C;color:#fff}
+.site .lnk svg{width:16px;height:16px;flex:none}
+.site .fav{position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 92%,transparent);color:var(--fg);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18);transition:transform .15s}
+.site .fav svg{width:21px;height:21px}
+.site .fav:hover{transform:scale(1.07)}
+.site .fav.on{color:#C8324B}
+.site .fav.on svg,.site .lnk.on svg,.site .s-fav svg{fill:currentColor}
+.site .fav:focus-visible,.site .faq button:focus-visible,.site .s-fav:focus-visible{outline:3px solid var(--at);outline-offset:2px}
+.site .lnk.on{color:#C8324B}
+.site .s-fav{position:relative;border:0;background:color-mix(in srgb,currentColor 10%,transparent);color:inherit;width:44px;height:44px;border-radius:50%;cursor:pointer;display:grid;place-items:center;flex:none}
+.site .s-fav svg{width:19px;height:19px;color:#C8324B}
+.site .s-fav b{position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;border-radius:999px;background:var(--a);color:var(--on-a);font-size:11.5px;display:grid;place-items:center;padding:0 5px}
+.site .chip.favc{display:inline-flex;align-items:center;gap:6px}
+.site .chip.favc svg{width:15px;height:15px;color:#C8324B;fill:currentColor}
+.site .favbar{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;justify-content:space-between;background:var(--a-soft);border-radius:var(--r);padding:14px 18px;margin-bottom:24px;font-weight:600}
+.site .dakc{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:flex-end;margin-top:8px}
+.site .dcena .dakc .lnk{margin-top:0;min-height:32px}
+.site .faq{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.site .fq{background:var(--surf);border-radius:var(--r);box-shadow:inset 0 0 0 1px var(--line)}
+.site .fq h3{margin:0;font:inherit}
+.site .fq button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;border:0;background:none;color:var(--fg);padding:18px 20px;font-family:var(--fb);font-weight:700;font-size:16.5px;line-height:1.35;cursor:pointer;border-radius:var(--r)}
+.site .fq button svg{width:20px;height:20px;flex:none;color:var(--at);transition:transform .2s}
+.site .fq.o button svg{transform:rotate(45deg)}
+.site .fq .fa{padding:0 20px 18px;color:var(--muted);max-width:70ch}
+.site .fq .fa p{margin:0 0 8px}
+.site .ptl{display:none}
+@container site (max-width:760px){
+  .site .dakc{justify-content:flex-start}
+  .site .favbar{flex-direction:column;align-items:flex-start}
+}
+@media (prefers-reduced-motion:reduce){.site .fav,.site .fq button svg{transition:none}}
+
+/* ---------------------------------------------------------------- tlač karty ponuky (aj uloženie do PDF) */
+@media print{
+  @page{margin:12mm}
+  html,body{background:#fff!important}
+  .site{--bg:#fff;--surf:#fff;--fg:#15191c;--muted:#4a5560;--line:#d9dde1;background:#fff!important;color:#15191c!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .site .s-head,.site .oznam,.site .mnav,.site .foot,.site .ck-w,.tk-ovl,.site .crumb,.site .dakc,.site .np,.site form,.site .dhyp,.site .sec-ed,.site .fbtns,.site .fav,.site .dgal button span{display:none!important}
+  .site main{padding:0!important}
+  .site .dhd{padding:0!important;background:#fff!important;color:#15191c!important}
+  .site .sec{padding:10px 0 0!important}
+  .site .w{max-width:none!important;padding:0!important}
+  .site .ptl{display:flex!important;order:-1;flex-wrap:wrap;gap:8px 28px;align-items:center;justify-content:space-between;border-bottom:1px solid #d9dde1;margin-bottom:14px;padding-bottom:10px;font-size:12.5px}
+  .site .ptl-k{display:flex;align-items:center;gap:12px}
+  .site .ptl-k img{height:34px;width:auto}
+  .site .ptl-k div,.site .ptl-m{display:flex;flex-direction:column}
+  .site .ptl-u{flex-basis:100%;color:#4a5560}
+  .site .dtit h1{font-size:24px!important}
+  .site .dcena b{font-size:24px!important}
+  .site .dhd .w{display:flex!important;flex-direction:column}
+  .site .dgal{display:grid!important;grid-template-columns:repeat(3,1fr)!important;align-items:start;grid-template-rows:auto!important;gap:6px!important;margin-top:10px;height:auto!important;aspect-ratio:auto!important}
+  .site .dgal button:first-child{grid-row:auto!important;grid-column:auto!important}
+  .site .dgal button{display:none!important;border-radius:6px!important;aspect-ratio:4/3;grid-area:auto!important;height:auto!important}
+  .site .dgal button:nth-child(-n+3){display:block!important}
+  .site .dgal img{width:100%;height:100%;object-fit:cover}
+  .site .det{display:block!important}
+  .site .dpar{grid-template-columns:repeat(3,1fr)!important;font-size:12.5px}
+  .site .dpopis{font-size:12.5px;line-height:1.5}
+  .site .dvyb{font-size:12.5px}
+  .site .dside{display:none!important}
+  .site .dside .dbox{box-shadow:none!important;border:1px solid #d9dde1;padding:10px!important}
+  .site .dkont .btn{background:none!important;color:#15191c!important;box-shadow:none!important;min-height:0!important;padding:0 12px 0 0!important}
+  .site .dkont .btn.wa{display:none!important}
+  .site h2.h3{break-after:avoid;margin-top:12px!important}
+}

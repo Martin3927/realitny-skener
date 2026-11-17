@@ -593,6 +593,42 @@ async function strazcaPotvrdenia(db: any) {
   return { ok: chyby.length === 0, odoslane, chyby };
 }
 
+// web kancelárie: potvrdenie klientovi, že jeho správa z formulára prišla a kto sa mu ozve (migrácia 133)
+// Do e-mailu nejde text, ktorý klient napísal – len druh požiadavky, názov ponuky a kontakty kancelárie.
+async function webPotvrdenia(db: any) {
+  const { data: zoz, error } = await db.rpc("_web_potvrdenia", { p_limit: 20 });
+  if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const k of (zoz as any[]) ?? []) {
+    try {
+      const mk = k.makler || {}, w = k.web || {}, pon = k.ponuka;
+      const kanc = String(w.name || "Realitná kancelária").trim();
+      const maklerMeno = String(mk.meno || "").trim();
+      const telefon = String(mk.telefon || w.tel || "").trim();
+      const odpovedat = String(mk.email || w.mail || "").trim();
+      const zaklad = k.domena ? "https://" + k.domena + "/" : WEB_URL + "stranka.html?m=" + encodeURIComponent(k.adresa);
+      const odkazPonuky = pon ? (k.domena ? zaklad + "ponuka/" + pon.id + "-" + encodeURIComponent(pon.slug || "ponuka") : zaklad + "&p=" + pon.id) : "";
+      const html = `<div style="background:#f7f2e8;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#1e2a35">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;margin:0 auto"><tr><td>
+        <p style="font-size:16px;margin:0 0 10px">Dobrý deň${k.meno ? ", " + esc(k.meno) : ""},</p>
+        <p style="font-size:15px;line-height:1.55;margin:0 0 14px">ďakujeme, na webe ${esc(kanc)} sme od vás prijali <b>${esc(k.co || "správu")}</b>.</p>
+        ${pon ? `<p style="font-size:15px;line-height:1.55;margin:0 0 14px">Ponuka: <a href="${esc(odkazPonuky)}" style="color:#8a5a2b;font-weight:700">${esc(pon.nazov || "ponuka č. " + pon.id)}</a></p>` : ""}
+        <p style="font-size:15px;line-height:1.55;margin:0 0 14px">${maklerMeno ? "Ozve sa vám <b>" + esc(maklerMeno) + "</b>" : "Ozveme sa vám"}, väčšinou ešte v ten istý pracovný deň.${telefon ? ` Ak je to súrne, zavolajte na <a href="tel:${esc(telefon.replace(/[^\d+]/g, ""))}" style="color:#8a5a2b;font-weight:700">${esc(telefon)}</a>.` : ""}</p>
+        <p style="font-size:14px;line-height:1.55;margin:18px 0 0">S pozdravom<br><b>${esc(kanc)}</b></p>
+        <p style="font-size:12px;line-height:1.5;color:#7a828c;margin:24px 0 0;border-top:1px solid #e6dccb;padding-top:12px">Tento e-mail je potvrdenie formulára odoslaného na webe ${esc(kanc)}. Ak ste ho neodoslali vy, pokojne ho ignorujte, nič ďalšie vám nepríde.</p>
+        </td></tr></table></div>`;
+      await posli(k.email, "Prijali sme vašu správu – " + kanc, html, { odMeno: kanc, odpovedat });
+      odoslane++;
+    } catch (e) {
+      chyby.push(String((e as Error).message || e));
+      await db.rpc("_web_potvrdenie_chyba", { p_id: k.id });
+    }
+  }
+  return { ok: chyby.length === 0, odoslane, chyby };
+}
+
 // strážca ponúk Týpkových nehnuteľností (realitnytypek.sk/nehnutelnosti): potvrdenie a e-maily s novými ponukami
 const PORTAL = "https://realitnytypek.sk/nehnutelnosti/";
 const PORTAL_OD = "Týpkove nehnuteľnosti";
@@ -943,5 +979,6 @@ Deno.serve(async (req) => {
     strazca: await portalStrazcaEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) })),
   };
   const odhad = await odhadEmaily(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
-  return Response.json({ ok: true, odoslane, web, registracie, skusobna, potvrdenia, strazca, portal, odhad });
+  const webPotvrdene = await webPotvrdenia(db).catch((e) => ({ ok: false, chyba: String((e as Error).message || e) }));
+  return Response.json({ ok: true, odoslane, web, registracie, skusobna, potvrdenia, strazca, portal, odhad, webPotvrdene });
 });

@@ -5256,7 +5256,10 @@
     napojGaleriu();
     var sel = $("#pd-stav");
     if (sel) sel.onchange = async function () {
-      try { await rpc("zmenit_stav_nehnutelnosti", { p_id: p.id, p_stav: sel.value }); p.stav = sel.value; toast("Stav: " + STAVY_P[sel.value][0]); if (sel.value === "predane") konfety({ pocet: 160 }); vykresliDetailPonuky(); }
+      try { await rpc("zmenit_stav_nehnutelnosti", { p_id: p.id, p_stav: sel.value }); p.stav = sel.value; toast("Stav: " + STAVY_P[sel.value][0]);
+        if (sel.value === "predane") { konfety({ pocet: 160 }); if (admin() || p.makler_id === S.me.id) { S.pdPanel = "recenzia"; await nacitajOdkazyRecenzii(); } }
+        vykresliDetailPonuky();
+        if (sel.value === "predane" && $("#pd-recenzia")) $("#pd-recenzia").scrollIntoView({ behavior: "smooth", block: "nearest" }); }
       catch (err) { toast(chybaText(err), true); sel.value = p.stav; }
     };
     el.querySelectorAll("[data-dok-otvor]").forEach(function (b) {
@@ -5367,7 +5370,41 @@
     if (kam === "sms") return "sms:" + (tel ? telCislo(tel) : "") + "?&body=" + encodeURIComponent(text);
     return "mailto:" + encodeURIComponent(email || "") + "?subject=" + encodeURIComponent(predmet || "") + "&body=" + encodeURIComponent(text);
   }
-  function podpis() { return (S.me.meno || "") + ", Alpha Reality" + (S.me.telefon ? "\n" + S.me.telefon : ""); }
+  function podpis() { return (S.me.meno || "") + ", " + nazovKancelarie() + (S.me.telefon ? "\n" + S.me.telefon : ""); }
+
+  // ---------- prosba o recenziu: na web (Týpek), na Google alebo na Facebook (odkazy: migrácia 133)
+  var REC_KDE = [["typek", "Na náš web"], ["google", "Na Google"], ["facebook", "Na Facebook"]];
+  async function nacitajOdkazyRecenzii(znova) {
+    if (S.recOdkazy && !znova) return S.recOdkazy;
+    S.recOdkazy = (await rpc("odkazy_recenzii", {}).catch(function () { return null; })) || {};
+    return S.recOdkazy;
+  }
+  function odkazRecenzie(kde, maklerId) {
+    var o = S.recOdkazy || {};
+    return kde === "google" ? (o.google || "") : kde === "facebook" ? (o.facebook || "") : new URL("recenzia.html?m=" + (maklerId || S.me.id), location.href).href;
+  }
+  function recKde() { var k = S.recKde || "typek"; return odkazRecenzie(k) ? k : "typek"; }
+  function textProsbyORecenziu(kde, odkaz, meno) {
+    return "Dobrý deň" + (meno ? " " + String(meno).trim().split(" ")[0] : "") + ", ďakujem za dôveru a spoluprácu. Veľmi by mi pomohlo, keby ste mi napísali krátku recenziu" +
+      (kde === "google" ? " na Googli" : kde === "facebook" ? " na Facebooku" : "") + " – zaberie to minútu: " + odkaz + "\n\n" + podpis();
+  }
+  function recKdeHtml() {
+    var k = recKde();
+    return '<div class="rec-kde" role="group" aria-label="Kde má klient napísať recenziu">' + REC_KDE.map(function (x) {
+      var ma = !!odkazRecenzie(x[0]);
+      return '<button class="btn' + (k === x[0] ? " primary" : "") + '" type="button" data-rec-kde="' + x[0] + '" aria-pressed="' + (k === x[0]) + '"' + (ma ? "" : ' disabled title="Odkaz ešte nie je nastavený' + (admin() ? " – doplň ho v sekcii Recenzie" : " – nastaví ho administrátor v sekcii Recenzie") + '"') + ">" + x[1] + "</button>"; }).join("") + "</div>";
+  }
+  // panel v detaile predanej ponuky: správa majiteľovi s odkazom na recenziu
+  function panelRecenzia(p) {
+    var I = S.ponukyInt[p.id] || {}, k = recKde();
+    var h = '<div class="pd-panel" id="pd-recenzia"><h4>⭐ Požiadať klienta o recenziu</h4>' +
+      '<p class="meta">Po predaji je najlepší čas. Vyber, kde má klient recenziu napísať, a pošli mu pripravenú správu. Recenzia z nášho webu sa po schválení ukáže na webe makléra aj kancelárie.</p>' + recKdeHtml() +
+      '<label class="field"><span>Text správy</span><textarea id="pd-sprava-rec" rows="5">' + esc(textProsbyORecenziu(k, odkazRecenzie(k, p.makler_id), I.majitel_meno)) + "</textarea></label>" +
+      '<div class="pd-zdiel-btns"><a class="btn wa" href="#" data-posli-rec="wa" target="_blank" rel="noopener">WhatsApp' + (I.majitel_telefon ? " majiteľovi" : "") + '</a><a class="btn" href="#" data-posli-rec="sms">💬 SMS</a>' +
+      '<a class="btn" href="#" data-posli-rec="email">✉️ Email</a><button class="btn ghost" type="button" data-pdn="kopiruj-rec">Kopírovať text</button></div>' +
+      (!I.majitel_telefon && !I.majitel_email ? '<p class="meta">Telefón ani email majiteľa nie je vyplnený – príjemcu vyberieš v aplikácii, ktorá sa otvorí. Doplniť ich môžeš v úprave ponuky (krok Interné).</p>' : "");
+    return h + "</div>";
+  }
 
   // ---------- obhliadky, zobrazenia, dopyty – načítanie
   async function nacitajNastrojePonuk() {
@@ -5450,6 +5487,7 @@
       '<button class="btn" type="button" data-pdn="text">📋 Text pre portál</button>' + katasterTlacidlo(p, "btn") +
       ((p.fotky || []).length ? '<button class="btn" type="button" data-pdn="zip">⬇️ Fotky (ZIP)</button>' : "") +
       (mozem ? '<button class="btn ghost" type="button" data-pdn="duplikovat">⧉ Duplikovať</button>' : "") +
+      (mozem && p.stav === "predane" ? '<button class="btn" type="button" data-pdn="recenzia" aria-pressed="' + (S.pdPanel === "recenzia") + '">⭐ Požiadať o recenziu</button>' : "") +
       (admin() && p.stav === "predane" ? '<button class="btn" type="button" data-pdn="provizia">💶 Zapísať províziu</button>' : "") + "</div>" +
       '<div class="pd-staty"><span>👁 <b>' + nf.format(Z.spolu) + "</b> zobrazení ponuky" + (Z.d7 ? " (" + Z.d7 + " za 7 dní)" : "") + "</span>" +
       "<span>🗝️ <b>" + nO + "</b> " + (nO === 1 ? "obhliadka" : nO >= 2 && nO <= 4 ? "obhliadky" : "obhliadok") + "</span>" +
@@ -5457,6 +5495,7 @@
     if (S.pdPanel === "zdielat") h += panelZdielat(p);
     if (S.pdPanel === "report" && mozem) h += panelReport(p);
     if (S.pdPanel === "siete") h += panelSiete(p);
+    if (S.pdPanel === "recenzia" && mozem && p.stav === "predane") h += panelRecenzia(p);
     return h;
   }
   function panelZdielat(p) {
@@ -5538,6 +5577,8 @@
       b.onclick = async function () {
         var a = b.dataset.pdn;
         if (a === "zdielat" || a === "report" || a === "siete") { S.pdPanel = S.pdPanel === a ? null : a; vykresliDetailPonuky(); var pn = $(a === "zdielat" ? "#pd-zdielat" : a === "siete" ? "#pd-siete" : "#pd-report"); if (pn) pn.scrollIntoView({ behavior: "smooth", block: "nearest" }); return; }
+        if (a === "recenzia") { S.pdPanel = S.pdPanel === a ? null : a; if (S.pdPanel) await nacitajOdkazyRecenzii(); vykresliDetailPonuky(); var pr = $("#pd-recenzia"); if (pr) pr.scrollIntoView({ behavior: "smooth", block: "nearest" }); return; }
+        if (a === "kopiruj-rec") return kopiruj($("#pd-sprava-rec").value, "Text správy je skopírovaný.");
         if (a === "kopiruj-url") return kopiruj(verejnyOdkaz(p.id), "🔗 Odkaz na ponuku je skopírovaný.");
         if (a === "kopiruj-text") return kopiruj($("#pd-sprava").value, "Text správy je skopírovaný.");
         if (a === "kopiruj-report") return kopiruj(new URL("report.html?t=" + S.ponukyInt[p.id].report_token, location.href).href, "📊 Odkaz na report je skopírovaný.");
@@ -5562,6 +5603,10 @@
     el.querySelectorAll("[data-posli-r]").forEach(function (a) {
       a.onclick = function () { a.href = odkazSpravy(a.dataset.posliR, I.majitel_telefon, $("#pd-sprava-r").value, "Report k ponuke – " + nazovPonuky(p), I.majitel_email); };
     });
+    el.querySelectorAll("[data-posli-rec]").forEach(function (a) {
+      a.onclick = function () { a.href = odkazSpravy(a.dataset.posliRec, I.majitel_telefon, $("#pd-sprava-rec").value, "Prosba o recenziu – " + nazovKancelarie(), I.majitel_email); };
+    });
+    el.querySelectorAll("#pd-recenzia [data-rec-kde]").forEach(function (b) { b.onclick = function () { S.recKde = b.dataset.recKde; vykresliDetailPonuky(); }; });
     var tyz = $("#pd-report-tyz");
     if (tyz) tyz.onchange = async function () {
       try { await rpc("report_odkaz", { p_id: p.id, p_tyzdenne: tyz.checked }); I.report_tyzdenne = tyz.checked; toast(tyz.checked ? "Majiteľ bude dostávať report každý pondelok." : "Týždenný report je vypnutý."); }
@@ -7766,7 +7811,7 @@
 
   // ------------------------------------------------------------ RECENZIE
   var ZDROJE_REC = { web: "Web", google: "Google", facebook: "Facebook", osobne: "Osobne", ine: "Iné" };
-  async function nacitajRecenzie() { S.recenzie = await vsetkyRiadky("recenzie", "*", "id").catch(function () { return []; }); }
+  async function nacitajRecenzie() { var o = nacitajOdkazyRecenzii(true); S.recenzie = await vsetkyRiadky("recenzie", "*", "id").catch(function () { return []; }); await o; }
   function hviezdy(n) { return '<span class="hviezdy" aria-label="' + n + ' z 5">' + "★★★★★".slice(0, n) + '<i>' + "★★★★★".slice(n) + "</i></span>"; }
   function vykresliRecenzie() {
     var el = $("#obsah"); if (!el) return;
@@ -7775,13 +7820,18 @@
     var R = S.recenzie, schv = R.filter(function (r) { return r.stav === "schvalena"; });
     var priemer = schv.length ? (schv.reduce(function (a, r) { return a + r.hodnotenie; }, 0) / schv.length) : 0;
     var caka = R.filter(function (r) { return r.stav === "caka"; }).length;
-    var odkaz = new URL("recenzia.html?m=" + S.me.id, location.href).href;
-    var sprava = "Dobrý deň, ďakujem za dôveru a spoluprácu. Veľmi by mi pomohlo, keby ste mi napísali krátku recenziu – zaberie to minútu: " + odkaz + "\n\n" + podpis();
+    var kde = recKde(), odkaz = odkazRecenzie(kde), O = S.recOdkazy || {};
+    var sprava = textProsbyORecenziu(kde, odkaz, "");
     var h = '<div class="box rec-box"><div class="vykon-hlava"><h3>⭐ Recenzie</h3><button class="btn primary" type="button" data-rec="nova">+ Zapísať recenziu</button></div>' +
       '<div class="rec-suhrn"><div class="rec-priemer"><b>' + (schv.length ? priemer.toFixed(1).replace(".", ",") : "–") + "</b>" + hviezdy(Math.round(priemer)) + '<span class="meta">' + schv.length + " schválených</span></div>" +
-      '<div class="rec-poziadat"><b>Požiadajte klienta o recenziu</b><span class="meta">Pošlite mu odkaz – recenziu napíše za minútu, administrátor ju schváli a zobrazí sa na webe.</span>' +
+      '<div class="rec-poziadat"><b>Požiadajte klienta o recenziu</b><span class="meta">' + (kde === "typek" ? "Pošlite mu odkaz – recenziu napíše za minútu, administrátor ju schváli a zobrazí sa na webe." : kde === "google" ? "Klient napíše recenziu priamo na Google profil kancelárie." : "Klient napíše odporúčanie na Facebook stránke kancelárie.") + "</span>" + recKdeHtml() +
       '<div class="pd-zdiel-btns"><a class="btn wa" href="#" data-rec-posli="wa" target="_blank" rel="noopener">WhatsApp</a><a class="btn" href="#" data-rec-posli="sms">💬 SMS</a><a class="btn" href="#" data-rec-posli="email">✉️ Email</a>' +
-      '<button class="btn ghost" type="button" data-rec="kopiruj">Kopírovať odkaz</button></div></div></div>';
+      '<button class="btn ghost" type="button" data-rec="kopiruj">Kopírovať odkaz</button></div>' +
+      (admin() ? '<details class="rec-odkazy"' + (S.recOdkazyOtv ? " open" : "") + '><summary>Odkazy na recenzie na Google a Facebooku</summary><form id="f-rec-odkazy">' +
+        '<label class="field"><span>Google – odkaz na napísanie recenzie</span><input type="text" inputmode="url" name="google" maxlength="400" value="' + esc(O.google_vlastny || "") + '" placeholder="' + esc(O.google_auto || "napr. https://g.page/r/…/review") + '"></label>' +
+        '<label class="field"><span>Facebook – stránka kancelárie</span><input type="text" inputmode="url" name="facebook" maxlength="400" value="' + esc(O.facebook_vlastny || "") + '" placeholder="' + esc(O.facebook_auto || "napr. https://www.facebook.com/kancelaria/reviews") + '"></label>' +
+        '<p class="meta">Prázdne pole = Týpek použije odkaz, ktorý pozná: Google z napojeného Google profilu (Web kancelárie → Napojenia), Facebook zo sociálnych sietí webu kancelárie. Odkaz na Google recenziu nájdeš vo svojom firemnom profile na Googli pod „Požiadať o recenzie“.</p>' +
+        '<div><button class="btn primary" type="submit">Uložiť odkazy</button></div></form></details>' : "") + "</div></div>";
     if (S.recForm) h += '<form class="kal-form" id="f-rec"><h4>Zapísať recenziu klienta</h4><p class="meta">Len skutočné hodnotenia od klientov (napr. z Google, Facebooku alebo osobne). ' + (admin() ? "" : "Zobrazí sa po schválení administrátorom.") + '</p><div class="form-grid">' +
       '<label class="field"><span>Meno klienta *</span><input type="text" name="meno" required maxlength="80"></label>' +
       '<label class="field"><span>Hodnotenie</span><select name="hodnotenie">' + [5, 4, 3, 2, 1].map(function (n) { return '<option value="' + n + '">' + "★★★★★".slice(0, n) + " (" + n + ")</option>"; }).join("") + "</select></label>" +
@@ -7808,7 +7858,16 @@
         vykresliRecenzie();
       };
     });
-    el.querySelectorAll("[data-rec-posli]").forEach(function (a) { a.onclick = function () { a.href = odkazSpravy(a.dataset.recPosli, "", sprava, "Prosba o recenziu – Alpha Reality", ""); }; });
+    el.querySelectorAll("[data-rec-posli]").forEach(function (a) { a.onclick = function () { a.href = odkazSpravy(a.dataset.recPosli, "", sprava, "Prosba o recenziu – " + nazovKancelarie(), ""); }; });
+    el.querySelectorAll(".rec-poziadat [data-rec-kde]").forEach(function (b) { b.onclick = function () { S.recKde = b.dataset.recKde; vykresliRecenzie(); }; });
+    var det = el.querySelector(".rec-odkazy"); if (det) det.ontoggle = function () { S.recOdkazyOtv = det.open; };
+    var fo = $("#f-rec-odkazy");
+    if (fo) fo.onsubmit = async function (e) {
+      e.preventDefault();
+      var dopln = function (v) { v = String(v || "").trim(); return v && !/^https?:\/\//i.test(v) ? "https://" + v : v.replace(/^http:\/\//i, "https://"); };
+      try { S.recOdkazy = await rpc("ulozit_odkazy_recenzii", { p_google: dopln(fo.google.value), p_facebook: dopln(fo.facebook.value) }); toast("Odkazy na recenzie sú uložené."); vykresliRecenzie(); }
+      catch (err) { toast(chybaText(err), true); }
+    };
     el.querySelectorAll("[data-rec-stav]").forEach(function (b) {
       b.onclick = async function () { try { await rpc("schvalit_recenziu", { p_id: Number(b.dataset.id), p_stav: b.dataset.recStav }); await nacitajRecenzie(); toast(b.dataset.recStav === "schvalena" ? "⭐ Recenzia je schválená a zobrazí sa na webe." : "Recenzia je zamietnutá."); vykresliRecenzie(); } catch (e) { toast(chybaText(e), true); } };
     });

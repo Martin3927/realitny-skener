@@ -178,6 +178,22 @@ function kancelaria_stranka($d, $m, $vlastna, $SB, $APP) {
       ($zoznam ? '<h2>Aktuálne ponuky</h2><ul>' . $zoznam . '</ul>' : '') .
       (trim((string)($o['text'] ?? '')) ? '<h2>' . e(trim((string)($o['t'] ?? '')) ?: 'O nás') . '</h2><p>' . nl2br(e(skrat((string)$o['text'], 1200))) . '</p>' : '');
   }
+  // časté otázky: text pre vyhľadávače a štruktúrované údaje (na úvode, pri Službách a pri Kontakte – tam ich ukazuje aj web)
+  $ldFaq = null;
+  if (in_array($s, ['', 'sluzby', 'kontakt'], true) && is_array($web['faq'] ?? null) && (($web['on']['faq'] ?? true) !== false)) {
+    $otazky = [];
+    foreach ((array)($web['faq']['items'] ?? []) as $x) {
+      if (!is_array($x)) continue;
+      $q = trim((string)($x['q'] ?? '')); $a = trim((string)($x['a'] ?? ''));
+      if ($q !== '' && $a !== '' && count($otazky) < 12) $otazky[] = [skrat($q, 200), skrat($a, 1000)];
+    }
+    if ($otazky) {
+      $telo .= '<h2>' . e(trim((string)($web['faq']['t'] ?? '')) ?: 'Časté otázky') . '</h2>';
+      foreach ($otazky as $x) $telo .= '<h3>' . e($x[0]) . '</h3><p>' . nl2br(e($x[1])) . '</p>';
+      $ldFaq = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => array_map(function ($x) {
+        return ['@type' => 'Question', 'name' => $x[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $x[1]]]; }, $otazky)];
+    }
+  }
   $obsah = '<article class="ssr"><nav>' . rtrim($menu, ' · ') . '</nav>' . $telo . ($kontakt ? '<h2>Kontakt</h2><p>' . $kontakt . '</p>' : '') . '</article>';
 
   $jf = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP;
@@ -190,6 +206,7 @@ function kancelaria_stranka($d, $m, $vlastna, $SB, $APP) {
     ($obrazok ? '<meta property="og:image" content="' . e($obrazok) . '">' . "\n" : '') .
     '<meta name="twitter:card" content="summary_large_image">' . "\n" .
     '<script type="application/ld+json">' . json_encode($ld, $jf) . '</script>' . "\n" .
+    ($ldFaq ? '<script type="application/ld+json">' . json_encode($ldFaq, $jf) . '</script>' . "\n" : '') .
     '<script type="application/json" id="web-data">' . json_encode($d, $jf) . '</script>' . "\n" .
     '<style>.ssr{opacity:0;animation:ssrUkaz .2s 2.5s forwards;max-width:760px;margin:32px auto;padding:0 16px;font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;color:#1E2A35}.ssr h1{font-size:30px;line-height:1.2;margin:12px 0 8px}.ssr h2{font-size:21px;margin:28px 0 8px}.ssr a{color:#8A5A2B}@keyframes ssrUkaz{to{opacity:1}}</style>' . "\n";
   $html = $sablona;

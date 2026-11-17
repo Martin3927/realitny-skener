@@ -2888,3 +2888,11 @@ html.bez-posuvu #toast { z-index: 210 }
 .okolie-mapa { height: 360px; border-radius: 12px; overflow: hidden; margin: 0 0 12px; border: 1px solid var(--line) }
 @media (max-width: 640px) { .okolie-mapa { height: 300px } }
 .okolie-km { margin: 2px 0; font-size: 13px; font-weight: 600; color: var(--ink) }
+
+/* prosba o recenziu: výber, kde ju klient napíše (web, Google, Facebook) */
+.rec-kde { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 }
+.rec-kde .btn { min-height: 36px }
+.rec-kde .btn:disabled { opacity: .5; cursor: not-allowed }
+.rec-odkazy { margin-top: 8px }
+.rec-odkazy summary { cursor: pointer; font-weight: 600; padding: 6px 0 }
+.rec-odkazy form { display: grid; gap: 8px; margin-top: 8px; max-width: 560px }

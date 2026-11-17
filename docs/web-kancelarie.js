@@ -295,6 +295,10 @@ function secEd(k) {
       return head + '<div class="items">' + s.ocenenia.items.map(function (a, i) {
         return '<div class="item"><div class="item-h"><b>' + esc(a.t || "Ocenenie") + "</b>" + icb("ls-up:ocenenia.items:" + i, "up", "Vyššie", i === 0 ? " disabled" : "") + icb("ls-del:ocenenia.items:" + i, "trash", "Odstrániť") + '</div><div class="fields">' + fld("Názov", "ocenenia.items." + i + ".t") + fld("Rok alebo skratka", "ocenenia.items." + i + ".y", { half: 1 }) + fld("Kto ho udelil", "ocenenia.items." + i + ".d", { half: 1 }) + "</div></div>"; }).join("") +
         '</div><button type="button" class="addb" data-act="ls-add:ocenenia.items">+ Pridať ocenenie</button>';
+    case "faq":
+      return '<p class="note">Odpovede na otázky, ktoré klienti kladú najčastejšie. Sekcia sa ukáže na úvode, pri Službách a pri Kontakte. Otázka bez odpovede sa nezobrazí.</p>' + head + '<div class="items">' + s.faq.items.map(function (x, i) {
+        return '<div class="item"><div class="item-h"><b>' + esc(x.q || "Otázka") + "</b>" + icb("ls-up:faq.items:" + i, "up", "Vyššie", i === 0 ? " disabled" : "") + icb("ls-del:faq.items:" + i, "trash", "Odstrániť") + '</div><div class="fields">' + fld("Otázka", "faq.items." + i + ".q", { max: 160 }) + fld("Odpoveď", "faq.items." + i + ".a", { ta: 3, max: 900 }) + "</div></div>"; }).join("") +
+        "</div>" + (s.faq.items.length < 12 ? '<button type="button" class="addb" data-act="ls-add:faq.items">+ Pridať otázku</button>' : "");
     case "recenzie":
       return '<p class="note">Google recenzie napojíš v záložke <b>Napojenia</b>. Recenzie z Týpka sú tie, ktoré klienti napísali maklérom a admin ich schválil.</p>' + head + seg(p + "zdroj", [["oboje", "Google aj Týpek"], ["google", "Len Google"], ["typek", "Len Týpek"]], "Odkiaľ") + seg(p + "cnt", [["3", "3 recenzie"], ["6", "6 recenzií"], ["9", "9 recenzií"]], "Koľko ukázať") + onoff(p + "write", "Tlačidlo Napísať recenziu");
     case "galeria":
@@ -333,7 +337,9 @@ function paneStranky() {
   var adr = WEB && WEB.domena && WEB.domena_pripojena ? WEB.domena + "/ponuky" : "…/stranka.html?m=" + (WEB ? WEB.adresa : "") + "&s=ponuky";
   return grp("Ako sa web prechádza", seg("podstranky", [["on", "Samostatné podstránky"], ["off", "Jedna dlhá stránka"]]) +
       '<p class="note">' + (s.podstranky === "on" ? "Menu otvára samostatné stránky s vlastnou adresou, napríklad <b>" + esc(adr) + "</b>. Google ich nájde lepšie a dajú sa posielať odkazom." : "Menu posúva na sekcie na úvodnej stránke. Výkup, kariéra a články majú aj tak vlastné stránky.") + "</p>") +
-    grp("Stránky webu", '<p class="note">Vypnutá stránka sa na webe nezobrazí. Prepínačom <b>menu</b> ju dáš do hlavného menu. Obsah stránok sa skladá zo sekcií, ktoré upravuješ v záložke Sekcie.</p><ul class="secs">' + rows + "</ul>");
+    grp("Stránky webu", '<p class="note">Vypnutá stránka sa na webe nezobrazí. Prepínačom <b>menu</b> ju dáš do hlavného menu. Obsah stránok sa skladá zo sekcií, ktoré upravuješ v záložke Sekcie.</p><ul class="secs">' + rows + "</ul>") +
+    grp("Pre návštevníkov", onoff("wa", "Tlačidlo WhatsApp pri ponuke, maklérovi a v kontakte") + onoff("obl", "Obľúbené ponuky (srdiečko na ponuke)") + onoff("potvrdenie", "Potvrdenie klientovi e-mailom po odoslaní formulára") +
+      '<p class="note">WhatsApp otvorí správu maklérovi s názvom ponuky. Obľúbené ponuky ostávajú len v prehliadači návštevníka a svoj výber môže poslať maklérovi. Potvrdenie príde klientovi, ktorý vo formulári uvedie e-mail: napíšeme mu, že sme správu prijali a kto sa mu ozve. Kartu ponuky si návštevník vytlačí alebo uloží ako PDF tlačidlom pri ponuke.</p>');
 }
 
 function paneBlog() {
@@ -541,7 +547,7 @@ function act(a, el) {
   if (n === "c-add") { var id = "c" + Date.now().toString(36); s.custom[id] = { typ: x, t: { text: "Nadpis sekcie", txph: "Nadpis sekcie s fotkou", fotky: "Fotky", vyzva: "Výzva pre návštevníkov" }[x], text: x === "fotky" ? "" : "Sem napíš text sekcie. Odseky oddeľ novým riadkom.", img: "dom-obyvacka", imgs: x === "fotky" ? ["byt-obyvacka", "dom-zahrada", "chata"] : [], b: x === "vyzva" ? "Ozvite sa nám" : "", go: "kontakt", u: "", bgs: x === "vyzva" ? "col" : "", menu: "off", ml: "" };
     var ki = s.order.indexOf("kontakt"); s.order.splice(ki < 0 ? s.order.length : ki, 0, id); s.on[id] = true; UI.add = false; UI.open = id; save(); renderPanel(true); KC.render(); ukazSekciu(id); return; }
   if (n === "c-del") { if (!confirm("Odstrániť túto sekciu?")) return; delete s.custom[x]; delete s.on[x]; s.order = s.order.filter(function (k) { return k !== x; }); s.hero.slides.forEach(function (q) { if (q.go === x) q.go = "kontakt"; if (q.go2 === x) q.go2 = "kontakt"; }); UI.open = ""; save(); renderPanel(true); KC.render(); return; }
-  if (n === "ls-add") { var arr = get(x.split(":")[0]), tm = { "cisla.rows": { typ: "vlastne", n: "", t: "" }, "sluzby.items": { ic: "dom", t: "Nová služba", d: "Krátky popis služby." }, "ocenenia.items": { t: "Názov ocenenia", y: String(new Date().getFullYear()), d: "Kto ho udelil" } }[x.split(":")[0]]; arr.push(tm); save(); renderPanel(true); KC.render(); return; }
+  if (n === "ls-add") { var arr = get(x.split(":")[0]), tm = { "cisla.rows": { typ: "vlastne", n: "", t: "" }, "sluzby.items": { ic: "dom", t: "Nová služba", d: "Krátky popis služby." }, "ocenenia.items": { t: "Názov ocenenia", y: String(new Date().getFullYear()), d: "Kto ho udelil" }, "faq.items": { q: "Nová otázka", a: "" } }[x.split(":")[0]]; arr.push(tm); save(); renderPanel(true); KC.render(); return; }
   if (n === "ls-del") { get(p[1]).splice(+y, 1); save(); renderPanel(true); KC.render(); return; }
   if (n === "ls-up") { move(get(p[1]), +y, -1); save(); renderPanel(true); KC.render(); return; }
   if (n === "g-del") { get(p[1]).splice(+y, 1); save(); renderPanel(true); KC.render(); return; }
