@@ -872,6 +872,28 @@
       '<div id="push-stav" class="push-stav"><span class="meta">Zisťujem…</span></div>' +
       '<button class="btn-link" type="button" data-prof="mobil">📲 Návod pre Android a iPhone</button></div>';
   }
+  // pondelkový prehľad e-mailom – maklér si ho zapne a vypne sám
+  function boxTyzden() {
+    var zap = !(S.me.upozornenia && S.me.upozornenia.tyzden === false), co = [];
+    if (maSekciu("web")) co.push("návštevy a kontakty z tvojho webu");
+    if (maSekciu("inzeraty")) co.push("hovory, prevzaté inzeráty a čo sa ti v skeneri v pondelok uvoľní");
+    co.push("pripomienky na celý týždeň");
+    return '<div class="box" id="box-tyzden"><h3>📬 Pondelkový prehľad e-mailom</h3><p class="meta">Každý pondelok ráno ti príde' + (S.me.email ? " na " + esc(S.me.email) : "") +
+      " krátky prehľad: " + co.join(", ") + ".</p>" +
+      '<label class="toggle"><input type="checkbox" id="tyzden-zap"' + (zap ? " checked" : "") + "> Posielať pondelkový prehľad</label></div>";
+  }
+  function napojTyzden() {
+    var x = $("#tyzden-zap"); if (!x) return;
+    x.onchange = async function () {
+      var zap = x.checked; x.disabled = true;
+      try {
+        await rpc("nastavit_tyzdenny_email", { p_zap: zap });
+        S.me.upozornenia = Object.assign({}, S.me.upozornenia || {}, { tyzden: zap });
+        toast(zap ? "📬 Pondelkový prehľad ti bude chodiť každý pondelok ráno." : "Pondelkový prehľad je vypnutý.");
+      } catch (err) { x.checked = !zap; toast(chybaText(err), true); }
+      x.disabled = false;
+    };
+  }
   async function napojUpozornenia() {
     var el = $("#push-stav"); if (!el) return;
     function kresli(h) { var x = $("#push-stav"); if (x) x.innerHTML = h; }
@@ -2085,7 +2107,7 @@
       '<div class="form-actions"><button class="btn primary" type="submit">Uložiť nové heslo</button></div></form>' +
       '<form class="box" id="f-tel"><h3>📞 Môj telefón</h3><p class="meta">Zobrazí sa klientom na stránke ponuky, na letáku a v reporte pre majiteľa.</p>' +
       '<div class="form-grid"><label class="field"><span>Telefón</span><input id="moj-tel" type="tel" inputmode="tel" maxlength="30" value="' + esc(S.me.telefon || "") + '" placeholder="napr. 0905 123 456"></label></div>' +
-      '<div class="form-actions"><button class="btn primary" type="submit">Uložiť telefón</button></div></form>' + boxUpozornenia() + boxObce() + formSms() + boxPlocha() +
+      '<div class="form-actions"><button class="btn primary" type="submit">Uložiť telefón</button></div></form>' + boxUpozornenia() + boxTyzden() + boxObce() + formSms() + boxPlocha() +
       '<div class="box spr-znova"><img src="typek-hlava.png" alt="" width="48" height="48"><div><h3>🧭 Sprievodca aplikáciou</h3><p class="meta">Realitný týpek vás znova prevedie hlavnými časťami aplikácie.</p></div>' +
         '<button class="btn" type="button" id="spr-znova">Spustiť sprievodcu</button></div>' +
       '<div class="prof-zavriet"><button class="btn ghost" type="button" id="pw-x">Zavrieť profil</button></div>';
@@ -2098,6 +2120,7 @@
     napojFormSms();
     napojObce();
     napojUpozornenia();
+    napojTyzden();
     if ($("#plocha-btn")) $("#plocha-btn").onclick = async function () {
       instalacia.prompt(); await instalacia.userChoice.catch(function () {}); instalacia = null; vykresliHeslo();
     };
@@ -4035,6 +4058,65 @@
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + I[nazov] + "</svg>";
   }
   // výzva na doplnenie telefónu a fotky: klienti ich vidia na stránke ponuky, letáku aj webe makléra
+  // prvé kroky nového makléra (prvých 30 dní, kým nie je všetko hotové alebo si ich neskryje)
+  async function nacitajKroky() {
+    if (S.krokyNacitava) return;
+    S.krokyNacitava = true;
+    try {
+      var k = await rpc("moje_prve_kroky", {}), zmena = JSON.stringify(k) !== JSON.stringify(S.kroky);
+      S.kroky = k; S.krokyKedy = Date.now();
+      if (zmena && S.tab === "domov" && !S.pwdOpen) vykresliDomov();
+    } catch (e) { S.krokyKedy = Date.now(); }
+    S.krokyNacitava = false;
+  }
+  function zoznamKrokov(k) {
+    return [
+      ["profil", "📸", "Fotka a telefón v profile", "Klienti ich uvidia pri ponukách, na letáku aj na webe.", k.foto && k.telefon],
+      k.ma_skener && ["obce", "📍", "Vyber si svoje obce", "Na hlavnej obrazovke potom uvidíš nové súkromné inzeráty z nich.", k.obce > 0],
+      ["upozornenia", "🔔", "Zapni upozornenia do mobilu", "Telefón pípne pri novom inzeráte, kontakte aj pripomienke.", k.push > 0],
+      k.ma_skener && ["prevzatie", "🔎", "Prevezmi prvý inzerát a zavolaj", "V skeneri ťukni na súkromný inzerát a Prevziať. Po hovore zapíš, ako dopadol.", k.prevzatia > 0],
+      k.ma_web && ["web", "🌐", "Zverejni svoj osobný web", "Vyber šablónu, skontroluj texty a klikni na Zverejniť.", k.web_zverejneny]
+    ].filter(Boolean);
+  }
+  function prveKrokyHtml() {
+    if (!S.krokyKedy || Date.now() - S.krokyKedy > 60000) nacitajKroky();
+    var k = S.kroky; if (!k || !k.vytvorene) return "";
+    if ((Date.now() - new Date(k.vytvorene).getTime()) / 864e5 > 30) return "";
+    try { if (localStorage.getItem("typek-kroky-skryt-" + S.me.id)) return ""; } catch (e) { /* bez úložiska */ }
+    var L = zoznamKrokov(k), hotovo = L.filter(function (x) { return x[4]; }).length;
+    if (!L.length || hotovo === L.length) return "";
+    var dalsi = L.find(function (x) { return !x[4]; });
+    return '<section class="prve-kroky" aria-label="Prvé kroky"><div class="pk-hlava"><div><h3>🚀 Prvé kroky v Týpkovi</h3><p class="meta">' + hotovo + " z " + L.length +
+      " hotové. Zaberie to pár minút a Týpek ti potom naozaj šetrí čas.</p></div>" +
+      '<button class="btn-link" type="button" data-krok-skryt>Skryť</button></div>' +
+      '<div class="pk-pruh" role="progressbar" aria-valuemin="0" aria-valuemax="' + L.length + '" aria-valuenow="' + hotovo + '"><span style="width:' + Math.round(hotovo / L.length * 100) + '%"></span></div>' +
+      '<ol class="pk-zoznam">' + L.map(function (x) {
+        return '<li class="' + (x[4] ? "hotovo" : x === dalsi ? "dalsi" : "") + '"><span class="pk-ikona" aria-hidden="true">' + (x[4] ? "✓" : x[1]) + "</span>" +
+          '<span class="pk-text"><b>' + esc(x[2]) + "</b>" + (x[4] ? "" : "<small>" + esc(x[3]) + "</small>") + "</span>" +
+          (x[4] ? '<span class="pk-ok">Hotovo</span>' : '<button class="btn' + (x === dalsi ? " primary" : "") + '" type="button" data-krok="' + x[0] + '">' + (x === dalsi ? "Urobiť teraz" : "Otvoriť") + "</button>") + "</li>";
+      }).join("") + "</ol></section>";
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-krok]");
+    if (b) {
+      var c = b.dataset.krok;
+      if (c === "profil" || c === "obce") {
+        S.zvonOpen = false; vykresliZvoncek(); S.pwdOpen = true; vykresliHeslo();
+        var ciel = c === "obce" ? $("#box-obce") : $("#pwd .box");
+        if (ciel) { ciel.scrollIntoView({ behavior: "smooth", block: c === "obce" ? "center" : "start" }); ciel.classList.add("zvyrazni"); setTimeout(function () { ciel.classList.remove("zvyrazni"); }, 2600); }
+        return;
+      }
+      if (c === "upozornenia") return ukazCiel("upozornenia");
+      if (c === "prevzatie") { S.f.predajca = "sukr"; S.f.praca = "vsetky"; ulozFiltre(); return prejdi("inzeraty"); }
+      if (c === "web") return prejdi("web");
+      return;
+    }
+    if (e.target.closest("[data-krok-skryt]")) {
+      try { localStorage.setItem("typek-kroky-skryt-" + S.me.id, "1"); } catch (x) { /* nič */ }
+      var sk = e.target.closest(".prve-kroky"); if (sk) sk.remove();
+      toast("Prvé kroky sú skryté. Sprievodcu spustíš kedykoľvek v Môj profil.");
+    }
+  });
   function vyzvaProfil() {
     var m = (S.me && S.mById && S.mById[S.me.id]) || S.me || {}, bezTel = !String(m.telefon || "").trim(), bezFoto = !(m.foto && m.foto.indexOf("data:image/") === 0);
     if (!bezTel && !bezFoto) return "";
@@ -4116,7 +4198,7 @@
       if (!samostatny()) dlazdice.push(["makleri", "makleri", "Makléri", "Účty, práva, heslá a texty SMS", S.makleri.filter(function (m) { return m.aktivny; }).length + " aktívnych", "", ""]);
     }
     el.innerHTML = '<div class="domov">' + (admin() && skenerStoji() ? '<div class="sk-stav zle"><span>⚠️ <b>Skener ' + vekText(skenerStoji()) + " nekontroloval portály</b> – nové inzeráty sa neobjavujú.</span>" +
-      '<a class="btn" href="#inzeraty">Pozrieť a opraviť</a></div>' : "") + pruhSkusobna() + vyzvaProfil() +
+      '<a class="btn" href="#inzeraty">Pozrieť a opraviť</a></div>' : "") + pruhSkusobna() + (prveKrokyHtml() || vyzvaProfil()) +
       '<section class="hero' + (mojeO.length ? " oslava" : "") + '"><div class="hero-hlava"><span class="hero-foto">' + avatar(S.me.id, 76) + "</span>" +
       '<div class="hero-text"><div class="hero-dnes">' + esc(dnes.charAt(0).toUpperCase() + dnes.slice(1)) + (meninyDnes.length ? ' · meniny má <b>' + esc(meninyDnes.join(", ")) + "</b>" : "") + "</div>" +
       "<h2>Ahoj" + (krstne ? ", " + esc(krstne) : "") + ' <span class="mava" aria-hidden="true">👋</span></h2>' +

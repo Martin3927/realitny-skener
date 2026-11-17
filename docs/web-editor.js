@@ -162,6 +162,12 @@ function bodyOf(k) {
   if (s.custom[k]) return fld("Nadpis", "custom." + k + ".title") + fld("Text", "custom." + k + ".text", { area: 1, rows: 4 }) + upl("Obrázok (nepovinné)", "custom." + k + ".img", { max: 1600 }) + fld("Text tlačidla", "custom." + k + ".btn", { half: 1, ph: "napr. Viac info" }) + fld("Odkaz tlačidla", "custom." + k + ".link", { half: 1, ph: "www..." }) + '<button type="button" class="lbtn" data-delcustom="' + k + '">Odstrániť sekciu</button>';
   switch (k) {
     case "ponuky": return '<label class="full">Počet ponúk na úvode: <b id="nOut">' + (parseInt(s.n, 10) || 6) + '</b><input type="range" min="2" max="12" step="1" data-bind="n" data-num value="' + (parseInt(s.n, 10) || 6) + '"></label><p class="note">Ponuky sa berú samy z Nehnuteľností (aktívne a rezervované). Kliknutím na ponuku sa otvorí detail s fotkami, parametrami, mapou, videom a 3D prehliadkou.</p>';
+    case "hladam": { var nd = (W.CTX.dopyty || []).length;
+      return '<p class="note" style="margin-top:0">' + (nd ? "Teraz máš <b>" + nd + "</b> " + (nd === 1 ? "aktívny dopyt" : nd <= 4 ? "aktívne dopyty" : "aktívnych dopytov") + " v Klientoch." : "Zatiaľ nemáš v Klientoch žiadny aktívny dopyt. Ukážka vpravo je len pre teba – na webe sa sekcia ukáže, až keď nejaký pridáš.") + "</p>" +
+        fld("Nadpis", "heads.hladam.h", { ph: "Mám kupujúcich. Hľadám pre nich toto" }) + fld("Text pod nadpisom", "heads.hladam.p", { area: 1, rows: 2, ph: "Predávate niečo podobné? Ozvite sa. Kupujúceho už mám, takže predaj môže byť rýchlejší, než čakáte." }) +
+        fld("Najviac dopytov na webe", "hl.max", { num: 1, half: 1 }) +
+        '<label class="chk"><input type="checkbox" data-check="hl.prenajom"' + (s.hl.prenajom !== false ? " checked" : "") + ">Ukázať aj dopyty na prenájom</label>" +
+        '<p class="note">Na webe sa ukáže len to, čo klient hľadá: typ, lokalita, izby, plocha a cena. Meno, kontakt ani tvoj popis dopytu sa nezobrazia. Majiteľ, ktorý klikne na „Mám takúto nehnuteľnosť“, ti pošle správu s predvyplneným textom.</p>'; }
     case "predane": return '<label class="chk"><input type="checkbox" data-check="soldBand"' + (s.soldBand ? " checked" : "") + '>Výrazný pás PREDANÉ cez celú fotku</label><p class="note">Ukazujú sa ponuky, ktoré máš v Nehnuteľnostiach označené ako Predané (za posledné 2 roky). Bez predaných ponúk sa sekcia na webe nezobrazí.</p>';
     case "preco": return fld("Nadpis", "heads.preco.h", { ph: "Prečo si vybrať práve mňa" }) + fld("Text pod nadpisom (nepovinné)", "heads.preco.p") +
       s.why.map(function (x, i) { return listItem("why", i, s.why.length, fld("Dôvod " + (i + 1), "why." + i + ".t", { ph: "napr. Férové ceny" }) + fld("Krátky popis (nepovinné)", "why." + i + ".d", { area: 1, rows: 2 }), "Odstrániť"); }).join("") +
@@ -210,7 +216,7 @@ function bodyOf(k) {
 }
 // krátky popis pod názvom sekcie v zozname
 var SEC_D = { ponuky: "tvoje ponuky z Týpka, filtre", strazca: "dopyt do Klientov, e-maily s ponukami", omne: "text a fotka o tebe", preco: "dôvody s ikonami", tim: "kolegovia s kontaktmi",
-  postup: "kroky predaja", sluzby: "zoznam služieb s ikonami", vykup: "výkup, výhody a postup", cennik: "ceny a čo je v cene", predane: "predané ponuky z Týpka", lokality: "obce a štvrte, ktoré poznáš",
+  postup: "kroky predaja", sluzby: "zoznam služieb s ikonami", vykup: "výkup, výhody a postup", cennik: "ceny a čo je v cene", predane: "predané ponuky z Týpka", hladam: "anonymné dopyty z Klientov", lokality: "obce a štvrte, ktoré poznáš",
   video: "video z YouTube alebo Vimeo", recenzie: "hodnotenia klientov a Google", obhliadka: "výber termínu obhliadky", ocenenie: "formulár na odhad ceny", callback: "číslo a čas, kedy zavolať",
   stiahnut: "e-book za e-mail", faq: "otázky a odpovede", dotaznik: "tri otázky a kontakt", fotka: "veľká fotka s popisom", hypoteka: "výpočet splátky", clanok: "úvod článku s odkazom", kontakt: "telefón, e-mail a formulár" };
 function prepinac(attrs, on, lab) { return '<span class="sw-t"><input type="checkbox" ' + attrs + (on ? " checked" : "") + ' aria-label="' + esc(lab) + '"><span></span></span>'; }
@@ -864,7 +870,7 @@ sb.auth.getSession().then(function (r) {
     return rpc("verejny_web", { p_adresa: w.adresa, p_nahlad: true }).then(function (d) {
       d = d || {};
       var m = d.makler || {}, ponuky = (d.ponuky || []).map(T.prevod);
-      W.CTX = { ponuky: ponuky, predane: (d.predane || []).map(T.prevod), recenzie: d.recenzie, makler: m, kancelaria: d.kancelaria || {}, ukazka: !ponuky.length };
+      W.CTX = { ponuky: ponuky, predane: (d.predane || []).map(T.prevod), dopyty: d.dopyty || [], recenzie: d.recenzie, makler: m, kancelaria: d.kancelaria || {}, ukazka: !ponuky.length };
       var prazdny = !w.koncept || !Object.keys(w.koncept).length;
       W.S = T.merge(w.koncept || {});
       if (prazdny) predvolby(W.S, m, d.kancelaria);

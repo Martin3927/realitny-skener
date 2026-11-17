@@ -74,7 +74,7 @@
     if (!vlastna && q.get("m") && d.adresa && d.adresa !== String(adresa).toLowerCase()) {
       try { q.set("m", d.adresa); history.replaceState(null, "", location.pathname + "?" + q.toString() + location.hash); } catch (e) { /* nič */ }
     }
-    W.CTX = { ponuky: (d.ponuky || []).map(T.prevod), predane: (d.predane || []).map(T.prevod), recenzie: d.recenzie, makler: m, ukazka: false };
+    W.CTX = { ponuky: (d.ponuky || []).map(T.prevod), predane: (d.predane || []).map(T.prevod), dopyty: d.dopyty || [], recenzie: d.recenzie, makler: m, ukazka: false };
     try { if (localStorage.getItem("typek-web-cookies")) W.CK.bar = false; } catch (e) { /* nič */ }
     W.odoslat = function (o) {
       // neviditeľná ochrana: prehliadač vyrieši malú úlohu, server ju overí (každé riešenie platí raz)

@@ -123,6 +123,7 @@
     if (h === "#clanky") return clankyPrehlad();
     if (h === "#kontakty") return kontaktyPrehlad();
     if (h === "#chyby") return chybyPrehlad();
+    if (h === "#kroky") return krokyPrehlad();
     if (h === "#clanok-novy") return clanokEditor(null);
     var mc = h.match(/^#clanok\/(\d+)$/);
     if (mc) return clanokEditor(Number(mc[1]));
@@ -579,6 +580,7 @@
       '<a href="#"' + (akt === "zak" ? ' aria-current="page"' : "") + ">Zákazníci</a>" +
       '<a href="#clanky"' + (akt === "cl" ? ' aria-current="page"' : "") + ">Články na portáli</a>" +
       '<a href="#kontakty"' + (akt === "ko" ? ' aria-current="page"' : "") + ">Kontakty na predaj</a>" +
+      '<a href="#kroky"' + (akt === "pk" ? ' aria-current="page"' : "") + ">Prvé kroky</a>" +
       '<a href="#chyby"' + (akt === "ch" ? ' aria-current="page"' : "") + ">Chyby v aplikácii</a></nav>";
   }
   function fotoClanku(f, maly) {
@@ -589,6 +591,67 @@
   // ---------------------------------------------------------------- chyby, ktoré videli makléri v aplikácii (posledných 7 dní)
   function casChyby(iso) {
     return new Date(iso).toLocaleString("sk-SK", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  // ---------------------------------------------------------------- prvé kroky maklérov zákazníkov: kto sa kde zasekol
+  function krokyMaklera(k) {
+    return [
+      ["prihlasenie", "Prvé prihlásenie", !!(k.prihlaseny || k.naposledy)],
+      ["profil", "Fotka a telefón", k.foto && k.telefon],
+      k.ma_skener && ["obce", "Moje obce", k.obce > 0],
+      ["push", "Upozornenia do mobilu", k.push > 0],
+      k.ma_skener && ["prevzatie", "Prvý prevzatý inzerát", k.prevzatia > 0],
+      k.ma_skener && ["hovor", "Prvý zapísaný hovor", k.hovory > 0],
+      k.ma_web && ["web", "Zverejnený web", k.web_zverejneny]
+    ].filter(Boolean);
+  }
+  function stavKrokov(x) {
+    var k = x.kroky || {}, L = krokyMaklera(k), hotovo = L.filter(function (c) { return c[2]; }).length;
+    var vek = k.vytvorene ? Math.floor((Date.now() - new Date(k.vytvorene).getTime()) / 864e5) : 0;
+    var neaktivny = k.naposledy ? Math.floor((Date.now() - new Date(k.naposledy).getTime()) / 864e5) : null;
+    var dalsi = L.find(function (c) { return !c[2]; });
+    var pozor = (!k.prihlaseny && !k.naposledy && vek >= 1) || (dalsi && vek >= 3 && hotovo < Math.ceil(L.length / 2)) || (neaktivny != null && neaktivny >= 5);
+    return { L: L, hotovo: hotovo, vek: vek, neaktivny: neaktivny, dalsi: dalsi, pozor: !!pozor };
+  }
+  async function krokyPrehlad() {
+    $("#sp").innerHTML = zalozky("pk") + '<div class="boot">Načítavam prvé kroky…</div>';
+    var r = await sb.rpc("prve_kroky_prehlad");
+    if (r.error) { $("#sp").innerHTML = zalozky("pk") + '<p class="sp-nic">Prehľad sa nepodarilo načítať: ' + esc(chybaText(r.error)) + "</p>"; return; }
+    S.kroky = r.data || [];
+    krokyKresli();
+  }
+  function krokyKresli() {
+    var vlastna = !!S.krokyVlastna;
+    var vsetci = (S.kroky || []).map(function (x) { return Object.assign({ st: stavKrokov(x) }, x); });
+    var zoz = vsetci.filter(function (x) { return vlastna || x.zakaznik_stav !== "vlastna"; });
+    zoz.sort(function (a, b) { return (b.st.pozor - a.st.pozor) || (a.st.vek - b.st.vek) || String(a.meno).localeCompare(String(b.meno), "sk"); });
+    var zaseknuti = zoz.filter(function (x) { return x.st.pozor; }).length;
+    var hotovi = zoz.filter(function (x) { return x.st.hotovo === x.st.L.length; }).length;
+    var pocetVlastna = vsetci.length - vsetci.filter(function (x) { return x.zakaznik_stav !== "vlastna"; }).length;
+    $("#sp").innerHTML = zalozky("pk") +
+      '<div class="sp-uvod"><div><h1>Prvé kroky maklérov</h1><p>Kto z tvojich zákazníkov už Týpka naozaj používa a kto sa zasekol. Zavolaj tým, ktorí sú označení – najlepšie ešte počas skúšobnej doby.</p></div></div>' +
+      '<div class="sp-dlazdice">' + dlazdica("Maklérov", zoz.length, vlastna ? "aj vlastná kancelária" : "u zákazníkov") +
+        dlazdica("Zasekli sa", zaseknuti, "treba im zavolať", zaseknuti ? "pozor" : "") + dlazdica("Všetko hotové", hotovi, "prešli všetky kroky") + "</div>" +
+      '<div class="sp-prepinace"><div class="sp-filt" role="group" aria-label="Koho ukázať"><span class="sp-filt-n">Ukázať</span>' +
+        '<button type="button" data-pkv="0" aria-pressed="' + !vlastna + '"' + (!vlastna ? ' class="akt"' : "") + ">Len zákazníkov <small>" + (vsetci.length - pocetVlastna) + "</small></button>" +
+        '<button type="button" data-pkv="1" aria-pressed="' + vlastna + '"' + (vlastna ? ' class="akt"' : "") + ">Aj vlastnú kanceláriu <small>" + vsetci.length + "</small></button></div></div>" +
+      (zoz.length ? '<div class="sp-tab" role="table">' +
+        '<div class="sp-riadok sp-pk sp-th" role="row"><span>Maklér</span><span>Kancelária</span><span>Kroky</span><span>Ďalší krok</span><span>Naposledy v Týpkovi</span><span></span></div>' +
+        zoz.map(function (x) {
+          var st = x.st, k = x.kroky || {}, tel = String(x.telefon || "").replace(/[^\d+]/g, "");
+          var zak = x.zakaznik_id ? S.zak.find(function (z) { return z.id === x.zakaznik_id; }) : null;
+          var stz = zak ? stav(zak) : null;
+          return '<div class="sp-riadok sp-pk' + (st.pozor ? " pk-pozor" : "") + '" role="row">' +
+            '<span class="sp-meno"><b>' + esc(x.meno) + (x.rola === "admin" ? ' <small class="pk-rola">admin</small>' : "") + "</b><small>" + esc(x.email || "") + "</small></span>" +
+            '<span class="sp-meno"><b>' + (zak ? '<a href="#z/' + zak.id + '">' + esc(x.kancelaria) + "</a>" : esc(x.kancelaria)) + "</b>" + (stz ? '<small><em class="sp-stav ' + stz.c + '">' + esc(stz.t) + "</em></small>" : "") + "</span>" +
+            '<span class="pk-body" aria-label="' + st.hotovo + " z " + st.L.length + ' krokov">' + st.L.map(function (c) { return '<i class="' + (c[2] ? "ok" : "") + '" title="' + esc(c[1] + (c[2] ? " – hotovo" : " – ešte nie")) + '"></i>'; }).join("") +
+              "<small>" + st.hotovo + " z " + st.L.length + "</small></span>" +
+            '<span class="sp-meno">' + (st.dalsi ? "<b>" + esc(st.dalsi[1]) + "</b><small>" + (st.pozor ? "⚠️ " : "") + (st.vek ? "účet má " + dni(st.vek) : "účet založený dnes") + "</small>" : '<b class="pk-hotovo">✓ Všetko hotové</b>') + "</span>" +
+            '<span class="sp-meno"><b>' + (k.naposledy ? (st.neaktivny === 0 ? "dnes" : "pred " + dni(st.neaktivny)) : k.prihlaseny ? "–" : "ešte sa neprihlásil") + "</b>" +
+              (k.prevzatia || k.hovory ? "<small>" + k.prevzatia + " prevzatí · " + k.hovory + " hovorov</small>" : "") + "</span>" +
+            '<span class="pk-akcie">' + (tel ? '<a class="btn" href="tel:' + esc(tel) + '">Zavolať</a>' : "") + (x.email ? '<a class="btn" href="mailto:' + esc(x.email) + '">E-mail</a>' : "") + "</span></div>";
+        }).join("") + "</div>"
+      : '<div class="sp-prazdne"><img src="typek-postava.png" alt="" width="110" height="124"><h3>Zatiaľ žiadni makléri zákazníkov</h3><p>Keď sa zaregistruje prvý zákazník, uvidíš tu, ako postupuje. Svoju kanceláriu si zobrazíš prepínačom vyššie.</p></div>');
+    $("#sp").querySelectorAll("[data-pkv]").forEach(function (b) { b.onclick = function () { S.krokyVlastna = b.dataset.pkv === "1"; krokyKresli(); }; });
   }
   async function chybyPrehlad() {
     $("#sp").innerHTML = zalozky("ch") + '<div class="boot">Načítavam chyby…</div>';

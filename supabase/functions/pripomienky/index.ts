@@ -1,6 +1,6 @@
 // Odošle emaily k pripomienkam, ktorým nastal čas (aj automatické uvoľnenie a zníženú cenu), e-maily o konci skúšobnej doby,
 // e-maily strážcu ponúk klientom z webu makléra aj z Týpkových nehnuteľností
-// a v pondelok ráno týždenný prehľad výkonu maklérov administrátorom.
+// a v pondelok ráno týždenný prehľad výkonu maklérov administrátorom a každému maklérovi jeho pondelkový prehľad.
 // Volá ju databáza každú minútu (pg_cron); chránená tajným kľúčom v hlavičke x-kluc.
 // Email: Brevo (BREVO_API_KEY) alebo SMTP cez port 465 (SMTP_HOST, SMTP_USER, SMTP_PASS, EMAIL_FROM) – napr. vlastná schránka vo Websupporte.
 // Porty 25 a 587 Supabase nepustí, preto SMTP len cez 465 (SSL).
@@ -188,6 +188,102 @@ async function prehladKancelarie(db: any, kancId: number, kancNazov: string) {
     catch (e) { chyby.push(String((e as Error).message || e)); }
   }
   return { odoslane, chyby };
+}
+
+// pondelkový e-mail každému maklérovi: jeho web, skener a pripomienky na týždeň (vypne si ho v Môj profil)
+const ZDROJ_WEB: Record<string, string> = { odhad: "Odhad ceny", strazca: "Strážca ponúk", obhliadka: "Obhliadka", callback: "Zavolať späť",
+  dotaznik: "Dotazník", ebook: "E-book", kontakt: "Správa", ponuka: "Záujem o ponuku" };
+function tvarSk(n: number, jeden: string, dva: string, pat: string) { return n === 1 ? jeden : n >= 2 && n <= 4 ? dva : pat; }
+function kratkyDatum(iso: string) {
+  return new Date(iso + "T12:00:00Z").toLocaleDateString("sk-SK", { timeZone: "Europe/Bratislava", day: "numeric", month: "numeric" });
+}
+function denCas(iso: string) {
+  return new Date(iso).toLocaleString("sk-SK", { timeZone: "Europe/Bratislava", weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+// deno-lint-ignore no-explicit-any
+function tyzdenHtml(d: any) {
+  const zlata = "#dab967", siva = "#6b7280";
+  const kart = (nadpis: string, obsah: string) =>
+    `<div style="border:1px solid #ece6da;border-radius:10px;padding:14px 16px;margin:14px 0"><div style="font-size:15px;font-weight:700;margin-bottom:8px">${nadpis}</div>${obsah}</div>`;
+  const cislo = (n: unknown, popis: string, pozn = "") =>
+    `<td style="padding:4px 14px 4px 0;vertical-align:top"><div style="font-size:24px;font-weight:700;color:#1f2a37">${esc(n)}</div><div style="font-size:12px;color:${siva}">${esc(popis)}</div>${pozn ? `<div style="font-size:12px">${pozn}</div>` : ""}</td>`;
+  const tlacidlo = (href: string, text: string) =>
+    `<a href="${esc(href)}" style="display:inline-block;margin-top:10px;background:${zlata};color:#1f2a37;padding:8px 14px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">${esc(text)}</a>`;
+  const casti: string[] = [];
+  const sumar: string[] = [];
+  const w = d.web;
+  if (w) {
+    const nav = Number(w.navstevy || 0), pred = Number(w.navstevy_pred || 0), kon = Number(w.kontakty_pocet || 0), kl = Number(w.kliky || 0);
+    const zmena = !pred ? (nav ? "nové" : "") : (nav >= pred ? "+" : "−") + Math.abs(Math.round((nav - pred) / pred * 100)) + " %";
+    const farba = !pred || nav >= pred ? "#2e7d5b" : "#b3261e";
+    let o = `<table style="border-collapse:collapse"><tr>${cislo(nav, tvarSk(nav, "návšteva", "návštevy", "návštev"), zmena ? `<span style="color:${farba}">${esc(zmena)} oproti týždňu predtým</span>` : "")}${cislo(kon, tvarSk(kon, "kontakt z formulára", "kontakty z formulárov", "kontaktov z formulárov"))}${cislo(kl, tvarSk(kl, "klik na telefón alebo WhatsApp", "kliky na telefón a WhatsApp", "klikov na telefón a WhatsApp"))}</tr></table>`;
+    // deno-lint-ignore no-explicit-any
+    const k = (w.kontakty as any[]) || [];
+    if (k.length) o += `<ul style="margin:10px 0 0;padding-left:18px;font-size:14px">${k.map((x) => `<li style="margin:3px 0"><b>${esc(x.meno || "Bez mena")}</b> · ${esc(ZDROJ_WEB[x.zdroj] || x.zdroj || "")}${x.co ? ` – <span style="color:${siva}">${esc(x.co)}</span>` : ""}</li>`).join("")}</ul>`;
+    if (w.top && Number(w.top.pocet) > 0) o += `<p style="margin:10px 0 0;font-size:14px">⭐ Najsledovanejšia ponuka: <b>${esc(w.top.nazov)}</b> (${esc(w.top.pocet)} ${tvarSk(Number(w.top.pocet), "zobrazenie", "zobrazenia", "zobrazení")})</p>`;
+    if (!nav && !kon) o += `<p style="margin:10px 0 0;font-size:13px;color:${siva}">Tip: pošli odkaz na svoj web klientom, daj ho na Facebook alebo do podpisu e-mailu. Každá návšteva sa tu ukáže.</p>`;
+    casti.push(kart("🌐 Tvoj web minulý týždeň", o + tlacidlo(APP_URL + "web-editor.html#statistiky", "Pozrieť štatistiky webu")));
+    if (nav) sumar.push(nav + " " + tvarSk(nav, "návšteva", "návštevy", "návštev") + " webu");
+    if (kon) sumar.push(kon + " " + tvarSk(kon, "kontakt", "kontakty", "kontaktov"));
+  }
+  const s = d.skener;
+  if (s) {
+    const hov = Number(s.hovory || 0), prev = Number(s.prevzal || 0), drzi = Number(s.drzi || 0), auto = Number(s.auto_uvolnene || 0);
+    const ziskane = Number(s.ziskane || 0), stretnutia = Number(s.stretnutia || 0), bez = Number(s.bez_hovoru || 0);
+    // deno-lint-ignore no-explicit-any
+    const uvol = (s.uvolni_dnes as any[]) || [];
+    const obce = (s.obce as string[]) || [];
+    const ma = hov || prev || drzi || auto || uvol.length || Number(s.nove_obce || 0);
+    if (ma || obce.length) {
+      let o = `<table style="border-collapse:collapse"><tr>${cislo(prev, tvarSk(prev, "prevzatý inzerát", "prevzaté inzeráty", "prevzatých inzerátov"))}${cislo(hov, tvarSk(hov, "hovor", "hovory", "hovorov"))}${cislo(drzi, "držíš teraz", bez ? `<span style="color:${siva}">${bez} bez hovoru</span>` : "")}</tr></table>`;
+      if (ziskane || stretnutia) o += `<p style="margin:8px 0 0;font-size:14px">🎉 ${[ziskane ? ziskane + " " + tvarSk(ziskane, "získaný do ponuky", "získané do ponuky", "získaných do ponuky") : "", stretnutia ? stretnutia + " " + tvarSk(stretnutia, "dohodnuté stretnutie", "dohodnuté stretnutia", "dohodnutých stretnutí") : ""].filter(Boolean).join(", ")}</p>`;
+      if (auto) o += `<p style="margin:8px 0 0;font-size:14px;color:#b3261e">⚠️ ${auto} ${tvarSk(auto, "inzerát sa ti automaticky uvoľnil", "inzeráty sa ti automaticky uvoľnili", "inzerátov sa ti automaticky uvoľnilo")} – 24 hodín bez zápisu. Nájdeš ich v skeneri pod 🕘 História.</p>`;
+      if (uvol.length) o += `<p style="margin:10px 0 2px;font-size:14px"><b>⏳ Dnes sa ti uvoľní</b> – zapíš hovor, nastav pripomienku alebo stlač „Ešte riešim“:</p><ul style="margin:0;padding-left:18px;font-size:14px">${uvol.map((x) => `<li style="margin:3px 0"><a href="${esc(APP_URL + "#inzeraty/" + x.id)}" style="color:#1f2a37">${esc(x.nazov)}</a> <span style="color:${siva}">o ${esc(new Date(x.kedy).toLocaleTimeString("sk-SK", { timeZone: "Europe/Bratislava", hour: "2-digit", minute: "2-digit" }))}</span></li>`).join("")}</ul>`;
+      if (obce.length) o += `<p style="margin:10px 0 0;font-size:14px">📍 V tvojich obciach (${esc(obce.slice(0, 3).join(", "))}${obce.length > 3 ? " a ďalšie" : ""}): <b>${Number(s.nove_obce || 0)}</b> ${tvarSk(Number(s.nove_obce || 0), "nový súkromný inzerát", "nové súkromné inzeráty", "nových súkromných inzerátov")} za týždeň, voľných spolu <b>${Number(s.volne_obce || 0)}</b>.</p>`;
+      else o += `<p style="margin:10px 0 0;font-size:13px;color:${siva}">Tip: v Môj profil si vyber obce, ktoré sledujete. Tu ti potom každý pondelok napíšem, koľko je v nich nových súkromných inzerátov.</p>`;
+      casti.push(kart("🔎 Skener minulý týždeň", o + tlacidlo(APP_URL + "#inzeraty", "Otvoriť skener")));
+      if (hov) sumar.push(hov + " " + tvarSk(hov, "hovor", "hovory", "hovorov"));
+      if (uvol.length) sumar.push(uvol.length + " sa dnes " + tvarSk(uvol.length, "uvoľní", "uvoľnia", "uvoľní"));
+    }
+  }
+  const pn = Number(d.pripomienky_pocet || 0);
+  if (pn) {
+    // deno-lint-ignore no-explicit-any
+    const p = (d.pripomienky as any[]) || [];
+    const o = `<ul style="margin:0;padding-left:18px;font-size:14px">${p.map((x) => `<li style="margin:4px 0"><b>${esc(denCas(x.cas))}</b> – ${esc(x.poznamka || "Pripomienka")}</li>`).join("")}</ul>` +
+      (pn > p.length ? `<p style="margin:6px 0 0;font-size:13px;color:${siva}">a ďalšie (${pn - p.length})</p>` : "");
+    casti.push(kart(`🔔 Tento týždeň ťa čaká (${pn})`, o + tlacidlo(APP_URL, "Otvoriť Realitného týpka")));
+    sumar.push(pn + " " + tvarSk(pn, "pripomienka", "pripomienky", "pripomienok"));
+  }
+  if (!casti.length) return null;
+  const meno = String(d.oslovenie || String(d.meno || "").split(" ")[0] || "").trim();
+  const obdobie = kratkyDatum(d.od) + " – " + kratkyDatum(d.do);
+  const html = `<div style="font-family:Arial,sans-serif;max-width:600px;color:#23272e">
+    <div style="border-bottom:3px solid ${zlata};padding-bottom:8px;font-size:18px"><b>📬 Pondelkový prehľad</b> <span style="color:#888;font-size:14px">· ${esc(obdobie)}</span></div>
+    <p style="font-size:15px;margin:16px 0 4px">Ahoj${meno ? " " + esc(meno) : ""},</p>
+    <p style="margin:0 0 4px">tu je tvoj minulý týždeň a čo ťa čaká. Pekný a úspešný štart do týždňa!</p>
+    ${casti.join("")}
+    <p style="color:#999;font-size:12px;margin-top:20px">Realitný týpek · ${esc(d.kancelaria)} · chodí každý pondelok ráno. Vypneš ho v aplikácii: Môj profil → Pondelkový prehľad e-mailom.</p></div>`;
+  return { html, predmet: "📬 Tvoj týždeň" + (sumar.length ? ": " + sumar.slice(0, 3).join(", ") : " · " + obdobie) };
+}
+// deno-lint-ignore no-explicit-any
+async function tyzdenMaklerom(db: any) {
+  const { data: zoz, error } = await db.rpc("_tyzden_na_odoslanie");
+  if (error) return { ok: false, chyba: error.message };
+  let odoslane = 0, preskocene = 0;
+  const chyby: string[] = [];
+  // deno-lint-ignore no-explicit-any
+  for (const m of (zoz as any[]) ?? []) {
+    try {
+      const { data: d, error: e2 } = await db.rpc("_tyzden_maklera", { p_makler: m.id });
+      if (e2) throw e2;
+      const e = d ? tyzdenHtml(d) : null;
+      if (e) { await posli(m.email, e.predmet, e.html, { odMeno: "Realitný týpek · " + (d.kancelaria || "Realitná kancelária") }); odoslane++; }
+      else preskocene++;
+      await db.from("makleri").update({ tyzden_email: new Date().toISOString() }).eq("id", m.id);
+    } catch (e) { chyby.push(String((e as Error).message || e)); }
+  }
+  return { ok: chyby.length === 0, odoslane, preskocene, chyby };
 }
 
 // nové objednávky a žiadosti o bezplatnú verziu z predajného webu → e-mail hlavnému správcovi (ku každej zvlášť)
@@ -782,10 +878,11 @@ Deno.serve(async (req) => {
   if (!Deno.env.get("BREVO_API_KEY") && !Deno.env.get("SMTP_HOST")) {
     return Response.json({ ok: true, odoslane: 0, info: "email nie je nastavený" });
   }
-  let telo: { prehlad?: boolean; reporty?: boolean } = {};
+  let telo: { prehlad?: boolean; reporty?: boolean; maklerom?: boolean } = {};
   try { telo = await req.json(); } catch { /* prázdne telo */ }
   if (telo.prehlad) return Response.json(await tyzdennyPrehlad(db));
   if (telo.reporty) return Response.json(await reportyMajitelom(db));
+  if (telo.maklerom) return Response.json(await tyzdenMaklerom(db));
 
   // zaberieme pripomienky (aby sa ten istý email neposlal dvakrát)
   const { data: rows, error } = await db.from("pripomienky")

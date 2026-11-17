@@ -42,17 +42,18 @@ var BGS = [
   { id: "svetle", name: "Svetlé", bg: "#FFFFFF", surf: "#F3F5F7", fg: "#1A2128", muted: "#5A6571", line: "#DEE3E8", dark: false },
   { id: "kremove", name: "Krémové", bg: "#F7F2E8", surf: "#FFFDF8", fg: "#1E2A35", muted: "#5A6470", line: "#E4DACA", dark: false },
   { id: "tmave", name: "Tmavé", bg: "#141A21", surf: "#1E2630", fg: "#EEF1F4", muted: "#9DAAB7", line: "#2E3945", dark: true }];
-var SECS = { ponuky: "Ponuky", vykup: "Výkup", cennik: "Cenník", preco: "Prečo so mnou", tim: "Tím", predane: "Predané nehnuteľnosti", strazca: "Strážca ponúk", omne: "O mne", postup: "Postup predaja", sluzby: "Služby", lokality: "Lokality, ktoré poznám",
+var SECS = { ponuky: "Ponuky", hladam: "Hľadám pre klientov", vykup: "Výkup", cennik: "Cenník", preco: "Prečo so mnou", tim: "Tím", predane: "Predané nehnuteľnosti", strazca: "Strážca ponúk", omne: "O mne", postup: "Postup predaja", sluzby: "Služby", lokality: "Lokality, ktoré poznám",
   video: "Video", recenzie: "Recenzie", obhliadka: "Rezervácia obhliadky", ocenenie: "Odhad ceny", callback: "Zavolám vám späť", stiahnut: "Na stiahnutie", faq: "Časté otázky",
   dotaznik: "Dotazník", fotka: "Fotka", hypoteka: "Hypotekárna kalkulačka", clanok: "Článok mesiaca", kontakt: "Kontakt" };
 var SOC = [["fb", "Facebook", "facebook.com/meno"], ["ig", "Instagram", "instagram.com/meno"], ["li", "LinkedIn", "linkedin.com/in/meno"], ["x", "X", "x.com/meno"], ["tt", "TikTok", "tiktok.com/@meno"], ["yt", "YouTube", "youtube.com/@meno"]];
 var DEF = { tpl: "susedska", color: "zlata", cc: "#1D6F8F", b2: "", hcol: "text", cbg: "#EEF2F1", logoCols: [], font: "moderne", bg: "kremove", r: 14,
   btn: "pill", btnFill: "fill", ph: "plain", anim: true, heroMedia: "foto", heroImg: "", heroVideo: "", heroAiImg: "", heroAiVid: "", heroPos: "", heroFoc: "", heroDim: "", bub: "polo",
-  order: ["ponuky", "strazca", "omne", "preco", "tim", "postup", "sluzby", "vykup", "cennik", "predane", "lokality", "video", "recenzie", "obhliadka", "ocenenie", "callback", "stiahnut", "faq", "dotaznik", "fotka", "hypoteka", "clanok", "kontakt"],
-  on: { ponuky: true, vykup: false, cennik: false, preco: false, tim: false, predane: true, strazca: true, omne: true, postup: true, sluzby: true, lokality: false, video: false, recenzie: true, obhliadka: true, ocenenie: true, callback: true, stiahnut: false, faq: true, dotaznik: false, fotka: false, hypoteka: false, clanok: false, kontakt: true },
+  order: ["ponuky", "strazca", "omne", "preco", "tim", "postup", "sluzby", "vykup", "cennik", "predane", "hladam", "lokality", "video", "recenzie", "obhliadka", "ocenenie", "callback", "stiahnut", "faq", "dotaznik", "fotka", "hypoteka", "clanok", "kontakt"],
+  on: { ponuky: true, hladam: false, vykup: false, cennik: false, preco: false, tim: false, predane: true, strazca: true, omne: true, postup: true, sluzby: true, lokality: false, video: false, recenzie: true, obhliadka: true, ocenenie: true, callback: true, stiahnut: false, faq: true, dotaznik: false, fotka: false, hypoteka: false, clanok: false, kontakt: true },
   n: 6, name: "", area: "Spišská Nová Ves a Levoča", office: "", phone: "", email: "", wa: "", photo: "", photo2: "", logo: "", years: "", sold: "", yearsTx: "", soldTx: "",
   soc: { fb: "", ig: "", li: "", x: "", tt: "", yt: "" },
   stats: [], addr: "", hours: "", kava: true, online: false, mbar: true,
+  hl: { max: 6, prenajom: true },
   heroBtn: "", heroBtnTx: "", svcX: "", soldBand: false, footFirma: false, team: [],
   why: [{ t: "Férové ceny", d: "Cenu nastavíme podľa skutočných predajov v okolí, nie podľa prianí." }, { t: "Rýchlosť", d: "Ozvem sa vám v ten istý deň a veci nenechávam ležať." },
     { t: "Spoľahlivosť", d: "Čo sľúbim, to dodržím. O každom kroku viete vopred." }, { t: "Diskrétnosť", d: "Vaše údaje a zámery ostanú medzi nami." },
@@ -147,7 +148,7 @@ function merge(x) {
 
 /* ================================================================ stav */
 var W = {
-  S: merge({}), CTX: { ponuky: [], predane: [], recenzie: null, makler: null, ukazka: true },
+  S: merge({}), CTX: { ponuky: [], predane: [], dopyty: [], recenzie: null, makler: null, ukazka: true },
   Q: { step: 0, a: [] }, Wt: { typ: ["Byt"], place: "", max: 160000 }, BK: { d: 0, t: "", l: 0 }, VF: { typ: "Byt", stav: "Po rekonštrukcii" }, CBT: "Čo najskôr",
   CK: { bar: true }, PAGE: { v: "home" }, DONE: {}, ERR: {}, FV: {}, EDIT: false, INTRO: true, VSETKY: false, FIL: { k: "", t: "", o: "", sort: "" }, adresa: "",
   editor: false, odoslat: null, root: null, poZmene: null,
@@ -323,7 +324,8 @@ var IC = {
   tel: SV('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>'),
   kava: SV('<path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3v3M12 3v3"/>'),
   video: SV('<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>'),
-  mail: SV('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>') };
+  mail: SV('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>'),
+  pin: SV('<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>') };
 // ikony pre Prečo so mnou – vyberú sa podľa názvu
 var WHY_IC = {
   cena: SV('<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'),
@@ -498,6 +500,22 @@ var R = {
       return '<div class="card"><div class="media">' + fotoX(x, i + 3, P) + (W.S.soldBand ? '<span class="sold-band" aria-label="Predané"><b>PREDANÉ</b></span>' : '<span class="tag tag-sold">PREDANÉ</span>') + '</div><h3>' + esc(x.t) + '<br><span class="muted" style="font-weight:400;font-size:15px">' + esc(x.l) + '</span></h3><div class="params">' + x.a.slice(0, 2).map(function (v) { return "<span>" + esc(v) + "</span>"; }).join("") + "</div></div>";
     }).join("") + "</div>";
   },
+  hladam: function () {
+    var s = W.S, real = (W.CTX.dopyty || []).filter(function (d) { return s.hl.prenajom !== false || d.t !== "prenajom"; });
+    var ukazka = !real.length && W.editor, L = (ukazka ? HLAD_UKAZKA : real).slice(0, Math.min(12, Math.max(1, +s.hl.max || 6)));
+    var hd = H("hladam", "Hľadám pre svojich klientov", "Mám kupujúcich. Hľadám pre nich toto", "Predávate niečo podobné? Ozvite sa. Kupujúceho už mám, takže predaj môže byť rýchlejší, než čakáte.");
+    if (!L.length) return "";
+    W.HLAD = L;
+    return hd + (ukazka ? '<p class="sample">Ukážka. Na webe sa zobrazia tvoje aktívne dopyty z Klientov – len čo klient hľadá, bez mena a kontaktu. Kým žiadny nemáš, sekcia sa na webe neukáže.</p>' : "") +
+      '<div class="hlad">' + L.map(function (d, i) {
+        var chips = [hladCena(d), d.p1 ? "od " + fmt(d.p1) + " m²" : "", d.t === "prenajom" ? "prenájom" : ""].filter(Boolean);
+        return '<div class="hl-k"><div class="hl-h"><i>' + hladIkona(d) + '</i><div><span class="hl-t">' + (d.t === "prenajom" ? "Klient si chce prenajať" : "Klient chce kúpiť") + "</span><h3>" + esc(hladTitul(d)) + "</h3></div>" +
+          (d.dni <= 7 ? '<span class="hl-novy">nový</span>' : "") + "</div>" +
+          '<p class="hl-l">' + IC.pin + esc(hladLokalita(d)) + "</p>" +
+          (chips.length ? '<div class="hl-ch">' + chips.map(function (c) { return "<span>" + esc(c) + "</span>"; }).join("") + "</div>" : "") +
+          '<button type="button" class="btn gh hl-b" data-hladam="' + i + '">Mám takúto nehnuteľnosť</button></div>';
+      }).join("") + "</div>";
+  },
   strazca: function () {
     var s = W.S, Wt = W.Wt, places = String(s.watch.places || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean);
     var right = W.DONE.strazca ? '<div class="done"><b>Ďakujem, mám to zapísané</b><p>' + esc(Wt.typ.join(", ") || "Všetko") + " · " + esc(Wt.place || "celý región") + " · do " + fmt(Wt.max) + ' €</p><p class="muted" style="font-size:14px">Keď sa objaví vhodná ponuka, ozvem sa vám. Ak ste zadali e-mail, potvrďte ho odkazom, ktorý vám príde. Potom vám ponuky budú chodiť aj e-mailom.</p><button type="button" class="qback" data-again="strazca">Upraviť požiadavku</button></div>'
@@ -645,6 +663,32 @@ var R = {
         : '<div class="cform" data-form="' + f + '">' + inp(f, "meno", "Meno") + inp(f, "kontakt", "Telefón alebo e-mail") + '<textarea class="fld" name="sprava" placeholder="Čo potrebujete?" aria-label="Čo potrebujete?">' + fv(f, "sprava") + "</textarea>" + errMsg(f) + '<button class="btn" type="button" data-send="' + f + '" style="justify-self:start">Odoslať správu</button></div>') + "</div>";
   }
 };
+// sekcia Hľadám pre svojich klientov – len to, čo klient hľadá (bez mena, kontaktu a popisu)
+var HLAD_KAT = { byty: ["Byt", "byt"], domy: ["Rodinný dom", "dom"], chaty: ["Chata alebo chalupa", "chata"], pozemky: ["Pozemok", "pozemok"], priestory: ["Komerčný priestor", "priestor"], objekty: ["Objekt", "priestor"], garaze: ["Garáž", "garaz"] };
+var HLAD_IC = {
+  byt: SV('<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>'),
+  dom: SV('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>'),
+  chata: SV('<path d="M2 13L12 4l10 9"/><path d="M5 11v9h14v-9"/><path d="M9 20v-4h6v4"/>'),
+  pozemok: SV('<path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z"/><path d="M9 4v13M15 7v13"/>'),
+  priestor: SV('<rect x="3" y="8" width="18" height="12" rx="1.5"/><path d="M3 12h18M8 8V5h8v3"/>'),
+  garaz: SV('<path d="M3 10l9-6 9 6v10H3z"/><path d="M7 20v-7h10v7M7 16h10"/>') };
+var HLAD_UKAZKA = [
+  { t: "predaj", k: ["byty"], ty: [], o: ["Spišská Nová Ves"], ok: [], i1: 3, i2: 3, c2: 160000, p1: 65, dni: 3 },
+  { t: "predaj", k: ["domy"], ty: [], o: ["Levoča", "Spišský Štvrtok"], ok: [], c2: 220000, dni: 12 },
+  { t: "predaj", k: ["pozemky"], ty: [], o: [], ok: ["Spišská Nová Ves"], c2: 60000, p1: 600, dni: 20 }];
+function hladTitul(d) {
+  if ((d.ty || []).length) return d.ty.slice(0, 2).join(" alebo ");
+  if ((d.k || []).length === 1 && d.k[0] === "byty" && d.i1 && d.i1 === d.i2) return d.i1 + "-izbový byt";
+  var k = (d.k || []).map(function (x) { return (HLAD_KAT[x] || [x])[0]; }), t = k.length ? k.slice(0, 2).join(" alebo ") : "Nehnuteľnosť";
+  if (d.i1 || d.i2) t += ", " + (d.i1 && d.i2 && d.i1 !== d.i2 ? d.i1 + " – " + d.i2 + " izby" : d.i1 && !d.i2 ? d.i1 + "+ izby" : (d.i1 || d.i2) + (+(d.i1 || d.i2) === 1 ? " izba" : +(d.i1 || d.i2) >= 5 ? " izieb" : " izby"));
+  return t;
+}
+function hladLokalita(d) {
+  var o = d.o || [], ok = (d.ok || []).map(function (x) { return "okres " + x; }), L = o.length ? o : ok;
+  return L.length ? L.slice(0, 3).join(", ") + (L.length > 3 ? " a okolie" : "") : "kdekoľvek v okolí";
+}
+function hladCena(d) { return d.c1 && d.c2 ? fmt(d.c1) + " – " + fmt(d.c2) + " €" : d.c2 ? "do " + fmt(d.c2) + " €" : d.c1 ? "od " + fmt(d.c1) + " €" : ""; }
+function hladIkona(d) { return HLAD_IC[(HLAD_KAT[(d.k || [])[0]] || [0, "dom"])[1]] || HLAD_IC.dom; }
 function svcX() { var L = String(W.S.svcX || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean); return L.length ? '<div class="svcx"><span class="lbl">Doplnkové služby</span><div class="svcx-l">' + L.map(function (t) { return "<span>" + esc(t) + "</span>"; }).join("") + "</div></div>" : ""; }
 function riadky(t) { return String(t || "").split(/\n/).map(function (x) { return x.trim(); }).filter(Boolean); }
 function rCustom(id) {
@@ -849,7 +893,7 @@ function openLB(i, j) { var x = ZOZ()[i]; if (!x) return; LB = { imgs: galeria(x
    Zapína ich prepínač Animácie (W.S.anim). Pri úprave textu (W.EDIT), na mobile bez myši a pri „obmedziť pohyb“
    v systéme sa vypnú tie rušivé. Obsah sa nikdy neskryje natrvalo – bez JS alebo bez podpory ostane viditeľný. */
 var PH = { seen: {}, io: null, raf: 0, loop: 0, mx: 0, my: 0, cx: 0, cy: 0, fine: false, sys: false, reduce: false, napojene: false, tilt: null, mag: null };
-var PH_GRIDS = ".cards,.tiles,.rows,.lux-list,.revs,.steps,.svc,.locs,.gal,.val,.faq,.facts,.cen,.vyk,.preco,.tim";
+var PH_GRIDS = ".cards,.tiles,.rows,.lux-list,.revs,.steps,.svc,.locs,.gal,.val,.faq,.facts,.cen,.vyk,.preco,.tim,.hlad";
 function phOk() { return !!(W.S.anim && !PH.reduce && W.root); }
 function phNapoj() {
   if (PH.napojene) return; PH.napojene = true;
@@ -987,6 +1031,9 @@ function napoj(root) {
     }
     var t = e.target.closest("button,[data-open],[data-home]"); if (!t) return; var d = t.dataset;
     if (d.open !== undefined && (!e.target.closest("button") || e.target.closest("button") === t)) { otvorDetail(+d.open); return; }
+    if (d.hladam !== undefined) { var hx = (W.HLAD || [])[+d.hladam]; if (hx) { var kam = W.S.on.kontakt ? "kontakt" : W.S.on.ocenenie ? "ocenenie" : "kontakt";
+      W.FV.kontakt = Object.assign({}, W.FV.kontakt, { sprava: "Dobrý deň, mám nehnuteľnosť, ktorá by mohla zaujímať vášho klienta (" + hladTitul(hx) + ", " + hladLokalita(hx) + "): " }); W.DONE.kontakt = false;
+      if (W.PAGE.v !== "home") W.PAGE = { v: "home" }; render(); requestAnimationFrame(function () { goSec(kam); var ta = W.root.querySelector('[data-form="kontakt"] textarea'); if (ta) { ta.focus({ preventScroll: true }); ta.setSelectionRange(ta.value.length, ta.value.length); } }); } return; }
     if (d.online !== undefined) { W.FV.kontakt = Object.assign({}, W.FV.kontakt, { sprava: "Dobrý deň, chcel(a) by som sa s vami spojiť cez online hovor. Vyhovuje mi: " }); W.DONE.kontakt = false; render();
       requestAnimationFrame(function () { var ta = W.root.querySelector('[data-form="kontakt"] textarea'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }); return; }
     if (d.book !== undefined) { W.BK.l = +d.book; W.DONE.obhliadka = false; W.PAGE = { v: "home" }; render(); setHash(""); requestAnimationFrame(function () { goSec("obhliadka"); }); return; }

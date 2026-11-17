@@ -55,6 +55,18 @@ body.sz-stranka { min-height: 100vh; padding-bottom: 60px }
 .sp-riadok:first-child { border-top: 0 }
 /* chyby v aplikácii */
 .sp-riadok.sp-chyba { grid-template-columns: 110px minmax(130px, 1fr) minmax(130px, 1fr) minmax(200px, 3fr); align-items: start }
+/* prvé kroky maklérov */
+.sp-riadok.sp-pk { grid-template-columns: minmax(170px, 1.6fr) minmax(150px, 1.4fr) minmax(150px, 1.1fr) minmax(150px, 1.3fr) minmax(130px, 1.1fr) auto }
+.sp-riadok.pk-pozor { box-shadow: inset 4px 0 0 var(--warn) }
+.pk-body { display: flex; align-items: center; gap: 4px; flex-wrap: wrap }
+.pk-body i { width: 14px; height: 14px; border-radius: 999px; background: var(--line); display: inline-block }
+.pk-body i.ok { background: var(--good) }
+.pk-body small { margin-left: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums }
+.pk-rola { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted) }
+.pk-hotovo { color: var(--good) }
+.pk-akcie { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap }
+.pk-akcie .btn { padding: 6px 12px; font-size: 13px }
+@media (max-width: 900px) { .sp-riadok.sp-pk { grid-template-columns: 1fr 1fr } .sp-riadok.sp-pk.sp-th { display: none } .pk-akcie { justify-content: flex-start } }
 .sp-chyba-text { overflow-wrap: anywhere; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px }
 @media (max-width: 720px) { .sp-riadok.sp-chyba { grid-template-columns: 1fr 1fr } .sp-riadok.sp-chyba.sp-th { display: none } .sp-chyba-text { grid-column: 1 / -1 } }
 a.sp-riadok:hover { background: var(--surface-2) }
