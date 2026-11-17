@@ -93,6 +93,17 @@ jobs:
             echo "::error::Nie je kam zálohu uložiť – chýba SFTP prístup na Websupport (FTP_HESLO) aj ZALOHA_HESLO."; exit 1
           fi
           [ -z "$ZALOHA_HESLO" ] && echo "::notice::ZALOHA_HESLO nie je nastavené – záloha ide len na Websupport (bez kópie v GitHube)."
+          # Skúška po zmene zálohovacieho skriptu (push) sťahuje všetky súbory a obnovuje databázu – cez deň spomaľuje
+          # aplikáciu maklérom (17. 11. 2026 okolo 13:50 zlyhávali dotazy). V pracovnom čase (po–so 7:00–19:00) sa preto
+          # nespustí: zmenu overí nočná záloha, alebo ju večer spusti ručne (Run workflow → „Aj skúška obnovy“).
+          if [ "$DOVOD" = "skuska" ]; then
+            hod=$(TZ=Europe/Bratislava date +%-H); den=$(TZ=Europe/Bratislava date +%u)
+            if [ "$den" -le 6 ] && [ "$hod" -ge 7 ] && [ "$hod" -lt 19 ]; then
+              echo "::notice::Pracovný čas – skúšku zálohy po zmene skriptu nespúšťam (spomaľuje aplikáciu). Zmenu overí nočná záloha, alebo ju večer spusti ručne."
+              echo "Skúška zálohy sa cez pracovný čas (po–so 7:00–19:00) nespúšťa. Zmenu overí nočná záloha, alebo ju večer spusti ručne." >> "$GITHUB_STEP_SUMMARY"
+              echo "PRESKOCIT=1" >> "$GITHUB_ENV"; exit 0
+            fi
+          fi
           subory=0; skuska=0
           if [ "$CHCEM_SUBORY" = "true" ] || [ "$PLAN" = "40 2 * * 0" ] || [ "$DOVOD" = "skuska" ]; then subory=1; fi
           if [ "$CHCEM_SKUSKU" = "true" ] || [ "$DOVOD" = "skuska" ]; then skuska=1; fi

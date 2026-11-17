@@ -3,6 +3,7 @@
   "use strict";
 
   var CFG = window.SKENER_CONFIG;
+  var VERZIA = ((document.currentScript && document.currentScript.src || "").match(/[?&]v=(\d+)/) || [])[1] || "";
   var sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey, {
     auth: { persistSession: true, autoRefreshToken: true },
   });
@@ -196,13 +197,46 @@
   function toast(msg, chyba) {
     var t = $("#toast");
     t.textContent = msg; t.className = chyba ? "err" : ""; t.hidden = false;
+    if (chyba && chybaPosl && chybaPosl.text === msg && Date.now() - chybaPosl.cas < 3000) { zapisChybu(chybaPosl.povodna); chybaPosl = null; }
     clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, chyba ? 6000 : 2800);
   }
+  // Chyby, ktoré maklér uvidí (toast s chybou zo servera, pád skriptu), sa zapíšu do databázy – hlavný správca ich
+  // vidí v Správe zákazníkov. Nezapisujú sa výpadky internetu ani hlášky, ktorými databáza odpovedá na zlý vstup.
+  var chybaPosl = null, chybyOdoslane = {};
+  function zapisChybu(sprava, kde) {
+    try {
+      if (!S.me || !sprava || S.odhlasujem || S.vyprsalo) return;
+      var k = String(sprava).slice(0, 120), t = Date.now();
+      if (chybyOdoslane[k] && t - chybyOdoslane[k] < 5 * 60000) return;   // tá istá chyba najviac raz za 5 minút
+      chybyOdoslane[k] = t;
+      sb.rpc("zapis_chybu", {
+        p_sprava: String(sprava).slice(0, 500), p_kde: String(S.tab || "") + (kde ? " · " + kde : ""),
+        p_zariadenie: (vMobile() ? "mobil" : "počítač") + " · " + String(navigator.userAgent || "").slice(0, 160), p_verzia: VERZIA,
+      }).then(function () {}, function () {});
+    } catch (x) { /* záznam chyby nesmie nič pokaziť */ }
+  }
+  window.addEventListener("error", function (ev) {
+    if (!ev || !ev.message || /^Script error/i.test(ev.message)) return;
+    zapisChybu("Skript: " + ev.message + " (" + String(ev.filename || "").split("/").pop().split("?")[0] + ":" + (ev.lineno || 0) + ")", "pád");
+  });
+  window.addEventListener("unhandledrejection", function (ev) {
+    var d = ev && ev.reason, m = (d && (d.message || d.chyba)) || String(d || "");
+    if (!m || /Failed to fetch|NetworkError|Load failed|AbortError/i.test(m) || (d && d.code === "P0001")) return;
+    zapisChybu("Nezachytené: " + m + (d && d.code ? " [" + d.code + "]" : ""), "pád");
+  });
   function chybaText(e) {
+    var t = chybaTextZaklad(e), m = (e && (e.message || e.chyba)) || String(e), kod = (e && e.code) || "";
+    var bezna = kod === "P0001" || /Invalid login credentials|Failed to fetch|NetworkError|Load failed/i.test(m);
+    chybaPosl = bezna ? null : { text: t, povodna: m + (kod ? " [" + kod + "]" : ""), cas: Date.now() };
+    return t;
+  }
+  function chybaTextZaklad(e) {
     var m = (e && (e.message || e.chyba)) || String(e);
     if (/Invalid login credentials/i.test(m)) return "Nesprávny email alebo heslo.";
     if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Nepodarilo sa spojiť so serverom. Skontrolujte internet.";
     if (/JWT expired/i.test(m)) return "Prihlásenie vypršalo. Obnovte stránku.";
+    if (/New password should be different/i.test(m)) return "Nové heslo musí byť iné ako to staré.";
+    if (/Password should be|weak.?password/i.test(m)) return "Heslo je príliš slabé. Zvoľte dlhšie heslo (aspoň 8 znakov).";
     if (/statement timeout|canceling statement|57014/i.test(m + " " + ((e && e.code) || ""))) return "Server je práve vyťažený. Skúste to o chvíľu znova.";
     if (/Too many requests|rate limit/i.test(m)) return "Príliš veľa požiadaviek naraz. Skúste to o chvíľu znova.";
     return m;
@@ -514,6 +548,13 @@
   }
 
   async function start() {
+    // odkaz z e-mailu „Nové heslo“ (#obnova=…): najprv obrazovka na nové heslo; odkaz sa spotrebuje až po jeho zadaní
+    var obn = location.hash.match(/^#obnova=([A-Za-z0-9_%.-]{16,300})$/);
+    if (obn) {
+      history.replaceState(null, "", location.pathname);
+      nacitajVzhlad().catch(function () {});
+      return obrazovkaNoveHeslo(decodeURIComponent(obn[1]));
+    }
     var uid = ulozenaRelacia(), aktivita = poslednaAktivita();   // kedy maklér naposledy niečo robil (pred týmto spustením)
     if (!uid) zmazSnimku();                        // nikto nie je prihlásený – uložené údaje preč
     else if (!S.zoSnimky) {
@@ -551,12 +592,14 @@
       '<label class="field"><span>Heslo</span><input type="password" id="l-heslo" autocomplete="current-password" required></label>' +
       '<div class="error" id="l-err">' + esc(sprava || "") + "</div>" +
       '<button class="btn primary wide" type="submit">Prihlásiť sa</button>' +
-      "<p>Účet vám vytvorí administrátor. Ak ste zabudli heslo, požiadajte ho o nové.</p>" + PRAVA + "</form>" +
+      '<p><button class="odkaz-btn" type="button" id="l-zabudnute">Zabudli ste heslo?</button></p>' +
+      "<p>Účet vám vytvorí administrátor.</p>" + PRAVA + "</form>" +
       '</div>';
     pridajOko($("#f-login"));
+    $("#l-zabudnute").addEventListener("click", function () { obrazovkaZabudnute($("#l-email").value.trim().toLowerCase()); });
     $("#f-login").addEventListener("submit", async function (e) {
       e.preventDefault();
-      var btn = e.target.querySelector("button"); btn.disabled = true; $("#l-err").textContent = "";
+      var btn = e.target.querySelector("button[type=submit]"); btn.disabled = true; $("#l-err").textContent = "";
       var email = $("#l-email").value.trim().toLowerCase(), heslo = $("#l-heslo").value;
       var r = await sb.auth.signInWithPassword({ email: email, password: heslo });
       // mobilné klávesnice niekedy pridajú medzeru na koniec – skúsime aj bez nej
@@ -569,6 +612,64 @@
       }
       novePrihlasenie();
       poPrihlaseni(r.data.user);
+    });
+  }
+  var LOGIN_HLAVA = '<span class="lesk lesk-typek"><img class="login-logo login-logo-typek" src="typek-hlavicka.png?v=202610251320" alt="Realitný týpek" width="239" height="240"></span>';
+  // zabudnuté heslo: maklér zadá e-mail a príde mu odkaz na nové heslo (odpoveď je rovnaká, či účet existuje alebo nie)
+  function obrazovkaZabudnute(email) {
+    $("#app").innerHTML = '<div class="login"><form class="login-box" id="f-zab">' + LOGIN_HLAVA +
+      '<h1 class="login-nazov">Nové <span>heslo</span></h1><p>Napíšte e-mail, ktorým sa prihlasujete. Pošleme vám naň odkaz na nové heslo.</p>' +
+      '<label class="field"><span>Email</span><input type="email" id="z-email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required value="' + esc(email || "") + '"></label>' +
+      '<div class="error" id="z-err"></div>' +
+      '<button class="btn primary wide" type="submit">Poslať odkaz</button>' +
+      '<p><button class="odkaz-btn" type="button" id="z-spat">← Späť na prihlásenie</button></p>' + PRAVA + "</form></div>";
+    $("#z-spat").addEventListener("click", function () { obrazovkaLogin(""); });
+    $("#f-zab").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var btn = e.target.querySelector("button[type=submit]"), em = $("#z-email").value.trim().toLowerCase();
+      btn.disabled = true; $("#z-err").textContent = "";
+      try {
+        await funkcia({ akcia: "zabudnute", email: em });
+        $("#app").innerHTML = '<div class="login"><div class="login-box">' + LOGIN_HLAVA +
+          '<h1 class="login-nazov">Pozrite si <span>e-mail</span></h1>' +
+          "<p>Ak je k adrese <b>" + esc(em) + "</b> účet v Realitnom týpkovi, poslali sme na ňu odkaz na nové heslo. Platí 1 hodinu.</p>" +
+          "<p>E-mail neprišiel? Pozrite aj spam, alebo požiadajte o nové heslo administrátora.</p>" +
+          '<button class="btn primary wide" type="button" id="z-ok">Späť na prihlásenie</button>' + PRAVA + "</div></div>";
+        $("#z-ok").addEventListener("click", function () { obrazovkaLogin(""); });
+      } catch (err) { $("#z-err").textContent = chybaTextZaklad(err); btn.disabled = false; }
+    });
+  }
+  // nové heslo po otvorení odkazu z e-mailu
+  function obrazovkaNoveHeslo(kluc) {
+    var overene = false;
+    $("#app").innerHTML = '<div class="login"><form class="login-box" id="f-nove">' + LOGIN_HLAVA +
+      '<h1 class="login-nazov">Nové <span>heslo</span></h1><p>Zvoľte si nové heslo do Realitného týpka.</p>' +
+      '<label class="field"><span>Nové heslo (aspoň 8 znakov)</span><input type="password" id="nh-1" minlength="8" autocomplete="new-password" required></label>' +
+      '<label class="field"><span>Nové heslo ešte raz</span><input type="password" id="nh-2" minlength="8" autocomplete="new-password" required></label>' +
+      '<div class="error" id="nh-err"></div>' +
+      '<button class="btn primary wide" type="submit">Uložiť heslo a prihlásiť sa</button>' +
+      '<p><button class="odkaz-btn" type="button" id="nh-spat">← Späť na prihlásenie</button></p>' + PRAVA + "</form></div>";
+    pridajOko($("#f-nove"));
+    $("#nh-spat").addEventListener("click", function () { location.reload(); });
+    $("#f-nove").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var btn = e.target.querySelector("button[type=submit]"), h1 = $("#nh-1").value, h2 = $("#nh-2").value, err = $("#nh-err");
+      err.textContent = "";
+      if (h1.length < 8) { err.textContent = "Heslo musí mať aspoň 8 znakov."; return; }
+      if (h1 !== h2) { err.textContent = "Heslá sa nezhodujú. Napíšte to isté heslo dvakrát."; return; }
+      btn.disabled = true;
+      try {
+        if (!overene) {
+          var o = await sb.auth.verifyOtp({ token_hash: kluc, type: "recovery" });
+          if (o.error) { err.textContent = "Odkaz už neplatí alebo bol použitý. Vráťte sa na prihlásenie a požiadajte o nový."; btn.disabled = false; return; }
+          overene = true;
+        }
+        var u = await sb.auth.updateUser({ password: h1 });
+        if (u.error) { err.textContent = chybaTextZaklad(u.error); btn.disabled = false; return; }
+        novePrihlasenie();
+        await zmazSnimku();
+        location.reload();   // bežný štart už s novým prihlásením
+      } catch (x) { err.textContent = chybaTextZaklad(x); btn.disabled = false; }
     });
   }
   // Po novom prihlásení sa nečinnosť počíta od tejto chvíle. Čas poslednej činnosti z minulého prihlásenia

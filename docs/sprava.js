@@ -122,6 +122,7 @@
     var h = location.hash;
     if (h === "#clanky") return clankyPrehlad();
     if (h === "#kontakty") return kontaktyPrehlad();
+    if (h === "#chyby") return chybyPrehlad();
     if (h === "#clanok-novy") return clanokEditor(null);
     var mc = h.match(/^#clanok\/(\d+)$/);
     if (mc) return clanokEditor(Number(mc[1]));
@@ -577,12 +578,36 @@
     return '<nav class="sp-zalozky" aria-label="Časti správy">' +
       '<a href="#"' + (akt === "zak" ? ' aria-current="page"' : "") + ">Zákazníci</a>" +
       '<a href="#clanky"' + (akt === "cl" ? ' aria-current="page"' : "") + ">Články na portáli</a>" +
-      '<a href="#kontakty"' + (akt === "ko" ? ' aria-current="page"' : "") + ">Kontakty na predaj</a></nav>";
+      '<a href="#kontakty"' + (akt === "ko" ? ' aria-current="page"' : "") + ">Kontakty na predaj</a>" +
+      '<a href="#chyby"' + (akt === "ch" ? ' aria-current="page"' : "") + ">Chyby v aplikácii</a></nav>";
   }
   function fotoClanku(f, maly) {
     if (!f) return "";
     if (/^https:\/\//.test(f)) return f;
     return /^[a-z0-9-]{2,60}$/.test(f) ? "img/web/" + f + (maly ? "-m" : "") + ".webp" : "";
+  }
+  // ---------------------------------------------------------------- chyby, ktoré videli makléri v aplikácii (posledných 7 dní)
+  function casChyby(iso) {
+    return new Date(iso).toLocaleString("sk-SK", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  async function chybyPrehlad() {
+    $("#sp").innerHTML = zalozky("ch") + '<div class="boot">Načítavam chyby…</div>';
+    var r = await sb.rpc("chyby_prehlad", { p_dni: 7 });
+    if (r.error) { $("#sp").innerHTML = zalozky("ch") + '<p class="sp-nic">Chyby sa nepodarilo načítať: ' + esc(chybaText(r.error)) + "</p>"; return; }
+    var d = r.data || [], dnes = new Date().toDateString();
+    var dnesPocet = d.filter(function (x) { return new Date(x.cas).toDateString() === dnes; }).length;
+    $("#sp").innerHTML = zalozky("ch") +
+      '<div class="sp-uvod"><div><h1>Chyby v aplikácii</h1><p>Čo maklérom v Týpkovi nešlo za posledných 7 dní (' + d.length + ", z toho dnes " + dnesPocet + "). " +
+        "Výpadky internetu a hlášky na zle vyplnený formulár sa nezapisujú. Záznamy sa po 30 dňoch mažú.</p></div></div>" +
+      (d.length ? '<div class="sp-tab" role="table">' +
+        '<div class="sp-riadok sp-chyba sp-th" role="row"><span>Kedy</span><span>Kto</span><span>Kde</span><span>Chyba</span></div>' +
+        d.map(function (x) {
+          return '<div class="sp-riadok sp-chyba" role="row"><span>' + esc(casChyby(x.cas)) + "</span>" +
+            '<span class="sp-meno"><b>' + esc(x.makler) + "</b><small>" + esc(x.kancelaria) + "</small></span>" +
+            '<span class="sp-meno"><b>' + esc(x.kde || "–") + "</b><small>" + esc(String(x.zariadenie || "").split(" · ")[0]) + (x.verzia ? " · verzia " + esc(x.verzia) : "") + "</small></span>" +
+            '<span class="sp-chyba-text" title="' + esc(x.zariadenie || "") + '">' + esc(x.sprava) + "</span></div>";
+        }).join("") + "</div>"
+      : '<div class="sp-prazdne"><img src="typek-postava.png" alt="" width="110" height="124"><h3>Žiadne chyby</h3><p>Za posledných 7 dní makléri v aplikácii nevideli žiadnu chybu.</p></div>');
   }
   async function nacitajClanky() {
     var r = await sb.rpc("portal_clanky_sprava");

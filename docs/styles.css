@@ -73,6 +73,10 @@ a { color: var(--info) }
 .login-box h1 { font-family: var(--display); font-size: 20px; margin: 0; letter-spacing: .02em }
 .login-box h1 span { color: var(--gold) }
 .login-box p { margin: 0; color: var(--muted); font-size: 14px }
+/* textové tlačidlo v prihlásení (Zabudli ste heslo?, Späť na prihlásenie) */
+.odkaz-btn { background: none; border: 0; padding: 4px 2px; font: inherit; font-size: 14px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer }
+.odkaz-btn:hover { color: var(--text, inherit) }
+.odkaz-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px }
 
 /* ---------- hlavička */
 header.top { background: var(--graphite); color: #f7f2e8; padding-top: env(safe-area-inset-top, 0px) }

@@ -1,8 +1,37 @@
-// Správa účtov maklérov (vytvorenie účtu, zmena hesla).
+// Správa účtov maklérov (vytvorenie účtu, zmena hesla, zabudnuté heslo e-mailom).
 // Beží v Supabase s administrátorským kľúčom; volajúceho overuje sama.
 // Kancelárie: administrátor pracuje len s maklérmi svojej (aktívnej) kancelárie; nový maklér dostane jeho kanceláriu.
 // Hlavný správca Týpka môže založiť účet aj do inej kancelárie (telo.kancelaria – prvý správca novej kancelárie).
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import nodemailer from "npm:nodemailer@6.9.16";
+
+const APP_URL = Deno.env.get("APP_URL") || "https://app.realitnytypek.sk/";
+
+function esc(s: unknown) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
+// E-mail rovnako ako vo funkcii pripomienky: Brevo (BREVO_API_KEY) alebo SMTP cez port 465.
+async function posli(komu: string, predmet: string, html: string) {
+  const od = Deno.env.get("EMAIL_FROM") || Deno.env.get("SMTP_USER") || "";
+  const brevo = Deno.env.get("BREVO_API_KEY");
+  if (brevo) {
+    const r = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "api-key": brevo, "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ sender: { name: "Realitný týpek", email: od }, to: [{ email: komu }], subject: predmet, htmlContent: html }),
+    });
+    if (!r.ok) throw new Error("Brevo " + r.status + ": " + (await r.text()).slice(0, 200));
+    return;
+  }
+  const host = Deno.env.get("SMTP_HOST");
+  if (!host) throw new Error("Email nie je nastavený");
+  const t = nodemailer.createTransport({
+    host, port: Number(Deno.env.get("SMTP_PORT") || 465), secure: (Deno.env.get("SMTP_SECURE") ?? "true") !== "false",
+    auth: { user: Deno.env.get("SMTP_USER"), pass: Deno.env.get("SMTP_PASS") },
+  });
+  await t.sendMail({ from: { name: "Realitný týpek", address: od }, to: komu, subject: predmet, html });
+}
 
 const PRVY_ADMIN = "augustinak@alphareality.sk";
 
@@ -30,6 +59,45 @@ Deno.serve(async (req) => {
     telo = await req.json();
   } catch {
     return odpoved(400, { chyba: "Neplatná požiadavka." });
+  }
+
+  // Zabudnuté heslo: odkaz na nové heslo e-mailom. Volá sa bez prihlásenia, preto:
+  //  • odpoveď je vždy rovnaká (nedá sa zistiť, či účet s e-mailom existuje),
+  //  • najviac 3 žiadosti za hodinu na jeden e-mail a 10 z jednej adresy,
+  //  • odkaz je jednorazový a platí 1 hodinu (overuje ho prihlasovanie Supabase); heslo sa mení až po jeho otvorení.
+  if (telo.akcia === "zabudnute") {
+    const email = String(telo.email || "").trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) return odpoved(400, { chyba: "Zadajte platný email." });
+    const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim().slice(0, 60);
+    const hodina = new Date(Date.now() - 3600e3).toISOString();
+    await admin.from("obnova_hesla_pokusy").delete().lt("cas", new Date(Date.now() - 864e5).toISOString());
+    const { count: naEmail } = await admin.from("obnova_hesla_pokusy").select("id", { count: "exact", head: true }).eq("email", email).gt("cas", hodina);
+    const { count: zAdresy } = ip
+      ? await admin.from("obnova_hesla_pokusy").select("id", { count: "exact", head: true }).eq("ip", ip).gt("cas", hodina)
+      : { count: 0 };
+    await admin.from("obnova_hesla_pokusy").insert({ email, ip: ip || null });
+    if ((naEmail ?? 0) >= 3 || (zAdresy ?? 0) >= 10) return odpoved(200, { ok: true });
+    const praca = (async () => {
+      const { data: m } = await admin.from("makleri").select("meno, aktivny").eq("email", email).maybeSingle();
+      if (!m || !m.aktivny) return;
+      const { data, error } = await admin.auth.admin.generateLink({ type: "recovery", email });
+      const kluc = data?.properties?.hashed_token;
+      if (error || !kluc) { console.error("obnova-hesla", error?.message || "bez odkazu"); return; }
+      const odkaz = APP_URL + "#obnova=" + encodeURIComponent(kluc);
+      const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#23272e">
+        <div style="border-bottom:3px solid #dab967;padding-bottom:8px;font-size:18px"><b>🔑 Nové heslo do Realitného týpka</b></div>
+        <p style="font-size:16px;margin:16px 0 0">Dobrý deň${m.meno ? ", " + esc(String(m.meno).split(" ")[0]) : ""},</p>
+        <p style="margin:10px 0 0">požiadali ste o nové heslo. Kliknite na tlačidlo a nastavte si ho. Odkaz platí 1 hodinu a dá sa použiť len raz.</p>
+        <p style="margin:22px 0"><a href="${esc(odkaz)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Nastaviť nové heslo</a></p>
+        <p style="color:#666;font-size:13px">Ak ste o nové heslo nežiadali, tento e-mail si nevšímajte – vaše heslo ostáva bez zmeny.</p>
+        <p style="color:#999;font-size:12px">Realitný týpek</p></div>`;
+      await posli(email, "🔑 Nové heslo do Realitného týpka", html);
+    })().catch((e) => console.error("obnova-hesla", String((e as Error).message || e).slice(0, 200)));
+    // e-mail sa odosiela na pozadí, aby čas odpovede neprezradil, či účet existuje
+    // deno-lint-ignore no-explicit-any
+    const er = (globalThis as any).EdgeRuntime;
+    if (er?.waitUntil) er.waitUntil(praca); else await praca;
+    return odpoved(200, { ok: true });
   }
 
   // Kto volá?
