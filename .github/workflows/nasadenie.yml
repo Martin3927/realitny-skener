@@ -131,8 +131,21 @@ jobs:
           DIR_WEB: ${{ vars.FTP_DIR_WEB || '/realitnytypek.sk/web' }}
         run: |
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq lftp >/dev/null
+          # 1) poistka: skúšobný súbor veľký ako celé nasadenie – keď sa na hosting nezmestí (plná kvóta),
+          #    nasadenie sa zastaví skôr, než sa čokoľvek zmení (17. 11. 2026 plný hosting zmazal živé súbory)
+          need=$(( $(du -sm build | cut -f1) + 5 ))
+          head -c $(( need * 1048576 )) /dev/zero > skuska-miesta.bin
+          SKUSKA=$(dirname "$DIR_WEB")/.skuska-miesta.bin
+          if ! lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "
+              set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30; set cmd:fail-exit yes;
+              put skuska-miesta.bin -o $SKUSKA; rm $SKUSKA; bye"; then
+            lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "set sftp:auto-confirm yes; rm -f $SKUSKA; bye" || true
+            echo "::error::Na hostingu nie je voľných ${need} MB (plná kvóta – najčastejšie zálohy v /zalohy). Nasadenie som zastavil, na webe sa nič nezmenilo."
+            exit 1
+          fi
+          # 2) nahrávanie cez dočasný súbor a premenovanie: keď sa nahratie nepodarí, starý súbor ostane (nemaže sa vopred)
           lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "
-            set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30;
-            mirror -R --verbose=1 --parallel=4 build/app/ $DIR_APP;
-            mirror -R --verbose=1 --parallel=4 build/web/ $DIR_WEB;
+            set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30; set xfer:use-temp-file yes;
+            mirror -R --verbose=1 --overwrite --parallel=4 build/app/ $DIR_APP;
+            mirror -R --verbose=1 --overwrite --parallel=4 build/web/ $DIR_WEB;
             bye"

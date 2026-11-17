@@ -76,7 +76,7 @@ jobs:
       CHCEM_SKUSKU: ${{ inputs.skuska }}
       PRE_KLUC: ${{ inputs.pre_kluc }}
       LEN_MIESTO: ${{ inputs.len_miesto }}
-      PONECHAT_DB: 60
+      PONECHAT_DB: 25   # ~11 MB každá; 60 kópií zaplnilo 1 GB hosting (17. 11. 2026)
       PONECHAT_SUBORY: 4
       PONECHAT_KOD: 2
     steps:
@@ -274,6 +274,16 @@ jobs:
         if: env.PRESKOCIT != '1' && env.NA_WEBSUPPORT == '1'
         run: |
           cd "$RUNNER_TEMP"
+          # najprv uvoľniť miesto pre novú zálohu – pri plnom hostingu by sa nová nezmestila a staré by sa nikdy nezmazali
+          for d in databaza:$PONECHAT_DB ${SUB_SUBOR:+subory:$PONECHAT_SUBORY} ${KOD_SUBOR:+kod:$PONECHAT_KOD}; do
+            p=${d%%:*}; n=$(( ${d##*:} - 1 ))
+            lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls -1 $DIR/$p/; bye" 2>/dev/null \
+              | xargs -r -n1 basename | grep '^typek-' | sort | head -n -"$n" > stare-pred.txt || true
+            if [ -s stare-pred.txt ]; then
+              echo "Pred nahratím mažem $(wc -l < stare-pred.txt) najstarších záloh v $p"
+              lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; $(sed "s#^#rm $DIR/$p/#; s#\$#;#" stare-pred.txt) bye" || true
+            fi
+          done
           put="put -O $DIR/databaza $DB_SUBOR;"
           [ -n "$SUB_SUBOR" ] && put="$put put -O $DIR/subory $SUB_SUBOR;"
           [ -n "$KOD_SUBOR" ] && put="$put put -O $DIR/kod $KOD_SUBOR;"
