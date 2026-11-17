@@ -1416,6 +1416,48 @@
     if (Object.keys(vyradit).length) S.inz = S.inz.filter(function (z) { return !vyradit[z.id]; });
     if (zmena) prepocitajObce();
   }
+  // ---------- história prevzatí: kto mal ktorý inzerát, odkedy-dokedy a prečo o neho prišiel (vypršal čas, uvoľnil, presun)
+  async function nacitajHistoriuPrevzati() {
+    var od = new Date(Date.now() - 180 * 864e5).toISOString();
+    var r = await sb.from("aktivity").select("inzerat_id, makler_id, typ, poznamka, vytvorene").in("typ", ["prevzatie", "uvolnenie", "presun"])
+      .gte("vytvorene", od).order("vytvorene", { ascending: true }).limit(10000);
+    if (r.error) throw r.error;
+    var podlaMena = {};
+    (S.makleri || []).forEach(function (m) { if (m.meno) podlaMena[m.meno] = m.id; if (m.email) podlaMena[m.email] = m.id; });
+    var drzi = {}, H = {};   // H[makler][inzerat] = { od, do, dovod, kto }
+    function zacni(iid, mid, kedy) { if (!mid) return; (H[mid] = H[mid] || {})[iid] = { od: kedy, do: null, dovod: "", kto: null }; drzi[iid] = mid; }
+    function skonci(iid, kedy, dovod, kto) {
+      var mid = drzi[iid]; if (!mid || !H[mid] || !H[mid][iid]) return;
+      var x = H[mid][iid]; if (x.do) return;
+      x.do = kedy; x.dovod = dovod; x.kto = kto || null; drzi[iid] = null;
+    }
+    (r.data || []).forEach(function (a) {
+      if (a.typ === "prevzatie") { if (drzi[a.inzerat_id] && drzi[a.inzerat_id] !== a.makler_id) skonci(a.inzerat_id, a.vytvorene, "prevzal", a.makler_id); zacni(a.inzerat_id, a.makler_id, a.vytvorene); }
+      else if (a.typ === "uvolnenie") skonci(a.inzerat_id, a.vytvorene, /automaticky/.test(a.poznamka || "") ? "vyprsalo" : a.makler_id === drzi[a.inzerat_id] ? "uvolnil" : "uvolnil-iny", a.makler_id);
+      else if (a.typ === "presun") {
+        var c = String(a.poznamka || "").split(" → "), komu = podlaMena[(c[1] || "").trim()] || null, odKoho = podlaMena[(c[0] || "").trim()] || null;
+        if (odKoho && !drzi[a.inzerat_id]) drzi[a.inzerat_id] = odKoho;   // prevzatie staršie ako 180 dní
+        skonci(a.inzerat_id, a.vytvorene, "presun", komu);
+        zacni(a.inzerat_id, komu, a.vytvorene);
+      }
+    });
+    S.histPrev = H;
+  }
+  // čo vidí maklér pri inzeráte v Histórii: odkedy dokedy ho mal a prečo ho už nemá
+  function historiaPrevzatiaRiadok(z) {
+    if (S.f.praca !== "historia" || !S.histPrev) return "";
+    var mid = S.f.kto || S.me.id, x = (S.histPrev[mid] || {})[z.id]; if (!x) return "";
+    var ty = mid === S.me.id, p = S.prev[z.id], maj = p && p.makler_id;
+    var dovod = !x.do ? (maj === mid ? "stále " + (ty ? "tvoj" : "jeho") : "") :
+      x.dovod === "vyprsalo" ? "⏳ uvoľnil sa sám – 24 hodín bez zápisu" :
+      x.dovod === "uvolnil" ? "↩️ " + (ty ? "uvoľnil si ho" : "uvoľnil ho") :
+      x.dovod === "uvolnil-iny" ? "↩️ uvoľnil ho " + esc(meno(x.kto)) :
+      x.dovod === "presun" ? "🔀 presunutý na " + (x.kto ? esc(meno(x.kto)) : "voľný") : "🙋 prevzal ho " + esc(meno(x.kto));
+    var teraz = !maj ? '<b class="hp-volny">teraz voľný – môžeš ho prevziať znova</b>' : maj === mid ? "" : "teraz ho má " + esc(meno(maj));
+    if (!x.do && maj === mid) return '<div class="hp-riadok">🕘 ' + (ty ? "Máš ho" : "Má ho") + " od " + datum(x.od) + "</div>";
+    return '<div class="hp-riadok' + (x.dovod === "vyprsalo" ? " hp-vyprsalo" : "") + '">🕘 ' + (ty ? "Mal si ho" : "Mal ho") + " od " + datum(x.od) +
+      (x.do ? " do " + datum(x.do, true) : "") + (dovod ? " · " + dovod : "") + (teraz ? " · " + teraz : "") + "</div>";
+  }
   async function nacitajPrevzatia() {
     var rows = await vsetkyRiadky("prevzatia", "*", "inzerat_id");
     var p = {}; rows.forEach(function (x) { p[x.inzerat_id] = x; }); S.prev = p;
@@ -1594,7 +1636,7 @@
   async function nacitajVsetko(dotazMaklerov) {
     await nacitajMaklerov(dotazMaklerov);
     var meta = nacitajMeta();
-    await Promise.all([nacitajStrazcu(), nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
+    await Promise.all([nacitajStrazcu(), nacitajHistoriuPrevzati().catch(function () { S.histPrev = null; }), nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
       nacitajPredajcov().catch(function () { S.pred = null; }), nacitajMatterport().catch(function () { S.mp = null; })]);
   }
   // stav skenera (posledná kontrola, chyby) – pri štarte aj priebežne, inak by otvorená aplikácia po pár hodinách hlásila, že skener stojí
@@ -1611,7 +1653,7 @@
       // celý zoznam inzerátov raz za hodinu, medzitým len zmenené (bez databázovej zmeny 075 ako doteraz každých 10 min)
       if (Date.now() - S.lastInzLoad > (S.zmenyOd ? 60 : 10) * 60000) uloha.push(nacitajInzeraty(), nacitajOdhady());
       else if (S.zmenyOd) uloha.push(nacitajZmeny().catch(function () {}));
-      uloha.push(nacitajNastavenia().catch(function () {}), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajStrazcu());
+      uloha.push(nacitajNastavenia().catch(function () {}), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajStrazcu(), nacitajHistoriuPrevzati().catch(function () {}));
       if (S.ponuky && !S.ponukaEdit) uloha.push(nacitajPonuky().catch(function () {}));
       else if (S.dopyty && !S.dopytEdit) uloha.push(nacitajDopyty().catch(function () {}));
       if (S.tab === "inzeraty" || S.tab === "klienti") uloha.push(nacitajPredajcov().catch(function () {}));
@@ -2158,7 +2200,7 @@
     $("#filters").innerHTML = '<div class="filters"><div class="wrap">' +
       '<input type="search" id="q" placeholder="Hľadať v názve, obci, predajcovi…" aria-label="Hľadať" value="' + esc(f.q) + '">' +
       '<button type="button" class="btn f-vymaz" id="f-vymaz">✕ Vymazať filter<span class="f-vymaz-n"></span></button>' +
-      seg("praca", [["vsetky", "Všetky"], ["volne", "Voľné", 1], ["moje", "Moje", 1], ["prevzate", "Prevzaté", 1]]) +
+      seg("praca", [["vsetky", "Všetky"], ["volne", "Voľné", 1], ["moje", "Moje", 1], ["prevzate", "Prevzaté", 1], ["historia", "🕘 História", 1]]) +
       '<select id="f-kto" aria-label="Maklér"><option value="">👤 Všetci makléri</option>' + S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) {
         return '<option value="' + m.id + '">' + esc(m.meno || m.email) + (m.id === S.me.id ? " (ja)" : "") + "</option>"; }).join("") + "</select>" +
       seg("predajca", [["vsetci", "Všetci", 1], ["sukr", "Súkromní", 1], ["rk", "RK", 1]]) +
@@ -2326,14 +2368,16 @@
   function filtruj() {
     var f = S.f, q = norm(f.q).trim(), qd = /\d/.test(q) ? telCifry(q) : "", nv = f.novost || "", lim = /^\d+$/.test(nv) ? Date.now() - Number(nv) * 864e5 : 0, me = S.me.id;
     var vekDo = nv.charAt(0) === "p" ? Number(nv.slice(1)) : 0, vekNad = nv.charAt(0) === "s" ? Number(nv.slice(1)) : 0;
-    var zaklad = viditelne(), pocty = {};
+    var zaklad = f.praca === "historia" ? S.inz : viditelne(), pocty = {};
+    var hist = (S.histPrev || {})[f.kto || me] || {};
     if (S.jedenId) return { out: S.inz.filter(function (z) { return z.id === S.jedenId; }), pocty: pocty };
     function pridaj(k) { pocty[k] = (pocty[k] || 0) + 1; }
     var out = zaklad.filter(function (z) {
       var p = S.prev[z.id], maj = p && p.makler_id;
       var pt = ptyp(z);
       var okP = f.predajca === "vsetci" || (f.predajca === "sukr" ? pt !== "rk" : pt === "rk");
-      var okPr = (f.praca === "vsetky" || (f.praca === "volne" && !maj) || (f.praca === "moje" && maj === me) || (f.praca === "prevzate" && maj)) && (!f.kto || maj === f.kto);
+      var okPr = f.praca === "historia" ? !!hist[z.id] :
+        (f.praca === "vsetky" || (f.praca === "volne" && !maj) || (f.praca === "moje" && maj === me) || (f.praca === "prevzate" && maj)) && (!f.kto || maj === f.kto);
       var okIne = (!f.typ || z.typ === f.typ) &&
         (!f.okres || (f.okres === "moje" ? (S.me.obce || []).indexOf(z.obec) >= 0 : f.okres.indexOf("o:") === 0 ? z.okres === f.okres.slice(2) : z.obec === f.okres)) &&
         (!lim || novyCas(z) >= lim) &&
@@ -2341,7 +2385,7 @@
         (!f.under || (S.odh[z.id] && S.odh[z.id].podhodnotene)) &&
         (!q || z._t.indexOf(q) >= 0 || (qd.length >= 4 && S.tel[z.id] && telCifry(S.tel[z.id].telefon).indexOf(qd) >= 0));
       if (okIne && okPr) { pridaj("predajca:vsetci"); pridaj(pt !== "rk" ? "predajca:sukr" : "predajca:rk"); }
-      if (okIne && okP) { if (!maj) pridaj("praca:volne"); if (maj === me) pridaj("praca:moje"); if (maj) pridaj("praca:prevzate"); }
+      if (okIne && okP) { if (!maj) pridaj("praca:volne"); if (maj === me) pridaj("praca:moje"); if (maj) pridaj("praca:prevzate"); if (hist[z.id]) pridaj("praca:historia"); }
       return okP && okPr && okIne;
     });
     var s = f.sort;
@@ -2351,6 +2395,10 @@
       if (s === "cenam2") return (a.cena_m2 || 9e12) - (b.cena_m2 || 9e12);
       if (s === "stare") return zverejnene(a) - zverejnene(b);
       if (s === "hovor") return String((S.prev[b.id] || {}).posledny_hovor || "").localeCompare(String((S.prev[a.id] || {}).posledny_hovor || ""));
+      if (f.praca === "historia" && s === "novy") {   // naposledy stratené / prevzaté hore
+        var ha = hist[a.id] || {}, hb = hist[b.id] || {};
+        return String(hb.do || hb.od || "").localeCompare(String(ha.do || ha.od || ""));
+      }
       return novyCas(b) - novyCas(a) || String(b.publikovane || "").localeCompare(String(a.publikovane || ""));
     });
     return { out: out, pocty: pocty };
@@ -2419,7 +2467,8 @@
     h += '<div class="bar"><span>' + nf.format(out.length) + (out.length === 1 ? " inzerát" : out.length > 1 && out.length < 5 ? " inzeráty" : " inzerátov") + "</span>" +
       (S.canUnder ? "<span>Porovnanie: cena/m² oproti mediánu podobných aktuálnych ponúk</span>" : "") + "</div>";
     h += out.length ? '<div class="list" id="list">' + out.slice(0, S.shown).map(karta).join("") + "</div>" :
-      '<div class="empty">Nič nezodpovedá filtrom.' + (pocetFiltrov() ? ' <button type="button" class="btn primary" data-vymaz-filter>✕ Vymazať filter</button>' : "") + "</div>";
+      '<div class="empty">' + (S.f.praca === "historia" && !Object.keys((S.histPrev || {})[S.f.kto || S.me.id] || {}).length ?
+        "V histórii zatiaľ nič nie je – ukážu sa tu inzeráty, ktoré si prevzal za posledných 6 mesiacov, aj tie, ktoré sa ti uvoľnili." : "Nič nezodpovedá filtrom.") + (pocetFiltrov() ? ' <button type="button" class="btn primary" data-vymaz-filter>✕ Vymazať filter</button>' : "") + "</div>";
     if (out.length > S.shown) h += '<button class="btn more" type="button" id="more">Zobraziť ďalšie (zostáva ' + nf.format(out.length - S.shown) + ")</button>";
     el.innerHTML = h;
     stavVymazania();
@@ -2533,7 +2582,7 @@
       '<a class="title" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(z.nazov) + "</a>" +
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
       (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + naPortaliOd(z) + "</div>" +
-      telRiadok(z) + predRiadok(z) + aiRiadok(z) +
+      historiaPrevzatiaRiadok(z) + telRiadok(z) + predRiadok(z) + aiRiadok(z) +
       '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") +
       (obnovenyNedavno(z) ? '<span class="pill new" title="Predajca inzerát zverejnil znova – oplatí sa ozvať">🔁 Znova zverejnený ' + datum(z.obnovene) + "</span>" : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
       '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +

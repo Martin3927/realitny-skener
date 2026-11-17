@@ -2806,3 +2806,7 @@ html.bez-posuvu #toast { z-index: 210 }
   .trh-kupeny { grid-template-columns: minmax(0, 1fr) auto }
   .trh-kupeny > .odh-znak { grid-column: 1; justify-self: start }
 }
+/* skener – História prevzatí */
+.hp-riadok { margin: 6px 0 4px; padding: 6px 10px; border-radius: 10px; background: var(--chip, rgba(30,42,53,.06)); font-size: 13px; line-height: 1.4; color: var(--ink, inherit) }
+.hp-riadok.hp-vyprsalo { background: rgba(219,149,34,.14) }
+.hp-volny { color: #2E7D5B; font-weight: 700 }
