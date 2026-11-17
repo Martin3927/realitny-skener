@@ -203,6 +203,8 @@
     if (/Invalid login credentials/i.test(m)) return "Nesprávny email alebo heslo.";
     if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Nepodarilo sa spojiť so serverom. Skontrolujte internet.";
     if (/JWT expired/i.test(m)) return "Prihlásenie vypršalo. Obnovte stránku.";
+    if (/statement timeout|canceling statement|57014/i.test(m + " " + ((e && e.code) || ""))) return "Server je práve vyťažený. Skúste to o chvíľu znova.";
+    if (/Too many requests|rate limit/i.test(m)) return "Príliš veľa požiadaviek naraz. Skúste to o chvíľu znova.";
     return m;
   }
   // keď prihlásenie medzičasom vypršalo, skúsime ho obnoviť; ak sa nedá, ponúkneme prihlásenie (nie chybu „permission denied“)
@@ -519,7 +521,15 @@
       if (sn && ukazSnimku(sn, aktivita) === "necinnost") return odhlasitPreNecinnost();
     }
     var g = await sb.auth.getSession(), ses = g.data.session;
-    nacitajVzhlad().then(function (zmena) { if (zmena && !S.me && $("#f-login")) obrazovkaLogin($("#l-err") ? $("#l-err").textContent : ""); }).catch(function () {});
+    nacitajVzhlad().then(function (zmena) {
+      if (!zmena || S.me || !$("#f-login")) return;
+      // formulár sa prekreslí v novom vzhľade – rozpísaný email, heslo a kurzor ostávajú
+      var em = $("#l-email").value, he = $("#l-heslo").value, akt = document.activeElement && document.activeElement.id;
+      if ($("#f-login button[type=submit]").disabled) return;   // práve sa prihlasuje
+      obrazovkaLogin($("#l-err") ? $("#l-err").textContent : "");
+      $("#l-email").value = em; $("#l-heslo").value = he;
+      if (akt === "l-email" || akt === "l-heslo") $("#" + akt).focus();
+    }).catch(function () {});
     if (ses && S.zoSnimky && ses.user.id !== uid) zrusSnimku();
     if (ses) return poPrihlaseni(ses.user, aktivita);
     // prihlásenie sa nedalo obnoviť pre výpadok internetu – údaje z posledného otvorenia nechávame
@@ -557,8 +567,15 @@
           "Nesprávny email alebo heslo. Ťuknite na 👁 a skontrolujte heslo – veľké a malé písmená, prípadne zámenu y a z na klávesnici." : chybaText(r.error);
         return;
       }
+      novePrihlasenie();
       poPrihlaseni(r.data.user);
     });
+  }
+  // Po novom prihlásení sa nečinnosť počíta od tejto chvíle. Čas poslednej činnosti z minulého prihlásenia
+  // (ostáva v zariadení po ručnom odhlásení alebo vypršaní) by inak makléra hneď po prihlásení znova odhlásil.
+  function novePrihlasenie() {
+    aktPamat = 0; aktZapis = 0;
+    try { localStorage.removeItem(KLUC_AKT); } catch (e) { /* bez úložiska */ }
   }
 
   function nacitajLicenciu() {
@@ -618,6 +635,7 @@
         await funkcia({ akcia: "vytvorit", meno: $("#p-meno").value, email: $("#p-email").value, heslo: $("#p-heslo").value });
         var r = await sb.auth.signInWithPassword({ email: $("#p-email").value.trim().toLowerCase(), password: $("#p-heslo").value });
         if (r.error) throw r.error;
+        novePrihlasenie();
         poPrihlaseni(r.data.user);
       } catch (err) { $("#p-err").textContent = chybaText(err); btn.disabled = false; }
     });
@@ -1282,7 +1300,7 @@
   });
 
   // odhlásenie: uložené údaje a prihlásenie zmizne zo zariadenia aj bez internetu
-  function zabudniPrihlasenie() { try { localStorage.removeItem(sb.auth.storageKey); } catch (e) { /* bez úložiska */ } }
+  function zabudniPrihlasenie() { try { localStorage.removeItem(sb.auth.storageKey); localStorage.removeItem(KLUC_AKT); } catch (e) { /* bez úložiska */ } }
   async function odhlasit() {
     S.odhlasujem = true;
     await zmazSnimku();
