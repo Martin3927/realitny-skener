@@ -2810,3 +2810,49 @@ html.bez-posuvu #toast { z-index: 210 }
 .hp-riadok { margin: 6px 0 4px; padding: 6px 10px; border-radius: 10px; background: var(--chip, rgba(30,42,53,.06)); font-size: 13px; line-height: 1.4; color: var(--ink, inherit) }
 .hp-riadok.hp-vyprsalo { background: rgba(219,149,34,.14) }
 .hp-volny { color: #2E7D5B; font-weight: 700 }
+
+/* ---- skener: prehľadnosť (súvisiace, Ešte riešim, ⋯ Viac, pohľady, Moja práca dnes) */
+.suv-row { margin: 4px 0 2px; padding: 6px 10px; border-radius: 8px; font-size: 13px; line-height: 1.45; background: var(--info-soft); color: var(--ink) }
+.suv-row.suv-rk { background: var(--info-soft) }
+.suv-row.suv-sukr { background: var(--good-soft) }
+.suv-row .btn-link { margin-left: 4px }
+.actions .riesim-hori { border-color: var(--bad); color: var(--bad) }
+.act-viac-btn { display: none }
+.act-viac { display: contents }
+@media (max-width: 640px) {
+  .act-viac-btn { display: inline-flex }
+  .act-viac { display: none }
+  .act-viac.otv { display: contents }
+}
+.pohlady { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; align-items: center }
+.pohlad { display: inline-flex; align-items: stretch; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); overflow: hidden }
+.pohlad button { border: 0; background: transparent; font: inherit; font-size: 13px; padding: 5px 11px; cursor: pointer; color: var(--ink); white-space: nowrap }
+.pohlad button[aria-pressed="true"] { background: var(--ink); color: var(--surface); font-weight: 700 }
+.pohlad .pohlad-x { padding: 5px 9px 5px 4px; color: var(--muted) }
+.pohlad .pohlad-x:hover { color: var(--bad) }
+.pohlad-uloz { font-size: 13px }
+@media (max-width: 640px) {
+  .pohlady { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none }
+  .pohlady::-webkit-scrollbar { display: none }
+  .pohlad, .pohlad-uloz { flex: 0 0 auto }
+}
+.moja-praca { margin-bottom: 12px; padding: 0 }
+.moja-praca > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 14px }
+.moja-praca > summary::-webkit-details-marker { display: none }
+.moja-praca > summary::after { content: "▾"; margin-left: auto; color: var(--muted); transition: transform .2s }
+.moja-praca:not([open]) > summary::after { transform: rotate(-90deg) }
+.moja-praca .mp-tit { font-size: 15px }
+.moja-praca .odpocet, .moja-praca .ok, .moja-praca .due { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap }
+.moja-praca .odpocet b { font-variant-numeric: tabular-nums }
+.moja-praca .odpocet.wait, .moja-praca span.ok { background: var(--good-soft); color: var(--good) }
+.moja-praca .odpocet.wait { background: var(--warn-soft); color: var(--warn) }
+.moja-praca .odpocet.due, .moja-praca span.due { background: var(--bad-soft); color: var(--bad) }
+.moja-praca .mp-sek { padding: 0 14px 12px }
+.moja-praca h4 { margin: 4px 0 6px; font-size: 13px }
+.moja-praca ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px }
+.moja-praca li a { display: block; padding: 6px 8px; border-radius: 8px; color: inherit; text-decoration: none; font-size: 14px; line-height: 1.4 }
+.moja-praca li a:hover, .moja-praca li a:focus-visible { background: var(--surface-2) }
+.vykon-sum div.zle b { color: var(--bad) }
+.vykon-sum div.dobre b { color: var(--good) }
+.moja-praca .mp-m { color: var(--muted); font-size: 12.5px; font-weight: 400 }
+.moja-praca summary .meta { display: inline }

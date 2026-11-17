@@ -1138,7 +1138,7 @@ SKENER_KLUC = os.environ.get("SKENER_KLUC") or ""
 POUZI_DB = bool(DB_URL and DB_KEY and SKENER_KLUC)
 STLPCE = ["id", "portal", "portaly", "url", "nazov", "typ", "podtyp", "izby", "cena", "plocha", "cena_m2", "obec",
           "okres", "predajca", "predajca_typ", "predajca_dovod", "foto", "popis", "publikovane", "prvy_krat",
-          "naposledy", "aktivny", "duplikat_z", "dalsie_odkazy", "historia_cien", "lat", "lon", "ulica", "obnovene"]
+          "naposledy", "aktivny", "duplikat_z", "dalsie_odkazy", "historia_cien", "lat", "lon", "ulica", "obnovene", "suvisiace"]
 _POVODNE = {}  # odtlačky riadkov z databázy – posielame len zmenené
 
 
@@ -1253,6 +1253,12 @@ def je_silne_rk(z):
     """RK podľa portálu, mena predajcu alebo jasného textu – nie len podľa počtu inzerátov či slova „ponúkame“."""
     d = z.get("predajca_dovod") or ""
     return z.get("predajca_typ") == "rk" and " inzeruje RK (" not in d and "inzerát" not in d
+
+
+def sukromnik_a_rk(a, b):
+    """Jasný súkromník a realitka s tým istým bytom – nespájame ich, aby súkromník nezmizol pod realitkou."""
+    ta, tb = a.get("predajca_typ"), b.get("predajca_typ")
+    return {ta, tb} == {"rk", "sukromny"} and (je_silne_rk(a) or je_silne_rk(b))
 
 
 def je_duplikat_bez_ceny(a, b):
@@ -2039,10 +2045,12 @@ def main():
         except Exception as ex:  # noqa – staršia databáza bez funkcie: zlúčime ako doteraz
             log(f"! zoznam prevzatých inzerátov: {ex}")
     podla_kluca = {}
+    dvojice = []      # (súkromník, realitka) alebo naopak – ten istý byt, ale samostatné karty
     podla_typu = {}   # (typ, okres) → zoznam pôvodných – na porovnanie, keď na jednom portáli chýba cena
     skupiny = {}
     for e in inzeraty.values():
         e["dalsie_odkazy"] = []
+        e["suvisiace"] = []
         # „RK“ prenesené z duplikátu sa vyhodnocuje pri každej kontrole znova (nesmie sa „prilepiť“)
         if e.get("predajca_typ") == "rk" and " inzeruje RK (" in (e.get("predajca_dovod") or ""):
             e["predajca_typ"], e["predajca_dovod"] = "asi_sukromny", "bez znakov realitky"
@@ -2051,7 +2059,12 @@ def main():
             continue
         k = kluc_duplicity(e)
         e["duplikat_z"] = None
-        povodny = next((x for x in podla_kluca.get(k, []) if je_duplikat(x, e)), None) if k else None
+        zhody = [x for x in podla_kluca.get(k, []) if je_duplikat(x, e)] if k else []
+        # súkromník a realitka s tým istým bytom sa nespájajú – obe karty ostanú a navzájom sa spomenú
+        for x in zhody:
+            if sukromnik_a_rk(x, e):
+                dvojice.append((x, e))
+        povodny = next((x for x in zhody if not sukromnik_a_rk(x, e)), None)
         if not povodny:
             # na jednom portáli chýba cena – spojíme, len ak sa hodí presne jeden inzerát (inak nevieme, ktorý to je)
             kandidati = [x for x in podla_typu.get((e["typ"], e["okres"]), [])
@@ -2097,6 +2110,16 @@ def main():
                 and datetime.fromisoformat(str(povodny["prvy_krat"])) < NOW - timedelta(days=3):
             povodny["obnovene"] = NOW_ISO
             obnovene.append(povodny)
+
+    for a, b in dvojice:
+        a = inzeraty.get(a.get("duplikat_z")) or a
+        b = inzeraty.get(b.get("duplikat_z")) or b
+        if a is b or (a.get("predajca_typ") == "rk") == (b.get("predajca_typ") == "rk"):
+            continue
+        for x, y in ((a, b), (b, a)):
+            if all(s_["id"] != y["id"] for s_ in x["suvisiace"]):
+                x["suvisiace"].append({"id": y["id"], "portal": y["portal"], "url": y.get("url"),
+                                       "predajca": (y.get("predajca") or "")[:80], "rk": y.get("predajca_typ") == "rk"})
 
     vyhodnot_ceny(inzeraty)
 

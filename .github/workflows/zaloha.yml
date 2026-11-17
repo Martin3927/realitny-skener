@@ -297,7 +297,16 @@ jobs:
           done
           # archív skenera: dohrať len nové fotky, potom overiť a až potom nahrať nový zoznam
           if [ "$ARCHIV_ZVLAST" = 1 ] && [ -f archiv-zoznam.tsv.novy ]; then
-            if [ -d archiv-nove ] && [ -n "$(find archiv-nove -type f -print -quit)" ]; then
+            # archív sa nahrá, len keď sa zmestí celý a na hostingu ostane rezerva 150 MB (nasadenie aplikácie, ďalšie zálohy);
+            # inak sa preskočí – polovičné nahratie by zaplnilo hosting a zastavilo nasadenie aj zálohy
+            potreba=$(( $(du -sm archiv-nove 2>/dev/null | cut -f1) + 150 ))
+            if [ -d archiv-nove ] && [ -n "$(find archiv-nove -type f -print -quit)" ] && ! { head -c "${potreba}M" /dev/zero > skuska-miesta.bin \
+                && lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; set cmd:fail-exit yes; put skuska-miesta.bin -o $DIR/.skuska-miesta.bin; rm $DIR/.skuska-miesta.bin; bye" >/dev/null 2>&1; }; then
+              lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; rm -f $DIR/.skuska-miesta.bin; bye" >/dev/null 2>&1 || true
+              rm -f skuska-miesta.bin; archiv_preskoc=1
+              echo "::warning::Archív skenera ($ARCHIV_NOVE_MB MB nových fotiek) sa na hosting nezmestí – preskakujem ho. Fotky ostávajú v Supabase; záloha databázy a súborov je v poriadku."
+            elif [ -d archiv-nove ] && [ -n "$(find archiv-nove -type f -print -quit)" ]; then
+              rm -f skuska-miesta.bin
               lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; set cmd:fail-exit yes;
                 mkdir -p -f $DIR/archiv; mirror -R --ignore-time --no-perms --parallel=4 archiv-nove/ $DIR/archiv/; bye" \
                 || { echo "::error::Nové fotky archívu sa nepodarilo nahrať na Websupport – nie je hosting plný?"; exit 1; }
@@ -310,10 +319,12 @@ jobs:
             else
               echo "Archív skenera: žiadne nové fotky."
             fi
-            lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; set cmd:fail-exit yes;
-              put archiv-zoznam.tsv.novy -o $DIR/archiv-zoznam.tsv; bye" \
-              || { echo "::error::Zoznam archívu sa nepodarilo uložiť na Websupport"; exit 1; }
-            echo "ARCHIV_OK=1" >> "$GITHUB_ENV"
+            if [ "${archiv_preskoc:-0}" != 1 ]; then
+              lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; set cmd:fail-exit yes;
+                put archiv-zoznam.tsv.novy -o $DIR/archiv-zoznam.tsv; bye" \
+                || { echo "::error::Zoznam archívu sa nepodarilo uložiť na Websupport"; exit 1; }
+              echo "ARCHIV_OK=1" >> "$GITHUB_ENV"
+            fi
           fi
           # staré zálohy preč (najnovšie ostávajú); archív skenera sa nemaže nikdy
           for d in databaza:$PONECHAT_DB subory:$PONECHAT_SUBORY kod:$PONECHAT_KOD; do
