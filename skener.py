@@ -1256,9 +1256,11 @@ def je_silne_rk(z):
 
 
 def sukromnik_a_rk(a, b):
-    """Jasný súkromník a realitka s tým istým bytom – nespájame ich, aby súkromník nezmizol pod realitkou."""
-    ta, tb = a.get("predajca_typ"), b.get("predajca_typ")
-    return {ta, tb} == {"rk", "sukromny"} and (je_silne_rk(a) or je_silne_rk(b))
+    """Súkromník a realitka s tým istým bytom by sa nespájali (obe karty + odkaz na seba).
+    VYPNUTÉ 17. 11. 2026: v ostrej prevádzke boli takmer všetky „súkromné“ strany realitky, ktoré portál
+    neoznačil (TOP CITY, HT reality…) – spoľahlivejšie je spojiť ich a nechať vyhrať realitku ako doteraz.
+    Inzerát, s ktorým maklér pracuje, sa nezlúči nikdy (zoznam pracovane)."""
+    return False
 
 
 def je_duplikat_bez_ceny(a, b):
