@@ -1,0 +1,28 @@
+name: Hosting – kontrola miesta
+
+# Len čítanie: vypíše, čo na hostingu Websupport zaberá miesto (kvôli „Quota exceeded“ pri nasadení). Spúšťa sa ručne.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  miesto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Čo zaberá miesto
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_HESLO: ${{ secrets.FTP_HESLO }}
+        run: |
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq lftp >/dev/null
+          lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "
+            set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30;
+            pwd; cls -la /; cls -la /realitnytypek.sk;
+            du -h --max-depth=1 /;
+            du -h --max-depth=2 /realitnytypek.sk;
+            du -h --max-depth=3 /realitnytypek.sk/sub; du -h --max-depth=1 /realitnytypek.sk/zalohy; cls -la /realitnytypek.sk/zalohy/databaza | tail -5; cls -1 /realitnytypek.sk/zalohy/archiv | wc -l;
+            bye" 2>&1 | grep -v '^$'
