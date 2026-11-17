@@ -2031,6 +2031,13 @@ def main():
                 e["aktivny"] = False
 
     # --- duplicity medzi portálmi (rovnaký typ, okres, cena a plocha)
+    # inzeráty, s ktorými makléri pracujú (prevzaté, hovor, SMS, email) – tie sa nikdy nezlúčia do iného, inak by karta zmizla
+    pracovane = set()
+    if POUZI_DB:
+        try:
+            pracovane = set(_rpc("skener_pracovane", p_kluc=SKENER_KLUC) or [])
+        except Exception as ex:  # noqa – staršia databáza bez funkcie: zlúčime ako doteraz
+            log(f"! zoznam prevzatých inzerátov: {ex}")
     podla_kluca = {}
     podla_typu = {}   # (typ, okres) → zoznam pôvodných – na porovnanie, keď na jednom portáli chýba cena
     skupiny = {}
@@ -2050,6 +2057,8 @@ def main():
             kandidati = [x for x in podla_typu.get((e["typ"], e["okres"]), [])
                          if bool(x.get("cena")) != bool(e.get("cena")) and je_duplikat_bez_ceny(x, e)]
             povodny = kandidati[0] if len(kandidati) == 1 else None
+        if povodny and e["id"] in pracovane:
+            povodny = None   # maklér s ním pracuje – ostane samostatná karta
         if povodny:
             e["duplikat_z"] = povodny["id"]
             for p in e["portaly"]:

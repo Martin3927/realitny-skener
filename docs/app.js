@@ -1441,7 +1441,24 @@
         zacni(a.inzerat_id, komu, a.vytvorene);
       }
     });
-    S.histPrev = H;
+    S.histPrev = H; S.inzHistKluc = null;
+  }
+  // inzeráty z Histórie, ktoré nie sú v bežnom zozname (zmizli z portálu dávnejšie alebo ich skener spojil s iným inzerátom)
+  function doplnHistoriu(mid) {
+    var H = (S.histPrev || {})[mid] || {}, mam = {};
+    (S.inz || []).forEach(function (z) { mam[z.id] = 1; });
+    (S.inzHist || []).forEach(function (z) { mam[z.id] = 1; });
+    var chyba = Object.keys(H).filter(function (id) { return !mam[id]; });
+    var kluc = mid + ":" + chyba.length;
+    if (!chyba.length || S.inzHistKluc === kluc) return;
+    S.inzHistKluc = kluc;
+    var davky = []; for (var i = 0; i < chyba.length; i += 150) davky.push(chyba.slice(i, i + 150));
+    Promise.all(davky.map(function (d) { return sb.from("inzeraty").select("*").in("id", d).then(function (r) { if (r.error) throw r.error; return r.data; }); }))
+      .then(function (vys) {
+        var nove = [].concat.apply([], vys); nove.forEach(function (z) { z._t = textHladania(z); });
+        S.inzHist = (S.inzHist || []).concat(nove);
+        if (S.tab === "inzeraty" && S.f.praca === "historia") vykresliZoznam();
+      }).catch(function () { S.inzHistKluc = null; });
   }
   // čo vidí maklér pri inzeráte v Histórii: odkedy dokedy ho mal a prečo ho už nemá
   function historiaPrevzatiaRiadok(z) {
@@ -1454,9 +1471,10 @@
       x.dovod === "uvolnil-iny" ? "↩️ uvoľnil ho " + esc(meno(x.kto)) :
       x.dovod === "presun" ? "🔀 presunutý na " + (x.kto ? esc(meno(x.kto)) : "voľný") : "🙋 prevzal ho " + esc(meno(x.kto));
     var teraz = !maj ? '<b class="hp-volny">teraz voľný – môžeš ho prevziať znova</b>' : maj === mid ? "" : "teraz ho má " + esc(meno(maj));
-    if (!x.do && maj === mid) return '<div class="hp-riadok">🕘 ' + (ty ? "Máš ho" : "Má ho") + " od " + datum(x.od) + "</div>";
+    var spojeny = z.duplikat_z ? " · skener ho spojil s iným inzerátom toho istého bytu" : "";
+    if (!x.do && maj === mid) return '<div class="hp-riadok">🕘 ' + (ty ? "Máš ho" : "Má ho") + " od " + datum(x.od) + spojeny + "</div>";
     return '<div class="hp-riadok' + (x.dovod === "vyprsalo" ? " hp-vyprsalo" : "") + '">🕘 ' + (ty ? "Mal si ho" : "Mal ho") + " od " + datum(x.od) +
-      (x.do ? " do " + datum(x.do, true) : "") + (dovod ? " · " + dovod : "") + (teraz ? " · " + teraz : "") + "</div>";
+      (x.do ? " do " + datum(x.do, true) : "") + (dovod ? " · " + dovod : "") + (teraz ? " · " + teraz : "") + spojeny + "</div>";
   }
   async function nacitajPrevzatia() {
     var rows = await vsetkyRiadky("prevzatia", "*", "inzerat_id");
@@ -2368,7 +2386,8 @@
   function filtruj() {
     var f = S.f, q = norm(f.q).trim(), qd = /\d/.test(q) ? telCifry(q) : "", nv = f.novost || "", lim = /^\d+$/.test(nv) ? Date.now() - Number(nv) * 864e5 : 0, me = S.me.id;
     var vekDo = nv.charAt(0) === "p" ? Number(nv.slice(1)) : 0, vekNad = nv.charAt(0) === "s" ? Number(nv.slice(1)) : 0;
-    var zaklad = f.praca === "historia" ? S.inz : viditelne(), pocty = {};
+    if (f.praca === "historia") doplnHistoriu(f.kto || me);
+    var zaklad = f.praca === "historia" ? S.inz.concat((S.inzHist || []).filter(function (z) { return !S.inz.some(function (x) { return x.id === z.id; }); })) : viditelne(), pocty = {};
     var hist = (S.histPrev || {})[f.kto || me] || {};
     if (S.jedenId) return { out: S.inz.filter(function (z) { return z.id === S.jedenId; }), pocty: pocty };
     function pridaj(k) { pocty[k] = (pocty[k] || 0) + 1; }
