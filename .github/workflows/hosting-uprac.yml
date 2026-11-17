@@ -1,0 +1,35 @@
+name: Hosting – zmazať skúšobné zálohy (jednorazovo)
+
+# Jednorazovo 17. 11. 2026 so súhlasom používateľa: zmaže skúšobné a zlyhané zálohy určené na zmazanie už 3. 11. 2026 (zaloha.md).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  uprac:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Zmazať
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_HESLO: ${{ secrets.FTP_HESLO }}
+        run: |
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq lftp >/dev/null
+          Z=/realitnytypek.sk/zalohy
+          lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "
+            set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30;
+            rm $Z/subory/typek-subory-2026-11-02-2153.tar;
+            rm $Z/subory/typek-subory-2026-11-02-2202.tar;
+            rm $Z/databaza/typek-databaza-2026-11-03-1747-rucna.tar.gz;
+            rm $Z/databaza/typek-databaza-2026-11-03-1752-rucna.tar.gz;
+            rm $Z/databaza/typek-databaza-2026-11-03-1756-rucna.tar.gz;
+            rm $Z/databaza/typek-databaza-2026-11-02-2143-skuska.tar.gz;
+            rm $Z/databaza/typek-databaza-2026-11-02-2147-skuska.tar.gz;
+            rm $Z/databaza/typek-databaza-2026-11-02-2153-skuska.tar.gz;
+            rm $Z/databaza/typek-databaza-2026-11-02-2202-skuska.tar.gz;
+            du -h --max-depth=1 $Z;
+            bye" 2>&1 | grep -v '^$'
