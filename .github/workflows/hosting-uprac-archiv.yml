@@ -1,0 +1,61 @@
+name: Hosting – uvoľniť kópiu archívu skenera
+
+# Jednorazovo, spúšťa sa ručne (so súhlasom používateľa 17. 11. 2026).
+# Na hostingu je čiastočná KÓPIA archívu fotiek skenera (zalohy/archiv). Originál je v Supabase (priečinok „archiv“),
+# z ktorého sa fotky nikdy nemažú. Zmaže sa len fotka, ktorá je v Supabase s rovnakou veľkosťou – ostatné ostanú.
+# Zálohy databázy, súborov a kódu sa nemenia.
+on:
+  workflow_dispatch:
+    inputs:
+      naozaj:
+        description: "Naozaj mazať (inak len skúška – vypíše, čo by zmazal)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  uprac:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      FTP_SERVER: ${{ secrets.FTP_SERVER }}
+      FTP_USER: ${{ secrets.FTP_USER }}
+      FTP_HESLO: ${{ secrets.FTP_HESLO }}
+      DIR: ${{ vars.FTP_DIR_ZALOHY || '/realitnytypek.sk/zalohy' }}
+      NAOZAJ: ${{ inputs.naozaj }}
+      SB: https://uwxziqapghlyktwpipjd.supabase.co/storage/v1/object/public/archiv
+    steps:
+      - name: Overiť a uvoľniť
+        run: |
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq lftp >/dev/null
+          cd "$RUNNER_TEMP"
+          echo "set sftp:auto-confirm yes; set net:max-retries 3; set net:timeout 30" > ftp.lftp
+          ftp() { lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; $1 bye"; }
+          ftp "find -l $DIR/archiv/;" 2>/dev/null | awk '$1 ~ /^-/ {print $3 "\t" $NF}' > hosting.tsv || true
+          echo "Na hostingu v archiv/: $(wc -l < hosting.tsv) fotiek, $(awk '{s+=$1} END {printf "%.0f", s/1048576}' hosting.tsv) MB"
+          [ -s hosting.tsv ] || { echo "Nič na upratanie."; exit 0; }
+          # porovnanie s originálom v Supabase (veľkosť z hlavičky Content-Length)
+          over() {
+            s=$1; p=$2; rel=${p#"$DIR/archiv/"}
+            n=$(curl -sfI --retry 3 "$SB/$rel" | tr -d '\r' | awk 'tolower($1)=="content-length:" {print $2}' | tail -1)
+            if [ -n "$n" ] && [ "$n" = "$s" ]; then echo "OK	$p"; else echo "CHYBA	$p	$s	${n:-nie je}"; fi
+          }
+          export -f over; export SB DIR
+          tr '\t' ' ' < hosting.tsv | xargs -P 16 -n 2 bash -c 'over "$0" "$1"' > vysledok.tsv
+          ok=$(grep -c '^OK' vysledok.tsv || true); zle=$(grep -c '^CHYBA' vysledok.tsv || true)
+          echo "V Supabase overených (rovnaká veľkosť): $ok · neoverených (ostanú na hostingu): $zle"
+          grep '^CHYBA' vysledok.tsv | head -20 | cut -f2- | sed "s#$DIR/##" || true
+          if [ "$NAOZAJ" != "true" ]; then echo "Skúška – nič som nemazal."; exit 0; fi
+          grep '^OK' vysledok.tsv | cut -f2 | sed 's#^#rm #; s#$#;#' > zmaz.lftp
+          split -l 400 zmaz.lftp kus-
+          for k in kus-*; do ftp "$(tr '\n' ' ' < $k)" >/dev/null 2>&1 || true; done
+          # prázdne priečinky preč (rmdir zlyhá na neprázdnom – to je v poriadku)
+          ftp "find $DIR/archiv/;" 2>/dev/null | grep '/$' | sort -r | sed 's#^#rmdir #; s#$#;#' > rmdir.lftp || true
+          [ -s rmdir.lftp ] && ftp "$(tr '\n' ' ' < rmdir.lftp)" >/dev/null 2>&1 || true
+          zost=$(ftp "find -l $DIR/archiv/;" 2>/dev/null | awk '$1 ~ /^-/' | wc -l || true)
+          echo "Na hostingu v archiv/ ostalo: $zost fotiek"
+          # zoznam archívu by po zmazaní nesedel – preč, ak tam je
+          ftp "rm -f $DIR/archiv-zoznam.tsv;" >/dev/null 2>&1 || true
+          ftp "du -h --max-depth=1 $DIR; du -sh /realitnytypek.sk;" 2>&1 | sed "s#$DIR#zalohy#"
