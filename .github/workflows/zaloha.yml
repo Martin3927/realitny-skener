@@ -408,7 +408,13 @@ jobs:
                   for c in [x.strip().strip('"') for x in m.group(3).split(",")]:
                       print(f'alter table if exists "{m.group(1)}"."{m.group(2)}" add column if not exists "{c}" text;')
           PY
-          psql "$DB" -q -o /dev/null -f doplnit.sql 2>/dev/null || true
+          if [ -s doplnit.sql ]; then
+            # tabuľky auth a storage vlastnia systémové roly – meniť ich smie správca (lokálne heslo skúšobnej inštancie)
+            psql "postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres" -q -o /dev/null -v ON_ERROR_STOP=1 -f doplnit.sql 2> doplnit.err \
+              || { echo "Doplnenie stĺpcov ako supabase_admin nevyšlo:"; grep -E "ERROR|FATAL" doplnit.err | head -3 | cut -c1-200;
+                   (echo "set role supabase_auth_admin;"; grep '"auth"' doplnit.sql; echo "reset role; set role supabase_storage_admin;"; grep '"storage"' doplnit.sql) \
+                     | psql "$DB" -q -o /dev/null 2>&1 | grep -E "ERROR" | head -3 | cut -c1-200 || true; }
+          fi
           if ! psql "$DB" --single-transaction -v ON_ERROR_STOP=1 -q -o /dev/null \
                 -f "$z/roles.sql" -f "$z/schema.sql" -c 'SET session_replication_role = replica' -f "$z/data.sql" 2> obnova.err; then
             echo "::error::Obnova zlyhala:"
