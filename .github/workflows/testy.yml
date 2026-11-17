@@ -1,0 +1,49 @@
+name: Testy
+
+# Automatické testy: čistá databáza zo všetkých migrácií + testovacie dáta, potom testy databázy a rozhrania
+# (prehliadač na počítači aj v mobile). Bežia pri každej zmene aplikácie, databázy alebo testov.
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", "supabase/migrations/**", "testy/**", ".github/workflows/testy.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testy
+  cancel-in-progress: true
+
+jobs:
+  testy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PostgreSQL, PostgREST a prehliadač
+        run: |
+          sudo apt-get update -qq >/dev/null
+          sudo apt-get install -y -qq postgresql postgresql-contrib >/dev/null
+          curl -sSL https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz \
+            | sudo tar -xJ -C /usr/local/bin
+          postgrest --version
+          pip install -q playwright
+          python3 -m playwright install --with-deps chromium >/dev/null
+
+      - name: Spustiť testy
+        env:
+          TYPEK_SNIMKY: ${{ runner.temp }}/snimky/
+        run: |
+          bash testy/prostredie/spusti.sh
+          bash testy/spusti_testy.sh
+
+      - name: Snímky obrazovky (pri chybe)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testy-snimky
+          path: ${{ runner.temp }}/snimky/
+          retention-days: 7
+          if-no-files-found: ignore

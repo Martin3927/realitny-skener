@@ -149,3 +149,17 @@ jobs:
             mirror -R --verbose=1 --overwrite --parallel=4 build/app/ $DIR_APP;
             mirror -R --verbose=1 --overwrite --parallel=4 build/web/ $DIR_WEB;
             bye"
+
+      - name: Hlásenie strážcovi prevádzky
+        if: always()
+        env:
+          SKENER_KLUC: ${{ secrets.SKENER_KLUC }}
+          SB_URL: https://uwxziqapghlyktwpipjd.supabase.co
+          SB_KEY: sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf
+          STAV: ${{ job.status }}
+        run: |
+          [ -n "$SKENER_KLUC" ] || { echo "Bez SKENER_KLUC – strážcovi nehlásim."; exit 0; }
+          hl() { curl -s -o /dev/null -w "hlásenie $2: %{http_code}\n" -X POST "$SB_URL/rest/v1/rpc/prevadzka_hlasenie" \
+                   -H "apikey: $SB_KEY" -H "Content-Type: application/json" \
+                   -d "$(jq -nc --arg k "$SKENER_KLUC" --arg d "$2" --argjson ok "$1" --arg t "$3" '{p_kluc:$k,p_druh:$d,p_ok:$ok,p_text:$t}')" || true; }
+          hl "$([ "$STAV" = success ] && echo true || echo false)" nasadenie "Nasadenie aplikácie zlyhalo – beží predchádzajúca verzia. Pozri GitHub Actions → Nasadenie."

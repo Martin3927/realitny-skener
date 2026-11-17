@@ -18,7 +18,7 @@
     "Záujem – stretnutie dohodnuté": "won", "Získaný do ponuky": "won",
     "Nemá záujem o RK": "lost", "Predáva cez inú RK": "lost", "Už predané": "lost",
   };
-  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️", udalost: "📅", web: "🌐", volat: "📞", zakaznik: "🆕" };
+  var DRUH_IKONA = { pripomienka: "🔔", uvolnenie: "🔓", cena: "📉", zmluva: "📝", zhoda: "🎯", obhliadka: "🗝️", udalost: "📅", web: "🌐", volat: "📞", zakaznik: "🆕", navrat: "🔁" };
   // výsledky hovoru, pri ktorých sa inzerát automaticky neuvoľní
   var CHRANENE_VYSLEDKY = ["Záujem – stretnutie dohodnuté", "Získaný do ponuky"];
   var SMS_ZAKLAD = "Dobrý deň, volám sa {makler} z realitnej kancelárie Alpha Reality. {Všimol|Všimla} som si Váš inzerát – {nehnutelnost}, {lokalita}. " +
@@ -2228,10 +2228,11 @@
   }
 
   // ------------------------------------------------------------ INZERÁTY
-  var F_ZAKLAD = { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", kto: "", stav: "aktivne" };
+  var F_ZAKLAD = { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, sort: "novy", kto: "", stav: "aktivne", okolie: "" };
   function pohladyVsetky() {
     var v = [];
     if ((S.me.obce || []).length) v.push({ n: "📍 Moje obce · súkromní · voľní", f: { okres: "moje", predajca: "sukr", praca: "volne" } });
+    v.push({ n: "🧭 Voľní súkromníci okolo mňa", f: { okolie: "10", predajca: "sukr", praca: "volne" } });
     v.push({ n: "🙋 Moje", f: { praca: "moje" } });
     v.push({ n: "🆕 Súkromní za 24 h", f: { predajca: "sukr", novost: "1" } });
     v.push({ n: "🕰️ Voľní súkromní – najdlhšie na portáli", f: { predajca: "sukr", praca: "volne", sort: "stare" } });
@@ -2327,6 +2328,8 @@
       ((S.okresy || []).length > 1 ? S.okresy.map(function (o) { return '<option value="o:' + esc(o) + '">Okres ' + esc(o) + "</option>"; }).join("") : "") +
       ((S.me.obce || []).length ? '<option value="moje">📍 Moje obce (' + S.me.obce.length + ")</option>" : "") +
       '<optgroup label="Obec">' + S.obce.map(function (o) { return '<option value="' + esc(o[0]) + '">' + esc(o[0]) + " (" + o[1] + ")</option>"; }).join("") + "</optgroup></select>" +
+      '<select id="f-okolie" aria-label="Okolo mňa"><option value="">🧭 Kdekoľvek</option><option value="3">🧭 Do 3 km odo mňa</option><option value="5">🧭 Do 5 km odo mňa</option>' +
+        '<option value="10">🧭 Do 10 km odo mňa</option><option value="20">🧭 Do 20 km odo mňa</option><option value="50">🧭 Do 50 km odo mňa</option></select>' +
       '<select id="f-stav" aria-label="Stav inzerátu"><option value="aktivne">Aktívne na portáloch</option><option value="zmiznute">Zmiznuté z portálov (archív)</option><option value="vsetky">Aktívne aj zmiznuté</option></select>' +
       '<select id="f-novost" aria-label="Vek inzerátu"><option value="">Kedykoľvek zverejnené</option>' +
       '<optgroup label="Nové v skeneri"><option value="1">Nové za 24 h</option><option value="3">Nové za 3 dni</option><option value="7">Nové za 7 dní</option></optgroup>' +
@@ -2358,6 +2361,8 @@
     $("#q").addEventListener("input", function () { var v = this.value; clearTimeout(S.qT); S.qT = setTimeout(function () { zrusJeden(); f.q = v; S.shown = 100; vykresliZoznam(); }, 150); });
     $("#f-vymaz").onclick = vymazFilter;
     $("#f-okres").onchange = function () { zrusJeden(); f.okres = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
+    $("#f-okolie").value = f.okolie || ""; if ($("#f-okolie").value !== (f.okolie || "")) f.okolie = "";
+    $("#f-okolie").onchange = function () { zrusJeden(); f.okolie = this.value; S.shown = 100; if (f.okolie) S.polohaChyba = null; ulozFiltre(); vykresliZoznam(); };
     $("#f-novost").onchange = function () { zrusJeden(); f.novost = this.value; S.shown = 100; ulozFiltre(); vykresliZoznam(); };
     $("#f-stav").onchange = function () { zrusJeden(); f.stav = this.value; S.shown = 100; ulozFiltre(); vykresliStaty(); vykresliZoznam(); };
     $("#f-sort").onchange = function () { f.sort = this.value; ulozFiltre(); vykresliZoznam(); };
@@ -2368,7 +2373,7 @@
   function pocetFiltrov() {
     var f = S.f;
     return [f.q, f.predajca && f.predajca !== "vsetci", f.typ, f.okres, f.novost, f.praca && f.praca !== "vsetky", f.under, f.kto,
-      f.stav && f.stav !== "aktivne", S.jedenId].filter(Boolean).length;
+      f.stav && f.stav !== "aktivne", f.okolie, S.jedenId].filter(Boolean).length;
   }
   function stavVymazania() {
     var b = $("#f-vymaz"); if (!b) return;
@@ -2379,7 +2384,7 @@
   }
   function vymazFilter() {
     clearTimeout(S.qT); zrusJeden();
-    Object.assign(S.f, { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, kto: "", stav: "aktivne" });
+    Object.assign(S.f, { q: "", predajca: "vsetci", typ: "", okres: "", novost: "", praca: "vsetky", under: false, kto: "", stav: "aktivne", okolie: "" });
     S.shown = 100; ulozFiltre(); vykresliFiltreInz(); vykresliStaty(); vykresliZoznam();
     toast("Filtre sú vymazané – zobrazujem všetky aktívne inzeráty.");
   }
@@ -2483,12 +2488,85 @@
       datum(od) + " (" + kolko + ")</span>";
   }
   function dniNaPortali(z) { return Math.floor((Date.now() - zverejnene(z)) / 864e5); }
+  // ---------- okolo mňa: poloha telefónu, vzdialenosť k inzerátu (presná adresa, inak stred obce)
+  function obecGps() {
+    if (S.obecGps || !window.LOKALITY) return S.obecGps || null;
+    var m = {};
+    window.LOKALITY.forEach(function (l) { if (l[3] && l[4]) { m[l[0] + "|" + l[1]] = [l[3], l[4]]; if (!m[l[0]]) m[l[0]] = [l[3], l[4]]; } });
+    return (S.obecGps = m);
+  }
+  function suradnice(z) {
+    if (z.lat && z.lon) return [Number(z.lat), Number(z.lon), true];
+    var m = obecGps(); if (!m || !z.obec) return null;
+    var c = m[z.obec + "|" + z.okres] || m[z.obec];
+    return c ? [c[0], c[1], false] : null;
+  }
+  function kmOdo(z) {
+    var c = suradnice(z), p = S.poloha; if (!c || !p) return null;
+    var r = Math.PI / 180, dLa = (c[0] - p.lat) * r, dLo = (c[1] - p.lon) * r;
+    var a = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(p.lat * r) * Math.cos(c[0] * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  function kmText(km) { return km < 1 ? "pod 1 km" : (km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)) + " km"; }
+  function zistiPolohu() {
+    if (S.polohaZistujem) return;
+    if (!navigator.geolocation) { S.polohaChyba = "Tento prehliadač nevie zistiť polohu."; return vykresliZoznam(); }
+    S.polohaZistujem = true;
+    Promise.all([nacitajLokality().catch(function () {}), new Promise(function (ok, zle) {
+      navigator.geolocation.getCurrentPosition(ok, zle, { enableHighAccuracy: false, timeout: 15000, maximumAge: 5 * 60e3 });
+    })]).then(function (v) {
+      var c = v[1].coords; S.poloha = { lat: c.latitude, lon: c.longitude, presnost: c.accuracy, cas: Date.now() }; S.polohaChyba = null;
+    }, function (e) {
+      S.polohaChyba = e && e.code === 1 ? "Prístup k polohe je zakázaný – povoľ ho v nastaveniach prehliadača pre túto stránku." : "Polohu sa nepodarilo zistiť – skús to o chvíľu znova (zapni GPS).";
+    }).then(function () { S.polohaZistujem = false; if (S.tab === "inzeraty") vykresliZoznam(); });
+  }
+  function okolieHtml(pocet) {
+    if (!S.f.okolie || S.jedenId) return "";
+    if (S.polohaChyba) return '<div class="sk-stav" role="status"><span>🧭 ' + esc(S.polohaChyba) + '</span><button class="btn" type="button" data-okolie="znova">Skúsiť znova</button></div>';
+    if (!S.poloha) return '<div class="sk-stav" role="status"><span>🧭 Zisťujem tvoju polohu…</span></div>';
+    return '<div class="okolie-bar"><span>🧭 <b>' + pocet + "</b> " + (pocet === 1 ? "inzerát" : pocet >= 2 && pocet <= 4 ? "inzeráty" : "inzerátov") + " do " + esc(S.f.okolie) + " km od teba" +
+      ' <small class="meta">· najbližšie hore · vzdialenosť podľa adresy, inak podľa stredu obce</small></span>' +
+      '<span class="okolie-akcie"><button class="btn ghost" type="button" data-okolie="obnov" title="Znova zistiť polohu">📍 Obnoviť polohu</button>' +
+      '<button class="btn" type="button" data-okolie="mapa" aria-expanded="' + !!S.okolieMapa + '">' + (S.okolieMapa ? "✕ Skryť mapu" : "🗺️ Na mape") + "</button></span></div>" +
+      (S.okolieMapa ? '<div id="okolie-mapa" class="okolie-mapa" role="region" aria-label="Mapa inzerátov okolo mňa"></div>' : "");
+  }
+  function kresliOkolieMapu(out) {
+    var el = $("#okolie-mapa"); if (!el || !S.poloha) return;
+    nacitajLeaflet().then(function () {
+      if (!document.body.contains(el)) return;
+      if (S.okolieL) { try { S.okolieL.remove(); } catch (e) { /* nevadí */ } }
+      var ja = [S.poloha.lat, S.poloha.lon], mapa = L.map(el, { scrollWheelZoom: false }).setView(ja, 12);
+      S.okolieL = mapa;
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(mapa);
+      L.circle(ja, { radius: Number(S.f.okolie) * 1000, color: "#c8a24a", weight: 1, fillOpacity: 0.04 }).addTo(mapa);
+      L.circleMarker(ja, { radius: 8, color: "#fff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }).addTo(mapa).bindTooltip("Tu si ty");
+      var body = [ja], podObec = {};
+      out.slice(0, 300).forEach(function (z) {
+        var c = suradnice(z); if (!c) return;
+        var k = c[0].toFixed(4) + "," + c[1].toFixed(4), posun = (podObec[k] = (podObec[k] || 0) + 1) - 1;
+        var ll = [c[0] + (c[2] ? 0 : Math.sin(posun * 2.4) * 0.0012 * Math.sqrt(posun)), c[1] + (c[2] ? 0 : Math.cos(posun * 2.4) * 0.0018 * Math.sqrt(posun))];
+        body.push(ll);
+        var maj = S.prev[z.id] && S.prev[z.id].makler_id;
+        L.circleMarker(ll, { radius: 7, color: "#fff", weight: 2, fillColor: maj ? "#9ca3af" : ptyp(z) === "rk" ? "#6b7280" : "#16a34a", fillOpacity: 0.95 }).addTo(mapa)
+          .bindPopup("<b>" + esc(z.nazov || "Inzerát") + "</b><br>" + (z.cena ? eur(z.cena) + " · " : "") + esc(z.obec || "") +
+            (z._km != null ? " · " + kmText(z._km) : "") + (c[2] ? "" : '<br><small>poloha podľa stredu obce</small>') +
+            '<br><a href="#inzeraty/' + encodeURIComponent(z.id) + '">Otvoriť kartu ›</a>');
+      });
+      if (body.length > 1) mapa.fitBounds(body, { padding: [24, 24], maxZoom: 14 });
+    }, function () { el.innerHTML = '<div class="meta">Mapa nie je dostupná.</div>'; });
+  }
+  function okolieRiadok(z) {
+    if (!S.f.okolie || !S.poloha || z._km == null) return "";
+    var c = suradnice(z);
+    return '<div class="okolie-km">🧭 ' + kmText(z._km) + " od teba" + (c && !c[2] ? ' <small class="meta">(stred obce ' + esc(z.obec) + ")</small>" : "") + "</div>";
+  }
   function filtruj() {
     var f = S.f, q = norm(f.q).trim(), qd = /\d/.test(q) ? telCifry(q) : "", nv = f.novost || "", lim = /^\d+$/.test(nv) ? Date.now() - Number(nv) * 864e5 : 0, me = S.me.id;
     var vekDo = nv.charAt(0) === "p" ? Number(nv.slice(1)) : 0, vekNad = nv.charAt(0) === "s" ? Number(nv.slice(1)) : 0;
     if (f.praca === "historia") doplnHistoriu(f.kto || me);
     var zaklad = f.praca === "historia" ? S.inz.concat((S.inzHist || []).filter(function (z) { return !S.inz.some(function (x) { return x.id === z.id; }); })) : viditelne(), pocty = {};
     var hist = (S.histPrev || {})[f.kto || me] || {};
+    var okm = f.okolie && S.poloha ? Number(f.okolie) : 0;
     if (S.jedenId) return { out: S.inz.filter(function (z) { return z.id === S.jedenId; }), pocty: pocty };
     function pridaj(k) { pocty[k] = (pocty[k] || 0) + 1; }
     var out = zaklad.filter(function (z) {
@@ -2502,12 +2580,14 @@
         (!lim || novyCas(z) >= lim) &&
         (!vekDo || dniNaPortali(z) <= vekDo) && (!vekNad || dniNaPortali(z) > vekNad) &&
         (!f.under || (S.odh[z.id] && S.odh[z.id].podhodnotene)) &&
+        (!okm || ((z._km = kmOdo(z)) != null && z._km <= okm)) &&
         (!q || z._t.indexOf(q) >= 0 || (qd.length >= 4 && S.tel[z.id] && telCifry(S.tel[z.id].telefon).indexOf(qd) >= 0));
       if (okIne && okPr) { pridaj("predajca:vsetci"); pridaj(pt !== "rk" ? "predajca:sukr" : "predajca:rk"); }
       if (okIne && okP) { if (!maj) pridaj("praca:volne"); if (maj === me) pridaj("praca:moje"); if (maj) pridaj("praca:prevzate"); if (hist[z.id]) pridaj("praca:historia"); }
       return okP && okPr && okIne;
     });
     var s = f.sort;
+    if (okm) return { out: out.sort(function (a, b) { return a._km - b._km || novyCas(b) - novyCas(a); }), pocty: pocty };
     out.sort(function (a, b) {
       if (s === "under") return ((S.odh[a.id] || {}).rozdiel_pct ?? 999) - ((S.odh[b.id] || {}).rozdiel_pct ?? 999);
       if (s === "cena") return (a.cena || 9e12) - (b.cena || 9e12);
@@ -2580,7 +2660,7 @@
     if (S.jedenId || S.f.praca === "historia" || !S.me) return "";
     var moje = S.inz.filter(function (z) { var p = S.prev[z.id]; return p && p.makler_id === S.me.id; });
     var koniec = new Date(); koniec.setHours(23, 59, 59, 999);
-    var prip = mojeAktivne().filter(function (x) { return x.inzerat_id && new Date(x.cas) <= koniec && ["pripomienka", "volat", "uvolnenie"].indexOf(x.druh || "pripomienka") >= 0; });
+    var prip = mojeAktivne().filter(function (x) { return x.inzerat_id && new Date(x.cas) <= koniec && ["pripomienka", "volat", "uvolnenie", "cena", "navrat"].indexOf(x.druh || "pripomienka") >= 0; });
     if (!moje.length && !prip.length) return "";
     var s = moje.map(function (z) { return { z: z, c: casUvolnenia(z) }; }).sort(function (a, b) { return (a.c ? a.c.getTime() : 9e15) - (b.c ? b.c.getTime() : 9e15); });
     var najskor = s.length && s[0].c ? s[0].c : null;
@@ -2595,7 +2675,7 @@
         var z = S.inz.find(function (i) { return i.id === x.inzerat_id; }), po = new Date(x.cas) <= new Date();
         return '<li><a href="#inzeraty/' + encodeURIComponent(x.inzerat_id) + '"><span class="' + (po ? "due" : "ok") + '">' + (DRUH_IKONA[x.druh] || "🔔") + " " +
           new Date(x.cas).toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" }) + "</span> " +
-          (x.druh === "volat" ? "<b>Skús znova zavolať</b> – " : "") + (z ? nazov(z) : esc((x.poznamka || "Pripomienka").slice(0, 70))) + "</a></li>";
+          (x.druh === "volat" ? "<b>Skús znova zavolať</b> – " : x.druh === "cena" ? "<b>Zlacnel</b> – " : x.druh === "navrat" ? "<b>Predajca sa vrátil</b> – " : "") + (z ? nazov(z) : esc((x.poznamka || "Pripomienka").slice(0, 70))) + "</a></li>";
       }).join("") + (prip.length > 8 ? '<li class="meta">+ ďalšie ' + (prip.length - 8) + " v zvončeku</li>" : "") + "</ul></div>";
     }
     if (s.length) {
@@ -2612,9 +2692,10 @@
     oznacStaty();
     var el = $("#obsah"); if (!el) return;
     if (!S.jedenId && pozera()) inzeratyVidene();
+    if (S.f.okolie && !S.poloha && !S.polohaChyba && !S.jedenId) zistiPolohu();
     var r = filtruj(), out = r.out;
     document.querySelectorAll("[data-n]").forEach(function (n) { n.textContent = nf.format(r.pocty[n.dataset.n] || 0); });
-    var h = bannerSkenera() + mojaPracaHtml() + (S.jedenId ? '<div class="note" style="margin-bottom:10px">Zobrazený je jeden inzerát. <button class="btn" type="button" id="vsetky-inz">Zobraziť všetky inzeráty</button></div>' : "");
+    var h = bannerSkenera() + mojaPracaHtml() + okolieHtml(out.length) + (S.jedenId ? '<div class="note" style="margin-bottom:10px">Zobrazený je jeden inzerát. <button class="btn" type="button" id="vsetky-inz">Zobraziť všetky inzeráty</button></div>' : "");
     h += '<div class="bar"><span>' + nf.format(out.length) + (out.length === 1 ? " inzerát" : out.length > 1 && out.length < 5 ? " inzeráty" : " inzerátov") + "</span>" +
       (S.canUnder ? "<span>Porovnanie: cena/m² oproti mediánu podobných aktuálnych ponúk</span>" : "") + "</div>";
     h += out.length ? '<div class="list" id="list">' + out.slice(0, S.shown).map(karta).join("") + "</div>" :
@@ -2628,6 +2709,14 @@
     if (mp) mp.addEventListener("toggle", function () { try { localStorage.setItem("typek-mp-zbalene", mp.open ? "0" : "1"); } catch (e) { /* nevadí */ } });
     var mpm = el.querySelector("[data-mp-moje]"); if (mpm) mpm.onclick = function () { predvolba("moje"); };
     napojBannerSkenera(el);
+    el.querySelectorAll("[data-okolie]").forEach(function (b) {
+      b.onclick = function () {
+        var a = b.dataset.okolie;
+        if (a === "mapa") { S.okolieMapa = !S.okolieMapa; return vykresliZoznam(); }
+        S.poloha = null; S.polohaChyba = null; zistiPolohu(); vykresliZoznam();
+      };
+    });
+    if (S.okolieMapa && S.f.okolie && S.poloha && !S.jedenId) kresliOkolieMapu(out);
     if ($("#more")) $("#more").onclick = function () { S.shown += 100; vykresliZoznam(); };
     if ($("#vsetky-inz")) $("#vsetky-inz").onclick = function () { S.jedenId = null; history.replaceState({ tab: "inzeraty" }, "", "#inzeraty"); vykresliZoznam(); };
   }
@@ -2748,7 +2837,7 @@
       '<a class="title" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(z.nazov) + "</a>" +
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
       (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + naPortaliOd(z) + "</div>" +
-      historiaPrevzatiaRiadok(z) + telRiadok(z) + predRiadok(z) + suvRiadok(z) + aiRiadok(z) +
+      historiaPrevzatiaRiadok(z) + okolieRiadok(z) + telRiadok(z) + predRiadok(z) + suvRiadok(z) + aiRiadok(z) +
       '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") +
       (obnovenyNedavno(z) ? '<span class="pill new" title="Predajca inzerát zverejnil znova – oplatí sa ozvať">🔁 Znova zverejnený ' + datum(z.obnovene) + "</span>" : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
       '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : (!ozn && z.predajca_typ !== "rk" && aiRk(z) ? "Skener: " + (z.predajca_dovod || "") + " · AI: realitka" : z.predajca_dovod || "")) + '">' + pr[0] + (!ozn && z.predajca_typ !== "rk" && aiRk(z) ? " podľa AI" : "") + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
