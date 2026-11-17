@@ -1087,11 +1087,17 @@ def norm_reality(r):
     m = re.search(r"\|\s*([\d \.,]+)\s*m", unescape(r["params"]))
     if m:
         plocha = cislo(m.group(1))
+    if r["rk"]:
+        ptyp, dovod = "rk", "portál: logo RK"
+    else:
+        # chýbajúce logo RK nie je dôkaz súkromníka – na Reality.sk inzerujú bez loga aj realitky a developeri
+        druh, d = klasifikuj_text(r["nazov"])
+        ptyp, dovod = "asi_sukromny", "portál: bez loga RK" + (f" (ale {d})" if druh in ("rk", "slabe") else "")
     return zaznam(
         id=f"un:{r['pid']}", portal="reality", portaly=["reality"], url=r["url"], nazov=r["nazov"], typ=typ,
         cena=cena_z_textu(r["cena_txt"]), plocha=plocha, obec=obec, okres=r["okres"],
-        predajca=r["rk"], predajca_typ="rk" if r["rk"] else "sukromny",
-        predajca_dovod="portál: logo RK" if r["rk"] else "portál: bez RK", foto=r["foto"],
+        predajca=r["rk"], predajca_typ=ptyp,
+        predajca_dovod=dovod, foto=r["foto"],
         izby=izby_z_textu(r["params"]) if typ == "byt" else None,
     )
 

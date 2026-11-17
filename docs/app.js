@@ -1608,7 +1608,10 @@
     });
   }, 1000);
   // typ predajcu: ručné označenie má prednosť pred odhadom skenera
-  function ptyp(z) { var o = S.ozn[z.id]; return o ? o.predajca_typ : z.predajca_typ; }
+  // AI si je takmer istá, že ide o realitku (napr. text menuje realitnú kanceláriu) – maklér to môže zrušiť „Nie je RK“
+  var AI_RK_ISTOTA = 88;
+  function aiRk(z) { var a = S.ai && S.ai[z.id]; return !!(a && a.verdikt === "rk" && Number(a.istota) >= AI_RK_ISTOTA); }
+  function ptyp(z) { var o = S.ozn[z.id]; return o ? o.predajca_typ : z.predajca_typ !== "rk" && aiRk(z) ? "rk" : z.predajca_typ; }
   async function nacitajSchrankovanie() {
     var w = await Promise.all([vsetkyRiadky("schrankovanie", "*", "id"),
       vsetkyRiadky("sidliska", "*", "id").catch(function () { return []; }), vsetkyRiadky("schrankovanie_akcie", "*", "id").catch(function () { return []; }),
@@ -2214,6 +2217,7 @@
     v.push({ n: "🙋 Moje", f: { praca: "moje" } });
     v.push({ n: "🆕 Súkromní za 24 h", f: { predajca: "sukr", novost: "1" } });
     v.push({ n: "🕰️ Voľní súkromní – najdlhšie na portáli", f: { predajca: "sukr", praca: "volne", sort: "stare" } });
+    (Array.isArray(S.timPohlady) ? S.timPohlady : []).forEach(function (x, i) { if (x && x.n && x.f) v.push({ n: x.n, f: x.f, tim: i }); });
     (Array.isArray(S.me.pohlady) ? S.me.pohlady : []).forEach(function (x, i) { if (x && x.n && x.f) v.push({ n: x.n, f: x.f, moj: i }); });
     return v;
   }
@@ -2223,8 +2227,9 @@
   }
   function pohladyHtml() {
     return '<div class="pohlady" role="group" aria-label="Uložené pohľady">' + pohladyVsetky().map(function (x, i) {
-      return '<span class="pohlad' + (x.moj != null ? " moj" : "") + '"><button type="button" data-pohlad="' + i + '" aria-pressed="' + pohladAktivny(x) + '">' + esc(x.n) + "</button>" +
-        (x.moj != null ? '<button type="button" class="pohlad-x" data-pohlad-zmaz="' + x.moj + '" aria-label="Zmazať pohľad ' + esc(x.n) + '" title="Zmazať pohľad">✕</button>' : "") + "</span>";
+      return '<span class="pohlad' + (x.moj != null ? " moj" : x.tim != null ? " tim" : "") + '"><button type="button" data-pohlad="' + i + '" aria-pressed="' + pohladAktivny(x) + '"' + (x.tim != null ? ' title="Tímový pohľad – vidia ho všetci v kancelárii"' : "") + ">" + esc(x.n) + "</button>" +
+        (x.moj != null ? '<button type="button" class="pohlad-x" data-pohlad-zmaz="' + x.moj + '" aria-label="Zmazať pohľad ' + esc(x.n) + '" title="Zmazať pohľad">✕</button>' : "") +
+        (x.tim != null && admin() ? '<button type="button" class="pohlad-x" data-pohlad-zmaz-tim="' + x.tim + '" aria-label="Zmazať tímový pohľad ' + esc(x.n) + '" title="Zmazať tímový pohľad (pre všetkých)">✕</button>' : "") + "</span>";
     }).join("") + '<button type="button" class="btn-link pohlad-uloz" data-pohlad-uloz>⭐ Uložiť tento filter</button></div>';
   }
   function oznacPohlady() {
@@ -2239,7 +2244,29 @@
     try { await rpc("ulozit_pohlady", { p: nove }); return true; }
     catch (e) { S.me.pohlady = stare; vykresliFiltreInz(); oznacPohlady(); toast(chybaText(e), true); return false; }
   }
+  async function nacitajTimovePohlady() {
+    try { S.timPohlady = await rpc("timove_pohlady", {}); } catch (e) { S.timPohlady = []; }
+    if (S.tab === "inzeraty" && $("#filters .pohlady")) { vykresliFiltreInz(); oznacPohlady(); }
+  }
   function klikPohlad(b) {
+    if (b.dataset.pohladZmazTim != null) {
+      var tp = (S.timPohlady || []).slice(), ti = Number(b.dataset.pohladZmazTim);
+      if (!tp[ti] || !confirm2("Zmazať tímový pohľad „" + tp[ti].n + "“ pre všetkých?")) return;
+      tp.splice(ti, 1);
+      rpc("ulozit_timove_pohlady", { p: tp }).then(function () { S.timPohlady = tp; vykresliFiltreInz(); oznacPohlady(); }).catch(function (e) { toast(chybaText(e), true); });
+      return;
+    }
+    if (b.dataset.pohladUloz != null && admin() && confirm2("Uložiť tento filter pre celý tím?\n\nOK – uvidia ho všetci makléri v kancelárii\nZrušiť – uložiť len pre teba")) {
+      var tim = (S.timPohlady || []).slice();
+      if (tim.length >= 12) return toast("Tímových pohľadov môže byť najviac 12.", true);
+      var nt = (window.prompt("Ako nazveš tímový pohľad? (napr. Domy Levoča do 150 000 €)", "") || "").trim();
+      if (!nt) return;
+      var ft = {}; Object.keys(F_ZAKLAD).forEach(function (k) { if (k !== "kto" && String(S.f[k]) !== String(F_ZAKLAD[k]) && S.f[k] != null) ft[k] = S.f[k]; });
+      tim.push({ n: "👥 " + nt.slice(0, 40), f: ft });
+      rpc("ulozit_timove_pohlady", { p: tim }).then(function () { S.timPohlady = tim; vykresliFiltreInz(); oznacPohlady(); toast("👥 Tímový pohľad je uložený – uvidia ho všetci makléri."); })
+        .catch(function (e) { toast(chybaText(e), true); });
+      return;
+    }
     if (b.dataset.pohladUloz != null) {
       var moje = Array.isArray(S.me.pohlady) ? S.me.pohlady.slice() : [];
       if (moje.length >= 12) return toast("Uložiť môžeš najviac 12 pohľadov – najprv nejaký zmaž (✕).", true);
@@ -2262,6 +2289,7 @@
   }
   function vykresliFiltreInz() {
     var f = S.f;
+    if (S.timPohlady === undefined) { S.timPohlady = null; nacitajTimovePohlady(); }
     function seg(id, polozky) {
       return '<div class="seg" data-seg="' + id + '" role="group">' + polozky.map(function (p) {
         return '<button type="button" data-v="' + p[0] + '" aria-pressed="' + (f[id] === p[0]) + '">' + p[1] +
@@ -2638,7 +2666,7 @@
     }).join("");
   }
   function aiRiadok(z) {
-    if (ptyp(z) === "rk" || !S.ai) return "";
+    if (!S.ai || (ptyp(z) === "rk" && !(aiRk(z) && !S.ozn[z.id]))) return "";
     var a = S.ai[z.id]; if (!a || !a.verdikt) return "";
     var v = a.verdikt === "rk" ? ["ai-rk", "AI: asi realitka"] : a.verdikt === "sukromny" ? ["ai-ok", "AI: súkromník"] : ["ai-na", "AI: nedá sa isto povedať"];
     return '<div class="ai-row ' + v[0] + '" title="Posúdila AI ' + esc(datum(a.skontrolovane, true)) + ' – len odporúčanie, rozhoduje maklér">🤖 <b>' + v[1] +
@@ -2705,7 +2733,7 @@
       historiaPrevzatiaRiadok(z) + telRiadok(z) + predRiadok(z) + suvRiadok(z) + aiRiadok(z) +
       '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") +
       (obnovenyNedavno(z) ? '<span class="pill new" title="Predajca inzerát zverejnil znova – oplatí sa ozvať">🔁 Znova zverejnený ' + datum(z.obnovene) + "</span>" : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
-      '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : z.predajca_dovod || "") + '">' + pr[0] + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
+      '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : (!ozn && z.predajca_typ !== "rk" && aiRk(z) ? "Skener: " + (z.predajca_dovod || "") + " · AI: realitka" : z.predajca_dovod || "")) + '">' + pr[0] + (!ozn && z.predajca_typ !== "rk" && aiRk(z) ? " podľa AI" : "") + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +
       (ozn ? '<span class="pill rk">Označil ' + esc(meno(ozn.oznacil)) + "</span>" : "") +
       (o && o.podhodnotene ? '<span class="pill priv">Pod cenou</span>' : "") +
       (znizena ? '<span class="pill priv">Znížená cena z ' + eur(hist[hist.length - 2][1]) + "</span>" : "") + "</div>" +
@@ -2730,7 +2758,8 @@
     if (!maj) h += '<button class="btn primary" type="button" data-act="prevziat">Prevziať</button>';
     var smsMozna = mozeUpravit && S.tel[z.id] && ptyp(z) !== "rk" && !(S.predInz && S.predInz[z.id] && S.predInz[z.id].nevolat);
     if (smsMozna) h += '<a class="btn sms-btn" href="' + esc(smsOdkaz(z)) + '" data-act="sms-posli">💬 Poslať SMS</a>';
-    if (mozeUpravit) h += '<button class="btn" type="button" data-act="hovor">Zapísať hovor</button>';
+    if (mozeUpravit) h += '<button class="btn" type="button" data-act="hovor">Zapísať hovor</button>' +
+      '<button class="btn" type="button" data-act="nedviha" title="Zapíše hovor s výsledkom Nedvíha – bez otvárania formulára">📵 Nedvíha</button>';
     if (uvol) h += '<button class="btn' + (uvol.getTime() - Date.now() < 3 * 3600e3 ? " riesim-hori" : "") + '" type="button" data-act="riesim" title="Predĺži prevzatie o 24 hodín – napíšte krátko, čo s inzerátom riešite">⏳ Ešte riešim</button>';
     var viac = "";
     if (mozeUpravit) {
@@ -2741,6 +2770,7 @@
     if (ptyp(z) !== "rk" && mozeUpravit && maSekciu("asistent")) viac += '<button class="btn ghost" type="button" data-act="ai-hovor" title="AI navrhne, ako začať prvý hovor a SMS predajcovi">✨ Návrh hovoru</button>';
     if (ptyp(z) !== "rk" && (moj || admin())) viac += '<button class="btn ghost" type="button" data-act="do-ponuky" title="Preniesť do Nehnuteľností – predvyplní formulár">➕ Do ponuky</button>';
     if (ozn && ozn.predajca_typ === "rk") viac += '<button class="btn ghost" type="button" data-act="oznac-zrus" title="Vrátiť rozpoznanie skenera">Nie je RK</button>';
+    else if (!ozn && z.predajca_typ !== "rk" && aiRk(z)) viac += '<button class="btn ghost" type="button" data-act="oznac-sukr" title="AI ho považuje za realitku – ak je to súkromník, vráť ho medzi súkromných">Nie je RK</button>';
     else if (ptyp(z) !== "rk") viac += '<button class="btn ghost" type="button" data-act="oznac-rk" title="Presunúť medzi realitné kancelárie – platí aj pre ďalšie inzeráty s rovnakým číslom">Je to RK</button>';
     viac += '<button class="btn ghost" type="button" data-act="detail">Detail</button>';
     viac += '<button class="btn ghost" type="button" data-act="hist">História</button>';
@@ -2887,6 +2917,15 @@
     if (!b || b.tagName === "SELECT") return;
     var id = b.closest(".card").dataset.id, act = b.dataset.act, p = S.prev[id];
     if (["zvon", "detail", "hovor", "hist", "tel", "ai-hovor", "riesim"].indexOf(act) >= 0 && S.open[id] !== act) animPanel();
+    if (act === "nedviha") {
+      b.disabled = true;
+      return akcia(id, async function () {
+        var vn = await rpc("zapisat_hovor", { p_inzerat: id, p_vysledok: "Nedvíha", p_poznamka: "" });
+        S.open[id] = null;
+        toast("📵 Zapísané: Nedvíha." + (vn && vn.volat_znova ? " " + textVolatZnova(vn.volat_znova) : ""));
+        nacitajPripomienky().then(popisZvoncek).catch(function () {});
+      });
+    }
     if (act === "viac") { S.viac = S.viac || {}; S.viac[id] = !S.viac[id]; return prekresliKartu(id); }
     if (act === "riesim") {
       S.open[id] = S.open[id] === "riesim" ? null : "riesim"; prekresliKartu(id);
@@ -2924,12 +2963,12 @@
       }
       return;
     }
-    if (act === "oznac-rk" || act === "oznac-zrus") {
+    if (act === "oznac-rk" || act === "oznac-zrus" || act === "oznac-sukr") {
       try {
         var kp = S.predInz && S.predInz[id], ine = kp ? kp.inzeraty.length - 1 : 0;
-        await rpc("oznacit_predajcu", { p_inzerat: id, p_typ: act === "oznac-rk" ? "rk" : null });
+        await rpc("oznacit_predajcu", { p_inzerat: id, p_typ: act === "oznac-rk" ? "rk" : act === "oznac-sukr" ? "sukromny" : null });
         await Promise.all([nacitajOznacenia(), nacitajPredajcov().catch(function () {})]);
-        toast(act === "oznac-rk" ? "Označené ako realitná kancelária – presunuté mimo súkromných" + (ine === 1 ? " aj s ďalším inzerátom s rovnakým číslom." : ine > 1 ? " aj s ďalšími " + ine + " inzerátmi s rovnakým číslom." : ".") : "Označenie zrušené.");
+        toast(act === "oznac-sukr" ? "Označené ako súkromník – vrátený medzi súkromných." : act === "oznac-rk" ? "Označené ako realitná kancelária – presunuté mimo súkromných" + (ine === 1 ? " aj s ďalším inzerátom s rovnakým číslom." : ine > 1 ? " aj s ďalšími " + ine + " inzerátmi s rovnakým číslom." : ".") : "Označenie zrušené.");
       } catch (err) { toast(chybaText(err), true); }
       vykresliStaty(); return vykresliZoznam();
     }
@@ -10482,7 +10521,7 @@
       }).join("") +
       '<tr class="spolu"><td><b>Spolu</b></td>' + stlpce.map(function (c) {
         return '<td class="num"><b>' + (c[0] === "uspech" ? riadky.reduce(function (a, m) { return a + uspech(m); }, 0) : sucet(c[0])) + "</b></td>";
-      }).join("") + "</tr></tbody></table></div>" + statistikyPonukHtml() + statistikyOdhadovHtml(r) + "</div>";
+      }).join("") + "</tr></tbody></table></div>" + drziaBezHovoruHtml() + statistikyPonukHtml() + statistikyOdhadovHtml(r) + "</div>";
     el.innerHTML = h;
     if (S.vykonAnim) { S.vykonAnim = false; animujCisla(el); var g = el.querySelector(".grafy"); if (g) g.classList.add("rast"); }
     napojVykon();
@@ -10645,6 +10684,39 @@
     });
     window.addEventListener("scroll", function () { if (tip && !tip.hidden) skry(); }, { passive: true });
   })();
+  // prevzaté inzeráty, ktoré niekto drží dlhšie ako 24 h bez jediného hovoru od prevzatia (cez pripomienku alebo „Ešte riešim“)
+  function drziaBezHovoru() {
+    var t = Date.now();
+    return Object.values(S.prev || {}).filter(function (p) {
+      if (!p.makler_id || !p.prevzate || t - new Date(p.prevzate).getTime() < 24 * 3600e3) return false;
+      return !p.posledny_hovor || new Date(p.posledny_hovor) < new Date(p.prevzate);
+    }).sort(function (a, b) { return String(a.prevzate).localeCompare(String(b.prevzate)); });
+  }
+  function drziaBezHovoruHtml() {
+    var d = drziaBezHovoru();
+    var h = '<h3 class="stat-nadpis">🐢 Držia inzeráty bez hovoru</h3><p class="meta">Prevzaté dlhšie ako 24 hodín a od prevzatia ani jeden hovor (držia sa cez pripomienku alebo „Ešte riešim“). Najdlhšie hore.</p>';
+    if (!d.length) return h + '<p class="meta">✅ Nikto nedrží inzerát bez hovoru.</p>';
+    return h + '<div class="tbl-wrap"><table class="tbl drzia-tbl"><thead><tr><th>Inzerát</th><th>Maklér</th><th>Drží od</th><th>Presunúť</th></tr></thead><tbody>' +
+      d.slice(0, 25).map(function (p) {
+        var z = (S.inz || []).find(function (x) { return x.id === p.inzerat_id; });
+        var dni = Math.floor((Date.now() - new Date(p.prevzate).getTime()) / 864e5);
+        return '<tr><td><a href="#inzeraty/' + encodeURIComponent(p.inzerat_id) + '">' + esc(z ? z.nazov : p.inzerat_id) + "</a>" + (z && z.obec ? ' <small class="meta">' + esc(z.obec) + "</small>" : "") + "</td>" +
+          '<td><span class="h-row">' + avatar(p.makler_id, 22) + "<span>" + esc(meno(p.makler_id)) + "</span></span></td>" +
+          '<td class="num' + (dni >= 3 ? " zle" : "") + '">' + datum(p.prevzate) + " <small class=\"meta\">(" + (dni < 1 ? "dnes" : dni === 1 ? "1 deň" : dni + (dni < 5 ? " dni" : " dní")) + ")</small></td>" +
+          '<td><select data-vykon-presun="' + esc(p.inzerat_id) + '" aria-label="Presunúť na makléra"><option value="">Presunúť na…</option><option value="__volny">— voľný —</option>' +
+          S.makleri.filter(function (m) { return m.aktivny && m.id !== p.makler_id; }).map(function (m) { return '<option value="' + m.id + '">' + esc(m.meno || m.email) + "</option>"; }).join("") + "</select></td></tr>";
+      }).join("") + "</tbody></table></div>" + (d.length > 25 ? '<p class="meta">+ ďalších ' + (d.length - 25) + "</p>" : "");
+  }
+  document.addEventListener("change", function (e) {
+    var s = e.target.closest("#obsah select[data-vykon-presun]");
+    if (!s || !s.value) return;
+    var id = s.dataset.vykonPresun, kam = s.value === "__volny" ? null : s.value;
+    s.disabled = true;
+    rpc("presunut", { p_inzerat: id, p_makler: kam }).then(async function () {
+      toast(kam ? "Presunuté na: " + meno(kam) : "Inzerát je voľný.");
+      await nacitajPrevzatia(); vykresliVykon();
+    }).catch(function (err) { toast(chybaText(err), true); s.disabled = false; });
+  });
   function napojVykon() {
     document.querySelectorAll("#obsah [data-obd]").forEach(function (b) {
       b.onclick = function () { S.vykonObd = b.dataset.obd; nacitajVykon(); };

@@ -2856,3 +2856,6 @@ html.bez-posuvu #toast { z-index: 210 }
 .vykon-sum div.dobre b { color: var(--good) }
 .moja-praca .mp-m { color: var(--muted); font-size: 12.5px; font-weight: 400 }
 .moja-praca summary .meta { display: inline }
+.pohlad.tim { border-color: var(--gold-strong) }
+.drzia-tbl td { vertical-align: middle }
+.drzia-tbl select { max-width: 180px }

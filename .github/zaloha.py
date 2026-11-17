@@ -116,8 +116,25 @@ def stiahni_verejne(ciel, zoznam=None, nove=None, cely=False):
     prirastkovo = nove is not None
     na_hostingu = nacitaj_zoznam(zoznam) if prirastkovo else {}
 
+    # na hosting ide len archív dôležitých inzerátov (prevzaté, volané, s SMS/emailom, označené, s telefónom,
+    # pripomienkou alebo prenesené do ponuky) – celý archív je v Supabase a hosting má len ~1 GB; export berie celý
+    dolezite = set()
+    if prirastkovo and not cely:
+        import re
+        for r in q("""select distinct x.id from (
+                        select inzerat_id as id from prevzatia
+                          where makler_id is not null or pocet_hovorov > 0 or sms is not null or email is not null
+                        union select inzerat_id from aktivity union select inzerat_id from oznacenia
+                        union select inzerat_id from telefony union select inzerat_id from pripomienky
+                        union select zdroj_inzerat from nehnutelnosti) x where x.id is not null"""):
+            dolezite.add(re.sub(r"[^a-zA-Z0-9_-]", "_", r["id"]))
+
     def je_nova(r):
-        return r["b"] == ARCHIV and (r["n"] not in na_hostingu or (r["s"] != -1 and na_hostingu[r["n"]] != r["s"]))
+        if r["b"] != ARCHIV:
+            return False
+        if prirastkovo and not cely and r["n"].split("/")[0] not in dolezite:
+            return False
+        return r["n"] not in na_hostingu or (r["s"] != -1 and na_hostingu[r["n"]] != r["s"])
 
     if prirastkovo and not cely:
         # z archívu len nové; ostatné priečinky celé (ponuky, weby – fotky sa v nich menia aj mažú)

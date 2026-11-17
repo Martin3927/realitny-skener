@@ -274,27 +274,38 @@ jobs:
         if: env.PRESKOCIT != '1' && env.NA_WEBSUPPORT == '1'
         run: |
           cd "$RUNNER_TEMP"
-          # najprv uvoľniť miesto pre novú zálohu – pri plnom hostingu by sa nová nezmestila a staré by sa nikdy nezmazali
-          for d in databaza:$PONECHAT_DB ${SUB_SUBOR:+subory:$PONECHAT_SUBORY} ${KOD_SUBOR:+kod:$PONECHAT_KOD}; do
-            p=${d%%:*}; n=$(( ${d##*:} - 1 ))
-            lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls -1 $DIR/$p/; bye" 2>/dev/null \
-              | xargs -r -n1 basename | grep '^typek-' | sort | head -n -"$n" > stare-pred.txt || true
-            if [ -s stare-pred.txt ]; then
-              echo "Pred nahratím mažem $(wc -l < stare-pred.txt) najstarších záloh v $p"
-              lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; $(sed "s#^#rm $DIR/$p/#; s#\$#;#" stare-pred.txt) bye" || true
-            fi
-          done
+          # nahrať a overiť; staré zálohy sa mažú až po úspešnom nahratí. Ak sa nová nezmestí, uvoľní sa miesto
+          # (zmaže sa najstaršia nad limit – n-1) a nahrá sa ešte raz. Zlyhaná záloha teda nikdy nezmaže starú navyše.
           put="put -O $DIR/databaza $DB_SUBOR;"
           [ -n "$SUB_SUBOR" ] && put="$put put -O $DIR/subory $SUB_SUBOR;"
           [ -n "$KOD_SUBOR" ] && put="$put put -O $DIR/kod $KOD_SUBOR;"
-          lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; mkdir -p -f $DIR/databaza; mkdir -p -f $DIR/subory; mkdir -p -f $DIR/kod; $put bye"
-          # kontrola: na Websuporte je súbor celý
-          for f in "databaza/$DB_SUBOR" ${SUB_SUBOR:+"subory/$SUB_SUBOR"} ${KOD_SUBOR:+"kod/$KOD_SUBOR"}; do
-            tam=$(lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls --size --block-size=1 $DIR/$f; bye" | awk '{print $1}' || true)
-            tu=$(stat -c %s "$(basename "$f")")
-            [ "$tam" = "$tu" ] || { echo "::error::$f na Websuporte nesedí ($tam B, má byť $tu B) – nie je hosting plný?"; exit 1; }
-            echo "Uložené: $DIR/$f ($tu B)"
-          done
+          nahraj() {
+            lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; mkdir -p -f $DIR/databaza; mkdir -p -f $DIR/subory; mkdir -p -f $DIR/kod; $put bye" || true
+            for f in "databaza/$DB_SUBOR" ${SUB_SUBOR:+"subory/$SUB_SUBOR"} ${KOD_SUBOR:+"kod/$KOD_SUBOR"}; do
+              tam=$(lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls --size --block-size=1 $DIR/$f; bye" 2>/dev/null | awk '{print $1}' || true)
+              tu=$(stat -c %s "$(basename "$f")")
+              [ "$tam" = "$tu" ] || { echo "$f na Websuporte nesedí (${tam:-chýba} B, má byť $tu B)"; return 1; }
+            done
+          }
+          if ! nahraj; then
+            echo "Nová záloha sa nezmestila – uvoľňujem miesto (najstaršie zálohy nad limit) a skúšam znova."
+            for d in databaza:$PONECHAT_DB ${SUB_SUBOR:+subory:$PONECHAT_SUBORY} ${KOD_SUBOR:+kod:$PONECHAT_KOD}; do
+              p=${d%%:*}; n=$(( ${d##*:} - 1 ))
+              lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; cls -1 $DIR/$p/; bye" 2>/dev/null \
+                | xargs -r -n1 basename | grep '^typek-' | grep -vxF -e "$DB_SUBOR" -e "${SUB_SUBOR:-x}" -e "${KOD_SUBOR:-x}" \
+                | sort | head -n -"$n" > stare-pred.txt || true
+              if [ -s stare-pred.txt ]; then
+                echo "Mažem $(wc -l < stare-pred.txt) najstarších záloh v $p"
+                lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; $(sed "s#^#rm $DIR/$p/#; s#\$#;#" stare-pred.txt) bye" || true
+              fi
+            done
+            if ! nahraj; then
+              # polovičné súbory novej zálohy preč, nech nezaberajú miesto
+              lftp -u "$FTP_USER,$FTP_HESLO" "sftp://$FTP_SERVER" -e "source $RUNNER_TEMP/ftp.lftp; rm -f $DIR/databaza/$DB_SUBOR; ${SUB_SUBOR:+rm -f $DIR/subory/$SUB_SUBOR;} ${KOD_SUBOR:+rm -f $DIR/kod/$KOD_SUBOR;} bye" >/dev/null 2>&1 || true
+              echo "::error::Záloha sa na Websupport nezmestí ani po uvoľnení miesta – hosting je plný. Staré zálohy ostali."; exit 1
+            fi
+          fi
+          for f in "databaza/$DB_SUBOR" ${SUB_SUBOR:+"subory/$SUB_SUBOR"} ${KOD_SUBOR:+"kod/$KOD_SUBOR"}; do echo "Uložené: $DIR/$f ($(stat -c %s "$(basename "$f")") B)"; done
           # archív skenera: dohrať len nové fotky, potom overiť a až potom nahrať nový zoznam
           if [ "$ARCHIV_ZVLAST" = 1 ] && [ -f archiv-zoznam.tsv.novy ]; then
             # archív sa nahrá, len keď sa zmestí celý a na hostingu ostane rezerva 150 MB (nasadenie aplikácie, ďalšie zálohy);
