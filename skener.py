@@ -1842,6 +1842,11 @@ def main():
         if pred < timedelta(minutes=25):
             log(f"Záložný beh: posledná kontrola pred {int(pred.total_seconds() // 60)} min – netreba.")
             return
+    # nočná plná kontrola, ktorú GitHub spustil neskoro (stáva sa aj o 7 h): cez deň by 30 – 40 min blokovala bežné
+    # kontroly – preskočí sa (dobehne ďalšiu noc, prípadne ráno)
+    if "--nocny" in args and 6 <= NOW.astimezone(ZoneInfo("Europe/Bratislava")).hour:
+        log("Nočná plná kontrola prišla neskoro – cez deň ju preskakujem.")
+        return
     if POUZI_DB:
         try:
             _rpc("skener_beh_zacal", p_kluc=SKENER_KLUC)   # strážca počas dlhého behu nehlási výpadok

@@ -60,7 +60,9 @@ jobs:
         run: |
           set -o pipefail
           {
-          if [ "$PLAN" = "17 1 * * *" ] || [ "$REZIM" = "plny" ]; then
+          if [ "$PLAN" = "17 1 * * *" ]; then
+            python skener.py --plny --nocny
+          elif [ "$REZIM" = "plny" ]; then
             python skener.py --plny
           elif [ -n "$PLAN" ]; then
             python skener.py --zaloha

@@ -2896,3 +2896,4 @@ html.bez-posuvu #toast { z-index: 210 }
 .rec-odkazy { margin-top: 8px }
 .rec-odkazy summary { cursor: pointer; font-weight: 600; padding: 6px 0 }
 .rec-odkazy form { display: grid; gap: 8px; margin-top: 8px; max-width: 560px }
+.najprv-volat { align-self: center; color: var(--muted); font-size: 12.5px }

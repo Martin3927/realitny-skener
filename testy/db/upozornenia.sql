@@ -7,14 +7,20 @@ insert into nastavenia (kluc, hodnota) values ('skener_kluc_hash', encode(extens
 do $$
 declare n int;
 begin
-  -- strážca prevádzky: skener nebežal 2 h → problém; čerstvá kontrola → vyriešené
-  update stav_skenera set meta = jsonb_build_object('posledna_kontrola', (now() - interval '2 hours')::text) where id = 1;
+  -- strážca prevádzky: portál nevracia inzeráty → problém; „vrátil len“ nie je porucha; výpadok skenera stráži _skener_nebezi
+  update stav_skenera set meta = jsonb_build_object('posledna_kontrola', now()::text,
+    'chyby', jsonb_build_array('Nehnuteľnosti.sk: portál nevrátil žiadne inzeráty')) where id = 1;
   perform _prevadzka_kontrola();
-  assert exists (select 1 from prevadzka_problemy where kluc = 'skener'), 'skener nebeží – chýba problém';
+  assert exists (select 1 from prevadzka_problemy where kluc = 'portal-nehnutelnosti'), 'portál bez inzerátov – chýba problém';
   update stav_skenera set meta = jsonb_build_object('posledna_kontrola', now()::text,
     'chyby', jsonb_build_array('TopReality.sk vrátil len 50 inzerátov (minule 90)')) where id = 1;
   perform _prevadzka_kontrola();
-  assert not exists (select 1 from prevadzka_problemy), '„vrátil len“ nie je porucha a skener už beží';
+  assert not exists (select 1 from prevadzka_problemy), '„vrátil len“ nie je porucha';
+  -- dlhý beh skenera: počas behu (do 60 min) žiadny poplach, potom áno
+  update stav_skenera set meta = jsonb_build_object('posledna_kontrola', (now() - interval '45 minutes')::text,
+    'beh_zacal', (now() - interval '20 minutes')::text) where id = 1;
+  perform _skener_nebezi();
+  assert not exists (select 1 from push_fronta where titul like '%Skener nebeží%'), 'poplach počas bežiacej kontroly';
   -- hlásenie z GitHubu
   perform prevadzka_hlasenie('test-kluc', 'zaloha', false, 'Záloha zlyhala.');
   assert exists (select 1 from prevadzka_problemy where kluc = 'zaloha'), 'hlásenie zálohy';
@@ -62,3 +68,24 @@ select zapisat_hovor('bazos:c1', 'Nedvíha', 'manžel 0911 222 333');
 select predlzit_prevzatie('bazos:c1', 'po hovore znova môžem');
 reset role;
 select 'DB testy v poriadku';
+
+-- Najprv volať: SMS bez hovoru nejde, po hovore áno; SMS nepredĺži prevzatie
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}', false);
+select prevziat('bazos:c3');
+do $$ begin
+  perform oznacit_kontakt('bazos:c3', 'sms', true);
+  assert false, 'SMS bez hovoru prešla';
+exception when raise_exception then null;
+end $$;
+select zapisat_hovor('bazos:c3', 'Nedvíha', '');
+reset role;
+update prevzatia set upravene = now() - interval '5 hours' where inzerat_id = 'bazos:c3';
+set role authenticated;
+select oznacit_kontakt('bazos:c3', 'sms', true);
+reset role;
+do $$ begin
+  assert (select upravene < now() - interval '4 hours' from prevzatia where inzerat_id = 'bazos:c3'), 'SMS predĺžila prevzatie';
+  assert (select sms is not null from prevzatia where inzerat_id = 'bazos:c3'), 'SMS sa nezapísala';
+end $$;
+select 'SMS až po hovore – v poriadku';

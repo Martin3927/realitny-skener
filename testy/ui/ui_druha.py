@@ -23,10 +23,13 @@ with sync_playwright() as p:
     b=p.chromium.launch()
     pg=prihlas(b,"jana@test.sk",{"width":390,"height":844})
     k=pg.locator('.card[data-id="bazos:b2"]')
+    check("bez hovoru: SMS sa nedá, výzva zavolať", k.locator('.sms-btn').count()==0 and "Najprv zavolaj" in k.inner_text())
     nb=k.locator('[data-act="nedviha"]'); check("mobil: Nedvíha viditeľné", nb.count()==1 and nb.is_visible())
     nb.click(); pg.wait_for_timeout(1500)
     check("toast Nedvíha", "Nedvíha" in pg.locator("#toast").inner_text())
     check("stav karty Volané: Nedvíha", "Nedvíha" in pg.locator('.card[data-id="bazos:b2"] .status').inner_text())
+    k=pg.locator('.card[data-id="bazos:b2"]')
+    check("po hovore: tlačidlo Poslať SMS", k.locator('.sms-btn').count()==1 and "Najprv zavolaj" not in k.inner_text())
     # AI realitka
     pg.locator('.seg[data-seg="predajca"] button[data-v="rk"]').click(); pg.wait_for_timeout(400)
     c2=pg.locator('.card[data-id="bazos:c2"]')

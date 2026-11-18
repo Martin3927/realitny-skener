@@ -2613,7 +2613,12 @@
     return '<span class="na-portali" title="Na portáli od ' + datum(od) + " · v skeneri od " + datum(z.prvy_krat, true) + '">📅 na portáli od ' +
       datum(od) + " (" + kolko + ")</span>";
   }
-  function dniNaPortali(z) { return Math.floor((Date.now() - zverejnene(z)) / 864e5); }
+  // kalendárne dni (zverejnené včera = 1 deň), nie podľa hodiny dňa
+  function dniNaPortali(z) {
+    var a = new Date(zverejnene(z)), b = new Date();
+    a.setHours(12, 0, 0, 0); b.setHours(12, 0, 0, 0);
+    return Math.round((b - a) / 864e5);
+  }
   // ---------- okolo mňa: poloha telefónu, vzdialenosť k inzerátu (presná adresa, inak stred obce)
   function obecGps() {
     if (S.obecGps || !window.LOKALITY) return S.obecGps || null;
@@ -2887,6 +2892,11 @@
   }
   // verdikt AI: len označenie – o presune medzi RK rozhoduje maklér („Je to RK“); vidí ho každý so skenerom
   // ten istý byt ponúka súkromník aj realitka – skener ich nespojí, len na seba upozornia
+  // hovor pri inzeráte za posledných 30 dní (ktokoľvek z kancelárie) – až potom sa dá zapísať SMS alebo email
+  function uzVolali(id) {
+    var p = S.prev[id];
+    return !!(p && p.posledny_hovor && Date.now() - new Date(p.posledny_hovor).getTime() < 30 * 864e5);
+  }
   function suvRiadok(z) {
     var s = (z.suvisiace || []).filter(function (x) { return x && x.id; });
     if (!s.length) return "";
@@ -2919,7 +2929,7 @@
       (a.sms ? '<h4>SMS predajcovi</h4><p class="ai-text">' + esc(a.sms) + "</p>" : "") +
       '<div class="form-actions"><button class="btn" type="button" data-act="ai-kopiruj" data-co="hovor">Kopírovať hovor</button>' +
       (a.sms ? '<button class="btn" type="button" data-act="ai-kopiruj" data-co="sms">Kopírovať SMS</button>' : "") +
-      (a.sms && S.tel[z.id] && !(S.predInz && S.predInz[z.id] && S.predInz[z.id].nevolat) ? '<a class="btn sms-btn" href="' + esc(smsOdkazText(z, a.sms)) + '" data-act="sms-posli">💬 Poslať túto SMS</a>' : "") +
+      (a.sms && S.tel[z.id] && uzVolali(z.id) && !(S.predInz && S.predInz[z.id] && S.predInz[z.id].nevolat) ? '<a class="btn sms-btn" href="' + esc(smsOdkazText(z, a.sms)) + '" data-act="sms-posli">💬 Poslať túto SMS</a>' : "") +
       '<button class="btn ghost" type="button" data-act="ai-hovor-znova">Nový návrh</button><button class="btn ghost" type="button" data-act="zavriet">Zavrieť</button></div>' +
       '<small class="meta">Návrh od AI – prispôsob ho po svojom. Nič sa neposiela samo.</small></div>';
   }
@@ -2982,7 +2992,7 @@
     var uvol = maj && (moj || admin()) ? casUvolnenia(z) : null;
     if (uvol) {
       var zostava = uvol.getTime() - Date.now();
-      znacky.push('<span class="odpocet ' + (zostava < 3 * 3600e3 ? "due" : "wait") + '" data-uvol="' + uvol.getTime() + '" title="Prevzatý inzerát sa uvoľní, ak sa pri ňom 24 hodín nič nezapíše. Odpočet začne znova po zápise hovoru, SMS alebo emailu; zastaví ho budúca pripomienka alebo dohodnuté stretnutie.">⏳ <b>' +
+      znacky.push('<span class="odpocet ' + (zostava < 3 * 3600e3 ? "due" : "wait") + '" data-uvol="' + uvol.getTime() + '" title="Prevzatý inzerát sa uvoľní, ak sa pri ňom 24 hodín nič nezapíše. Odpočet začne znova po zápise hovoru alebo „Ešte riešim“ (SMS ani email ho nepredĺžia); zastaví ho budúca pripomienka alebo dohodnuté stretnutie.">⏳ <b>' +
         textOdpoctu(zostava) + "</b></span>" + (moj ? " do uvoľnenia, ak nič nezapíšete" : " do uvoľnenia"));
     }
     if (mojePrip.length > 2) znacky.push("🔔 +" + (mojePrip.length - 2) + " ďalšie");
@@ -2990,14 +3000,16 @@
     h += '<div class="actions">';
     if (!maj) h += '<button class="btn primary" type="button" data-act="prevziat">Prevziať</button>';
     var smsMozna = mozeUpravit && S.tel[z.id] && ptyp(z) !== "rk" && !(S.predInz && S.predInz[z.id] && S.predInz[z.id].nevolat);
-    if (smsMozna) h += '<a class="btn sms-btn" href="' + esc(smsOdkaz(z)) + '" data-act="sms-posli">💬 Poslať SMS</a>';
+    var volal = uzVolali(z.id);
+    if (smsMozna && volal) h += '<a class="btn sms-btn" href="' + esc(smsOdkaz(z)) + '" data-act="sms-posli">💬 Poslať SMS</a>';
     if (mozeUpravit) h += '<button class="btn" type="button" data-act="hovor">Zapísať hovor</button>' +
       '<button class="btn" type="button" data-act="nedviha" title="Zapíše hovor s výsledkom Nedvíha – bez otvárania formulára">📵 Nedvíha</button>';
     if (uvol) h += '<button class="btn' + (uvol.getTime() - Date.now() < 3 * 3600e3 ? " riesim-hori" : "") + '" type="button" data-act="riesim" title="Predĺži prevzatie o 24 hodín – napíšte krátko, čo s inzerátom riešite">⏳ Ešte riešim</button>';
     var viac = "";
     if (mozeUpravit) {
-      viac += '<button class="btn' + (p && p.sms ? " on" : "") + '" type="button" data-act="sms">' + (p && p.sms ? "✓ SMS poslaná" : "SMS poslaná") + "</button>" +
-        '<button class="btn' + (p && p.email ? " on" : "") + '" type="button" data-act="email">' + (p && p.email ? "✓ Email poslaný" : "Email poslaný") + "</button>";
+      // SMS a email až po hovore – maklér musí najprv volať (zrušiť označenie ide vždy)
+      if (volal || (p && p.sms)) viac += '<button class="btn' + (p && p.sms ? " on" : "") + '" type="button" data-act="sms">' + (p && p.sms ? "✓ SMS poslaná" : "SMS poslaná") + "</button>";
+      if (volal || (p && p.email)) viac += '<button class="btn' + (p && p.email ? " on" : "") + '" type="button" data-act="email">' + (p && p.email ? "✓ Email poslaný" : "Email poslaný") + "</button>";
     }
     viac += '<button class="btn ghost" type="button" data-act="zvon" title="Nastaviť pripomienku">🔔 Pripomenúť</button>';
     if (ptyp(z) !== "rk" && mozeUpravit && maSekciu("asistent")) viac += '<button class="btn ghost" type="button" data-act="ai-hovor" title="AI navrhne, ako začať prvý hovor a SMS predajcovi">✨ Návrh hovoru</button>';
@@ -3016,6 +3028,7 @@
         }).join("") + "</select>";
     }
     var viacOtv = !!(S.viac && S.viac[z.id]);
+    if (mozeUpravit && !volal && ptyp(z) !== "rk") h += '<small class="najprv-volat">📞 Najprv zavolaj – SMS pošleš, keď predajca nedvíha.</small>';
     h += '<span class="act-viac' + (viacOtv ? " otv" : "") + '">' + viac + "</span>" +
       '<button class="btn ghost act-viac-btn" type="button" data-act="viac" aria-expanded="' + viacOtv + '">' + (viacOtv ? "✕ Menej" : "⋯ Viac") + "</button>";
     h += "</div>";
