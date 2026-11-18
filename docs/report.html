@@ -53,6 +53,17 @@
     var tyzden = minule.filter(function (o) { return new Date(o.cas).getTime() > t - 7 * 864e5; }).length;
     var hc = R.historia_cien || [];
     var tel = T.telOdkaz(m.telefon);
+    // prepínače klientskej zóny (staršia odpoveď bez nich = všetko zapnuté)
+    var Z = R.zona || { zobrazenia: true, kontakty: true, kupujuci: true, obhliadky: true, spatna_vazba: true, terminy: true, cena: true };
+    function stat(n, text) { return '<div class="r-stat"><b>' + n + "</b><span>" + text + "</span></div>"; }
+    var staty = [];
+    if (Z.obhliadky) {
+      staty.push(stat(tyzden, tvar(tyzden, "obhliadka", "obhliadky", "obhliadok") + " za posledný týždeň"));
+      staty.push(stat(minule.length, tvar(minule.length, "obhliadka", "obhliadky", "obhliadok") + " spolu"));
+    }
+    if (Z.zobrazenia) staty.push(stat(T.nf.format(R.zobrazenia_7 || 0), tvar(R.zobrazenia_7 || 0, "zobrazenie", "zobrazenia", "zobrazení") + " ponuky za týždeň" + (R.zobrazenia ? " (spolu " + T.nf.format(R.zobrazenia) + ")" : "")));
+    if (Z.kupujuci) staty.push(stat(R.zaujemcovia || 0, tvar(R.zaujemcovia || 0, "klient v našej databáze hľadá", "klienti v našej databáze hľadajú", "klientov v našej databáze hľadá") + " podobnú nehnuteľnosť"));
+    if (Z.kontakty) staty.push(stat(R.kontakty || 0, tvar(R.kontakty || 0, "záujemca napísal", "záujemcovia napísali", "záujemcov napísalo") + " cez stránku ponuky" + (R.kontakty_7 ? " (" + R.kontakty_7 + " za týždeň)" : "")));
     document.getElementById("obsah").innerHTML =
       '<p class="r-pozdrav">Dobrý deň' + (R.majitel ? ", " + esc(R.majitel) : "") + ". Tu je aktuálny prehľad o predaji vašej nehnuteľnosti.</p>" +
       '<section class="v-box r-hl">' + (F[0] ? '<img class="r-f" src="' + esc(T.fotkaUrl(F[0])) + '" alt="">' : "") +
@@ -60,28 +71,30 @@
       '<div class="r-cena"><b>' + esc(R.cena ? T.eur(R.cena) : T.cena(p)) + "</b><span class=\"r-pozn\">v ponuke " + R.dni_v_ponuke + " " + dni(R.dni_v_ponuke) +
       (p.stav === "rezervovane" ? " · rezervované" : p.stav === "predane" ? " · predané" : "") + "</span></div>" +
       '<a href="' + esc(T.verejnyOdkaz(p.id)) + '&amp;nahlad=1" target="_blank" rel="noopener">Zobraziť ponuku tak, ako ju vidia klienti →</a></div></section>' +
-      '<div class="r-staty">' +
-      '<div class="r-stat"><b>' + tyzden + "</b><span>" + tvar(tyzden, "obhliadka", "obhliadky", "obhliadok") + " za posledný týždeň</span></div>" +
-      '<div class="r-stat"><b>' + minule.length + "</b><span>" + tvar(minule.length, "obhliadka", "obhliadky", "obhliadok") + " spolu</span></div>" +
-      '<div class="r-stat"><b>' + T.nf.format(R.zobrazenia_7 || 0) + "</b><span>" + tvar(R.zobrazenia_7 || 0, "zobrazenie", "zobrazenia", "zobrazení") + " ponuky za týždeň" + (R.zobrazenia ? " (spolu " + T.nf.format(R.zobrazenia) + ")" : "") + "</span></div>" +
-      '<div class="r-stat"><b>' + (R.zaujemcovia || 0) + "</b><span>" + tvar(R.zaujemcovia || 0, "klient v našej databáze hľadá", "klienti v našej databáze hľadajú", "klientov v našej databáze hľadá") + " podobnú nehnuteľnosť</span></div>" +
-      '<div class="r-stat"><b>' + (R.kontakty || 0) + "</b><span>" + tvar(R.kontakty || 0, "záujemca napísal", "záujemcovia napísali", "záujemcov napísalo") + " cez stránku ponuky" + (R.kontakty_7 ? " (" + R.kontakty_7 + " za týždeň)" : "") + "</span></div></div>" +
+      (staty.length ? '<div class="r-staty">' + staty.join("") + "</div>" : "") +
       (buduce.length ? '<section class="v-box"><h2>Naplánované obhliadky</h2><ul class="r-obh">' + buduce.map(function (o) {
         return '<li><span class="r-d">' + esc(T.datum(o.cas, true)) + "</span><span>Záujemca " + esc(o.klient || "") + "</span></li>";
       }).join("") + "</ul></section>" : "") +
-      '<section class="v-box"><h2>Obhliadky a spätná väzba</h2>' + (minule.length ? '<ul class="r-obh">' + minule.map(function (o) {
+      (Z.obhliadky ? '<section class="v-box"><h2>' + (Z.spatna_vazba ? "Obhliadky a spätná väzba" : "Obhliadky") + "</h2>" + (minule.length ? '<ul class="r-obh">' + minule.map(function (o) {
         return '<li><span class="r-d">' + esc(T.datum(o.cas)) + "</span><span>" + (o.vysledok && VYS[o.vysledok] ? '<span class="r-vys ' + esc(o.vysledok) + '">' + VYS[o.vysledok] + "</span><br>" : "") +
-          (o.spatna_vazba ? esc(o.spatna_vazba) : '<span class="r-pozn">Bez spätnej väzby.</span>') + "</span></li>";
-      }).join("") + "</ul>" : '<p class="r-pozn">Zatiaľ neprebehla žiadna obhliadka. Ponuku aktívne ponúkame klientom a na portáloch.</p>') + "</section>" +
+          (o.spatna_vazba ? esc(o.spatna_vazba) : Z.spatna_vazba ? '<span class="r-pozn">Bez spätnej väzby.</span>' : "Obhliadka so záujemcom" + (o.klient ? " " + esc(o.klient) : "") + '<br><span class="r-pozn">Dojmy z obhliadky vám povie ' + (m.pohlavie === "zena" ? "vaša maklérka" : "váš maklér") + ".</span>") + "</span></li>";
+      }).join("") + "</ul>" : '<p class="r-pozn">Zatiaľ neprebehla žiadna obhliadka. Ponuku aktívne ponúkame klientom a na portáloch.</p>') + "</section>" : "") +
       (hc.length > 1 ? '<section class="v-box"><h2>Vývoj ceny</h2><p class="r-cena">' + hc.map(function (x) { return esc(T.datum(x[0])) + " – <b>" + esc(T.eur(x[1])) + "</b>"; }).join(" → ") + "</p></section>" : "") +
       '<section class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno_cele || m.meno || T.kanc().nazov) + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + ' · <span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span></small></div></div>" +
       '<div class="v-btns dva">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Zavolať</a>' : "") + (m.email ? '<a class="v-btn" href="mailto:' + esc(m.email) + '">✉️ Napísať</a>' : "") + "</div></section>" +
-      '<p class="r-pozn">Report sa aktualizuje priebežne · stav k ' + esc(T.datum(R.vygenerovane, true)) + ". Zobrazenia sa počítajú na stránke ponuky " + '<span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span> (nie na portáloch).</p>";
+      '<p class="r-pozn">Report sa aktualizuje priebežne · stav k ' + esc(T.datum(R.vygenerovane, true)) + "." + (Z.zobrazenia ? " Zobrazenia sa počítajú na stránke ponuky " + '<span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span> (nie na portáloch)." : "") + "</p>";
   }
   if (!tok) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Neplatný odkaz</b>Odkaz na report nie je úplný.</div>'; return; }
   T.rpc("report_majitela", { p_token: tok }).then(function (R) {
     if (!R) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Report nie je dostupný</b>Odkaz je neplatný alebo už neaktívny. Kontaktujte svojho makléra.</div>'; return; }
     T.kancelaria(R.kancelaria_id, R.kanc);
+    if (R.vypnute) {
+      var m = (R.ponuka || {}).makler || {}, tel = T.telOdkaz(m.telefon);
+      document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Prehľad je teraz vypnutý</b>Aktuálne informácie o predaji vám rád povie váš maklér.</div>' +
+        (m.meno ? '<section class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno_cele || m.meno) + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + " · " + esc(T.kanc().nazov) + "</small></div></div>" +
+        '<div class="v-btns dva">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Zavolať</a>' : "") + (m.email ? '<a class="v-btn" href="mailto:' + esc(m.email) + '">✉️ Napísať</a>' : "") + "</div></section>" : "");
+      return;
+    }
     vykresli(R);
   }).catch(function (e) { document.getElementById("obsah").innerHTML = '<div class="v-nic"><b>Report sa nepodarilo načítať</b>' + esc(e.message || e) + "</div>"; });
 })();

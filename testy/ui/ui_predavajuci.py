@@ -120,7 +120,7 @@ with sync_playwright() as p:
     sql("update makleri set pristup = '{klienti,chat}' where email='peter@test.sk'")
     pm.reload(); pm.wait_for_timeout(2500)
     pm.goto(URL + "#klienti"); pm.wait_for_timeout(1200)
-    check("bez skenera: žiadny prepínač Predávajúci", pm.locator('[data-kl-pohlad]').count() == 0 and "Klienti a dopyty" in pm.inner_text("#obsah"))
+    check("bez skenera: žiadny prepínač Predávajúci", pm.locator('[data-kl-pohlad="predavajuci"]').count() == 0 and "Klienti a dopyty" in pm.inner_text("#obsah"))
     sql("update makleri set pristup = default where email='peter@test.sk'")
 
     # ---- admin: vymazanie na žiadosť

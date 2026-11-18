@@ -97,20 +97,21 @@ async function reportyMajitelom(db: any) {
   for (const r of (zoz as any[]) ?? []) {
     try {
       const { data: rep } = await db.rpc("report_majitela", { p_token: r.token });
-      if (!rep) continue;
+      if (!rep || rep.vypnute) continue;   // vypnutá klientska zóna predávajúceho – e-mail nejde
       const { data: m } = await db.from("makleri").select("meno, email, telefon, kancelaria_id").eq("id", r.makler_id).maybeSingle();
       const kn = nazovK(kancelarie, rep.kancelaria_id ?? m?.kancelaria_id);
       // deno-lint-ignore no-explicit-any
       const obh = (rep.obhliadky as any[]) || [];
       const tyzden = obh.filter((o) => new Date(o.cas).getTime() > Date.now() - 7 * 864e5 && new Date(o.cas).getTime() <= Date.now()).length;
       const odkaz = WEB_URL + "report.html?t=" + encodeURIComponent(r.token);
-      const riadok = (k: string, v: unknown) => `<tr><td style="padding:6px 0;color:#666">${esc(k)}</td><td style="padding:6px 0;text-align:right"><b>${esc(v)}</b></td></tr>`;
+      // riadok sa vynechá, keď je údaj v klientskej zóne vypnutý (report ho vtedy nevracia)
+      const riadok = (k: string, v: unknown) => v === null || v === undefined ? "" : `<tr><td style="padding:6px 0;color:#666">${esc(k)}</td><td style="padding:6px 0;text-align:right"><b>${esc(v)}</b></td></tr>`;
       const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#23272e">
         <div style="border-bottom:3px solid #dab967;padding-bottom:8px;font-size:18px"><b>📊 Týždenný report k vašej nehnuteľnosti</b></div>
         <p style="font-size:15px;margin:16px 0 4px">Dobrý deň${r.majitel ? ", " + esc(r.majitel) : ""},</p>
         <p style="margin:0 0 12px">posielame prehľad o ponuke <b>${esc(r.nazov)}</b>.</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px">
-          ${riadok("Obhliadky za posledný týždeň", tyzden)}${riadok("Obhliadky spolu", obh.length)}
+          ${riadok("Obhliadky za posledný týždeň", rep.obhliadky ? tyzden : null)}${riadok("Obhliadky spolu", rep.obhliadky ? obh.filter((o) => new Date(o.cas).getTime() <= Date.now()).length : null)}
           ${riadok("Zobrazenia ponuky za týždeň", rep.zobrazenia_7)}${riadok("Klienti, ktorí hľadajú podobnú nehnuteľnosť", rep.zaujemcovia)}
           ${riadok("Dní v ponuke", rep.dni_v_ponuke)}</table>
         <p style="margin:22px 0"><a href="${esc(odkaz)}" style="background:#dab967;color:#1f2a37;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700">Zobraziť celý report</a></p>

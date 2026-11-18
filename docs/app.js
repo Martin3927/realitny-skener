@@ -4530,7 +4530,7 @@
 
   async function nacitajPonuky() {
     // ponuky, interné údaje aj obhliadky a dopyty naraz (nie jedno po druhom)
-    var w = await Promise.all([vsetkyRiadky("nehnutelnosti", "*", "id"), vsetkyRiadky("nehnutelnosti_interne", "*", "nehnutelnost_id"), nacitajNastrojePonuk()]);
+    var w = await Promise.all([vsetkyRiadky("nehnutelnosti", "*", "id"), vsetkyRiadky("nehnutelnosti_interne", "*", "nehnutelnost_id"), nacitajNastrojePonuk(), S.kz ? null : nacitajKZ()]);
     S.ponuky = w[0].sort(function (a, b) { return String(b.upravene).localeCompare(String(a.upravene)); });
     var o = {}; w[1].forEach(function (x) { o[x.nehnutelnost_id] = x; }); S.ponukyInt = o;
   }
@@ -5434,9 +5434,87 @@
     S.zobrazenia = z;
   }
   async function nacitajDopyty() {
-    var w = await Promise.all([vsetkyRiadky("dopyty", "*", "id"), vsetkyRiadky("dopyty_kontakty", "*", "dopyt_id")]);
+    var w = await Promise.all([vsetkyRiadky("dopyty", "*", "id"), vsetkyRiadky("dopyty_kontakty", "*", "dopyt_id"),
+      vsetkyRiadky("dopyty_ponuky", "*", "dopyt_id", function (q) { return q.order("nehnutelnost_id"); }).catch(function () { return []; }),
+      S.kz ? null : nacitajKZ()]);
     S.dopyty = w[0].sort(function (a, b) { return String(b.upravene).localeCompare(String(a.upravene)); });
     var k = {}; w[1].forEach(function (x) { k[x.dopyt_id] = x; }); S.dopytyK = k;
+    S.dopytyP = w[2] || [];
+  }
+
+  // ---------- klientska zóna: prepínače kancelárie (čo uvidí predávajúci, čo smie kupujúci)
+  var KZ_PREDV = { predavajuci: { zapnute: true, zobrazenia: true, kontakty: true, kupujuci: true, obhliadky: true, spatna_vazba: true, terminy: true, cena: true, makler_meni: true },
+    kupujuci: { zapnute: true, automaticky: false, reakcie: true, obhliadka: true, sprava: true } };
+  var KZ_PRED = [["zobrazenia", "Počet zobrazení ponuky", "koľkokrát si ľudia otvorili stránku ponuky"],
+    ["kontakty", "Počet záujemcov zo stránky ponuky", "koľko ľudí napísalo cez formulár pri ponuke"],
+    ["kupujuci", "Počet kupujúcich z dopytov", "„X klientov v našej databáze hľadá podobnú nehnuteľnosť“"],
+    ["obhliadky", "Obhliadky", "koľko ich bolo a kedy"],
+    ["spatna_vazba", "Spätná väzba z obhliadok", "výsledok obhliadky a čo záujemca povedal", "obhliadky"],
+    ["terminy", "Naplánované obhliadky", "termíny, ktoré ešte len budú", "obhliadky"],
+    ["cena", "Vývoj ceny", "ako sa cena ponuky menila"]];
+  var KZ_KUP = [["automaticky", "Ponuky sa klientovi ukážu samy", "zapnuté: klient vidí všetky ponuky kancelárie, ktoré sedia na jeho dopyt · vypnuté: len tie, ktoré mu maklér pošle"],
+    ["reakcie", "Klient môže reagovať", "tlačidlá Páči sa mi a Nie je pre mňa"],
+    ["obhliadka", "Klient môže požiadať o obhliadku", "maklérovi príde upozornenie do zvončeka a mobilu", "reakcie"],
+    ["sprava", "Klient môže k žiadosti pripísať správu", "napr. kedy mu obhliadka vyhovuje", "obhliadka"]];
+  var KZ_REAKCIE = { paci: ["won", "❤️ Páči sa"], obhliadka: ["won", "🗝️ Chce obhliadku"], nie: ["lost", "Nie je pre neho"] };
+  function kz() { return S.kz || KZ_PREDV; }
+  async function nacitajKZ() {
+    // staršia databáza funkciu nemá – zóna sa vtedy v aplikácii neukáže
+    try { S.kz = await rpc("klientska_zona"); } catch (e) { S.kz = null; }
+  }
+  // čo uvidí majiteľ konkrétnej ponuky: nastavenie kancelárie + výnimky ponuky
+  function kzPonuky(I) {
+    var k = kz().predavajuci, z = Object.assign({}, k, (I && I.zona) || {});
+    delete z.makler_meni;
+    if (!k.zapnute) Object.keys(z).forEach(function (x) { z[x] = false; });
+    return z;
+  }
+  function kzRiadok(attr, kluc, nazov, popis, zapnute, vypnuty, odsadeny) {
+    return '<label class="toggle kz-r' + (odsadeny ? " kz-pod" : "") + '"><input type="checkbox" ' + attr + '="' + kluc + '"' + (zapnute ? " checked" : "") + (vypnuty ? " disabled" : "") + ">" +
+      "<span><b>" + esc(nazov) + "</b>" + (popis ? '<small class="meta d-block">' + esc(popis) + "</small>" : "") + "</span></label>";
+  }
+  function reakcieDopytu(id) { var o = {}; (S.dopytyP || []).forEach(function (x) { if (x.dopyt_id === id) o[x.nehnutelnost_id] = x; }); return o; }
+  function cipReakcie(x) {
+    var r = x && KZ_REAKCIE[x.reakcia]; if (!r) return "";
+    return '<span class="chip ' + r[0] + '" title="' + esc(datum(x.reakcia_kedy, true)) + '">' + r[1] + "</span>";
+  }
+  function vykresliKlientskuZonu() {
+    var el = $("#obsah"), Z = kz(), P = Z.predavajuci, K = Z.kupujuci, a = admin();
+    function zavisle(cast, r) { return !a || !cast.zapnute || (r[3] && !cast[r[3]]); }
+    var R = (S.dopytyP || []).filter(function (x) { return x.reakcia; }).sort(function (x, y) { return String(y.reakcia_kedy).localeCompare(String(x.reakcia_kedy)); }).slice(0, 15);
+    var nZon = Object.keys(S.dopytyK || {}).filter(function (id) { return S.dopytyK[id].zona_token; }).length;
+    var nRep = Object.keys(S.ponukyInt || {}).filter(function (id) { return S.ponukyInt[id].report_token; }).length;
+    var h = prepinacKlientov() + '<div class="box nehn kz-box"><div class="vykon-hlava"><h3>🔑 Klientska zóna</h3></div>' +
+      '<p class="meta">Predávajúci aj kupujúci dostanú od makléra tajný odkaz. Predávajúci na ňom vidí, ako beží predaj jeho nehnuteľnosti, kupujúci ponuky, ktoré sa k nemu hodia. ' +
+      (a ? "Tu nastavíte, čo presne uvidia – zmena platí hneď pre všetky odkazy kancelárie." : "Čo presne uvidia, nastavuje administrátor kancelárie.") + "</p>" +
+      '<div class="kz-stlpce"><section class="kz-cast"><h4>🏠 Predávajúci <span class="chip">' + nRep + " " + (nRep === 1 ? "odkaz" : nRep >= 2 && nRep <= 4 ? "odkazy" : "odkazov") + "</span></h4>" +
+      '<p class="meta">Odkaz vytvoríte pri ponuke tlačidlom „Klientska zóna majiteľa“. Mená a telefóny záujemcov majiteľ nevidí nikdy.</p>' +
+      kzRiadok("data-kz-p", "zapnute", "Zóna predávajúceho je zapnutá", "vypnutá: odkazy majiteľom nič neukážu a týždenný e-mail neodíde", P.zapnute, !a) +
+      '<div class="kz-skupina"><b class="kz-nadpis">Čo uvidí predávajúci</b>' + KZ_PRED.map(function (r) { return kzRiadok("data-kz-p", r[0], r[1], r[2], P[r[0]], zavisle(P, r), !!r[3]); }).join("") + "</div>" +
+      kzRiadok("data-kz-p", "makler_meni", "Maklér môže pri svojej ponuke urobiť výnimku", "napr. jednému majiteľovi skryť spätnú väzbu; vypnuté: výnimky robí len administrátor", P.makler_meni, !a || !P.zapnute) + "</section>" +
+      '<section class="kz-cast"><h4>🎯 Kupujúci <span class="chip">' + nZon + " " + (nZon === 1 ? "odkaz" : nZon >= 2 && nZon <= 4 ? "odkazy" : "odkazov") + "</span></h4>" +
+      '<p class="meta">Odkaz vytvoríte v detaile dopytu klienta. Klient vidí len ponuky vašej kancelárie.</p>' +
+      kzRiadok("data-kz-k", "zapnute", "Zóna kupujúceho je zapnutá", "vypnutá: odkazy klientom nič neukážu", K.zapnute, !a) +
+      '<div class="kz-skupina"><b class="kz-nadpis">Ako zóna funguje</b>' + KZ_KUP.map(function (r) { return kzRiadok("data-kz-k", r[0], r[1], r[2], K[r[0]], zavisle(K, r), !!r[3]); }).join("") + "</div></section></div>" +
+      '<section class="pd-sekcia"><div class="pd-sek-hlava"><h4>💬 Posledné reakcie kupujúcich</h4></div>' +
+      (R.length ? '<div class="kz-reakcie">' + R.map(function (x) {
+        var d = (S.dopyty || []).find(function (y) { return y.id === x.dopyt_id; }), n = (S.ponuky || []).find(function (y) { return y.id === x.nehnutelnost_id; });
+        if (!d) return "";
+        return '<button type="button" class="kz-reakcia" data-dopyt-otvor="' + d.id + '">' + cipReakcie(x) + "<span><b>" + esc(menoKlienta(d)) + "</b> · " + esc(n ? nazovPonuky(n) : "ponuka") +
+          (x.sprava ? '<small class="meta d-block">„' + esc(x.sprava.slice(0, 160)) + "“</small>" : "") + '</span><small class="meta">' + ago(x.reakcia_kedy) + "</small></button>";
+      }).join("") + "</div>" : '<p class="meta">Zatiaľ žiadne. Keď klient v zóne označí, čo sa mu páči, alebo požiada o obhliadku, uvidíte to tu aj v detaile dopytu.</p>') + "</section></div>";
+    el.innerHTML = h;
+    viazPrepinacKlientov(el);
+    el.querySelectorAll("[data-dopyt-otvor]").forEach(function (b) { b.onclick = function () { otvorDopyt(Number(b.dataset.dopytOtvor)); }; });
+    el.querySelectorAll("[data-kz-p], [data-kz-k]").forEach(function (c) {
+      c.onchange = async function () {
+        var cast = c.dataset.kzP ? "predavajuci" : "kupujuci", kluc = c.dataset.kzP || c.dataset.kzK, zmena = {}, hod = {};
+        hod[kluc] = c.checked; zmena[cast] = hod; c.disabled = true;
+        try { S.kz = await rpc("ulozit_klientsku_zonu", { p: zmena }); toast("Uložené – platí hneď."); }
+        catch (err) { toast(chybaText(err), true); }
+        if (S.tab === "klienti" && klPohlad() === "zona") vykresliKlientskuZonu();
+      };
+    });
   }
 
   // ---------- párovanie dopytov (rovnaké pravidlá ako v databáze)
@@ -5495,7 +5573,7 @@
       '<button class="btn" type="button" data-pdn="zdielat" aria-pressed="' + (S.pdPanel === "zdielat") + '">🔗 Poslať klientovi</button>' +
       '<a class="btn" href="letak.html?id=' + p.id + '" target="_blank" rel="noopener">🖨 Leták (PDF)</a>' +
       (p.na_portali !== false && (p.stav === "aktivne" || p.stav === "rezervovane") ? '<a class="btn" href="' + esc(odkazNaPortal(p)) + '" target="_blank" rel="noopener" title="Ponuka v Týpkových nehnuteľnostiach na realitnytypek.sk">🏡 V Týpkových nehnuteľnostiach</a>' : "") +
-      (mozem ? '<button class="btn" type="button" data-pdn="report" aria-pressed="' + (S.pdPanel === "report") + '">📊 Report majiteľovi</button>' : "") +
+      (mozem ? '<button class="btn" type="button" data-pdn="report" aria-pressed="' + (S.pdPanel === "report") + '">📊 Klientska zóna majiteľa</button>' : "") +
       (mozem ? '<button class="btn" type="button" data-pdn="siete" aria-pressed="' + (S.pdPanel === "siete") + '">📣 Sociálne siete</button>' : "") +
       '<button class="btn" type="button" data-pdn="text">📋 Text pre portál</button>' + katasterTlacidlo(p, "btn") +
       ((p.fotky || []).length ? '<button class="btn" type="button" data-pdn="zip">⬇️ Fotky (ZIP)</button>' : "") +
@@ -5527,11 +5605,11 @@
   }
   function panelReport(p) {
     var I = S.ponukyInt[p.id] || {};
-    var h = '<div class="pd-panel" id="pd-report"><h4>📊 Report pre majiteľa</h4>' +
-      '<p class="meta">Majiteľ na odkaze uvidí obhliadky so spätnou väzbou, počet zobrazení ponuky a koľko klientov hľadá podobnú nehnuteľnosť. Mená a telefóny záujemcov nevidí. Report sa priebežne aktualizuje.</p>';
+    var h = '<div class="pd-panel" id="pd-report"><h4>📊 Klientska zóna majiteľa <small class="meta">report o predaji</small></h4>' +
+      '<p class="meta">Majiteľ na tajnom odkaze vidí, ako beží predaj jeho nehnuteľnosti. Čo presne uvidí, nastavíte nižšie. Mená a telefóny záujemcov nevidí nikdy. Stránka sa priebežne aktualizuje.</p>';
     if (!I.report_token) return h + '<div><button class="btn primary" type="button" data-pdn="report-vytvor">Vytvoriť odkaz na report</button></div></div>';
-    var url = new URL("report.html?t=" + I.report_token, location.href).href;
-    var sprava = "Dobrý deň" + (I.majitel_meno ? " " + I.majitel_meno.split(" ")[0] : "") + ", posielam Vám prehľad o predaji Vašej nehnuteľnosti – obhliadky, záujem a spätnú väzbu. Odkaz sa priebežne aktualizuje:\n" + url + "\n\n" + podpis();
+    var url = new URL("report.html?t=" + I.report_token, location.href).href, zr = kzPonuky(I);
+    var sprava = "Dobrý deň" + (I.majitel_meno ? " " + I.majitel_meno.split(" ")[0] : "") + ", posielam Vám prehľad o predaji Vašej nehnuteľnosti – " + (zr.obhliadky ? "obhliadky, " : "") + "záujem" + (zr.obhliadky && zr.spatna_vazba ? " a spätnú väzbu" : "") + ". Odkaz sa priebežne aktualizuje:\n" + url + "\n\n" + podpis();
     return h + '<div class="pd-odkaz"><input type="text" readonly value="' + esc(url) + '" aria-label="Odkaz na report"><button class="btn" type="button" data-pdn="kopiruj-report">Kopírovať odkaz</button>' +
       '<a class="btn ghost" href="' + esc(url) + '" target="_blank" rel="noopener">Otvoriť</a></div>' +
       '<label class="field"><span>Text správy majiteľovi</span><textarea id="pd-sprava-r" rows="4">' + esc(sprava) + "</textarea></label>" +
@@ -5539,7 +5617,30 @@
       (I.majitel_email ? '<a class="btn" href="#" data-posli-r="email">✉️ Email</a>' : "") + "</div>" +
       (!I.majitel_telefon && !I.majitel_email ? '<p class="meta">Telefón ani email majiteľa nie je vyplnený – doplníte ich v úprave ponuky (krok Interné).</p>' : "") +
       '<label class="toggle"><input type="checkbox" id="pd-report-tyz"' + (I.report_tyzdenne ? " checked" : "") + (I.majitel_email ? "" : " disabled") + "> Každý pondelok o 9:00 poslať majiteľovi report emailom</label>" +
-      (I.majitel_email ? (I.report_odoslany ? '<p class="meta">Naposledy odoslaný ' + datum(I.report_odoslany, true) + ".</p>" : "") : '<p class="meta">Na týždenný email treba vyplniť email majiteľa.</p>') + "</div>";
+      (I.majitel_email ? (I.report_odoslany ? '<p class="meta">Naposledy odoslaný ' + datum(I.report_odoslany, true) + ".</p>" : "") : '<p class="meta">Na týždenný email treba vyplniť email majiteľa.</p>') +
+      panelZonyPonuky(p, I) + "</div>";
+  }
+  // prepínače „čo uvidí predávajúci“ pri jednej ponuke (výnimky oproti nastaveniu kancelárie)
+  function panelZonyPonuky(p, I) {
+    if (!S.kz) return "";
+    var k = kz().predavajuci, z = kzPonuky(I), smiem = admin() || (p.makler_id === S.me.id && k.makler_meni);
+    if (!k.zapnute) return '<div class="kz-skupina"><b class="kz-nadpis">Čo uvidí predávajúci</b><p class="meta">Zóna predávajúceho je v kancelárii vypnutá – majiteľ na odkaze teraz nič neuvidí a týždenný e-mail neodíde.' +
+      (admin() ? " Zapnete ju v Klienti → Klientska zóna." : " Zapne ju administrátor.") + "</p></div>";
+    return '<div class="kz-skupina" id="pd-zona"><b class="kz-nadpis">Čo uvidí predávajúci tejto ponuky' + (I.zona ? ' <span class="chip maybe">výnimka oproti kancelárii</span>' : "") + "</b>" +
+      kzRiadok("data-kzp", "zapnute", "Zóna pre tohto majiteľa je zapnutá", "vypnutá: odkaz mu nič neukáže", z.zapnute, !smiem) +
+      KZ_PRED.map(function (r) { return kzRiadok("data-kzp", r[0], r[1], r[2], z[r[0]], !smiem || !z.zapnute || (r[3] && !z[r[3]]), !!r[3]); }).join("") +
+      (smiem ? (I.zona ? '<div><button class="btn ghost" type="button" data-pdn="kz-predv">Vrátiť nastavenie kancelárie</button></div>' : "") :
+        '<p class="meta">Prepínače mení ' + (k.makler_meni ? "zodpovedný maklér alebo administrátor." : "vo vašej kancelárii len administrátor.") + "</p>") + "</div>";
+  }
+  async function ulozZonuPonuky(p, z) {
+    var I = S.ponukyInt[p.id] || {}, k = kz().predavajuci;
+    try {
+      await rpc("ulozit_zonu_ponuky", { p_id: p.id, p: z });
+      var rozdiel = {}; Object.keys(z || {}).forEach(function (x) { if (z[x] !== k[x]) rozdiel[x] = z[x]; });
+      S.ponukyInt[p.id] = Object.assign(I, { zona: Object.keys(rozdiel).length ? rozdiel : null });
+      toast(z ? "Uložené – majiteľ to uvidí hneď." : "Platí nastavenie kancelárie.");
+    } catch (err) { toast(chybaText(err), true); }
+    vykresliDetailPonuky();
   }
   function textPrePortal(p) {
     var par = [];
@@ -5600,8 +5701,9 @@
         if (a === "zip") return stiahniFotky(p, b);
         if (a === "duplikovat") return duplikujPonuku(p);
         if (a === "provizia") { S.provForm = proviziaZPonuky(p); S.provF = null; prejdi("provizie"); return; }
+        if (a === "kz-predv") return ulozZonuPonuky(p, null);
         if (a === "report-vytvor") {
-          try { var t = await rpc("report_odkaz", { p_id: p.id, p_tyzdenne: null }); S.ponukyInt[p.id] = Object.assign(S.ponukyInt[p.id] || {}, { report_token: t }); vykresliDetailPonuky(); toast("📊 Odkaz na report je pripravený."); }
+          try { var t = await rpc("report_odkaz", { p_id: p.id, p_tyzdenne: null }); S.ponukyInt[p.id] = Object.assign(S.ponukyInt[p.id] || {}, { report_token: t }); vykresliDetailPonuky(); toast("📊 Odkaz pre majiteľa je pripravený."); }
           catch (err) { toast(chybaText(err), true); }
         }
       };
@@ -5620,6 +5722,9 @@
       a.onclick = function () { a.href = odkazSpravy(a.dataset.posliRec, I.majitel_telefon, $("#pd-sprava-rec").value, "Prosba o recenziu – " + nazovKancelarie(), I.majitel_email); };
     });
     el.querySelectorAll("#pd-recenzia [data-rec-kde]").forEach(function (b) { b.onclick = function () { S.recKde = b.dataset.recKde; vykresliDetailPonuky(); }; });
+    el.querySelectorAll("#pd-zona [data-kzp]").forEach(function (c) {
+      c.onchange = function () { var z = kzPonuky(S.ponukyInt[p.id] || {}); z[c.dataset.kzp] = c.checked; c.disabled = true; ulozZonuPonuky(p, z); };
+    });
     var tyz = $("#pd-report-tyz");
     if (tyz) tyz.onchange = async function () {
       try { await rpc("report_odkaz", { p_id: p.id, p_tyzdenne: tyz.checked }); I.report_tyzdenne = tyz.checked; toast(tyz.checked ? "Majiteľ bude dostávať report každý pondelok." : "Týždenný report je vypnutý."); }
@@ -5670,7 +5775,7 @@
       '<button class="btn ghost" type="button" data-klienti-novy>+ Nový dopyt</button></div>' +
       (D.length ? D.map(function (d) {
         var K = (S.dopytyK || {})[d.id];
-        return '<div class="pk-klient"><span class="pk-kl-av">' + avatar(d.makler_id, 28) + "</span><div><b>" + esc(menoKlienta(d)) + '</b><div class="meta">' + esc(popisDopytu(d)) + "</div>" +
+        return '<div class="pk-klient"><span class="pk-kl-av">' + avatar(d.makler_id, 28) + "</span><div><b>" + esc(menoKlienta(d)) + "</b> " + cipReakcie(reakcieDopytu(d.id)[p.id]) + '<div class="meta">' + esc(popisDopytu(d)) + "</div>" +
           (d.popis ? '<div class="meta">„' + esc(d.popis.slice(0, 140)) + "“</div>" : "") + "</div>" +
           '<div class="pk-kl-akcie">' + (K && K.telefon ? '<a class="btn ghost" href="tel:' + esc(telCislo(K.telefon)) + '">📞</a><button class="btn ghost" type="button" data-posli-klientovi="' + d.id + '" title="Poslať ponuku klientovi">📤</button>' : "") +
           '<button class="btn ghost" type="button" data-obh="nova" data-dopyt="' + d.id + '" title="Zapísať obhliadku">🗝️</button>' +
@@ -5894,9 +5999,14 @@
   function vykresliKlientov() {
     var el = $("#obsah"); if (!el) return;
     if (S.dopytEdit) return vykresliFormDopytu();
+    if (S.kz === undefined && !S.kzNacitava) {
+      S.kzNacitava = true;
+      nacitajKZ().then(function () { if (S.kz && S.tab === "klienti" && !S.dopytEdit && !S.dopytDetail && !S.predDetail && !$("#klienti-q:focus")) vykresliKlientov(); });
+    }
     if (!S.dopytDetail && klPohlad() === "predavajuci") return vykresliPredavajucich();
     if (!S.dopyty) { el.innerHTML = '<div class="box"><div class="meta">Načítavam klientov…</div></div>'; nacitajDopyty().then(vykresliKlientov, function (e) { toast(chybaText(e), true); S.dopyty = []; S.dopytyK = {}; vykresliKlientov(); }); return; }
     if (S.dopytDetail) return vykresliDetailDopytu();
+    if (klPohlad() === "zona") return vykresliKlientskuZonu();
     var F = S.klF = S.klF || { kto: admin() ? "vsetci" : "moji", stav: "aktivny", q: "" };
     var poc = { aktivny: 0, vybaveny: 0, zruseny: 0 };
     var podlaKto = S.dopyty.filter(function (d) { return F.kto === "vsetci" || d.makler_id === S.me.id; });
@@ -5927,17 +6037,21 @@
   // ------------------------------------------------------------ PREDÁVAJÚCI ZO SKENERA
   // predvolene sú Predávajúci zo skenera (ak má maklér prístup k skeneru)
   function klPohlad() {
+    if (S.klPohlad === "zona" && S.kz) return "zona";
     if (!maSekciu("inzeraty") || S.predNedostupne) return "dopyty";
-    return S.klPohlad || "predavajuci";
+    return S.klPohlad === "zona" ? "dopyty" : S.klPohlad || "predavajuci";
   }
   function prepinacKlientov() {
-    if (!maSekciu("inzeraty") || S.predNedostupne) return "";
+    var skener = maSekciu("inzeraty") && !S.predNedostupne;
+    if (!skener && !S.kz) return "";
     var p = klPohlad();
     var nPred = S.pred ? S.pred.filter(function (k) { return k.sukromny && !k.rk; }).length : null;
     var nDop = S.dopyty ? S.dopyty.filter(function (d) { return d.stav === "aktivny"; }).length : null;
-    return '<div class="sch-pohlad kl-pohlad" role="group" aria-label="Klienti">' + [
+    var pohlady = [
       ["predavajuci", "📇", "Predávajúci zo skenera", nPred == null ? "kontakty z inzerátov" : nf.format(nPred) + " " + (nPred === 1 ? "predávajúci" : "predávajúcich")],
-      ["dopyty", "🎯", "Dopyty klientov", nDop == null ? "čo hľadajú vaši klienti" : nf.format(nDop) + " " + (nDop === 1 ? "aktívny dopyt" : nDop >= 2 && nDop <= 4 ? "aktívne dopyty" : "aktívnych dopytov")]].map(function (x) {
+      ["dopyty", "🎯", "Dopyty klientov", nDop == null ? "čo hľadajú vaši klienti" : nf.format(nDop) + " " + (nDop === 1 ? "aktívny dopyt" : nDop >= 2 && nDop <= 4 ? "aktívne dopyty" : "aktívnych dopytov")],
+      ["zona", "🔑", "Klientska zóna", "čo vidí predávajúci a kupujúci"]].filter(function (x) { return x[0] === "dopyty" || (x[0] === "predavajuci" ? skener : !!S.kz); });
+    return '<div class="sch-pohlad kl-pohlad' + (pohlady.length > 2 ? " tri" : "") + '" role="group" aria-label="Klienti">' + pohlady.map(function (x) {
       return '<button type="button" data-kl-pohlad="' + x[0] + '" aria-pressed="' + (p === x[0]) + '"><span class="sp-ik" aria-hidden="true">' + x[1] +
         '</span><span class="sp-txt"><b>' + x[2] + "</b><small>" + x[3] + "</small></span></button>"; }).join("") + "</div>";
   }
@@ -6177,6 +6291,25 @@
     if (!d) { S.dopytDetail = null; return vykresliKlientov(); }
     var K = (S.dopytyK || {})[d.id], mozem = admin() || d.makler_id === S.me.id;
     var P = ponukyPreDopyt(d), I = inzeratyPreDopyt(d), V = S.dopVyber = S.dopVyber || {};
+    // klientska zóna kupujúceho: odkaz, čo je v zóne a ako klient reagoval
+    var ZK = kz().kupujuci, DP = reakcieDopytu(d.id), zonaTok = K && K.zona_token, zonaUrl = zonaTok ? new URL("zona.html?t=" + zonaTok, location.href).href : "";
+    var sediId = {}; P.forEach(function (p) { sediId[p.id] = true; });
+    (S.ponuky || []).forEach(function (p) { if (!sediId[p.id] && DP[p.id] && DP[p.id].stav === "poslana" && (p.stav === "aktivne" || p.stav === "rezervovane")) P.push(p); });
+    function vZone(p) { var x = DP[p.id]; return !!x && x.stav === "poslana" || (ZK.automaticky && !!sediId[p.id] && !(x && x.stav === "skryta")); }
+    var zonaIde = !!S.kz && ZK.zapnute && !!zonaTok && d.stav === "aktivny", nVZone = P.filter(vZone).length;
+    var zonaSprava = "Dobrý deň" + (K && K.meno ? " " + K.meno.split(" ")[0] : "") + ", " + (rodMaklera(S.me) === "zena" ? "pripravila" : "pripravil") + " som Vám stránku s ponukami, ktoré zodpovedajú tomu, čo hľadáte. " +
+      "Pri každej môžete jedným klikom dať vedieť, či sa Vám páči" + (ZK.obhliadka ? ", alebo požiadať o obhliadku" : "") + ":\n" + zonaUrl + "\n\n" + podpis();
+    var hZona = !S.kz ? "" : '<section class="pd-sekcia" id="dd-zona"><div class="pd-sek-hlava"><h4>🔑 Klientska zóna kupujúceho</h4></div>' +
+      (!ZK.zapnute ? '<p class="meta">Zóna kupujúceho je v kancelárii vypnutá.' + (admin() ? " Zapnete ju v Klienti → Klientska zóna." : " Zapne ju administrátor.") + "</p>" :
+       !mozem ? '<p class="meta">Odkaz do zóny vytvára maklér klienta alebo administrátor.</p>' :
+       !zonaTok ? '<p class="meta">Klient dostane tajný odkaz. Uvidí na ňom ponuky kancelárie, ' + (ZK.automaticky ? "ktoré sedia na jeho dopyt," : "ktoré mu pošlete,") + " a jedným klikom dá vedieť, čo sa mu páči" + (ZK.obhliadka ? " a kde chce obhliadku" : "") + '.</p><div><button class="btn primary" type="button" data-dd="zona-vytvor">Vytvoriť odkaz pre klienta</button></div>' :
+       '<div class="pd-odkaz"><input type="text" readonly value="' + esc(zonaUrl) + '" aria-label="Odkaz do klientskej zóny"><button class="btn" type="button" data-dd="zona-kopiruj">Kopírovať odkaz</button>' +
+         '<a class="btn ghost" href="' + esc(zonaUrl) + '" target="_blank" rel="noopener">Otvoriť</a></div>' +
+         '<div class="dd-poslat"><span class="meta">Poslať odkaz klientovi:</span>' + (K.telefon ? '<a class="btn wa" href="#" data-dd-zona="wa" target="_blank" rel="noopener">WhatsApp</a><a class="btn" href="#" data-dd-zona="sms">💬 SMS</a>' : "") +
+         (K.email ? '<a class="btn" href="#" data-dd-zona="email">✉️ Email</a>' : "") + '<button class="btn ghost" type="button" data-dd="zona-zrus">Zrušiť odkaz</button></div>' +
+         '<p class="meta">' + (d.stav !== "aktivny" ? "Dopyt nie je aktívny – klient na odkaze teraz nič nevidí. " : "") +
+           (K.zona_videna ? "Klient zónu naposledy otvoril " + ago(K.zona_videna) + "." : "Klient zónu ešte neotvoril.") + " V zóne " + (nVZone === 1 ? "je 1 ponuka" : nVZone >= 2 && nVZone <= 4 ? "sú " + nVZone + " ponuky" : "je " + nVZone + " ponúk") + ". " +
+           (ZK.automaticky ? "Ponuky, ktoré sedia na dopyt, sa pridávajú samy – nevhodnú skryjete nižšie." : "Ponuky do zóny posielate nižšie tlačidlom „Do zóny“.") + "</p>") + "</section>";
     var h = '<div class="box dopyt-detail"><div class="pd-hlava"><button class="btn ghost" type="button" data-dd="spat">← Všetci klienti</button>' +
       (mozem ? '<div class="pd-akcie"><select id="dd-stav" aria-label="Stav dopytu">' + [["aktivny", "Aktívny"], ["vybaveny", "Vybavený"], ["zruseny", "Zrušený"]].map(function (s) {
         return '<option value="' + s[0] + '"' + (d.stav === s[0] ? " selected" : "") + ">" + s[1] + "</option>"; }).join("") + '</select><button class="btn primary" type="button" data-dd="upravit">✏️ Upraviť</button></div>' : "") + "</div>" +
@@ -6185,13 +6318,17 @@
       (K ? '<section class="pd-interne"><h4>🔒 Kontakt</h4><dl class="pd-par">' + (K.telefon ? '<dt>Telefón</dt><dd><a class="tel" href="tel:' + esc(telCislo(K.telefon)) + '">' + esc(K.telefon) + "</a></dd>" : "") +
         (K.email ? '<dt>Email</dt><dd><a href="mailto:' + esc(K.email) + '">' + esc(K.email) + "</a></dd>" : "") + (K.poznamka ? "<dt>Poznámka</dt><dd>" + esc(K.poznamka) + "</dd>" : "") + "</dl></section>" :
         '<p class="meta">🔒 Kontakt na klienta vidí len jeho maklér a administrátor.</p>') +
+      hZona +
       '<section class="pd-sekcia"><div class="pd-sek-hlava"><h4>🏠 Ponuky kancelárie, ktoré sedia (' + P.length + ")</h4></div>" +
       (P.length ? '<div class="dd-ponuky">' + P.map(function (p) {
         var f = (p.fotky || [])[0];
         return '<div class="dd-ponuka">' + (K && (K.telefon || K.email) ? '<label class="dd-vyber"><input type="checkbox" data-dd-vyber="' + p.id + '"' + (V[p.id] ? " checked" : "") + ' aria-label="Vybrať na poslanie"></label>' : "") +
           '<button type="button" class="dd-p-telo" data-ponuka-otvor="' + p.id + '">' + (f ? '<img src="' + esc(fotkaUrl(f)) + '" alt="" loading="lazy">' : '<span class="dd-bez">🏠</span>') +
           "<span><b>" + esc(nazovPonuky(p)) + '</b><span class="meta d-block">' + esc([p.cast_obce, p.obec].filter(Boolean).join(", ")) + " · " + esc(cenaPonuky(p)) + "</span>" +
-          '<span class="meta d-block">' + avatar(p.makler_id, 16) + " " + esc(meno(p.makler_id)) + (p.cislo ? " · " + esc(p.cislo) : "") + "</span></span></button></div>";
+          '<span class="meta d-block">' + avatar(p.makler_id, 16) + " " + esc(meno(p.makler_id)) + (p.cislo ? " · " + esc(p.cislo) : "") + "</span></span></button>" +
+          (zonaIde || DP[p.id] ? '<div class="dd-zona-r">' + (zonaIde ? (vZone(p) ? '<span class="chip won">✓ v zóne klienta</span>' : '<span class="chip na">nie je v zóne</span>') : "") + cipReakcie(DP[p.id]) +
+            (zonaIde && mozem ? '<button class="btn ghost" type="button" data-zona-ponuka="' + p.id + '" data-stav="' + (vZone(p) ? "skryta" : "poslana") + '">' + (vZone(p) ? "Skryť" : "➕ Do zóny") + "</button>" : "") +
+            (DP[p.id] && DP[p.id].sprava ? '<small class="meta d-block">„' + esc(DP[p.id].sprava) + "“</small>" : "") + "</div>" : "") + "</div>";
       }).join("") + "</div>" +
         (K && (K.telefon || K.email) ? '<div class="dd-poslat"><span class="meta">Vybrané ponuky poslať klientovi:</span>' + (K.telefon ? '<a class="btn wa" href="#" data-dd-posli="wa" target="_blank" rel="noopener">WhatsApp</a><a class="btn" href="#" data-dd-posli="sms">💬 SMS</a>' : "") +
           (K.email ? '<a class="btn" href="#" data-dd-posli="email">✉️ Email</a>' : "") + '<button class="btn ghost" type="button" data-dd="kopiruj">Kopírovať text</button></div>' : "") :
@@ -6215,6 +6352,22 @@
       catch (err) { toast(chybaText(err), true); st.value = d.stav; }
     };
     el.querySelectorAll("[data-dd-vyber]").forEach(function (c) { c.onchange = function () { V[c.dataset.ddVyber] = c.checked; }; });
+    async function zonaAkcia(b, fn, args, hlaska) {
+      b.disabled = true;
+      try { await rpc(fn, args); await nacitajDopyty(); if (hlaska) toast(hlaska); }
+      catch (err) { toast(chybaText(err), true); }
+      if (S.dopytDetail === d.id && S.tab === "klienti") vykresliDetailDopytu();
+    }
+    var zv = el.querySelector('[data-dd="zona-vytvor"]'); if (zv) zv.onclick = function () { zonaAkcia(zv, "zona_kupujuceho_odkaz", { p_dopyt: d.id }, "🔑 Odkaz pre klienta je pripravený."); };
+    var zk = el.querySelector('[data-dd="zona-kopiruj"]'); if (zk) zk.onclick = function () { kopiruj(zonaUrl, "🔗 Odkaz do klientskej zóny je skopírovaný."); };
+    var zz = el.querySelector('[data-dd="zona-zrus"]'); if (zz) zz.onclick = function () {
+      if (!confirm("Zrušiť odkaz? Klientovi prestane fungovať. Nový odkaz mu potom treba poslať znova.")) return;
+      zonaAkcia(zz, "zona_kupujuceho_odkaz", { p_dopyt: d.id, p_zrusit: true }, "Odkaz je zrušený.");
+    };
+    el.querySelectorAll("[data-dd-zona]").forEach(function (a) { a.onclick = function () { a.href = odkazSpravy(a.dataset.ddZona, K.telefon, zonaSprava, "Ponuky pre Vás – " + nazovKancelarie(), K.email); }; });
+    el.querySelectorAll("[data-zona-ponuka]").forEach(function (b) {
+      b.onclick = function () { zonaAkcia(b, "zona_ponuka", { p_dopyt: d.id, p_nehnutelnost: Number(b.dataset.zonaPonuka), p_stav: b.dataset.stav }, b.dataset.stav === "poslana" ? "Ponuka je v zóne klienta." : "Ponuka je zo zóny skrytá."); };
+    });
     function textVybranych() {
       var vyb = P.filter(function (p) { return V[p.id]; }); if (!vyb.length) vyb = P.slice(0, 5);
       return "Dobrý deň" + (K && K.meno ? " " + K.meno.split(" ")[0] : "") + ", posielam Vám ponuky, ktoré zodpovedajú tomu, čo hľadáte:\n\n" +

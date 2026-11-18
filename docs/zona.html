@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1e2a35">
+<title>Klientska zóna · Alpha Reality</title>
+<link rel="stylesheet" href="pisma/pisma.css?v=20261105">
+<link rel="stylesheet" href="verejne.css?v=202610281600">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<style>
+.z-wrap { max-width: 860px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-left, 0px)) 48px; display: grid; gap: 18px }
+.z-pozdrav { font-size: 17px; margin: 0 }
+.z-hlada { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 0 }
+.z-hlada b { margin-right: 4px }
+.z-cip { display: inline-block; font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); font-weight: 600 }
+.z-pozn { font-size: 13px; color: var(--muted); margin: 8px 0 0 }
+.z-h2 { font-family: var(--display); font-size: 19px; margin: 6px 0 0 }
+.z-zoznam { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none }
+.z-karta { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: grid; grid-template-columns: 220px minmax(0, 1fr) }
+.z-karta.odlozena { opacity: .72 }
+.z-f { position: relative; background: var(--gold-soft); min-height: 160px }
+.z-f img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block }
+.z-f .z-bez { position: absolute; inset: 0; display: grid; place-items: center; font-size: 34px }
+.z-stitky { position: absolute; left: 8px; top: 8px; display: flex; flex-wrap: wrap; gap: 5px }
+.z-stitok { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--graphite); color: #f1efe8 }
+.z-stitok.nova { background: var(--gold-strong); color: #1e2a35 }
+.z-telo { padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0 }
+.z-telo h3 { font-family: var(--display); font-size: 17px; line-height: 1.25; margin: 0 }
+.z-telo h3 a { color: inherit; text-decoration: none }
+.z-telo h3 a:hover { text-decoration: underline }
+.z-lok { font-size: 14px; color: var(--muted) }
+.z-cena { font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums }
+.z-par { font-size: 14px; color: var(--muted) }
+.z-reakcie { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px }
+.z-r { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; min-height: 40px }
+.z-r:hover { border-color: var(--gold) }
+.z-r[aria-pressed="true"] { background: var(--gold-soft); border-color: var(--gold); color: var(--gold) }
+.z-r[data-r="obhliadka"][aria-pressed="true"] { background: var(--good-soft); border-color: var(--good); color: var(--good) }
+.z-r:disabled { opacity: .6; cursor: default }
+.z-detail { font-size: 14px; font-weight: 600 }
+.z-obh { display: grid; gap: 8px; margin-top: 4px; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line) }
+.z-obh label { font-size: 14px; font-weight: 600 }
+.z-obh textarea { width: 100%; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical; min-height: 64px }
+.z-obh-btns { display: flex; gap: 8px; flex-wrap: wrap }
+.z-ok { font-size: 14px; color: var(--good); font-weight: 600 }
+.z-chyba { font-size: 14px; color: var(--bad); font-weight: 600 }
+@media (max-width: 640px) { .z-karta { grid-template-columns: minmax(0, 1fr) } .z-f { min-height: 0; aspect-ratio: 16 / 10 } .z-r { flex: 1 1 auto } }
+</style>
+</head>
+<body data-kanc-caka>
+<header class="v-top"><div class="v-wrap">
+  <a href="https://www.alphareality.sk/" data-kanc-web><img src="logo.png" alt="Alpha Reality"></a>
+  <div class="v-top-t">Klientska zóna</div>
+</div></header>
+<main class="z-wrap" id="obsah"><div class="v-nic">Načítavam vaše ponuky…</div></main>
+<footer class="v-wrap v-pata">© <span data-kanc="firma">Alpha Reality s.r.o.</span><span hidden data-kanc="nazov">Alpha Reality</span> · Tento odkaz je určený len pre vás – nezdieľajte ho, prosím.</footer>
+<script src="config.js?v=202610182100"></script>
+<script src="verejne.js?v=202611031900"></script>
+<script>
+(function () {
+  var T = window.TYPEK, esc = T.esc, tok = T.param("t"), el = document.getElementById("obsah");
+  var KAT = { byty: "byty", domy: "domy", chaty: "chaty", pozemky: "pozemky", priestory: "priestory", objekty: "objekty", garaze: "garáže" };
+  var R = null, otvorena = null, hlasky = {};
+  function nic(nadpis, text) { el.innerHTML = '<div class="v-nic"><b>' + esc(nadpis) + "</b>" + esc(text) + "</div>"; }
+  function boxMaklera(m, veta) {
+    if (!m || !m.meno) return "";
+    var tel = T.telOdkaz(m.telefon);
+    return '<section class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno_cele || m.meno) + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") +
+      ' · <span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span></small></div></div>" + (veta ? '<p class="z-pozn">' + esc(veta) + "</p>" : "") +
+      '<div class="v-btns dva">' + (tel ? '<a class="v-btn zlate" href="tel:' + esc(tel) + '">📞 Zavolať</a>' : "") + (m.email ? '<a class="v-btn" href="mailto:' + esc(m.email) + '">✉️ Napísať</a>' : "") + "</div></section>";
+  }
+  function hlada(h) {
+    var c = [h.transakcia === "prenajom" ? "Prenájom" : "Kúpa"];
+    if ((h.typy || []).length) c = c.concat(h.typy); else (h.kategorie || []).forEach(function (k) { c.push(KAT[k] || k); });
+    (h.obce || []).forEach(function (o) { c.push(o); });
+    (h.okresy || []).forEach(function (o) { c.push("okres " + o); });
+    if (h.cena_od != null || h.cena_do != null) c.push(h.cena_od != null && h.cena_do != null ? T.eur(h.cena_od) + " – " + T.eur(h.cena_do) : h.cena_do != null ? "do " + T.eur(h.cena_do) : "od " + T.eur(h.cena_od));
+    if (h.plocha_od != null) c.push("od " + T.nf.format(h.plocha_od) + " m²");
+    if (h.plocha_do != null) c.push("do " + T.nf.format(h.plocha_do) + " m²");
+    if (h.izby_od != null || h.izby_do != null) c.push(h.izby_od != null && h.izby_do != null && h.izby_od !== h.izby_do ? h.izby_od + " – " + h.izby_do + " izby" : "izby: " + (h.izby_od != null ? h.izby_od : h.izby_do) + (h.izby_do == null ? "+" : ""));
+    return c;
+  }
+  function parametre(p) {
+    var x = [], pl = p.kategoria === "pozemky" ? p.plocha_pozemku : p.plocha_uzitkova;
+    if (pl) x.push(T.nf.format(pl) + " m²");
+    if (p.izby) x.push(p.izby + " " + (p.izby === 1 ? "izba" : p.izby < 5 ? "izby" : "izieb"));
+    if (p.kategoria !== "pozemky" && p.plocha_pozemku && p.plocha_uzitkova) x.push("pozemok " + T.nf.format(p.plocha_pozemku) + " m²");
+    return x.join(" · ");
+  }
+  function karta(p) {
+    var Z = R.zona || {}, f = (p.fotky || [])[0], url = T.verejnyOdkaz(p.id), st = [];
+    if (p.nova) st.push('<span class="z-stitok nova">Nové</span>');
+    if (p.stav === "rezervovane") st.push('<span class="z-stitok">Rezervované</span>');
+    if (p.znizena) st.push('<span class="z-stitok">Znížená cena</span>');
+    function tl(r, text) { return '<button type="button" class="z-r" data-r="' + r + '" data-id="' + p.id + '" aria-pressed="' + (p.reakcia === r) + '">' + text + "</button>"; }
+    var h = '<li class="z-karta' + (p.reakcia === "nie" ? " odlozena" : "") + '" id="p-' + p.id + '"><a class="z-f" href="' + esc(url) + '" target="_blank" rel="noopener" aria-label="' + esc(T.nazov(p)) + '">' +
+      (f ? '<img src="' + esc(T.fotkaUrl(f)) + '" alt="" loading="lazy">' : '<span class="z-bez" aria-hidden="true">🏠</span>') + (st.length ? '<span class="z-stitky">' + st.join("") + "</span>" : "") + "</a>" +
+      '<div class="z-telo"><h3><a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(T.nazov(p)) + '</a></h3><div class="z-lok">📍 ' + esc(T.lokalita(p)) + "</div>" +
+      '<div class="z-cena">' + esc(T.cena(p)) + "</div>" + (parametre(p) ? '<div class="z-par">' + esc(parametre(p)) + "</div>" : "") +
+      '<a class="z-detail" href="' + esc(url) + '" target="_blank" rel="noopener">Pozrieť fotky a podrobnosti →</a>';
+    if (Z.reakcie) {
+      h += '<div class="z-reakcie">' + tl("paci", "❤️ Páči sa mi") + (Z.obhliadka ? tl("obhliadka", "🗝️ Chcem obhliadku") : "") + tl("nie", "Nie je pre mňa") + "</div>";
+      if (otvorena === p.id) h += '<div class="z-obh"><label for="z-sprava">Kedy by vám obhliadka vyhovovala? <span class="z-pozn">nepovinné</span></label>' +
+        '<textarea id="z-sprava" maxlength="600" placeholder="napr. v sobotu doobeda alebo cez týždeň po 16:00"></textarea>' +
+        '<div class="z-obh-btns"><button type="button" class="v-btn zlate" data-posli="' + p.id + '">Poslať žiadosť o obhliadku</button><button type="button" class="v-btn" data-zrus>Zrušiť</button></div></div>';
+      if (hlasky[p.id]) h += '<div class="' + (hlasky[p.id].zle ? "z-chyba" : "z-ok") + '" role="status">' + esc(hlasky[p.id].text) + "</div>";
+    }
+    return h + "</div></li>";
+  }
+  function vykresli() {
+    var P = R.ponuky || [], akt = P.filter(function (p) { return p.reakcia !== "nie"; }), odl = P.filter(function (p) { return p.reakcia === "nie"; });
+    var m = R.makler || {}, ona = m.pohlavie === "zena";
+    el.innerHTML = '<p class="z-pozdrav">Dobrý deň' + (R.klient ? ", " + esc(R.klient) : "") + ". " +
+      (P.length ? "Tu sú ponuky, ktoré by vás mohli zaujímať." : "Tu nájdete ponuky, ktoré pre vás vyberieme.") + "</p>" +
+      '<section class="v-box"><p class="z-hlada"><b>Hľadáte:</b>' + hlada(R.hlada || {}).map(function (x) { return '<span class="z-cip">' + esc(x) + "</span>"; }).join("") + "</p>" +
+      '<p class="z-pozn">Zmenilo sa niečo? Dajte vedieť ' + (ona ? "svojej maklérke" : "svojmu maklérovi") + " – upraví to a ponuky sa prispôsobia.</p></section>" +
+      (akt.length ? '<ul class="z-zoznam">' + akt.map(karta).join("") + "</ul>" :
+        '<div class="v-nic"><b>' + (odl.length ? "Všetky ponuky ste odložili" : "Zatiaľ tu nič nie je") + "</b>Keď pribudne nehnuteľnosť, ktorá sa k vám hodí, nájdete ju tu.</div>") +
+      (odl.length ? '<h2 class="z-h2">Odložené</h2><ul class="z-zoznam">' + odl.map(karta).join("") + "</ul>" : "") +
+      boxMaklera(m, (R.zona || {}).reakcie ? "Keď dáte vedieť, čo sa vám páči, ozve sa vám a dohodnete ďalší postup." : "") +
+      '<p class="z-pozn">Ponuky sa aktualizujú priebežne · stav k ' + esc(T.datum(R.vygenerovane, true)) + ".</p>";
+    el.querySelectorAll(".z-r").forEach(function (b) {
+      b.onclick = function () {
+        var id = Number(b.dataset.id), r = b.dataset.r, p = najdi(id);
+        if (!p) return;
+        hlasky = {};
+        if (p.reakcia === r) return posli(p, null);
+        if (r === "obhliadka" && (R.zona || {}).sprava) { otvorena = id; vykresli(); var t = document.getElementById("z-sprava"); if (t) t.focus(); return; }
+        posli(p, r);
+      };
+    });
+    el.querySelectorAll("[data-posli]").forEach(function (b) {
+      b.onclick = function () { var p = najdi(Number(b.dataset.posli)), t = document.getElementById("z-sprava"); if (p) posli(p, "obhliadka", t ? t.value : ""); };
+    });
+    el.querySelectorAll("[data-zrus]").forEach(function (b) { b.onclick = function () { otvorena = null; vykresli(); }; });
+  }
+  function najdi(id) { return (R.ponuky || []).filter(function (p) { return p.id === id; })[0]; }
+  function posli(p, r, sprava) {
+    el.querySelectorAll(".z-r, [data-posli]").forEach(function (b) { b.disabled = true; });
+    T.rpc("zona_reakcia", { p_token: tok, p_nehnutelnost: p.id, p_reakcia: r, p_sprava: sprava || null }).then(function () {
+      p.reakcia = r; otvorena = null;
+      var ona = (R.makler || {}).pohlavie === "zena";
+      if (r === "obhliadka") hlasky[p.id] = { text: "Žiadosť o obhliadku je odoslaná. " + (ona ? "Vaša maklérka" : "Váš maklér") + " sa vám ozve s termínom." };
+      else if (r === "paci") hlasky[p.id] = { text: (ona ? "Vaša maklérka" : "Váš maklér") + " už vie, že sa vám ponuka páči." };
+      vykresli();
+    }).catch(function (e) { hlasky[p.id] = { zle: true, text: e.message || "Nepodarilo sa to odoslať. Skúste to znova." }; vykresli(); });
+  }
+  if (!tok) return nic("Neplatný odkaz", "Odkaz do klientskej zóny nie je úplný.");
+  T.rpc("zona_kupujuceho", { p_token: tok }).then(function (d) {
+    if (!d) return nic("Klientska zóna nie je dostupná", "Odkaz je neplatný alebo už neaktívny. Ozvite sa svojmu maklérovi.");
+    T.kancelaria(d.kancelaria_id, d.kanc);
+    if (d.vypnute) { el.innerHTML = '<div class="v-nic"><b>Klientska zóna je teraz vypnutá</b>Aktuálne ponuky vám rád pošle váš maklér.</div>' + boxMaklera(d.makler); return; }
+    R = d; vykresli();
+  }).catch(function (e) { nic("Klientsku zónu sa nepodarilo načítať", e.message || String(e)); });
+})();
+</script>
+</body>
+</html>
