@@ -1842,6 +1842,11 @@ def main():
         if pred < timedelta(minutes=25):
             log(f"Záložný beh: posledná kontrola pred {int(pred.total_seconds() // 60)} min – netreba.")
             return
+    if POUZI_DB:
+        try:
+            _rpc("skener_beh_zacal", p_kluc=SKENER_KLUC)   # strážca počas dlhého behu nehlási výpadok
+        except Exception as e:  # noqa – nevadí, len upozornenie
+            log(f"! začiatok behu: {e}")
     # rýchla kontrola (každých 10 min): prvá strana výsledkov; Bazoš len kategórie, kde radar videl nový inzerát
     rychly = "--rychly" in args and not prvy_beh
     radar = {}
@@ -1862,8 +1867,12 @@ def main():
             log(f"! kľúče upozornení: {e}")
     if radar.get("chyba") or (radar.get("pauza_do") and datetime.fromisoformat(radar["pauza_do"]) > NOW):
         log(f"! radar: {radar.get('chyba') or 'pauza'}")
-    plny = not rychly and ("--plny" in args or prvy_beh or not posledny_plny
-                           or NOW - datetime.fromisoformat(posledny_plny) > timedelta(hours=20))
+    # plná kontrola v noci (plánovač GitHubu 2:17) – ak tá vypadne, dobehne ráno (prvý beh po 6:00); cez deň a večer
+    # by dlhý beh (30 – 40 min) blokoval bežné kontroly a strážca by hlásil výpadok
+    vek_plny = NOW - datetime.fromisoformat(posledny_plny) if posledny_plny else None
+    rano = NOW.astimezone(ZoneInfo("Europe/Bratislava")).hour < 9
+    plny = not rychly and ("--plny" in args or prvy_beh or vek_plny is None
+                           or (rano and vek_plny > timedelta(hours=12)) or vek_plny > timedelta(hours=44))
     max_stran = 1 if rychly else int(CONFIG.get("stranok_pri_beznej_kontrole", 3))
     for host, do in (meta.get("pauza_portalov") or {}).items():
         try:
