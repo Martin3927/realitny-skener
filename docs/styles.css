@@ -3039,3 +3039,23 @@ html.bez-posuvu #toast { z-index: 210 }
   .poz-f-riadok { grid-template-columns: minmax(0, 1fr) }
   .todo-karta { margin-top: 2vh; padding: 16px 14px }
 }
+
+/* ---------- Hľadať v celom Týpkovi */
+.hladaj-var { z-index: 145; align-items: start; overflow-y: auto }
+.hladaj-karta { width: min(640px, 100%); margin: 7vh auto 16px; background: var(--surface); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.35); overflow: hidden; animation: vstupZoom .25s cubic-bezier(.2,.8,.2,1) }
+.hladaj-pole { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line) }
+.hladaj-pole > span { font-size: 18px }
+.hladaj-pole input { flex: 1; min-width: 0; border: 0; outline: none; font-size: 17px; background: transparent; color: var(--ink); padding: 6px 0; box-shadow: none }
+.hladaj-pole .menu-sheet-x { border-color: var(--line); color: var(--ink); width: 34px; height: 34px; font-size: 21px; flex: none }
+.hladaj-vysl { max-height: min(70vh, 640px); overflow-y: auto; padding: 6px 8px 10px }
+.hladaj-tip { padding: 14px 8px; display: block; line-height: 1.6 }
+.hladaj-tip kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; font-size: 12px; background: var(--surface-2) }
+.hladaj-sk { display: grid; gap: 2px; padding: 4px 0 }
+.hladaj-sk h4 { margin: 8px 6px 4px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px }
+.hladaj-sk h4 .n { font-size: 12px; opacity: .8 }
+.hladaj-r { display: grid; gap: 1px; text-align: left; border: 0; background: transparent; border-radius: 8px; padding: 8px 10px; cursor: pointer; color: var(--ink); font: inherit }
+.hladaj-r b { font-size: 14px; overflow-wrap: anywhere }
+.hladaj-r small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere }
+.hladaj-r:hover, .hladaj-r.vybrany { background: var(--gold-soft) }
+.hladaj-viac { justify-self: start; margin: 2px 6px; padding: 4px 10px; min-height: 0; font-size: 12px }
+@media (max-width: 640px) { .hladaj-karta { margin-top: 0; border-radius: 0 0 16px 16px } .hladaj-vysl { max-height: 78vh } }
