@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="sk" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Odovzdávací protokol · Alpha Reality</title>
+<link rel="stylesheet" href="pisma/pisma.css?v=20261105">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<style>
+/* Odovzdávací protokol A4: tlač alebo uloženie do PDF cez dialóg tlače (rovnako ako leták) */
+:root { --ink: #1e2a35; --muted: #4a6074; --line: #e3dccd; --gold: #8a5a2b; --gold-strong: #db9522; --gold-soft: #f2e4c6; --graphite: #1e2a35;
+  --display: "Montserrat", "Helvetica Neue", Arial, sans-serif; --body: "Public Sans", "Segoe UI", Arial, sans-serif; color-scheme: light }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { margin: 0; background: #d9d6ce; color: var(--ink); font-family: var(--body); font-size: 10.5pt; line-height: 1.45 }
+.lista { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; padding: 12px 16px; background: var(--graphite); color: #f1efe8; font-size: 14px }
+.lista button { font: inherit; font-weight: 700; border: 0; border-radius: 8px; padding: 10px 18px; background: var(--gold-strong); color: #1f1b12; cursor: pointer }
+.lista small { color: #bdb9b0; width: 100%; text-align: center }
+.obal { padding: 24px 12px 48px; overflow-x: auto }
+.list { width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; padding: 12mm 14mm 10mm; box-shadow: 0 8px 30px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 5mm }
+.hl { display: flex; align-items: center; justify-content: space-between; gap: 8mm; padding-bottom: 4mm; border-bottom: 1mm solid var(--gold-strong) }
+.hl img { height: 13mm; display: block; max-width: 60mm; object-fit: contain }
+.hl-t { text-align: right }
+.hl-t .tr { font-family: var(--display); font-weight: 800; font-size: 17pt; letter-spacing: .06em; text-transform: uppercase; color: var(--graphite) }
+.hl-t .pod { color: var(--muted); font-size: 10pt }
+.navrh { border: .5mm dashed #c0392b; color: #a8301f; background: #fdf1ee; padding: 2.5mm 4mm; font-weight: 700; text-align: center; border-radius: 2mm }
+h2 { font-family: var(--display); font-size: 11pt; text-transform: uppercase; letter-spacing: .08em; color: var(--gold); margin: 0 0 2mm }
+.blok { break-inside: avoid }
+dl.dl { display: grid; grid-template-columns: 45mm 1fr; gap: 1.2mm 4mm; margin: 0 }
+dl.dl dt { color: var(--muted) }
+dl.dl dd { margin: 0; font-weight: 600 }
+.strany { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm }
+.strany div { background: #f7f5ef; border-top: 1mm solid var(--gold-strong); padding: 2.5mm 3mm }
+.strany span { display: block; font-size: 8.5pt; color: var(--muted); text-transform: uppercase; letter-spacing: .05em }
+.strany b { font-family: var(--display); font-size: 11.5pt; overflow-wrap: anywhere }
+.strany small { display: block; color: var(--muted) }
+table.tab { width: 100%; border-collapse: collapse }
+.tab th { text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-bottom: .4mm solid var(--line); padding: 1.5mm 2mm }
+.tab td { border-bottom: .25mm solid var(--line); padding: 2mm; vertical-align: top }
+.tab .r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums }
+.tab tfoot td { font-weight: 700; border-bottom: 0 }
+.text { white-space: pre-wrap; margin: 0; overflow-wrap: anywhere }
+.vyhl { background: #f7f5ef; padding: 3mm 4mm; border-radius: 2mm; margin: 0 }
+.podpisy { display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; break-inside: avoid; margin-top: 2mm }
+.podpis { text-align: center }
+.podpis .img { height: 26mm; display: flex; align-items: flex-end; justify-content: center }
+.podpis img { max-height: 26mm; max-width: 100%; display: block }
+.podpis .ciara { border-top: .3mm solid var(--ink); margin: 1mm 0 1.5mm }
+.podpis b { display: block }
+.podpis span { color: var(--muted); font-size: 9pt }
+.podp-info { text-align: center; color: var(--muted); font-size: 9pt }
+.fotky { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm }
+.fotky figure { margin: 0; break-inside: avoid }
+.fotky img { width: 100%; height: 48mm; object-fit: contain; background: #f2f1ec; display: block; border-radius: 1.5mm }
+.fotky figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 1mm }
+.pata { margin-top: auto; padding-top: 3mm; border-top: .3mm solid var(--line); display: flex; justify-content: space-between; gap: 6mm; color: var(--muted); font-size: 8.5pt }
+.pata a { color: inherit }
+.nic { padding: 80px 20px; text-align: center; font-size: 18px; color: #444 }
+@page { size: A4 portrait; margin: 10mm 0 }
+@media print {
+  html, body { background: #fff }
+  .lista { display: none }
+  .obal { padding: 0 }
+  .list { box-shadow: none; margin: 0 auto; min-height: 0; padding-top: 2mm }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact }
+}
+@media (max-width: 820px) {
+  .obal { padding: 12px 6px 32px }
+}
+</style>
+</head>
+<body data-kanc-caka>
+<span hidden data-kanc="nazov">Alpha Reality</span>
+<div class="lista" id="lista" hidden>
+  <button type="button" id="tlac">🖨 Tlačiť / Uložiť ako PDF</button>
+  <small>Pri ukladaní do PDF zvoľte v tlači „Uložiť ako PDF“, veľkosť A4 a zapnite „Grafika pozadia“.</small>
+</div>
+<div class="obal"><article class="list" id="list"><div class="nic">Načítavam protokol…</div></article></div>
+<script src="config.js?v=202610182100"></script>
+<script src="verejne.js?v=202611031900"></script>
+<script>
+(function () {
+  var T = window.TYPEK, esc = T.esc, tok = T.param("t"), el = document.getElementById("list");
+  var DRUH = { predaj: ["Odovzdanie nehnuteľnosti kupujúcemu", "Predávajúci", "Kupujúci"], prenajom: ["Odovzdanie nehnuteľnosti nájomcovi", "Prenajímateľ", "Nájomca"],
+    vratenie: ["Vrátenie nehnuteľnosti od nájomcu", "Nájomca", "Prenajímateľ"] };
+  function kedy(iso) {
+    var d = new Date(iso);
+    return d.toLocaleDateString("sk-SK", { day: "numeric", month: "numeric", year: "numeric" }) + " o " + d.toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" });
+  }
+  function odsek(nadpis, t) { return t ? '<section class="blok"><h2>' + nadpis + '</h2><p class="text">' + esc(t) + "</p></section>" : ""; }
+  // fotky meračov sú v súkromnom úložisku – podpísané odkazy na hodinu (len kto má odkaz na protokol)
+  function podpisFotiek(cesty) {
+    var C = T.CFG;
+    if (!cesty.length || !C.supabaseUrl) return Promise.resolve({});
+    return fetch(C.supabaseUrl + "/storage/v1/object/sign/protokoly", {
+      method: "POST", headers: { apikey: C.supabaseKey, Authorization: "Bearer " + C.supabaseKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ expiresIn: 3600, paths: cesty }),
+    }).then(function (r) { return r.ok ? r.json() : []; }).then(function (a) {
+      var o = {}; (Array.isArray(a) ? a : []).forEach(function (x) { if (x && x.signedURL && x.path) o[x.path] = C.supabaseUrl + "/storage/v1" + x.signedURL; });
+      return o;
+    }).catch(function () { return {}; });
+  }
+  function vykresli(R, U) {
+    var D = DRUH[R.druh] || DRUH.predaj, M = R.meradla || [], K = R.kluce || [], m = R.makler || {}, kn = T.kanc();
+    var spolu = K.reduce(function (s, k) { return s + (Number(k.pocet) || 0); }, 0);
+    var fotky = M.filter(function (x) { return x.foto && U[x.foto]; });
+    document.title = "Odovzdávací protokol – " + (R.ponuka.nazov || "") + " · " + kn.nazov;
+    el.innerHTML =
+      '<header class="hl"><img src="logo.png" alt="Alpha Reality"><div class="hl-t"><div class="tr">Odovzdávací protokol</div><div class="pod">' + esc(D[0]) + " · č. " + esc(R.id) + "</div></div></header>" +
+      (R.podpisane ? "" : '<div class="navrh">NÁVRH – protokol ešte nie je podpísaný oboma stranami</div>') +
+      '<section class="blok"><h2>Nehnuteľnosť</h2><dl class="dl"><dt>Nehnuteľnosť</dt><dd>' + esc(R.ponuka.nazov || "") + (R.ponuka.cislo ? " (č. ponuky " + esc(R.ponuka.cislo) + ")" : "") + "</dd>" +
+        (R.miesto ? "<dt>Adresa</dt><dd>" + esc(R.miesto) + "</dd>" : "") + "<dt>Dátum a čas odovzdania</dt><dd>" + esc(kedy(R.datum)) + "</dd></dl></section>" +
+      '<section class="blok strany"><div><span>' + esc(D[1]) + " · odovzdáva</span><b>" + esc(R.odovzdavajuci || "–") + "</b></div>" +
+        "<div><span>" + esc(D[2]) + " · preberá</span><b>" + esc(R.preberajuci || "–") + "</b></div>" +
+        "<div><span>Sprostredkovateľ</span><b>" + esc(m.meno_cele || m.meno || kn.nazov) + "</b><small>" + esc(kn.nazov) + (m.telefon ? " · " + esc(m.telefon) : "") + "</small></div></section>" +
+      (M.length ? '<section class="blok"><h2>Stavy meračov</h2><table class="tab"><thead><tr><th>Merač</th><th>Číslo merača</th><th class="r">Stav</th></tr></thead><tbody>' +
+        M.map(function (x) { return "<tr><td>" + esc(x.druh) + (x.foto ? " 📷" : "") + "</td><td>" + esc(x.cislo || "–") + '</td><td class="r"><b>' + esc(x.stav || "–") + "</b>" + (x.jednotka && x.stav ? " " + esc(x.jednotka) : "") + "</td></tr>"; }).join("") +
+        "</tbody></table></section>" : "") +
+      (K.length ? '<section class="blok"><h2>Odovzdané kľúče a čipy</h2><table class="tab"><thead><tr><th>Kľúč / čip</th><th class="r">Počet</th></tr></thead><tbody>' +
+        K.map(function (k) { return "<tr><td>" + esc(k.co) + '</td><td class="r">' + esc(k.pocet) + " ks</td></tr>"; }).join("") +
+        '</tbody><tfoot><tr><td>Spolu</td><td class="r">' + spolu + " ks</td></tr></tfoot></table></section>" : "") +
+      odsek("Stav nehnuteľnosti a zistené nedostatky", R.stav) + odsek("Zariadenie, ktoré zostáva", R.vybavenie) + odsek("Poznámka a dohody", R.poznamka) +
+      '<p class="vyhl blok">' + esc(D[1]) + " odovzdal a " + esc(D[2].toLowerCase()) + " prevzal uvedenú nehnuteľnosť v stave opísanom v tomto protokole" + (K.length ? " spolu s uvedenými kľúčmi" : "") +
+        ". Stavy meračov sú zapísané ku dňu odovzdania. Obe strany svojím podpisom potvrdzujú, že údaje v protokole sú správne.</p>" +
+      '<section class="podpisy">' + [[R.podpis_odovzdavajuci, R.odovzdavajuci, D[1]], [R.podpis_preberajuci, R.preberajuci, D[2]]].map(function (x) {
+        return '<div class="podpis"><div class="img">' + (x[0] ? '<img src="' + esc(x[0]) + '" alt="Podpis">' : "") + '</div><div class="ciara"></div><b>' + esc(x[1] || "") + "</b><span>" + esc(x[2]) + "</span></div>";
+      }).join("") + "</section>" +
+      (R.podpisane ? '<div class="podp-info">Podpísané prstom na displeji ' + esc(kedy(R.podpisane)) + ".</div>" : "") +
+      (fotky.length ? '<section><h2>Fotky meračov</h2><div class="fotky">' + fotky.map(function (x) {
+        return '<figure><img src="' + esc(U[x.foto]) + '" alt="' + esc(x.druh) + '"><figcaption>' + esc(x.druh) + (x.cislo ? " · č. " + esc(x.cislo) : "") + (x.stav ? " · " + esc(x.stav) + (x.jednotka ? " " + esc(x.jednotka) : "") : "") + "</figcaption></figure>";
+      }).join("") + "</div></section>" : "") +
+      '<footer class="pata"><span>' + esc(kn.firma || kn.nazov) + (kn.web ? ' · <a href="' + esc(kn.web) + '">' + esc(kn.webText) + "</a>" : "") + "</span><span>Protokol č. " + esc(R.id) + " · Realitný týpek</span></footer>";
+  }
+  document.getElementById("tlac").onclick = function () { window.print(); };
+  if (!tok) { el.innerHTML = '<div class="nic">V odkaze chýba kľúč protokolu.</div>'; return; }
+  T.rpc("protokol_verejny", { p_token: tok }).then(function (R) {
+    if (!R) { el.innerHTML = '<div class="nic">Protokol sa nenašiel. Odkaz je neplatný alebo bol protokol zmazaný.</div>'; return; }
+    T.kancelaria(R.kancelaria_id, R.kanc);
+    var cesty = (R.meradla || []).map(function (x) { return x.foto; }).filter(Boolean);
+    return podpisFotiek(cesty).then(function (U) { vykresli(R, U); document.getElementById("lista").hidden = false; });
+  }).catch(function (e) { el.innerHTML = '<div class="nic">Protokol sa nepodarilo načítať: ' + esc(e.message || e) + "</div>"; });
+})();
+</script>
+</body>
+</html>

@@ -3142,3 +3142,43 @@ html.bez-posuvu #toast { z-index: 210 }
 .suv-row.predtym { background: var(--warn-soft) }
 .predtym-lac { color: var(--good); font-weight: 700 }
 .predtym-drah { color: var(--bad); font-weight: 700 }
+
+/* ---------- Odovzdávací protokol (merače, kľúče, podpis prstom) */
+.prot-zoz { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 10px }
+.prot-riadok { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; background: var(--surface) }
+.prot-hl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.prot-posli { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.prot-posli > .meta { font-weight: 600 }
+.prot-var { z-index: 140; align-items: start; overflow-y: auto }
+.prot-karta { width: min(720px, 100%); margin: 4vh auto 16px; background: var(--surface); border-radius: 16px; padding: 18px; display: grid; gap: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  border-top: 5px solid var(--gold-strong); animation: vstupZoom .3s cubic-bezier(.2,.8,.2,1); text-align: left }
+.prot-karta .menu-sheet-x { border-color: var(--line); color: var(--ink); width: 36px; height: 36px; font-size: 22px }
+.prot-f-dva { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+.prot-fs { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 12px; margin: 0; display: grid; gap: 10px; min-width: 0 }
+.prot-fs legend { font-weight: 700; padding: 0 6px }
+.prot-merace, .prot-kluce { display: grid; gap: 8px }
+.prot-merac { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto auto auto; gap: 6px; align-items: center }
+.prot-merac select, .prot-merac input, .prot-kluc input { font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); min-width: 0; width: 100% }
+.prot-stav { display: flex; gap: 4px; min-width: 0 }
+.prot-stav .prot-jedn { width: 58px; flex: none; text-align: center; color: var(--muted) }
+.prot-foto-btn { white-space: nowrap; cursor: pointer }
+.prot-foto-btn.nahrava { opacity: .7; pointer-events: none }
+.prot-nahlad { width: 42px; height: 42px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); overflow: hidden; cursor: zoom-in; font-size: 18px }
+.prot-nahlad img { width: 100%; height: 100%; object-fit: cover; display: block }
+.prot-kluc { display: grid; grid-template-columns: minmax(0, 1fr) 84px auto; gap: 6px; align-items: center }
+.prot-podpisy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.prot-podpis { display: grid; gap: 4px; position: relative }
+.prot-podpis-hl { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14px }
+.prot-podpis canvas { width: 100%; height: 150px; display: block; border: 1px dashed var(--muted); border-radius: 10px; background: #fff; touch-action: none; cursor: crosshair }
+.prot-podpis-ciara { position: absolute; left: 14px; right: 14px; bottom: 34px; border-top: 1px solid #c9c3b6; pointer-events: none }
+@media (max-width: 640px) {
+  .prot-karta { margin-top: 0; padding: 14px 12px; border-radius: 0 0 16px 16px }
+  .prot-f-dva, .prot-podpisy { grid-template-columns: minmax(0, 1fr) }
+  .prot-merac { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .prot-merac select { grid-column: 1 / -1 }
+  .prot-merac .prot-stav { grid-column: span 1 }
+  .prot-podpis canvas { height: 170px }
+}
+@media (max-width: 640px) {
+  .prot-merac + .prot-merac { border-top: 1px dashed var(--line); padding-top: 8px }
+}

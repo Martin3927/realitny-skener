@@ -5996,6 +5996,7 @@
       todoSekcia({ t: "ponuka", id: String(p.id), n: todoNazovPonuky(p) }) +
       (mozem ? sekciaVyrocia(p, I) + sekciaBezZaujmu(p) : "") +
       sekciaObhliadky(p, mozem) +
+      (mozem ? sekciaProtokolov(p) : "") +
       ((p.historia_cien || []).length > 1 ? '<p class="meta">Vývoj ceny: ' + p.historia_cien.map(function (x) { return datum(x[0]) + " " + eur(x[1]); }).join(" → ") + "</p>" : "") +
       (mozem ? sekciaHistorie("nehnutelnosti", p.id) : "") +
       '<p class="meta">Vytvorené ' + datum(p.vytvorene, true) + " · upravené " + datum(p.upravene, true) + (p.zdroj_inzerat ? " · prenesené zo skenera" : "") + "</p></div>";
@@ -6267,7 +6268,9 @@
       nacitajDopyty().catch(function () {}),
       rpc("portal_statistika").catch(function () { return null; }),
       vsetkyRiadky("obhliadky_hodnotenia", "*", "id").catch(function () { return []; }),
+      vsetkyRiadky("odovzdavacie_protokoly", PROT_STLPCE, "id").catch(function () { return []; }),
     ]);
+    S.protokoly = w[5] || [];
     S.obhliadky = w[0];
     var oh = {}; (w[4] || []).forEach(function (x) { oh[x.obhliadka_id] = x; }); S.obhHod = oh;
     S.portalStat = (w[3] && w[3].ponuky) || {};
@@ -6620,6 +6623,290 @@
         await rpc("hodnotenie_obhliadky_schvalit", { p_id: id, p_schvalit: a === "schvalit" });
         var r = await vsetkyRiadky("obhliadky_hodnotenia", "*", "id"); var oh = {}; r.forEach(function (x) { oh[x.obhliadka_id] = x; }); S.obhHod = oh;
         vykresliDetailPonuky(); toast(a === "schvalit" ? "✓ Hodnotenie uvidí majiteľ v reporte." : "Hodnotenie sa majiteľovi nezobrazí.");
+      }
+    } catch (err) { b.disabled = false; toast(chybaText(err), true); }
+  });
+  // ---------- odovzdávací protokol: merače s fotkami, kľúče, stav, podpis prstom oboch strán, PDF pre obe strany (migrácia 147)
+  var PROT_DRUH = { predaj: ["Odovzdanie kupujúcemu", "Predávajúci", "Kupujúci", "Predávajúcemu", "Kupujúcemu"], prenajom: ["Odovzdanie nájomcovi", "Prenajímateľ", "Nájomca", "Prenajímateľovi", "Nájomcovi"],
+    vratenie: ["Vrátenie od nájomcu", "Nájomca", "Prenajímateľ", "Nájomcovi", "Prenajímateľovi"] };
+  var PROT_MERACE = [["Elektrina", "kWh"], ["Elektrina – nízka tarifa", "kWh"], ["Plyn", "m³"], ["Studená voda", "m³"], ["Teplá voda", "m³"], ["Teplo", "GJ"], ["Iné", ""]];
+  var PROT_KLUCE = ["Vchodové dvere", "Bytové dvere", "Vchod do domu", "Poštová schránka", "Pivnica", "Garáž", "Brána", "Čip", "Ovládač brány"];
+  var PROT_STLPCE = "id,nehnutelnost_id,kancelaria_id,token,druh,datum,odovzdavajuci,odovzdavajuci_kontakt,preberajuci,preberajuci_kontakt,podpisane,vytvorene,upravene";
+  function protUrl(t) { return new URL("protokol.html?t=" + encodeURIComponent(t), location.href).href; }
+  function protJednotka(d) { var x = PROT_MERACE.find(function (m) { return m[0] === d; }); return x ? x[1] : ""; }
+  function protPredvoleneMerace(p) {
+    var D = p.kategoria === "byty" ? ["Elektrina", "Studená voda", "Teplá voda", "Teplo"] : /^(domy|chaty)$/.test(p.kategoria || "") ? ["Elektrina", "Plyn", "Studená voda"] : ["Elektrina"];
+    return D.map(function (d) { return { druh: d, jednotka: protJednotka(d) }; });
+  }
+  function protKontakt(k) { k = String(k || "").trim(); return /@/.test(k) ? { email: k } : k.replace(/[^\d]/g, "").length >= 9 ? { tel: k } : {}; }
+  function protSuhrn(r) { var o = {}; PROT_STLPCE.split(",").forEach(function (k) { o[k] = r[k]; }); return o; }
+  function protUloz(r) {
+    S.protokoly = (S.protokoly || []).filter(function (x) { return x.id !== r.id; });
+    S.protokoly.push(protSuhrn(r));
+  }
+  function protSprava(pr, p) {
+    return "Dobrý deň, posielam Vám odovzdávací protokol k nehnuteľnosti " + nazovPonuky(p) + " zo dňa " + datum(pr.datum) + " – stavy meračov, kľúče aj podpisy. " +
+      "Môžete si ho pozrieť a uložiť ako PDF:\n" + protUrl(pr.token) + "\n\n" + podpis();
+  }
+  function protPosliHtml(pr, p, kto) {
+    var D = PROT_DRUH[pr.druh] || PROT_DRUH.predaj, K = protKontakt(kto === "o" ? pr.odovzdavajuci_kontakt : pr.preberajuci_kontakt), t = protSprava(pr, p);
+    if (!K.tel && !K.email) return "";
+    return '<span class="prot-posli"><span class="meta">' + esc(kto === "o" ? D[3] : D[4]) + ":</span>" +
+      (K.tel ? '<a class="btn wa" href="' + esc(odkazSpravy("wa", K.tel, t)) + '" target="_blank" rel="noopener">WhatsApp</a><a class="btn" href="' + esc(odkazSpravy("sms", K.tel, t)) + '">💬 SMS</a>' : "") +
+      (K.email ? '<a class="btn" href="' + esc(odkazSpravy("email", "", t, "Odovzdávací protokol – " + nazovPonuky(p), K.email)) + '">✉️ E-mail</a>' : "") + "</span>";
+  }
+  function sekciaProtokolov(p) {
+    var L = (S.protokoly || []).filter(function (x) { return x.nehnutelnost_id === p.id; }).sort(function (a, b) { return String(b.vytvorene).localeCompare(String(a.vytvorene)); });
+    return '<section class="pd-sekcia protokoly" id="pd-protokoly"><div class="pd-sek-hlava"><h4>📋 Odovzdávací protokol</h4><button type="button" class="btn" data-prot-novy="' + p.id + '">+ Nový protokol</button></div>' +
+      (L.length ? '<ul class="prot-zoz">' + L.map(function (pr) {
+        var D = PROT_DRUH[pr.druh] || PROT_DRUH.predaj;
+        return '<li class="prot-riadok"><div class="prot-hl"><b>' + esc(D[0]) + "</b> · " + esc(datum(pr.datum, true)) +
+          ' <span class="chip ' + (pr.podpisane ? "won" : "na") + '">' + (pr.podpisane ? "✓ Podpísaný" : "Rozpracovaný") + "</span></div>" +
+          '<div class="meta">' + esc(D[1]) + ": " + esc(pr.odovzdavajuci || "–") + " · " + esc(D[2]) + ": " + esc(pr.preberajuci || "–") + "</div>" +
+          '<div class="pd-zdiel-btns">' + (pr.podpisane ? "" : '<button type="button" class="btn primary" data-prot-upravit="' + pr.id + '">✍️ Pokračovať</button>') +
+          '<a class="btn" href="' + esc(protUrl(pr.token)) + '" target="_blank" rel="noopener">📄 ' + (pr.podpisane ? "PDF" : "Náhľad") + "</a>" +
+          (pr.podpisane ? protPosliHtml(pr, p, "o") + protPosliHtml(pr, p, "p") : "") +
+          '<button type="button" class="btn ghost" data-prot-kopiruj="' + pr.id + '">📋 Kopírovať odkaz</button>' +
+          (!pr.podpisane || admin() ? '<button type="button" class="btn ghost" data-prot-zmazat="' + pr.id + '" aria-label="Zmazať protokol" title="Zmazať protokol">🗑️</button>' : "") + "</div></li>";
+      }).join("") + "</ul>" : "") +
+      '<p class="meta">' + (L.length ? "Po podpise sa protokol už nedá meniť. Obe strany dostanú odkaz, z ktorého si ho uložia ako PDF." :
+        "Pri odovzdaní nehnuteľnosti zapíšeš stavy meračov aj s fotkou, kľúče a stav. Obe strany sa podpíšu prstom na displeji a dostanú odkaz na protokol, ktorý si uložia ako PDF.") + "</p></section>";
+  }
+  function protPrekresli(pid) { if (S.tab === "nehnutelnosti" && S.ponukaDetail === pid) vykresliDetailPonuky(); }
+  async function protZmazSubory(cesty) {
+    cesty = (cesty || []).filter(Boolean);
+    if (cesty.length) await sb.storage.from("protokoly").remove(cesty).catch(function () {});
+  }
+  function protLokal(iso) { var d = iso ? new Date(iso) : new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); }
+  // podpisová plocha: kreslí sa prstom, myšou alebo perom; vráti PNG orezaný na podpis (najviac 600 × 200 px)
+  function protPodpisPad(cv, data, priZmene) {
+    var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1)), g = null, tah = false, posl = null, prazdny = !data, zmena = false, FARBA = "#13254a";
+    function priprav(zachovaj) {
+      // rozmer z rozloženia (nie z getBoundingClientRect – okno sa pri otvorení zväčšuje animáciou)
+      var w = Math.max(1, Math.round(cv.offsetWidth * dpr)), h = Math.max(1, Math.round(cv.offsetHeight * dpr));
+      if (g && cv.width === w && cv.height === h) return;
+      var kopia = null;
+      if (zachovaj && g && !prazdny) { kopia = document.createElement("canvas"); kopia.width = cv.width; kopia.height = cv.height; kopia.getContext("2d").drawImage(cv, 0, 0); }
+      cv.width = w; cv.height = h; g = cv.getContext("2d");
+      if (kopia) g.drawImage(kopia, 0, 0, w, h);
+      g.setTransform(dpr, 0, 0, dpr, 0, 0); g.lineWidth = 2.4; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = FARBA; g.fillStyle = FARBA;
+    }
+    priprav(false);
+    if (data) {
+      var im = new Image();
+      im.onload = function () { var W = cv.offsetWidth, H = cv.offsetHeight, k = Math.min(W / im.width, H / im.height, 1); g.drawImage(im, (W - im.width * k) / 2, (H - im.height * k) / 2, im.width * k, im.height * k); };
+      im.src = data;
+    }
+    function bod(e) { var r = cv.getBoundingClientRect(), kx = r.width ? cv.offsetWidth / r.width : 1, ky = r.height ? cv.offsetHeight / r.height : 1; return [(e.clientX - r.left) * kx, (e.clientY - r.top) * ky]; }
+    cv.addEventListener("pointerdown", function (e) {
+      e.preventDefault(); priprav(true);
+      try { cv.setPointerCapture(e.pointerId); } catch (x) { /* nevadí */ }
+      tah = true; posl = bod(e); g.beginPath(); g.arc(posl[0], posl[1], 1.2, 0, Math.PI * 2); g.fill();
+      prazdny = false; zmena = true; priZmene();
+    });
+    cv.addEventListener("pointermove", function (e) {
+      if (!tah) return; e.preventDefault();
+      var b = bod(e); g.beginPath(); g.moveTo(posl[0], posl[1]); g.lineTo(b[0], b[1]); g.stroke(); posl = b;
+    });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (t) { cv.addEventListener(t, function () { tah = false; }); });
+    return {
+      prazdny: function () { return prazdny; },
+      vymaz: function () { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.setTransform(dpr, 0, 0, dpr, 0, 0); prazdny = true; zmena = true; priZmene(); },
+      data: function () {
+        if (prazdny) return null;
+        if (!zmena && data) return data;
+        var W = cv.width, H = cv.height, px = cv.getContext("2d").getImageData(0, 0, W, H).data, x0 = W, y0 = H, x1 = -1, y1 = -1;
+        for (var y = 0; y < H; y += 2) for (var x = 0; x < W; x += 2) if (px[(y * W + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        if (x1 < 0 || (x1 - x0 < 12 * dpr && y1 - y0 < 12 * dpr)) return null;
+        var pad = 6 * dpr; x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(W, x1 + pad); y1 = Math.min(H, y1 + pad);
+        var k = Math.min(1, 600 / (x1 - x0), 200 / (y1 - y0)), out = document.createElement("canvas");
+        out.width = Math.max(1, Math.round((x1 - x0) * k)); out.height = Math.max(1, Math.round((y1 - y0) * k));
+        out.getContext("2d").drawImage(cv, x0, y0, x1 - x0, y1 - y0, 0, 0, out.width, out.height);
+        return out.toDataURL("image/png");
+      },
+    };
+  }
+  function protEditor(pr, p, novy) {
+    var stare = $("#prot-okno"); if (stare) stare.remove();
+    var E = { meradla: (pr.meradla || []).length ? pr.meradla.map(function (m) { return Object.assign({}, m); }) : protPredvoleneMerace(p),
+      kluce: (pr.kluce || []).length ? pr.kluce.map(function (k) { return Object.assign({}, k); }) : [{ co: "", pocet: "" }],
+      nove: [], odobrate: [], nahlady: {}, zmenene: false, ulozene: false, pady: {} };
+    var priecinok = pr.kancelaria_id + "/" + pr.token + "/";
+    var w = document.createElement("div"); w.className = "pochvala-var prot-var"; w.id = "prot-okno";
+    function txt(n, lab, max, rows, ph) {
+      return '<label class="field"><span>' + lab + '</span><textarea name="' + n + '" rows="' + rows + '" maxlength="' + max + '" placeholder="' + esc(ph) + '">' + esc(pr[n] || "") + "</textarea></label>";
+    }
+    w.innerHTML = '<form class="prot-karta" role="dialog" aria-modal="true" aria-labelledby="prot-okno-h" novalidate>' +
+      '<div class="todo-karta-hl"><h3 id="prot-okno-h">📋 Odovzdávací protokol</h3><button type="button" class="menu-sheet-x" data-prot-zavri aria-label="Zavrieť">×</button></div>' +
+      '<div class="todo-pre">🏠 <b>' + esc(nazovPonuky(p)) + "</b></div>" +
+      '<div class="prot-f-dva"><label class="field"><span>Druh</span><select name="druh">' + Object.keys(PROT_DRUH).map(function (k) {
+        return '<option value="' + k + '"' + (pr.druh === k ? " selected" : "") + ">" + PROT_DRUH[k][0] + "</option>"; }).join("") + "</select></label>" +
+        '<label class="field"><span>Dátum a čas odovzdania</span><input type="datetime-local" name="datum" value="' + esc(protLokal(pr.datum)) + '"></label></div>' +
+      '<label class="field"><span>Miesto (adresa nehnuteľnosti)</span><input type="text" name="miesto" maxlength="300" value="' + esc(pr.miesto || "") + '"></label>' +
+      '<fieldset class="prot-fs"><legend>Strany</legend>' + ["o", "p"].map(function (s) {
+        var n = s === "o" ? "odovzdavajuci" : "preberajuci";
+        return '<div class="prot-f-dva"><label class="field"><span data-prot-l="' + s + '"></span><input type="text" name="' + n + '" maxlength="200" autocomplete="off" value="' + esc(pr[n] || "") + '" placeholder="Meno a priezvisko"></label>' +
+          '<label class="field"><span>Telefón alebo e-mail <small class="meta">na poslanie protokolu</small></span><input type="text" name="' + n + '_kontakt" maxlength="120" autocomplete="off" value="' + esc(pr[n + "_kontakt"] || "") + '"></label></div>';
+      }).join("") + "</fieldset>" +
+      '<fieldset class="prot-fs"><legend>Merače</legend><div class="prot-merace"></div><button type="button" class="btn ghost" data-prot-merac-pridaj>+ Pridať merač</button></fieldset>' +
+      '<fieldset class="prot-fs"><legend>Kľúče a čipy</legend><div class="prot-kluce"></div><button type="button" class="btn ghost" data-prot-kluc-pridaj>+ Pridať kľúč</button>' +
+        '<datalist id="prot-kluce-dl">' + PROT_KLUCE.map(function (k) { return '<option value="' + esc(k) + '">'; }).join("") + "</datalist></fieldset>" +
+      txt("stav", "Stav nehnuteľnosti a zistené nedostatky", 3000, 2, "napr. Byt je vypratý a čistý, bez viditeľných poškodení.") +
+      txt("vybavenie", "Zariadenie, ktoré zostáva", 3000, 2, "napr. Kuchynská linka so spotrebičmi, vstavané skrine.") +
+      txt("poznamka", "Poznámka a dohody", 3000, 2, "napr. Predávajúci odhlási trvalý pobyt do 31. 12.") +
+      '<fieldset class="prot-fs"><legend>Podpisy</legend><p class="meta">Každá strana sa podpíše prstom priamo na displeji.</p><div class="prot-podpisy">' + ["o", "p"].map(function (s) {
+        return '<div class="prot-podpis"><div class="prot-podpis-hl"><span data-prot-l2="' + s + '"></span><button type="button" class="btn-link" data-prot-vymaz="' + s + '">Vymazať</button></div>' +
+          '<canvas data-prot-pad="' + s + '" aria-label="Podpisová plocha"></canvas><span class="prot-podpis-ciara"></span></div>';
+      }).join("") + "</div></fieldset>" +
+      '<div class="form-actions"><button class="btn primary" type="button" data-prot-uzavriet>✍️ Podpísať a uzavrieť</button><button class="btn" type="submit">💾 Uložiť rozpracovaný</button><button class="btn ghost" type="button" data-prot-zavri>Zavrieť</button></div>' +
+      '<p class="meta">Po uzavretí sa protokol už nedá meniť. Odkaz na PDF potom pošleš obom stranám.</p></form>';
+    document.body.appendChild(w);
+    var f = w.querySelector("form");
+    function stitky() {
+      var D = PROT_DRUH[f.druh.value] || PROT_DRUH.predaj;
+      f.querySelectorAll("[data-prot-l]").forEach(function (el) { el.textContent = el.dataset.protL === "o" ? D[1] + " (odovzdáva)" : D[2] + " (preberá)"; });
+      f.querySelectorAll("[data-prot-l2]").forEach(function (el) { el.textContent = el.dataset.protL2 === "o" ? D[1] : D[2]; });
+    }
+    function citaj() {
+      f.querySelectorAll(".prot-merac").forEach(function (r) { var m = E.meradla[Number(r.dataset.i)]; if (!m) return; r.querySelectorAll("[data-m]").forEach(function (i) { m[i.dataset.m] = i.value; }); });
+      f.querySelectorAll(".prot-kluc").forEach(function (r) { var k = E.kluce[Number(r.dataset.i)]; if (!k) return; r.querySelectorAll("[data-k]").forEach(function (i) { k[i.dataset.k] = i.value; }); });
+    }
+    function merace() {
+      f.querySelector(".prot-merace").innerHTML = E.meradla.map(function (m, i) {
+        var znamy = PROT_MERACE.some(function (x) { return x[0] === m.druh; });
+        return '<div class="prot-merac" data-i="' + i + '"><select data-m="druh" aria-label="Merač">' + PROT_MERACE.map(function (x) { return '<option' + (x[0] === m.druh ? " selected" : "") + ">" + esc(x[0]) + "</option>"; }).join("") +
+            (znamy || !m.druh ? "" : '<option selected>' + esc(m.druh) + "</option>") + "</select>" +
+          '<input type="text" data-m="cislo" maxlength="60" placeholder="Číslo merača" aria-label="Číslo merača" value="' + esc(m.cislo || "") + '">' +
+          '<span class="prot-stav"><input type="text" data-m="stav" maxlength="40" inputmode="decimal" placeholder="Stav" aria-label="Stav merača" value="' + esc(m.stav || "") + '">' +
+            '<input type="text" class="prot-jedn" data-m="jednotka" maxlength="12" aria-label="Jednotka" value="' + esc(m.jednotka || "") + '"></span>' +
+          (m.foto ? '<button type="button" class="prot-nahlad" data-m-nahlad="' + i + '" title="Fotka merača">' + (E.nahlady[m.foto] ? '<img src="' + esc(E.nahlady[m.foto]) + '" alt="Fotka merača">' : "📷") + "</button>" : "") +
+          '<label class="btn ghost prot-foto-btn">' + (m.foto ? "📷 Iná fotka" : "📷 Pridať fotku") + '<input type="file" accept="image/*" hidden data-m-foto="' + i + '"></label>' +
+          '<button type="button" class="btn ghost" data-m-zmaz="' + i + '" aria-label="Odstrániť merač">✕</button></div>';
+      }).join("") || '<p class="meta">Bez meračov.</p>';
+    }
+    function kluce() {
+      f.querySelector(".prot-kluce").innerHTML = E.kluce.map(function (k, i) {
+        return '<div class="prot-kluc" data-i="' + i + '"><input type="text" data-k="co" list="prot-kluce-dl" maxlength="80" placeholder="napr. Vchodové dvere" aria-label="Kľúč" value="' + esc(k.co || "") + '">' +
+          '<input type="number" data-k="pocet" min="1" max="99" inputmode="numeric" placeholder="ks" aria-label="Počet kusov" value="' + esc(k.pocet || "") + '">' +
+          '<button type="button" class="btn ghost" data-k-zmaz="' + i + '" aria-label="Odstrániť kľúč">✕</button></div>';
+      }).join("");
+    }
+    function odoberFotku(cesta) {
+      if (!cesta) return;
+      if (E.nove.indexOf(cesta) >= 0) { E.nove = E.nove.filter(function (x) { return x !== cesta; }); protZmazSubory([cesta]); }
+      else E.odobrate.push(cesta);
+    }
+    stitky(); merace(); kluce();
+    ["o", "p"].forEach(function (s) {
+      E.pady[s] = protPodpisPad(f.querySelector('[data-prot-pad="' + s + '"]'), s === "o" ? pr.podpis_odovzdavajuci : pr.podpis_preberajuci, function () { E.zmenene = true; });
+    });
+    // náhľady existujúcich fotiek meračov
+    var cesty = E.meradla.map(function (m) { return m.foto; }).filter(Boolean);
+    if (cesty.length) sb.storage.from("protokoly").createSignedUrls(cesty, 3600).then(function (r) {
+      (r && Array.isArray(r.data) ? r.data : []).forEach(function (x) { if (x.signedUrl) E.nahlady[x.path] = x.signedUrl; });
+      if (document.body.contains(w)) { citaj(); merace(); }
+    }).catch(function () {});
+    async function zavri(bezOtazky) {
+      if (!bezOtazky && E.zmenene && !window.confirm("Zavrieť protokol bez uloženia zmien?")) return;
+      w.remove();
+      await protZmazSubory(E.nove); E.nove = [];
+      if (novy && !E.ulozene) { try { await rpc("protokol_zmazat", { p_id: pr.id }); S.protokoly = (S.protokoly || []).filter(function (x) { return x.id !== pr.id; }); protPrekresli(p.id); } catch (e) { /* ostane rozpracovaný */ } }
+    }
+    f.addEventListener("input", function () { E.zmenene = true; });
+    f.addEventListener("change", async function (e) {
+      E.zmenene = true;
+      if (e.target.name === "druh") return stitky();
+      if (e.target.dataset.m === "druh") { var r = e.target.closest(".prot-merac"); r.querySelector('[data-m="jednotka"]').value = protJednotka(e.target.value); return; }
+      var fi = e.target.dataset.mFoto; if (fi === undefined || !e.target.files || !e.target.files[0]) return;
+      var subor = e.target.files[0], i = Number(fi), lab = e.target.closest("label");
+      citaj();
+      if (!/^image\//.test(subor.type || "image/")) return toast("Vyber fotku.", true);
+      lab.classList.add("nahrava"); lab.firstChild.textContent = "⏳ Nahrávam…";
+      var img = await nacitajObrazok(subor), z = img && img.naturalWidth ? await platnoNaJpeg(img, 1600, 0.82) : null;
+      var blob = z ? z.blob : subor, typ = z ? "image/jpeg" : subor.type || "image/jpeg";
+      var cesta = priecinok + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + (typ === "image/png" ? ".png" : typ === "image/webp" ? ".webp" : ".jpg");
+      var up; try { up = await sb.storage.from("protokoly").upload(cesta, blob, { contentType: typ, upsert: false }); } catch (e1) { up = { error: e1 }; }
+      if (!document.body.contains(w)) return protZmazSubory([cesta]);
+      if (up && up.error) { merace(); return toast(chybaText(up.error), true); }
+      if (!E.meradla[i]) return protZmazSubory([cesta]);
+      odoberFotku(E.meradla[i].foto);
+      E.meradla[i].foto = cesta; E.nove.push(cesta); E.nahlady[cesta] = URL.createObjectURL(blob);
+      merace(); toast("📷 Fotka merača je pridaná.");
+    });
+    w.addEventListener("click", function (e) {
+      var t = e.target;
+      if (t === w || t.closest("[data-prot-zavri]")) { e.preventDefault(); return zavri(false); }
+      if (t.closest("[data-prot-merac-pridaj]")) { citaj(); if (E.meradla.length >= 15) return toast("Meračov môže byť najviac 15.", true); E.meradla.push({ druh: "Elektrina", jednotka: "kWh" }); E.zmenene = true; return merace(); }
+      if (t.closest("[data-prot-kluc-pridaj]")) { citaj(); if (E.kluce.length >= 20) return toast("Kľúčov môže byť najviac 20 riadkov.", true); E.kluce.push({ co: "", pocet: "" }); E.zmenene = true; kluce(); var k = f.querySelectorAll('[data-k="co"]'); if (k.length) k[k.length - 1].focus(); return; }
+      var mz = t.closest("[data-m-zmaz]"); if (mz) { citaj(); var mi = Number(mz.dataset.mZmaz); odoberFotku((E.meradla[mi] || {}).foto); E.meradla.splice(mi, 1); E.zmenene = true; return merace(); }
+      var kz = t.closest("[data-k-zmaz]"); if (kz) { citaj(); E.kluce.splice(Number(kz.dataset.kZmaz), 1); E.zmenene = true; return kluce(); }
+      var nh = t.closest("[data-m-nahlad]"); if (nh) { var u = E.nahlady[(E.meradla[Number(nh.dataset.mNahlad)] || {}).foto]; if (u) window.open(u, "_blank", "noopener"); return; }
+      var vy = t.closest("[data-prot-vymaz]"); if (vy) return E.pady[vy.dataset.protVymaz].vymaz();
+      if (t.closest("[data-prot-uzavriet]")) return uloz(true, t.closest("button"));
+    });
+    w.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); zavri(false); } });
+    f.addEventListener("submit", function (e) { e.preventDefault(); uloz(false, f.querySelector('[type="submit"]')); });
+    async function uloz(uzavriet, tl) {
+      citaj();
+      var fd = new FormData(f), P = { druh: fd.get("druh") };
+      ["miesto", "odovzdavajuci", "odovzdavajuci_kontakt", "preberajuci", "preberajuci_kontakt", "stav", "vybavenie", "poznamka"].forEach(function (k) { P[k] = String(fd.get(k) || "").trim(); });
+      var dt = fd.get("datum"); if (dt) { var d = new Date(dt); if (!isNaN(d)) P.datum = d.toISOString(); }
+      P.meradla = E.meradla.map(function (m) { return { druh: m.druh, cislo: String(m.cislo || "").trim(), stav: String(m.stav || "").trim(), jednotka: String(m.jednotka || "").trim(), foto: m.foto || null }; });
+      P.kluce = E.kluce.filter(function (k) { return String(k.co || "").trim(); }).map(function (k) { return { co: String(k.co).trim(), pocet: String(k.pocet || "").trim() || "1" }; });
+      P.podpis_odovzdavajuci = E.pady.o.data(); P.podpis_preberajuci = E.pady.p.data();
+      if (uzavriet) {
+        var D = PROT_DRUH[P.druh] || PROT_DRUH.predaj;
+        if (!P.odovzdavajuci || !P.preberajuci) return toast("Doplň mená oboch strán.", true);
+        if (!P.podpis_odovzdavajuci) return toast("Chýba podpis – " + D[1].toLowerCase() + ".", true);
+        if (!P.podpis_preberajuci) return toast("Chýba podpis – " + D[2].toLowerCase() + ".", true);
+        if (!window.confirm("Po podpísaní sa protokol už nedá meniť. Uzavrieť ho?")) return;
+        P.uzavriet = true;
+      }
+      if (tl) tl.disabled = true;
+      try {
+        var r = await rpc("protokol_ulozit", { p_id: pr.id, p: P });
+        E.ulozene = true; E.zmenene = false; E.nove = [];
+        var prec = E.odobrate; E.odobrate = [];
+        protZmazSubory(prec);
+        protUloz(r); w.remove(); protPrekresli(p.id);
+        if (uzavriet) {
+          toast("✍️ Protokol je podpísaný – pošli ho obom stranám.");
+          var sek = $("#pd-protokoly"); if (sek) sek.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } else toast("💾 Protokol je uložený.");
+      } catch (err) { if (tl) tl.disabled = false; toast(chybaText(err), true); }
+    }
+    setTimeout(function () { var o = f.querySelector('[name="preberajuci"]'); if (o && novy) o.focus(); }, 40);
+  }
+  document.addEventListener("click", async function (e) {
+    var b = e.target.closest && e.target.closest("[data-prot-novy],[data-prot-upravit],[data-prot-kopiruj],[data-prot-zmazat]"); if (!b) return;
+    e.preventDefault();
+    var p = (S.ponuky || []).find(function (x) { return x.id === S.ponukaDetail; }); if (!p) return;
+    try {
+      if (b.dataset.protNovy) {
+        b.disabled = true;
+        var r = await rpc("protokol_novy", { p_nehnutelnost: p.id });
+        b.disabled = false; protUloz(r); protEditor(r, p, true);
+        return;
+      }
+      var id = Number(b.dataset.protUpravit || b.dataset.protKopiruj || b.dataset.protZmazat), pr = (S.protokoly || []).find(function (x) { return x.id === id; });
+      if (!pr) return;
+      if (b.dataset.protKopiruj) return kopiruj(protUrl(pr.token), "Odkaz na protokol je skopírovaný.");
+      if (b.dataset.protUpravit) {
+        b.disabled = true;
+        var q = await sb.from("odovzdavacie_protokoly").select("*").eq("id", id).single();
+        b.disabled = false;
+        if (q.error) throw q.error;
+        if (q.data.podpisane) { protUloz(q.data); protPrekresli(p.id); return toast("Protokol je už podpísaný.", true); }
+        return protEditor(q.data, p, false);
+      }
+      if (b.dataset.protZmazat) {
+        if (!window.confirm(pr.podpisane ? "Zmazať podpísaný protokol? Odkaz u oboch strán prestane fungovať." : "Zmazať rozpracovaný protokol?")) return;
+        b.disabled = true;
+        var l = await sb.storage.from("protokoly").list(pr.kancelaria_id + "/" + pr.token, { limit: 100 }).catch(function () { return null; });
+        await protZmazSubory((l && Array.isArray(l.data) ? l.data : []).map(function (x) { return pr.kancelaria_id + "/" + pr.token + "/" + x.name; }));
+        await rpc("protokol_zmazat", { p_id: id });
+        S.protokoly = S.protokoly.filter(function (x) { return x.id !== id; });
+        protPrekresli(p.id); toast("Protokol je zmazaný.");
       }
     } catch (err) { b.disabled = false; toast(chybaText(err), true); }
   });
