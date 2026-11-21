@@ -2990,3 +2990,52 @@ html.bez-posuvu #toast { z-index: 210 }
   .poz-akcie { opacity: 1 }
   .poz-check { width: 30px; height: 30px }
 }
+
+/* ---------- ToDo List: prepojenia s inzerátmi, ponukami, obhliadkami, klientmi a odhadmi */
+.todo-pri .pd-sek-hlava h4 { display: flex; align-items: center; gap: 6px }
+.todo-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--gold-strong); color: var(--on-accent); font-size: 12px; font-weight: 700 }
+.todo-v-boxe { display: grid; gap: 10px }
+.todo-pri-zoz { display: grid; gap: 2px }
+.todo-riadok { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 4px; border-radius: 8px }
+.todo-riadok + .todo-riadok { border-top: 1px solid var(--line) }
+.todo-riadok .poz-check { width: 24px; height: 24px }
+.todo-riadok.dolezite .poz-check { border-color: var(--gold-strong) }
+.todo-riadok-t { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0 }
+.todo-riadok-text { border: 0; background: none; padding: 0; text-align: left; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; overflow-wrap: anywhere }
+.todo-riadok-text:hover { text-decoration: underline }
+.todo-riadok.dolezite .todo-riadok-text { font-weight: 700 }
+.todo-len-ty { font-size: 12px }
+.poz-odkaz { border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; font: inherit; font-size: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis }
+.poz-odkaz:hover { background: var(--gold-soft); border-color: var(--gold-strong) }
+.todo-filter-odkaz { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--gold-soft); border-radius: 10px; padding: 8px 10px; font-size: 14px; font-weight: 600 }
+.todo-znacka { border: 1px solid var(--line); background: var(--gold-soft); color: var(--ink); border-radius: 999px; padding: 1px 9px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; max-width: 100% }
+.todo-znacka:hover { border-color: var(--gold-strong) }
+.obh-akcie { flex-wrap: wrap; justify-content: flex-end }
+.todo-termin { display: flex; gap: 6px; flex-wrap: wrap; align-items: center }
+.todo-termin input[type="date"] { flex: 1 1 140px; min-width: 0 }
+.todo-rychlo { display: inline-flex; gap: 4px; flex-wrap: wrap }
+.todo-rychlo button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer }
+.todo-rychlo button:hover { background: var(--surface-2) }
+.poz-f-riadok { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto }
+.todo-prepoj { position: relative }
+.todo-prepoj-vyb { display: flex; gap: 6px; align-items: center; flex-wrap: wrap }
+.todo-prepoj-vyb:empty { display: none }
+.todo-prepoj-vyb .btn { padding: 3px 8px; min-height: 0 }
+.todo-prepoj-zoz { display: grid; gap: 2px }
+.todo-prepoj-zoz:empty { display: none }
+.todo-prepoj-zoz button { text-align: left; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 13px; cursor: pointer; overflow-wrap: anywhere }
+.todo-prepoj-zoz button:hover, .todo-prepoj-zoz button:focus { background: var(--gold-soft); border-color: var(--gold-strong) }
+.todo-prepoj-zoz small { color: var(--muted); font-weight: 600 }
+.todo-var { z-index: 140; align-items: start; overflow-y: auto }
+.todo-karta { width: min(460px, 100%); margin: 6vh auto 16px; background: var(--surface); border-radius: 16px; padding: 18px; display: grid; gap: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  border-top: 5px solid var(--gold-strong); animation: vstupZoom .3s cubic-bezier(.2,.8,.2,1); text-align: left }
+.todo-karta-hl { display: flex; justify-content: space-between; align-items: center; gap: 10px }
+.todo-karta-hl h3 { margin: 0; font-size: 19px }
+.todo-karta .menu-sheet-x { border-color: var(--line); color: var(--ink); width: 36px; height: 36px; font-size: 22px }
+.todo-pre { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; font-size: 13px; color: var(--muted); overflow-wrap: anywhere }
+.todo-pre b { color: var(--ink) }
+.todo-f-dva { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end }
+@media (max-width: 640px) {
+  .poz-f-riadok { grid-template-columns: minmax(0, 1fr) }
+  .todo-karta { margin-top: 2vh; padding: 16px 14px }
+}

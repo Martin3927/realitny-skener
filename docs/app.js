@@ -1847,12 +1847,13 @@
     S.vykreslenaSekcia = S.tab;
     if (S.tab !== "vzhlad" && S.vzhladDraft) { S.vzhladDraft = null; aplikujVzhlad(vzhladPreMna()); }
     var tabs = SEKCIE.filter(function (x) { return maSekciu(x[0]); }).map(function (x) { return x[0] === "provizie" && !admin() ? ["provizie", "Moje provízie", "euro"] : x; });
-    tabs.push(["poznamky", "Tvoje poznámky", "poznamky"]);
+    tabs.push(["poznamky", "ToDo List", "poznamky"]);
     if (admin()) tabs.push(["vykon", "Výkon", "vykon"]);
     if (admin() && !samostatny()) tabs.push(["makleri", "Makléri", "makleri"]);
     if (admin()) tabs.push(["vzhlad", "Vzhľad", "farby"], ["historia", "História zmien", "historia"]);
     var aktualna = tabs.find(function (t) { return t[0] === S.tab; }) || ["domov", "Prehľad", "domov"];
     var menuHtml = menuDlazdice(tabs);
+    pozZaistiNacitanie();
     document.body.classList.add("ma-bocne");
     $("#app").innerHTML =
       '<aside class="bocne" aria-label="Sekcie"><a class="bocne-logo" href="#" data-tab="domov" title="Prehľad"><img src="' + esc(logoUrl()) + '" alt="' + esc(nazovKancelarie()) + '"><span>Realitný týpek</span></a>' + menuHtml +
@@ -3003,6 +3004,9 @@
         textOdpoctu(zostava) + "</b></span>" + (moj ? " do uvoľnenia, ak nič nezapíšete" : " do uvoľnenia"));
     }
     if (mojePrip.length > 2) znacky.push("🔔 +" + (mojePrip.length - 2) + " ďalšie");
+    var tdz = S.poz ? todoIndex()["inzerat:" + z.id] || [] : [];
+    if (tdz.length) znacky.push('<button type="button" class="todo-znacka" data-todo-zoznam="' + todoAttr({ t: "inzerat", id: z.id, n: todoNazovInz(z) }) + '" title="Tvoje úlohy k inzerátu v ToDo Liste">✅ ' +
+      esc(todoKratko(tdz.sort(pozPoradie)[0].text, 60)) + (tdz.length > 1 ? " +" + (tdz.length - 1) : "") + "</button>");
     if (znacky.length) h += '<div class="marks">' + znacky.join(" · ") + "</div>";
     h += '<div class="actions">';
     if (!maj) h += '<button class="btn primary" type="button" data-act="prevziat">Prevziať</button>';
@@ -3019,6 +3023,7 @@
       if (volal || (p && p.email)) viac += '<button class="btn' + (p && p.email ? " on" : "") + '" type="button" data-act="email">' + (p && p.email ? "✓ Email poslaný" : "Email poslaný") + "</button>";
     }
     viac += '<button class="btn ghost" type="button" data-act="zvon" title="Nastaviť pripomienku">🔔 Pripomenúť</button>';
+    viac += todoTlacidlo({ t: "inzerat", id: z.id, n: todoNazovInz(z) });
     if (ptyp(z) !== "rk" && mozeUpravit && maSekciu("asistent")) viac += '<button class="btn ghost" type="button" data-act="ai-hovor" title="AI navrhne, ako začať prvý hovor a SMS predajcovi">✨ Návrh hovoru</button>';
     if (ptyp(z) !== "rk" && (moj || admin())) viac += '<button class="btn ghost" type="button" data-act="do-ponuky" title="Preniesť do Nehnuteľností – predvyplní formulár">➕ Do ponuky</button>';
     if (ozn && ozn.predajca_typ === "rk") viac += '<button class="btn ghost" type="button" data-act="oznac-zrus" title="Vrátiť rozpoznanie skenera">Nie je RK</button>';
@@ -4205,7 +4210,7 @@
       ["chat", "chat", "Chat", "Správy celému tímu aj súkromne kolegovi", neprec ? neprec + (neprec === 1 ? " neprečítaná správa" : neprec <= 4 ? " neprečítané správy" : " neprečítaných správ") : "Všetko prečítané", "", ""],
       ["matterport", "matterport", "Matterport", "Rezervácia 3D kamery – klik na deň a hodinu", S.mp ? mpStavText() : "Rezervácia kamery", "", ""],
       ["kalendar", "kal", "Kalendár", "Stretnutia, obhliadky a pripomienky – aj v Google a Apple kalendári", (function () { var n = polozkyKalendara().filter(function (x) { return denKluc(x.od) === denKluc(new Date()); }).length; return n ? n + " dnes" : "Dnes voľno"; })(), "", ""],
-      ["poznamky", "poznamky", "Tvoje poznámky", "Tvoj súkromný zoznam úloh a nápadov – hotové odklikneš", S.poz ? (pozOtvorene().length ? pozOtvorene().length + " na spravenie" : "Všetko hotové") : "",
+      ["poznamky", "poznamky", "ToDo List", "Tvoje úlohy – aj k inzerátom, ponukám, klientom a obhliadkam", S.poz ? (pozOtvorene().length ? pozOtvorene().length + " na spravenie" : "Všetko hotové") : "",
         S.poz && pozOtvorene().filter(pozPoTermine).length ? pozOtvorene().filter(pozPoTermine).length + " po termíne" : "", ""],
       ["mapa", "mapa", "Realitná mapa", "Naše ponuky a súkromní predajcovia na mape", "", "", ""],
       ["kataster", "kataster", "Kataster", "Katastrálna mapa, list vlastníctva, parcela podľa GPS", "", "", ""],
@@ -4218,7 +4223,7 @@
     dlazdice = dlazdice.filter(function (d) { return ["zvon", "profil", "poznamky"].indexOf(d[0]) >= 0 || maSekciu(d[0]); });
     var pozPo = S.poz ? pozOtvorene().filter(pozPoTermine).length : 0;
     // počet poznámok na dlaždici – načíta sa raz potichu na pozadí
-    if (!S.poz && !S.pozNacitava) { S.pozNacitava = true; nacitajPoznamky().then(function () { if (S.tab === "domov" && !pozZaneprazdnene()) vykresliDomov(); }, function () { S.pozNacitava = false; }); }
+    pozZaistiNacitanie();
     if (admin()) {
       dlazdice.push(["vykon", "vykon", "Výkon maklérov", "Hovory, SMS, výsledky a grafy – len pre vás", "", "", ""]);
       if (!samostatny()) dlazdice.push(["makleri", "makleri", "Makléri", "Účty, práva, heslá a texty SMS", S.makleri.filter(function (m) { return m.aktivny; }).length + " aktívnych", "", ""]);
@@ -4497,8 +4502,13 @@
     prejdi(k);
   });
 
-  // ------------------------------------------------------------ TVOJE POZNÁMKY (súkromný zoznam úloh – vidí ich len majiteľ, ani administrátor nie)
+  // ------------------------------------------------------------ TODO LIST (súkromný zoznam úloh – vidí ho len majiteľ, ani administrátor nie;
+  // úloha môže byť prepojená s inzerátom zo skenera, ponukou, obhliadkou, klientom, predávajúcim alebo odhadom – tabuľka „poznamky“)
   var POZ_ZAVRETE = "typek-poz-zavrete";
+  var TODO_DRUH = { inzerat: ["🔎", "Inzerát", "Skener"], ponuka: ["🏠", "Ponuka", "Ponuky"], obhliadka: ["🗝️", "Obhliadka", "Ponuky"], dopyt: ["🎯", "Klient", "Klienti"],
+    predavajuci: ["📇", "Predávajúci", "Klienti"], odhad: ["📊", "Odhad", "Odhady"], mimo: ["🤫", "Mimo ponuky", "Klienti"] };
+  var TODO_NAVRH = { inzerat: "napr. Zavolať predajcovi znova v piatok", ponuka: "napr. Doniesť majiteľovi zmluvu na podpis", obhliadka: "napr. Spýtať sa na spätnú väzbu",
+    dopyt: "napr. Poslať klientovi nové ponuky", predavajuci: "napr. Zavolať, či už predal", odhad: "napr. Zavolať klientovi k odhadu" };
   function pozZavrete() { try { return JSON.parse(localStorage.getItem(POZ_ZAVRETE) || "{}") || {}; } catch (e) { return {}; } }
   function pozUlozZavrete(z) { try { localStorage.setItem(POZ_ZAVRETE, JSON.stringify(z)); } catch (e) { /* bez úložiska */ } }
   // vráti true, ak sa niečo zmenilo oproti tomu, čo už aplikácia mala
@@ -4507,7 +4517,19 @@
     if (r.error) throw r.error;
     var stare = S.poz ? JSON.stringify(S.poz) : null;
     S.poz = r.data || [];
-    return JSON.stringify(S.poz) !== stare;
+    var zmena = JSON.stringify(S.poz) !== stare;
+    if (zmena) S.pozVer = (S.pozVer || 0) + 1;
+    return zmena;
+  }
+  // úlohy treba aj mimo ToDo Listu (dlaždica, skener, detaily) – načítajú sa raz potichu a doplnia sa tam, kde chýbali
+  function pozZaistiNacitanie() {
+    if (S.poz || S.pozNacitava) return;
+    S.pozNacitava = true;
+    nacitajPoznamky().then(function () {
+      todoObnovSekcie();
+      if (S.tab === "inzeraty") Object.keys(todoIndex()).forEach(function (k) { if (k.indexOf("inzerat:") === 0) todoPrekresliKartu(k.slice(8)); });
+      if (S.tab === "domov" && !pozZaneprazdnene()) vykresliDomov();
+    }, function () { S.pozNacitava = false; });
   }
   function pozDnes() { return denKluc(new Date()); }
   function pozTermin(d) {
@@ -4530,35 +4552,236 @@
   }
   function pozSkupiny() {
     var m = {}; (S.poz || []).forEach(function (x) { if (x.skupina) m[x.skupina] = 1; });
+    Object.keys(TODO_DRUH).forEach(function (t) { m[TODO_DRUH[t][2]] = m[TODO_DRUH[t][2]] || 0; });
+    return Object.keys(m).filter(function (k) { return m[k]; }).sort(function (a, b) { return a.localeCompare(b, "sk"); });
+  }
+  function pozSkupinyNavrh() {
+    var m = {}; pozSkupiny().forEach(function (s) { m[s] = 1; }); Object.keys(TODO_DRUH).forEach(function (t) { m[TODO_DRUH[t][2]] = 1; });
     return Object.keys(m).sort(function (a, b) { return a.localeCompare(b, "sk"); });
   }
   function pozZaneprazdnene() {
     var a = document.activeElement;
-    return !!(S.pozEdit || S.pozNova || S.pozUklada || maNeulozene() || (a && a.closest && a.closest("#obsah") && /INPUT|TEXTAREA|SELECT/.test(a.tagName)));
+    return !!(S.pozEdit || S.pozNova || S.pozUklada || $("#todo-okno") || maNeulozene() || (a && a.closest && a.closest("#obsah") && /INPUT|TEXTAREA|SELECT/.test(a.tagName)));
   }
-  // odkazy v texte poznámky sa dajú otvoriť
+  function pozNajdi(id) { return (S.poz || []).find(function (x) { return String(x.id) === String(id); }); }
+  // odkazy v texte úlohy sa dajú otvoriť
   function pozText(t) {
     return esc(t).replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]"'])/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>').replace(/\n/g, "<br>");
   }
+
+  // ---------- prepojenia
+  function todoKluc(o) { return o ? o.t + ":" + o.id : ""; }
+  function todoSedi(k, o) {
+    if (!k || !o) return false;
+    if (k.t === o.t && String(k.id) === String(o.id)) return true;
+    return o.t === "ponuka" && k.t === "obhliadka" && String(k.p) === String(o.id);   // pri ponuke aj úlohy k jej obhliadkam
+  }
+  function todoPre(o) { return (S.poz || []).filter(function (x) { return !x.hotovo && todoSedi(x.odkaz, o); }).sort(pozPoradie); }
+  function todoIndex() {
+    if (S.pozIdx && S.pozIdxVer === S.pozVer) return S.pozIdx;
+    var m = {}; (S.poz || []).forEach(function (x) { if (x.odkaz && !x.hotovo) { var k = todoKluc(x.odkaz); (m[k] = m[k] || []).push(x); } });
+    S.pozIdx = m; S.pozIdxVer = S.pozVer; return m;
+  }
+  function todoKratko(s, n) { s = String(s || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+  function todoNazovPonuky(p) { var n = nazovPonuky(p); return todoKratko(n + (p.obec && n.indexOf(p.obec) < 0 ? ", " + p.obec : ""), 150); }
+  function todoNazovInz(z) { return todoKratko((z.nazov || "Inzerát") + (z.obec ? " · " + z.obec : "") + (z.cena ? " · " + eur(z.cena) : ""), 150); }
+  function todoNazovOdhadu(o) { return todoKratko((o.nazov || o.obec || "Odhad") + (o.meno ? " – " + o.meno : ""), 150); }
+  function todoAttr(o) { return esc(JSON.stringify(o)); }
+  function todoTlacidlo(o, text, trieda) {
+    return '<button type="button" class="' + (trieda || "btn ghost") + '" data-todo-pridaj="' + todoAttr(o) + '" title="Pridať úlohu do ToDo Listu – uvidíš ju len ty">' + esc(text || "✅ Do ToDo") + "</button>";
+  }
+  function todoOdkazChip(o, trieda) {
+    var D = TODO_DRUH[o.t] || ["📌", ""];
+    return '<button type="button" class="poz-chip poz-odkaz' + (trieda ? " " + trieda : "") + '" data-todo-otvor="' + todoAttr(o) + '" title="Otvoriť v Týpkovi">' + D[0] + " " + esc(D[1]) + ": " + esc(todoKratko(o.n, 70)) + "</button>";
+  }
+  // sekcia „✅ ToDo“ v detaile inzerátu, ponuky, klienta, predávajúceho a odhadu
+  function todoSekcia(o, trieda) {
+    pozZaistiNacitanie();
+    return '<section class="' + (trieda || "pd-sekcia") + ' todo-pri" data-todo-sekcia="' + todoAttr(o) + '">' + todoSekciaVnutro(o) + "</section>";
+  }
+  function todoSekciaVnutro(o) {
+    var Z = S.poz ? todoPre(o) : [];
+    return '<div class="pd-sek-hlava"><h4>✅ ToDo' + (Z.length ? ' <span class="todo-n">' + Z.length + "</span>" : "") + "</h4>" + todoTlacidlo(o, "+ Pridať úlohu", "btn") + "</div>" +
+      (!S.poz ? '<p class="meta">Načítavam úlohy…</p>' : Z.length ? '<div class="todo-pri-zoz">' + Z.map(function (x) { return todoRiadokHtml(x, o); }).join("") + "</div>" +
+        '<p class="meta todo-len-ty">Úlohy vidíš len ty.</p>' :
+        '<p class="meta">Žiadne otvorené úlohy' + (o.t === "ponuka" ? " (ani k obhliadkam)" : "") + ". Úlohy vidíš len ty.</p>");
+  }
+  function todoRiadokHtml(x, o) {
+    var po = pozPoTermine(x), k = x.odkaz || {};
+    return '<div class="todo-riadok' + (x.dolezite ? " dolezite" : "") + '">' +
+      '<button type="button" class="poz-check" data-todo-hotovo="' + x.id + '" aria-pressed="false" title="Odkliknúť ako hotové" aria-label="Odkliknúť ako hotové"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 12.5 4 4 8-9"/></svg></button>' +
+      '<div class="todo-riadok-t"><button type="button" class="todo-riadok-text" data-todo-uprav="' + x.id + '" title="Upraviť v ToDo Liste">' + (x.dolezite ? "⭐ " : "") + esc(x.text) + "</button>" +
+        (k.t === "obhliadka" && o && o.t === "ponuka" ? '<span class="meta">🗝️ ' + esc(k.n || "Obhliadka") + "</span>" : "") +
+        (x.termin ? '<span class="poz-chip' + (po ? " po" : x.termin === pozDnes() ? " dnes" : "") + '">📅 ' + (po ? "po termíne · " : "") + esc(pozTermin(x.termin)) + "</span>" : "") + "</div></div>";
+  }
+  function todoObnovSekcie() {
+    document.querySelectorAll("[data-todo-sekcia]").forEach(function (el) {
+      var o; try { o = JSON.parse(el.dataset.todoSekcia); } catch (e) { return; }
+      el.innerHTML = todoSekciaVnutro(o);
+    });
+  }
+  function todoPrekresliKartu(id) { if (S.tab === "inzeraty" && document.querySelector('#obsah .card[data-id="' + CSS.escape(id) + '"]')) prekresliKartu(id); }
+  // po každej zmene: počty a sekcie všade, kde sú na obrazovke
+  function pozPoZmene(odkazy) {
+    S.pozVer = (S.pozVer || 0) + 1;
+    todoObnovSekcie();
+    (odkazy || []).forEach(function (o) { if (o && o.t === "inzerat") todoPrekresliKartu(o.id); });
+  }
+  // otvoriť miesto, s ktorým je úloha prepojená
+  function todoOtvor(o) {
+    if (!o || !o.t) return;
+    var sek = { inzerat: "inzeraty", ponuka: "nehnutelnosti", obhliadka: "nehnutelnosti", dopyt: "klienti", predavajuci: "klienti", odhad: "odhady", mimo: "klienti" }[o.t];
+    if (!sek || !tabPovoleny(sek)) return toast("Túto sekciu nemáš v Týpkovi povolenú.", true);
+    var okno = $("#todo-okno"); if (okno) okno.remove();
+    if (o.t === "inzerat") return otvorInzeratZUpozornenia(o.id);
+    if (o.t === "ponuka" || o.t === "obhliadka") {
+      otvorOdkaz("#nehnutelnosti/" + (o.t === "ponuka" ? o.id : o.p), true);
+      if (o.t === "obhliadka") setTimeout(function () { var s = $("#pd-obhliadky"); if (s) s.scrollIntoView({ behavior: "smooth", block: "start" }); }, 350);
+      return;
+    }
+    if (o.t === "odhad") return otvorOdkaz("#odhady/" + o.id, true);
+    if (!odistBezUlozenia()) return;
+    if (o.t === "dopyt") return otvorDopyt(Number(o.id));
+    if (o.t === "predavajuci") return otvorPredajcu(o.id);
+    prejdi("klienti");
+  }
+  // ToDo List len s úlohami k jednému miestu (napr. zo skenera)
+  function todoUkazZoznam(o) {
+    var F = S.pozF = S.pozF || { stav: "otvorene", skupina: "*", q: "" };
+    F.odkaz = o; F.stav = "otvorene"; F.skupina = "*"; F.q = ""; S.pozEdit = null; S.pozNova = false;
+    if (S.tab === "poznamky") { vykresliPoznamky(); window.scrollTo(0, 0); } else prejdi("poznamky");
+  }
+  function todoUpravVZozname(id) {
+    var F = S.pozF = S.pozF || { stav: "otvorene", skupina: "*", q: "" };
+    var x = pozNajdi(id); if (!x) return;
+    F.stav = x.hotovo ? "vsetky" : "otvorene"; F.skupina = "*"; F.q = ""; F.odkaz = null; S.pozNova = false; S.pozEdit = x.id;
+    if (S.tab === "poznamky") vykresliPoznamky(); else prejdi("poznamky");
+    setTimeout(function () { var u = $(".poz-uprava"); if (u) { u.scrollIntoView({ block: "center" }); var t = u.querySelector('[name="text"]'); if (t) t.focus({ preventScroll: true }); } }, 60);
+  }
+  async function todoPrepniHotovo(id) {
+    var x = pozNajdi(id); if (!x) return;
+    var nove = !x.hotovo, pred = { hotovo: x.hotovo, hotovo_kedy: x.hotovo_kedy };
+    x.hotovo = nove; x.hotovo_kedy = nove ? new Date().toISOString() : null; pozPoZmene([x.odkaz]);
+    var r = await sb.from("poznamky").update({ hotovo: nove }).eq("id", x.id).select().maybeSingle();
+    if (r.error || !r.data) { Object.assign(x, pred); pozPoZmene([x.odkaz]); return toast(r.error ? chybaText(r.error) : "Úlohu sa nepodarilo zmeniť.", true); }
+    Object.assign(x, r.data);
+    if (nove) toast("Hotovo ✓ " + (pozOtvorene().length ? "V ToDo ti ostáva " + pozOtvorene().length + "." : "Všetko máš spravené."));
+  }
+  // rýchly termín: Dnes / Zajtra / O týždeň
+  function terminRychlo() {
+    return '<span class="todo-rychlo">' + [[0, "Dnes"], [1, "Zajtra"], [7, "O týždeň"]].map(function (x) { return '<button type="button" data-termin-o="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</span>";
+  }
+  // okno „Nová úloha“ – otvára sa tlačidlom ✅ Do ToDo pri inzeráte, ponuke, obhliadke, klientovi, predávajúcom a odhade
+  function todoDialog(o) {
+    pozZaistiNacitanie();
+    var stare = $("#todo-okno"); if (stare) stare.remove();
+    var D = TODO_DRUH[o.t] || ["📌", "", ""];
+    var w = document.createElement("div"); w.className = "pochvala-var todo-var"; w.id = "todo-okno";
+    w.innerHTML = '<form class="todo-karta" role="dialog" aria-modal="true" aria-labelledby="todo-okno-h">' +
+      '<div class="todo-karta-hl"><h3 id="todo-okno-h">✅ Nová úloha do ToDo</h3><button type="button" class="menu-sheet-x" data-todo-zavri aria-label="Zavrieť">×</button></div>' +
+      '<div class="todo-pre">' + D[0] + " " + esc(D[1]) + ": <b>" + esc(o.n || "") + "</b></div>" +
+      '<label class="field"><span>Čo treba spraviť</span><input type="text" name="text" required maxlength="500" autocomplete="off" placeholder="' + esc(TODO_NAVRH[o.t] || "napr. Zavolať a dohodnúť sa") + '"></label>' +
+      '<div class="field"><span>Termín <small class="meta">nepovinné</small></span><div class="todo-termin"><input type="date" name="termin" aria-label="Termín">' + terminRychlo() + "</div></div>" +
+      '<div class="todo-f-dva"><label class="field"><span>Skupina</span><input type="text" name="skupina" maxlength="60" list="todo-okno-sk" autocomplete="off" value="' + esc(D[2]) + '"></label>' +
+        '<label class="poz-dolezite"><input type="checkbox" name="dolezite"> ⭐ Dôležité</label></div>' +
+      '<datalist id="todo-okno-sk">' + pozSkupinyNavrh().map(function (s) { return '<option value="' + esc(s) + '">'; }).join("") + "</datalist>" +
+      '<label class="field"><span>Podrobnosti <small class="meta">nepovinné</small></span><textarea name="detail" rows="2" maxlength="4000"></textarea></label>' +
+      '<div class="form-actions"><button class="btn primary" type="submit">+ Pridať do ToDo</button><button class="btn ghost" type="button" data-todo-zavri>Zrušiť</button></div>' +
+      '<p class="meta">Úlohu vidíš len ty – v ToDo Liste aj tu.</p></form>';
+    document.body.appendChild(w);
+    var f = w.querySelector("form");
+    function zavri() { w.remove(); }
+    w.addEventListener("click", function (e) { if (e.target === w || e.target.closest("[data-todo-zavri]")) zavri(); });
+    w.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); zavri(); } });
+    f.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var fd = new FormData(f), text = String(fd.get("text") || "").trim(); if (!text) return;
+      var tl = f.querySelector('[type="submit"]'); tl.disabled = true;
+      var r = await sb.from("poznamky").insert({ text: text, termin: fd.get("termin") || null, dolezite: !!fd.get("dolezite"), skupina: String(fd.get("skupina") || "").trim() || null,
+        detail: String(fd.get("detail") || "").trim() || null, odkaz: o }).select().single();
+      if (r.error) { tl.disabled = false; return toast(chybaText(r.error), true); }
+      if (S.poz) S.poz.unshift(r.data);
+      zavri(); pozPoZmene([o]); toast("Pridané do ToDo ✓");
+      if (S.tab === "poznamky") vykresliPoznamky();
+    });
+    setTimeout(function () { var t = f.querySelector('[name="text"]'); if (t) t.focus(); }, 30);
+  }
+  // „Prepojiť s…“ vo formulári ToDo Listu – hľadá v tom, čo má Týpek už načítané
+  function todoKandidati(q) {
+    q = norm(q).trim(); if (q.length < 2) return [];
+    var out = [], videne = {};
+    function pridaj(o, txt) { if (out.length >= 8 || videne[todoKluc(o)] || norm(txt).indexOf(q) < 0) return; videne[todoKluc(o)] = 1; out.push(o); }
+    if (S.ponuky && tabPovoleny("nehnutelnosti")) S.ponuky.forEach(function (p) { pridaj({ t: "ponuka", id: String(p.id), n: todoNazovPonuky(p) }, [nazovPonuky(p), p.obec, p.ulica, p.cislo].join(" ")); });
+    if (S.dopyty && tabPovoleny("klienti")) S.dopyty.forEach(function (d) { pridaj({ t: "dopyt", id: String(d.id), n: todoKratko(menoKlienta(d) + " – " + popisDopytu(d), 150) }, menoKlienta(d) + " " + popisDopytu(d)); });
+    if (S.predTel && tabPovoleny("klienti")) Object.keys(S.predTel).forEach(function (t) { var k = S.predTel[t]; if (k) pridaj({ t: "predavajuci", id: t, n: todoKratko((k.meno || "Predávajúci") + " · " + (k.telefon || t), 150) }, [k.meno, k.telefon, t].join(" ")); });
+    if (S.odhady && tabPovoleny("odhady")) S.odhady.forEach(function (o) { pridaj({ t: "odhad", id: String(o.id), n: todoNazovOdhadu(o) }, [o.meno, o.nazov, o.obec].join(" ")); });
+    if (S.inz && tabPovoleny("inzeraty")) for (var i = 0; i < S.inz.length && out.length < 8; i++) { var z = S.inz[i]; pridaj({ t: "inzerat", id: z.id, n: todoNazovInz(z) }, [z.nazov, z.obec].join(" ")); }
+    return out;
+  }
+  function todoPrepojHtml(o) {
+    return '<div class="field todo-prepoj"><span>Prepojiť s <small class="meta">nepovinné – ponuka, klient, predávajúci, odhad alebo inzerát</small></span>' +
+      '<input type="hidden" name="odkaz" value="' + (o ? todoAttr(o) : "") + '">' +
+      '<div class="todo-prepoj-vyb">' + (o ? todoOdkazChip(o) + '<button type="button" class="btn ghost" data-todo-odpoj title="Zrušiť prepojenie">✕</button>' : "") + "</div>" +
+      '<input type="search" class="todo-prepoj-q" placeholder="Začni písať meno, obec alebo názov…" autocomplete="off" aria-label="Prepojiť s"' + (o ? " hidden" : "") + ">" +
+      '<div class="todo-prepoj-zoz" role="listbox"></div></div>';
+  }
+  document.addEventListener("input", function (e) {
+    var q = e.target.closest && e.target.closest(".todo-prepoj-q"); if (!q) return;
+    var box = q.closest(".todo-prepoj").querySelector(".todo-prepoj-zoz"), K = todoKandidati(q.value);
+    box.innerHTML = K.length ? K.map(function (o) { var D = TODO_DRUH[o.t]; return '<button type="button" role="option" data-todo-vyber="' + todoAttr(o) + '">' + D[0] + " <small>" + esc(D[1]) + "</small> " + esc(o.n) + "</button>"; }).join("") :
+      norm(q.value).trim().length >= 2 ? '<span class="meta">Nič sa nenašlo. Hľadám v ponukách, klientoch, predávajúcich, odhadoch a inzerátoch, ktoré máš v Týpkovi otvorené.</span>' : "";
+  });
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest && e.target;
+    if (!t) return;
+    var b = t.closest("[data-todo-pridaj]");
+    if (b) { e.preventDefault(); var o; try { o = JSON.parse(b.dataset.todoPridaj); } catch (x) { return; } return todoDialog(o); }
+    var ot = t.closest("[data-todo-otvor]");
+    if (ot) { e.preventDefault(); try { todoOtvor(JSON.parse(ot.dataset.todoOtvor)); } catch (x) { /* poškodený odkaz */ } return; }
+    var zz = t.closest("[data-todo-zoznam]");
+    if (zz) { e.preventDefault(); try { todoUkazZoznam(JSON.parse(zz.dataset.todoZoznam)); } catch (x) { /* */ } return; }
+    var h = t.closest("[data-todo-hotovo]");
+    if (h) { e.preventDefault(); return todoPrepniHotovo(h.dataset.todoHotovo); }
+    var u = t.closest("[data-todo-uprav]");
+    if (u) { e.preventDefault(); return todoUpravVZozname(u.dataset.todoUprav); }
+    var r = t.closest("[data-termin-o]");
+    if (r) {
+      var f = r.closest("form"), d = f && f.querySelector('[name="termin"]');
+      if (d) { d.value = denKluc(Date.now() + Number(r.dataset.terminO) * 864e5); d.dispatchEvent(new Event("change", { bubbles: true })); }
+      return;
+    }
+    var v = t.closest("[data-todo-vyber]"), od = t.closest("[data-todo-odpoj]");
+    if (v || od) {
+      var pr = (v || od).closest(".todo-prepoj"), o2 = null;
+      if (v) try { o2 = JSON.parse(v.dataset.todoVyber); } catch (x) { return; }
+      pr.outerHTML = todoPrepojHtml(o2);
+      var f2 = document.querySelector('form[data-poz-form] .todo-prepoj');
+      if (f2) { f2.closest("form").setAttribute("data-zmenene", ""); if (!o2) { var qq = f2.querySelector(".todo-prepoj-q"); if (qq) qq.focus(); } }
+    }
+  });
+
+  // ---------- samotný ToDo List
   function pozFormHtml(x, nova) {
     x = x || {};
     var F = S.pozF, predSk = nova && F.skupina !== "*" && F.skupina !== "" ? F.skupina : "";
     return '<form class="poz-form" data-strazit data-poz-form="' + (nova ? "nova" : x.id) + '">' +
-      '<label class="field"><span>' + (nova ? "Čo treba spraviť alebo si zapamätať" : "Poznámka") + '</span><input type="text" name="text" required maxlength="500" autocomplete="off" value="' +
+      '<label class="field"><span>' + (nova ? "Čo treba spraviť alebo si zapamätať" : "Úloha") + '</span><input type="text" name="text" required maxlength="500" autocomplete="off" value="' +
         esc(x.text || "") + '" placeholder="napr. Zavolať majiteľovi bytu"></label>' +
       '<div class="poz-f-riadok">' +
         '<label class="field"><span>Skupina</span><input type="text" name="skupina" maxlength="60" list="poz-skupiny" autocomplete="off" value="' + esc(x.skupina || predSk) + '" placeholder="napr. Týpek, Klienti, Súkromné"></label>' +
-        '<label class="field"><span>Termín</span><input type="date" name="termin" value="' + esc(x.termin || "") + '"></label>' +
+        '<div class="field"><span>Termín</span><div class="todo-termin"><input type="date" name="termin" value="' + esc(x.termin || "") + '" aria-label="Termín">' + terminRychlo() + "</div></div>" +
         '<label class="poz-dolezite"><input type="checkbox" name="dolezite"' + (x.dolezite ? " checked" : "") + "> ⭐ Dôležité</label>" +
       "</div>" +
+      todoPrepojHtml(x.odkaz || (nova && F.odkaz) || null) +
       '<label class="field"><span>Podrobnosti</span><textarea name="detail" rows="3" maxlength="4000" placeholder="Nepovinné – čokoľvek navyše, aj odkaz">' + esc(x.detail || "") + "</textarea></label>" +
-      '<datalist id="poz-skupiny">' + pozSkupiny().map(function (s) { return '<option value="' + esc(s) + '">'; }).join("") + "</datalist>" +
+      '<datalist id="poz-skupiny">' + pozSkupinyNavrh().map(function (s) { return '<option value="' + esc(s) + '">'; }).join("") + "</datalist>" +
       '<div class="form-actions"><button class="btn primary" type="submit" data-ulozit>' + (nova ? "+ Pridať" : "Uložiť") + "</button>" +
         '<button class="btn ghost" type="button" data-poz="zrus">Zrušiť</button></div></form>';
   }
   function pozPolozkaHtml(x, ukazSkupinu) {
     if (S.pozEdit === x.id) return '<div class="poz-pol poz-uprava" data-id="' + x.id + '">' + pozFormHtml(x, false) + "</div>";
     var po = pozPoTermine(x), meta = [];
+    if (x.odkaz) meta.push(todoOdkazChip(x.odkaz));
     if (x.termin && !x.hotovo) meta.push('<span class="poz-chip' + (po ? " po" : x.termin === pozDnes() ? " dnes" : "") + '">📅 ' + (po ? "po termíne · " : "") + esc(pozTermin(x.termin)) + "</span>");
     if (ukazSkupinu && x.skupina) meta.push('<span class="poz-chip">' + esc(x.skupina) + "</span>");
     if (x.hotovo && x.hotovo_kedy) meta.push('<span class="poz-chip ok">✓ hotovo ' + esc(pozTermin(denKluc(x.hotovo_kedy))) + "</span>");
@@ -4574,10 +4797,12 @@
   function vykresliPoznamky() {
     var el = $("#obsah"); if (!el) return;
     if (!S.poz) {
-      el.innerHTML = '<div class="box poz-box"><div class="meta">Načítavam poznámky…</div></div>';
+      el.innerHTML = '<div class="box poz-box"><div class="meta">Načítavam ToDo List…</div></div>';
+      S.pozNacitava = true;
       nacitajPoznamky().then(function () { if (S.tab === "poznamky") vykresliPoznamky(); }, function (e) {
+        S.pozNacitava = false;
         if (S.tab !== "poznamky") return;
-        el.innerHTML = '<div class="box poz-box"><p class="meta">Poznámky sa nepodarilo načítať: ' + esc(chybaText(e)) + '</p><div><button class="btn" type="button" id="poz-znova">Skúsiť znova</button></div></div>';
+        el.innerHTML = '<div class="box poz-box"><p class="meta">ToDo List sa nepodarilo načítať: ' + esc(chybaText(e)) + '</p><div><button class="btn" type="button" id="poz-znova">Skúsiť znova</button></div></div>';
         $("#poz-znova").onclick = vykresliPoznamky;
       });
       return;
@@ -4588,23 +4813,25 @@
     if (F.skupina !== "*" && F.skupina !== "" && skupiny.indexOf(F.skupina) < 0) F.skupina = "*";
     var q = norm(F.q).trim();
     var zoz = V.filter(function (x) {
+      if (F.odkaz && !todoSedi(x.odkaz, F.odkaz)) return false;
       if (F.stav === "otvorene" && x.hotovo) return false;
       if (F.stav === "hotove" && !x.hotovo) return false;
       if (F.skupina !== "*" && (x.skupina || "") !== F.skupina) return false;
-      return !q || norm(x.text + " " + (x.detail || "") + " " + (x.skupina || "")).indexOf(q) >= 0;
+      return !q || norm(x.text + " " + (x.detail || "") + " " + (x.skupina || "") + " " + (x.odkaz ? x.odkaz.n : "")).indexOf(q) >= 0;
     }).sort(pozPoradie);
-    var h = '<div class="box poz-box"><div class="vykon-hlava"><div><h3>📝 Tvoje poznámky</h3><p class="meta">Len pre teba – nikto iný ich nevidí, ani administrátor.</p></div>' +
+    var h = '<div class="box poz-box"><div class="vykon-hlava"><div><h3>✅ ToDo List</h3><p class="meta">Len pre teba – nikto iný ho nevidí, ani administrátor. Úlohu pridáš aj priamo pri inzeráte, ponuke, obhliadke, klientovi či odhade.</p></div>' +
       '<div class="poz-suhrn"><b>' + otv.length + "</b> na spravenie" + (poTermine ? ' · <span class="poz-po-n">' + poTermine + " po termíne</span>" : "") + "</div></div>";
+    if (F.odkaz) h += '<div class="todo-filter-odkaz"><span>Úlohy k:</span>' + todoOdkazChip(F.odkaz) + '<button type="button" class="btn ghost" data-poz="odkaz-zrus">✕ Celý ToDo List</button></div>';
     // pridanie: rýchly riadok alebo celý formulár
     h += S.pozNova ? pozFormHtml({ text: S.pozNovaText || "" }, true) :
-      '<form class="poz-rychla" data-poz-form="rychla"><input type="text" name="text" maxlength="500" required autocomplete="off" placeholder="Pridaj poznámku a stlač Enter…" aria-label="Nová poznámka">' +
-        '<button class="btn primary" type="submit">+ Pridať</button><button class="btn ghost" type="button" data-poz="viac" title="Skupina, termín, dôležité, podrobnosti">Viac možností</button></form>';
+      '<form class="poz-rychla" data-poz-form="rychla"><input type="text" name="text" maxlength="500" required autocomplete="off" placeholder="Pridaj úlohu a stlač Enter…" aria-label="Nová úloha">' +
+        '<button class="btn primary" type="submit">+ Pridať</button><button class="btn ghost" type="button" data-poz="viac" title="Skupina, termín, dôležité, prepojenie, podrobnosti">Viac možností</button></form>';
     // výber
     h += '<div class="poz-vyber"><div class="seg" role="group" aria-label="Zobraziť">' + [["otvorene", "Na spravenie", otv.length], ["hotove", "Hotové", hot.length], ["vsetky", "Všetky", V.length]].map(function (x) {
         return '<button type="button" data-pozstav="' + x[0] + '" aria-pressed="' + (F.stav === x[0]) + '">' + x[1] + ' <span class="n">' + x[2] + "</span></button>";
       }).join("") + "</div>" +
-      '<input type="search" class="poz-hladaj" placeholder="Hľadať v poznámkach" aria-label="Hľadať v poznámkach" value="' + esc(F.q) + '"></div>';
-    if (skupiny.length) {
+      '<input type="search" class="poz-hladaj" placeholder="Hľadať v ToDo" aria-label="Hľadať v ToDo" value="' + esc(F.q) + '"></div>';
+    if (skupiny.length && !F.odkaz) {
       var bez = V.some(function (x) { return !x.skupina; });
       h += '<div class="poz-skup-vyber">' + [["*", "Všetky skupiny"]].concat(skupiny.map(function (s) { return [s, s]; })).concat(bez ? [["", "Bez skupiny"]] : []).map(function (s) {
         var n = s[0] === "*" ? otv.length : otv.filter(function (x) { return (x.skupina || "") === s[0]; }).length;
@@ -4612,12 +4839,12 @@
       }).join("") + "</div>";
     }
     // zoznam
-    if (!V.length) h += '<div class="poz-prazdne"><b>Zatiaľ tu nič nie je.</b><span>Zapíš si prvú úlohu alebo nápad – uvidíš ich len ty. Keď ich spravíš, odklikneš ich krúžkom.</span></div>';
+    if (!V.length) h += '<div class="poz-prazdne"><b>Zatiaľ tu nič nie je.</b><span>Zapíš si prvú úlohu – alebo ju pridaj tlačidlom ✅ Do ToDo pri inzeráte, ponuke či klientovi. Keď ju spravíš, odklikneš ju krúžkom.</span></div>';
     else if (!zoz.length) h += '<div class="poz-prazdne">' + (F.stav === "otvorene" && !q && F.skupina === "*" ? "<b>Všetko máš hotové 🎉</b>" : "<span>V tomto výbere nič nie je.</span>") + "</div>";
-    else if (F.skupina === "*" && skupiny.length) {
+    else if (F.skupina === "*" && skupiny.length && !F.odkaz) {
       var pod = {}; zoz.forEach(function (x) { var k = x.skupina || ""; (pod[k] = pod[k] || []).push(x); });
       var Z = pozZavrete();
-      // skupiny v poradí ich najdôležitejšej poznámky, bez skupiny na koniec
+      // skupiny v poradí ich najdôležitejšej úlohy, bez skupiny na koniec
       var kluce = Object.keys(pod).sort(function (a, b) { if (!a) return 1; if (!b) return -1; return pozPoradie(pod[a][0], pod[b][0]) || a.localeCompare(b, "sk"); });
       h += kluce.map(function (k) {
         var n = pod[k].length, nPo = pod[k].filter(pozPoTermine).length;
@@ -4626,7 +4853,7 @@
           '<div class="poz-zoznam">' + pod[k].map(function (x) { return pozPolozkaHtml(x, false); }).join("") + "</div></details>";
       }).join("");
     } else h += '<div class="poz-zoznam">' + zoz.map(function (x) { return pozPolozkaHtml(x, F.skupina === "*"); }).join("") + "</div>";
-    if (hot.length && F.stav !== "otvorene") h += '<div class="poz-dole"><button type="button" class="btn ghost danger" data-poz="zmaz-hotove">Zmazať všetky hotové (' + hot.length + ")</button></div>";
+    if (hot.length && F.stav !== "otvorene" && !F.odkaz) h += '<div class="poz-dole"><button type="button" class="btn ghost danger" data-poz="zmaz-hotove">Zmazať všetky hotové (' + hot.length + ")</button></div>";
     el.innerHTML = h + "</div>";
     var box = $(".poz-box");
     box.querySelectorAll("details.poz-skup").forEach(function (d) {
@@ -4640,7 +4867,6 @@
     box.addEventListener("click", pozKlik);
     box.addEventListener("submit", pozUloz);
   }
-  function pozNajdi(id) { return (S.poz || []).find(function (x) { return String(x.id) === String(id); }); }
   async function pozKlik(e) {
     var F = S.pozF;
     var st = e.target.closest("[data-pozstav]");
@@ -4649,6 +4875,7 @@
     if (sk) { F.skupina = sk.dataset.pozsk; vykresliPoznamky(); return; }
     var b = e.target.closest("[data-poz]"); if (!b) return;
     var a = b.dataset.poz, riadok = b.closest("[data-id]"), x = riadok ? pozNajdi(riadok.dataset.id) : null;
+    if (a === "odkaz-zrus") { F.odkaz = null; vykresliPoznamky(); return; }
     if (a === "viac") {
       var r = $(".poz-rychla input"); S.pozNovaText = r ? r.value : ""; S.pozNova = true; S.pozEdit = null; vykresliPoznamky();
       var t = $('.poz-form [name="text"]'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
@@ -4666,30 +4893,30 @@
     }
     if (a === "hotovo" && x) {
       var nove = !x.hotovo, predtym = { hotovo: x.hotovo, hotovo_kedy: x.hotovo_kedy };
-      x.hotovo = nove; x.hotovo_kedy = nove ? new Date().toISOString() : null;
-      // v zozname „Na spravenie“ hotová poznámka krátko zostane odškrtnutá a potom zmizne
+      x.hotovo = nove; x.hotovo_kedy = nove ? new Date().toISOString() : null; pozPoZmene([x.odkaz]);
+      // v zozname „Na spravenie“ hotová úloha krátko zostane odškrtnutá a potom zmizne
       if (nove && F.stav === "otvorene" && riadok) { riadok.classList.add("hotovo", "odchadza"); b.setAttribute("aria-pressed", "true"); setTimeout(function () { if (S.tab === "poznamky" && !S.pozEdit) vykresliPoznamky(); }, 450); }
       else vykresliPoznamky();
       var rh = await sb.from("poznamky").update({ hotovo: nove }).eq("id", x.id).select().maybeSingle();
-      if (rh.error || !rh.data) { x.hotovo = predtym.hotovo; x.hotovo_kedy = predtym.hotovo_kedy; toast(rh.error ? chybaText(rh.error) : "Poznámku sa nepodarilo zmeniť.", true); vykresliPoznamky(); return; }
+      if (rh.error || !rh.data) { Object.assign(x, predtym); pozPoZmene([x.odkaz]); toast(rh.error ? chybaText(rh.error) : "Úlohu sa nepodarilo zmeniť.", true); vykresliPoznamky(); return; }
       Object.assign(x, rh.data);
       if (nove) toast("Hotovo ✓ " + (pozOtvorene().length ? "Ostáva " + pozOtvorene().length + "." : "Všetko máš spravené."));
       return;
     }
     if (a === "zmaz" && x) {
-      if (!window.confirm("Zmazať poznámku „" + (x.text.length > 80 ? x.text.slice(0, 80) + "…" : x.text) + "“?")) return;
+      if (!window.confirm("Zmazať úlohu „" + todoKratko(x.text, 80) + "“?")) return;
       var rz = await sb.from("poznamky").delete().eq("id", x.id);
       if (rz.error) return toast(chybaText(rz.error), true);
       S.poz = S.poz.filter(function (y) { return y !== x; }); if (S.pozEdit === x.id) S.pozEdit = null;
-      vykresliPoznamky(); toast("Poznámka je zmazaná."); return;
+      pozPoZmene([x.odkaz]); vykresliPoznamky(); toast("Úloha je zmazaná."); return;
     }
     if (a === "zmaz-hotove") {
       var n = S.poz.filter(function (y) { return y.hotovo; }).length;
-      if (!n || !window.confirm("Zmazať všetky hotové poznámky (" + n + ")? Nespravené ostanú.")) return;
+      if (!n || !window.confirm("Zmazať všetky hotové úlohy (" + n + ")? Nespravené ostanú.")) return;
       b.disabled = true;
       var rv = await sb.from("poznamky").delete().eq("hotovo", true);
       if (rv.error) { b.disabled = false; return toast(chybaText(rv.error), true); }
-      S.poz = S.poz.filter(function (y) { return !y.hotovo; }); vykresliPoznamky(); toast("Hotové poznámky sú zmazané.");
+      S.poz = S.poz.filter(function (y) { return !y.hotovo; }); pozPoZmene(); vykresliPoznamky(); toast("Hotové úlohy sú zmazané.");
     }
   }
   async function pozUloz(e) {
@@ -4699,24 +4926,26 @@
     var druh = f.dataset.pozForm, fd = new FormData(f), F = S.pozF;
     var text = String(fd.get("text") || "").trim();
     if (!text) { var ti = f.querySelector('[name="text"]'); if (ti) ti.focus(); return; }
-    var data = druh === "rychla" ? { text: text, skupina: F.skupina !== "*" && F.skupina !== "" ? F.skupina : null } : {
+    var odkaz = null; try { odkaz = fd.get("odkaz") ? JSON.parse(fd.get("odkaz")) : null; } catch (x) { odkaz = null; }
+    var data = druh === "rychla" ? { text: text, skupina: F.skupina !== "*" && F.skupina !== "" ? F.skupina : null, odkaz: F.odkaz || null } : {
       text: text, skupina: String(fd.get("skupina") || "").trim() || null, termin: fd.get("termin") || null,
-      dolezite: !!fd.get("dolezite"), detail: String(fd.get("detail") || "").trim() || null,
+      dolezite: !!fd.get("dolezite"), detail: String(fd.get("detail") || "").trim() || null, odkaz: odkaz,
     };
+    var stary = druh !== "rychla" && druh !== "nova" ? (pozNajdi(druh) || {}).odkaz : null;
     var tl = f.querySelector('[type="submit"]'); if (tl) tl.disabled = true;
     S.pozUklada = true;
     var r = druh === "rychla" || druh === "nova" ? await sb.from("poznamky").insert(data).select().single() : await sb.from("poznamky").update(data).eq("id", druh).select().maybeSingle();
     S.pozUklada = false;
-    if (r.error || !r.data) { if (tl) tl.disabled = false; return toast(r.error ? chybaText(r.error) : "Poznámku sa nepodarilo uložiť.", true); }
+    if (r.error || !r.data) { if (tl) tl.disabled = false; return toast(r.error ? chybaText(r.error) : "Úlohu sa nepodarilo uložiť.", true); }
     f.removeAttribute("data-zmenene");
     if (druh === "rychla" || druh === "nova") {
       S.poz.unshift(r.data); S.pozNova = false; S.pozNovaText = "";
       if (F.stav === "hotove") F.stav = "otvorene";
-      vykresliPoznamky(); toast("Pridané.");
+      pozPoZmene([r.data.odkaz]); vykresliPoznamky(); toast("Pridané.");
       var q = $(".poz-rychla input"); if (q) q.focus();   // hneď sa dá písať ďalšia
     } else {
       var x = pozNajdi(druh); if (x) Object.assign(x, r.data);
-      S.pozEdit = null; vykresliPoznamky(); toast("Uložené.");
+      S.pozEdit = null; pozPoZmene([stary, r.data.odkaz]); vykresliPoznamky(); toast("Uložené.");
     }
   }
 
@@ -5489,6 +5718,7 @@
           (I.provizia_rk ? " · pre RK " + (I.provizia_rk_typ === "pct" ? nf.format(I.provizia_rk) + " %" : eur(I.provizia_rk)) : "") + "</dd>" : "") +
         (I.poznamka ? "<dt>Poznámka</dt><dd>" + esc(I.poznamka) + "</dd>" : "") + "</dl>" +
         ((I.dokumenty || []).length ? '<div class="pf-dok">' + I.dokumenty.map(function (d) { return '<button type="button" class="chip-obec" data-dok-otvor="' + esc(d.cesta) + '">📄 ' + esc(d.nazov) + "</button>"; }).join("") + "</div>" : "") + "</section>" : "") +
+      todoSekcia({ t: "ponuka", id: String(p.id), n: todoNazovPonuky(p) }) +
       sekciaObhliadky(p, mozem) +
       ((p.historia_cien || []).length > 1 ? '<p class="meta">Vývoj ceny: ' + p.historia_cien.map(function (x) { return datum(x[0]) + " " + eur(x[1]); }).join(" → ") + "</p>" : "") +
       (mozem ? sekciaHistorie("nehnutelnosti", p.id) : "") +
@@ -6003,7 +6233,8 @@
         (o.makler_id && o.makler_id !== p.makler_id ? ' <span class="meta">· ' + avatar(o.makler_id, 18) + " " + esc(meno(o.makler_id)) + "</span>" : "") +
         (o.ponuknuta_cena ? '<div>Ponúknutá cena: <b>' + eur(o.ponuknuta_cena) + "</b></div>" : "") +
         (o.spatna_vazba ? '<div class="obh-vazba">💬 ' + esc(o.spatna_vazba) + "</div>" : "") + (o.poznamka ? '<div class="meta">🔒 ' + esc(o.poznamka) + "</div>" : "") + "</div>" +
-        (smiem ? '<div class="obh-akcie"><button class="btn ghost" type="button" data-obh="upravit" data-id="' + o.id + '">Upraviť</button><button class="btn ghost danger" type="button" data-obh="zrusit" data-id="' + o.id + '">Zrušiť</button></div>' : "") + "</div>";
+        '<div class="obh-akcie">' + todoTlacidlo({ t: "obhliadka", id: String(o.id), p: String(p.id), n: todoKratko("Obhliadka " + datum(o.cas, true) + (o.klient_meno ? " – " + o.klient_meno : "") + " · " + todoNazovPonuky(p), 150) }, "✅ ToDo") +
+          (smiem ? '<button class="btn ghost" type="button" data-obh="upravit" data-id="' + o.id + '">Upraviť</button><button class="btn ghost danger" type="button" data-obh="zrusit" data-id="' + o.id + '">Zrušiť</button>' : "") + "</div></div>";
     }).join("");
     h += "</section>";
     // potenciálni klienti
@@ -6423,6 +6654,7 @@
           return '<option value="' + m.id + '"' + (m.id === k.makler_id ? " selected" : "") + ">" + esc(m.meno || m.email) + "</option>"; }).join("") + "</select>" :
         !k.makler_id ? ' <button class="btn" type="button" data-predd="moj">Priradiť mne</button>' : k.makler_id === S.me.id ? ' <button class="btn ghost" type="button" data-predd="nie-moj">Zrušiť priradenie</button>' : "") + "</div>";
 
+    h += todoSekcia({ t: "predavajuci", id: tel, n: todoKratko((k.meno || "Predávajúci") + " · " + (k.telefon || tel), 150) });
     // údaje, ktoré dopíšu makléri
     h += '<form class="pd-sekcia pred-form" id="f-pred"><div class="pd-sek-hlava"><h4>📝 Meno a poznámka</h4></div><div class="form-grid">' +
       '<label class="field"><span>Meno predávajúceho</span><input type="text" name="meno" maxlength="120" value="' + esc(k.meno_vlastne || "") + '" placeholder="' + esc(k.meno_portal || "napr. Ján Novák") + '"></label></div>' +
@@ -6554,6 +6786,7 @@
       (K ? '<section class="pd-interne"><h4>🔒 Kontakt</h4><dl class="pd-par">' + (K.telefon ? '<dt>Telefón</dt><dd><a class="tel" href="tel:' + esc(telCislo(K.telefon)) + '">' + esc(K.telefon) + "</a></dd>" : "") +
         (K.email ? '<dt>Email</dt><dd><a href="mailto:' + esc(K.email) + '">' + esc(K.email) + "</a></dd>" : "") + (K.poznamka ? "<dt>Poznámka</dt><dd>" + esc(K.poznamka) + "</dd>" : "") + "</dl></section>" :
         '<p class="meta">🔒 Kontakt na klienta vidí len jeho maklér a administrátor.</p>') +
+      todoSekcia({ t: "dopyt", id: String(d.id), n: todoKratko(menoKlienta(d) + " – " + popisDopytu(d), 150) }) +
       hZona +
       '<section class="pd-sekcia"><div class="pd-sek-hlava"><h4>🏠 Ponuky kancelárie, ktoré sedia (' + P.length + ")</h4></div>" +
       (P.length ? '<div class="dd-ponuky">' + P.map(function (p) {
@@ -8752,6 +8985,7 @@
       '<div class="box"><h3>🏠 Nehnuteľnosť</h3><table class="odh-tab">' + riadky.join("") + "</table></div>" +
       (o.fotky_cesta ? '<div class="box"><h3>📷 Fotky od klienta</h3><div id="odh-fotky" class="odh-fotky"><span class="meta">Načítavam fotky…</span></div></div>' : "") +
       '<div class="box"><h3>🔎 Čo o klientovi vieme</h3><div id="odh-zhody">' + odhZhodyHtml(o) + "</div></div>" +
+      '<div class="box odh-todo">' + todoSekcia({ t: "odhad", id: String(o.id), n: todoNazovOdhadu(o) }, "todo-v-boxe") + "</div>" +
       '<div class="box"><h3>📝 Moja poznámka</h3><textarea id="odh-pozn" rows="3" maxlength="3000" placeholder="Len pre vás a administrátora – klient ju neuvidí">' + esc(o.poznamka_maklera || "") + "</textarea>" +
         '<div><button type="button" class="btn" data-odh-pozn>Uložiť poznámku</button></div></div>' +
       (admin() ? '<div class="box"><h3>↪ Odovzdať kolegovi</h3><div class="odh-priradit"><select id="odh-komu">' + S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) {

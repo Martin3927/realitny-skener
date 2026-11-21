@@ -1,0 +1,92 @@
+import os, subprocess
+from playwright.sync_api import sync_playwright
+# ToDo List prepojený s Týpkom: úloha k inzerátu zo skenera, k ponuke, k obhliadke a ku klientovi (migrácia 140);
+# z ToDo Listu sa jedným klikom vráti na miesto, pri ktorom úloha vznikla. Kolega úlohy nevidí.
+URL=os.environ.get("TYPEK_URL", "http://localhost:8000/index.html"); SH=os.environ.get("TYPEK_SNIMKY", "/tmp/typek-snimky/"); ok=[]; errs=[]
+def sql(q): return subprocess.run(["psql","-h","127.0.0.1","-p","54322","-U","postgres","-d","typek","-tAc",q],capture_output=True,text=True).stdout.strip()
+def check(n,c): ok.append(("OK   " if c else "ZLE  ")+n)
+JANA="22222222-2222-2222-2222-222222222222"
+sql("""insert into nehnutelnosti (makler_id, nazov, stav, transakcia, kategoria, typ, cena, obec, okres, izby, plocha_uzitkova, historia_cien)
+       values ('%s', 'Byt Smižany', 'aktivne', 'predaj', 'byty', '3-izbový byt', 120000, 'Smižany', 'Spišská Nová Ves', 3, 70, '[]')""" % JANA)
+BYT=sql("select id from nehnutelnosti where nazov = 'Byt Smižany'")
+sql("""insert into obhliadky (nehnutelnost_id, makler_id, cas, klient_meno, vysledok) values (%s, '%s', now() - interval '2 days', 'Eva Nová', 'zvazuje')""" % (BYT, JANA))
+sql("insert into dopyty (makler_id, transakcia, kategorie, obce, cena_do) values ('%s', 'predaj', '{byty}', '{Smižany}', 130000)" % JANA)
+DOPYT=sql("select max(id) from dopyty")
+sql("insert into dopyty_kontakty (dopyt_id, meno, telefon) values (%s, 'Karol Kupec', '0905 123 456')" % DOPYT)
+INZ=sql("select id from inzeraty where predajca_typ <> 'rk' and aktivny order by prvy_krat desc limit 1")
+
+def prihlas(b, vp, email):
+    pg=b.new_context(viewport=vp).new_page(); pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("dialog", lambda d: d.accept())
+    pg.goto(URL); pg.wait_for_selector("#l-email"); pg.fill("#l-email",email); pg.fill("#l-heslo","Test12345"); pg.click("#f-login button[type=submit]")
+    pg.wait_for_selector("#obsah", timeout=20000); pg.wait_for_timeout(1500); return pg
+def pridaj(pg, text, rychlo=None):
+    pg.wait_for_selector("#todo-okno form"); pg.fill('#todo-okno [name="text"]', text)
+    if rychlo: pg.click('#todo-okno [data-termin-o="%s"]' % rychlo)
+    pg.click('#todo-okno button[type=submit]'); pg.wait_for_timeout(1200)
+with sync_playwright() as p:
+    b=p.chromium.launch()
+    pg=prihlas(b, {"width":1300,"height":900}, "jana@test.sk")
+    check("menu: ToDo List", "ToDo List" in pg.inner_text(".bocne"))
+    # ---- skener: úloha k inzerátu
+    pg.goto(URL+"#inzeraty"); pg.wait_for_selector('#obsah .card[data-id="%s"]' % INZ, timeout=15000); pg.wait_for_timeout(500)
+    karta='#obsah .card[data-id="%s"]' % INZ
+    if pg.locator(karta+' [data-act="viac"]').is_visible(): pg.click(karta+' [data-act="viac"]'); pg.wait_for_timeout(300)
+    pg.click(karta+' [data-todo-pridaj]')
+    check("okno Nová úloha ukazuje inzerát", "Inzerát" in pg.inner_text("#todo-okno .todo-pre"))
+    check("skupina sa navrhne podľa miesta", pg.input_value('#todo-okno [name="skupina"]') == "Skener")
+    pridaj(pg, "Zavolať predajcovi znova", "1")
+    check("okno sa zavrelo", pg.locator("#todo-okno").count() == 0)
+    check("na karte inzerátu je úloha", "Zavolať predajcovi znova" in pg.inner_text(karta+" .todo-znacka"))
+    t=sql("select termin = current_date + 1, odkaz->>'t', odkaz->>'id', skupina from poznamky where text = 'Zavolať predajcovi znova'")
+    check("v databáze s prepojením a termínom zajtra (%s)" % t, t == "t|inzerat|%s|Skener" % INZ)
+    pg.click(karta+" .todo-znacka"); pg.wait_for_selector(".poz-box .todo-filter-odkaz", timeout=8000)
+    check("ToDo List len s úlohami k inzerátu", pg.locator(".poz-pol").count() == 1)
+    pg.click('.poz-pol .poz-odkaz'); pg.wait_for_timeout(1500)
+    check("odkaz z ToDo vráti na inzerát v skeneri", pg.evaluate("location.hash").startswith("#inzeraty") and pg.locator(karta).count() == 1)
+    # ---- ponuka a obhliadka
+    pg.goto(URL+"#nehnutelnosti/"+BYT); pg.wait_for_selector(".ponuka-detail .todo-pri", timeout=15000); pg.wait_for_timeout(400)
+    check("ponuka: sekcia ToDo bez úloh", "Žiadne otvorené úlohy" in pg.inner_text(".ponuka-detail .todo-pri"))
+    pg.click('.ponuka-detail .todo-pri [data-todo-pridaj]'); pridaj(pg, "Doniesť majiteľovi zmluvu")
+    pg.click('#pd-obhliadky .obh [data-todo-pridaj]')
+    check("okno pri obhliadke ukazuje klienta", "Eva Nová" in pg.inner_text("#todo-okno .todo-pre"))
+    pridaj(pg, "Spýtať sa Evy na spätnú väzbu")
+    sek=pg.inner_text(".ponuka-detail .todo-pri")
+    check("ponuka: úloha k ponuke aj k obhliadke", "Doniesť majiteľovi zmluvu" in sek and "Spýtať sa Evy" in sek and "🗝️" in sek)
+    check("ponuka: počet 2", pg.inner_text(".ponuka-detail .todo-pri .todo-n") == "2")
+    pg.locator(".ponuka-detail").screenshot(path=SH+"todo_ponuka.png")
+    pg.click('.ponuka-detail .todo-pri [data-todo-hotovo]'); pg.wait_for_timeout(1200)
+    check("odkliknutá úloha zmizla zo sekcie", pg.locator(".ponuka-detail .todo-pri .todo-riadok").count() == 1)
+    check("v databáze hotová", sql("select count(*) from poznamky where hotovo") == "1")
+    # klik na text úlohy otvorí úpravu v ToDo Liste
+    pg.click('.ponuka-detail .todo-pri .todo-riadok-text'); pg.wait_for_selector(".poz-uprava", timeout=8000)
+    check("úprava v ToDo Liste", pg.locator('.poz-uprava .todo-prepoj .poz-odkaz').count() == 1)
+    pg.click('.poz-uprava [data-poz="zrus"]'); pg.wait_for_timeout(300)
+    # ---- klient: prepojenie z ToDo Listu cez „Prepojiť s…“
+    pg.goto(URL+"#klienti"); pg.wait_for_timeout(1500)
+    pg.goto(URL+"#poznamky"); pg.wait_for_selector(".poz-box .poz-rychla", timeout=10000)
+    pg.click('[data-poz="viac"]'); pg.wait_for_selector(".poz-form")
+    pg.fill('.poz-form [name="text"]', "Poslať Karolovi nové ponuky")
+    pg.fill('.poz-form .todo-prepoj-q', "kupec"); pg.wait_for_timeout(300)
+    check("Prepojiť s: našiel klienta", pg.locator('.todo-prepoj-zoz [data-todo-vyber]').count() >= 1)
+    pg.click('.todo-prepoj-zoz [data-todo-vyber]'); pg.wait_for_timeout(200)
+    check("Prepojiť s: vybraný klient", "Karol Kupec" in pg.inner_text(".poz-form .todo-prepoj-vyb"))
+    pg.click('.poz-form button[type=submit]'); pg.wait_for_timeout(1000)
+    check("klient v databáze", sql("select odkaz->>'t' || ':' || (odkaz->>'id') from poznamky where text like 'Poslať Karolovi%'") == "dopyt:"+DOPYT)
+    check("chip Klient v zozname", pg.locator('.poz-pol', has_text="Poslať Karolovi").locator(".poz-odkaz").count() == 1)
+    pg.locator(".poz-box").screenshot(path=SH+"todo_zoznam.png")
+    pg.locator('.poz-pol', has_text="Poslať Karolovi").locator(".poz-odkaz").click(); pg.wait_for_selector(".dopyt-detail .todo-pri", timeout=10000)
+    check("odkaz otvoril klienta a jeho úlohu", "Poslať Karolovi nové ponuky" in pg.inner_text(".dopyt-detail .todo-pri"))
+    # ---- kolega nevidí
+    pa=prihlas(b, {"width":1300,"height":900}, "admin@test.sk")
+    pa.goto(URL+"#nehnutelnosti/"+BYT); pa.wait_for_selector(".ponuka-detail .todo-pri", timeout=15000); pa.wait_for_timeout(600)
+    check("administrátor nevidí Janine úlohy pri ponuke", "Žiadne otvorené úlohy" in pa.inner_text(".ponuka-detail .todo-pri"))
+    # ---- mobil: okno sa zmestí
+    pm=prihlas(b, {"width":390,"height":844}, "jana@test.sk")
+    pm.goto(URL+"#nehnutelnosti/"+BYT); pm.wait_for_selector(".ponuka-detail .todo-pri", timeout=15000); pm.wait_for_timeout(500)
+    pm.click('.ponuka-detail .todo-pri [data-todo-pridaj]'); pm.wait_for_selector("#todo-okno form"); pm.wait_for_timeout(400)
+    check("mobil: okno bez posúvania do strany", pm.evaluate("document.documentElement.scrollWidth") <= 390 and pm.locator("#todo-okno form").bounding_box()["width"] <= 390)
+    pm.screenshot(path=SH+"todo_okno_mobil.png")
+    pm.keyboard.press("Escape"); pm.wait_for_timeout(200)
+    check("mobil: Escape zavrie okno", pm.locator("#todo-okno").count() == 0)
+    b.close()
+print("\n".join(ok)); print(errs or "bez chýb JS")

@@ -97,4 +97,25 @@ begin
   end;
 end $$;
 commit;
+-- ---------- prepojenie s miestom v Týpkovi (migrácia 140)
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}', true);
+insert into poznamky (text, odkaz) values ('K ponuke', '{"t":"ponuka","id":"5","n":"Byt Smižany"}');
+insert into poznamky (text, odkaz) values ('K obhliadke', '{"t":"obhliadka","id":"9","p":"5","n":"Obhliadka"}');
+do $$
+begin
+  assert (select count(*) from poznamky where odkaz ->> 't' in ('ponuka', 'obhliadka')) = 2, 'prepojené úlohy uložené';
+  begin
+    insert into poznamky (text, odkaz) values ('zlý druh', '{"t":"heslo","id":"1"}');
+    assert false, 'neznámy druh prepojenia prešiel';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into poznamky (text, odkaz) values ('bez id', '{"t":"ponuka"}');
+    assert false, 'prepojenie bez id prešlo';
+  exception when check_violation then null;
+  end;
+end $$;
+commit;
 select 'poznamky OK';
