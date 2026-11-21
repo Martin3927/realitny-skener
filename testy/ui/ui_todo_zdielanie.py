@@ -37,6 +37,20 @@ with sync_playwright() as p:
     pj.click("[data-pozzdiel]")
     # administrátor
     pa=prihlas(b, "admin@test.sk")
+    # upozornenie na prehľade a v zvončeku
+    pa.wait_for_selector(".todo-domov", timeout=10000)
+    td=pa.inner_text(".todo-domov")
+    check("na prehľade upozornenie od kolegyne", "Jana Nováková ti zdieľa úlohu: Pripraviť zmluvu" in td)
+    check("zvonček ukazuje číslo", pa.locator("#zvon-n:not([hidden])").count() == 1)
+    pa.screenshot(path=SH+"todo_zdielanie_prehlad.png")
+    pa.click("#zvon-btn"); pa.wait_for_selector(".zvon-box .zvon-todo", timeout=5000)
+    check("v zvončeku sekcia Z ToDo Listu s odkazom", "Z TODO LISTU" in pa.inner_text(".zvon-todo").upper() and pa.locator(".zvon-todo [data-prip-todo]").count() == 1
+          and pa.locator('.zvon-todo [data-prip-act="zrusit"]').count() == 0)
+    pa.click("#zvon-btn"); pa.wait_for_timeout(300)
+    pa.click(".todo-domov [data-tkd-otvor]"); pa.wait_for_selector(".poz-pol.zvyraznena", timeout=8000)
+    check("Otvoriť prejde na úlohu v ToDo Liste a zvýrazní ju", "Pripraviť zmluvu" in pa.inner_text(".poz-pol.zvyraznena"))
+    pa.wait_for_timeout(800)
+    check("upozornenie je vybavené", sql("select count(*) from pripomienky where druh = 'todo' and makler_id = '%s' and hotovo is null" % ADMIN) == "0")
     pa.goto(URL+"#poznamky"); pa.wait_for_selector(".poz-box .poz-rychla", timeout=10000); pa.wait_for_timeout(500)
     t=pa.inner_text(".poz-box")
     check("kolega vidí zdieľanú úlohu, nie súkromnú", "Pripraviť zmluvu" in t and "Moja súkromná" not in t)
@@ -54,6 +68,11 @@ with sync_playwright() as p:
     # Jana vidí, kto úlohu splnil
     pj.goto(URL+"#domov"); pj.wait_for_timeout(500); pj.goto(URL+"#poznamky"); pj.reload(); pj.wait_for_selector(".poz-box .poz-rychla", timeout=15000); pj.wait_for_timeout(800)
     pj.click('[data-pozstav="hotove"]'); pj.wait_for_timeout(300)
+    pj.goto(URL+"#domov"); pj.wait_for_selector(".todo-domov", timeout=8000)
+    check("autorke na prehľade: hotovo od kolegu", "Hotovo · Martin Testovací: Pripraviť zmluvu" in pj.inner_text(".todo-domov"))
+    pj.click('.todo-domov [data-tkd-ok]'); pj.wait_for_timeout(800)
+    check("OK upozornenie skryje", pj.locator(".todo-domov").count() == 0)
+    pj.goto(URL+"#poznamky"); pj.wait_for_selector(".poz-box .poz-rychla", timeout=8000); pj.click('[data-pozstav="hotove"]'); pj.wait_for_timeout(300)
     check("autorka vidí, kto ju splnil", "Martin Testovací" in pj.locator(".poz-pol", has_text="Pripraviť zmluvu").inner_text())
     pj.locator(".poz-pol", has_text="Pripraviť zmluvu").locator('[data-poz="hotovo"]').click(); pj.wait_for_timeout(1000)
     # administrátor sa odoberie
