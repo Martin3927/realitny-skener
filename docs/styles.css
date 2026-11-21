@@ -3139,3 +3139,6 @@ html.bez-posuvu #toast { z-index: 210 }
 .obh-hod-akcie { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px }
 .obh-hod-akcie .btn, .obh-hod .pd-zdiel-btns .btn { padding: 5px 10px; min-height: 0; font-size: 13px }
 .obh-hod-ziadost { margin-top: 6px; font-size: 13px }
+.suv-row.predtym { background: var(--warn-soft) }
+.predtym-lac { color: var(--good); font-weight: 700 }
+.predtym-drah { color: var(--bad); font-weight: 700 }

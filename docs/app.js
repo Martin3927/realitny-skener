@@ -1870,7 +1870,7 @@
     await nacitajMaklerov(dotazMaklerov);
     var meta = nacitajMeta();
     await Promise.all([nacitajStrazcu(), nacitajHistoriuPrevzati().catch(function () { S.histPrev = null; }), nacitajInzeraty(), nacitajPrevzatia(), nacitajOdhady(), nacitajSchrankovanie(), nacitajPripomienky(), nacitajOznacenia(), nacitajAi(), nacitajTelefony(), nacitajChat(), nacitajPrihlasenia(), nacitajOsobne(), nacitajOslavy(), nacitajPonuky().catch(function () { S.ponuky = null; }), nacitajUdalosti(), meta,
-      nacitajPredajcov().catch(function () { S.pred = null; }), nacitajMatterport().catch(function () { S.mp = null; })]);
+      nacitajPredajcov().catch(function () { S.pred = null; }), nacitajMatterport().catch(function () { S.mp = null; }), nacitajPredtym()]);
   }
   // stav skenera (posledná kontrola, chyby) – pri štarte aj priebežne, inak by otvorená aplikácia po pár hodinách hlásila, že skener stojí
   function nacitajMeta() {
@@ -2976,6 +2976,23 @@
     var p = S.prev[id];
     return !!(p && p.posledny_hovor && Date.now() - new Date(p.posledny_hovor).getTime() < 30 * 864e5);
   }
+  // „Tento byt sa už predával“ – zhoda so starším zmiznutým inzerátom podľa fotiek (odtlacky.py, migrácia 146)
+  function nacitajPredtym() {
+    if (!maSekciu("inzeraty")) { S.predtym = {}; return Promise.resolve(); }
+    return vsetkyRiadky("inzeraty_predtym", "inzerat_id, zhody", "inzerat_id", function (q) { return q.neq("zhody", "[]"); })
+      .then(function (r) { var m = {}; r.forEach(function (x) { if ((x.zhody || []).length) m[x.inzerat_id] = x.zhody; }); S.predtym = m; }, function () { S.predtym = S.predtym || {}; });
+  }
+  function predtymRiadok(z) {
+    var Z = (S.predtym || {})[z.id]; if (!Z || !Z.length) return "";
+    return Z.slice(0, 2).map(function (x) {
+      var rozdiel = x.cena && z.cena ? Math.round((z.cena / x.cena - 1) * 100) : null;
+      return '<div class="suv-row predtym">🔁 <b>Tento byt sa už predával</b> ' + esc(datum(x.od)) + " – " + esc(datum(x.do)) + (x.cena ? " za <b>" + eur(x.cena) + "</b>" : "") +
+        (rozdiel ? ' <span class="' + (rozdiel < 0 ? "predtym-lac" : "predtym-drah") + '">(teraz ' + (rozdiel > 0 ? "+" : "") + rozdiel + " %)</span>" : "") +
+        " · " + (x.rk ? "🏢 realitka" : "👤 súkromník") + (x.predajca ? " " + esc(x.predajca) : "") + (PORTAL[x.portal] ? " (" + esc(PORTAL[x.portal]) + ")" : "") +
+        ' <a class="btn-link" href="#inzeraty/' + encodeURIComponent(x.id) + '">Karta ›</a>' + (x.url ? ' <a class="btn-link" href="' + esc(x.url) + '" target="_blank" rel="noopener">Na portáli ›</a>' : "") +
+        ' <small class="meta">zhoda ' + x.fotiek + (x.fotiek === 1 ? " fotky" : " fotiek") + "</small></div>";
+    }).join("");
+  }
   function suvRiadok(z) {
     var s = (z.suvisiace || []).filter(function (x) { return x && x.id; });
     if (!s.length) return "";
@@ -3052,7 +3069,7 @@
       '<a class="title" href="' + esc(z.url) + '" target="_blank" rel="noopener">' + esc(z.nazov) + "</a>" +
       '<div class="meta"><span>' + (TYP[z.typ] || "") + (z.izby ? ", " + z.izby + "-izb." : "") + "</span><span>" + esc(z.obec || "okres " + z.okres) + "</span>" +
       (z.plocha ? "<span>" + nf.format(z.plocha) + " m²</span>" : "") + naPortaliOd(z) + "</div>" +
-      historiaPrevzatiaRiadok(z) + okolieRiadok(z) + telRiadok(z) + predRiadok(z) + suvRiadok(z) + aiRiadok(z) +
+      historiaPrevzatiaRiadok(z) + okolieRiadok(z) + telRiadok(z) + predRiadok(z) + suvRiadok(z) + predtymRiadok(z) + aiRiadok(z) +
       '<div class="pills">' + (nove ? '<span class="pill new">Nové</span>' : "") +
       (obnovenyNedavno(z) ? '<span class="pill new" title="Predajca inzerát zverejnil znova – oplatí sa ozvať">🔁 Znova zverejnený ' + datum(z.obnovene) + "</span>" : "") + (!z.aktivny ? '<span class="pill gone">Zmizol z portálu · naposledy ' + datum(z.naposledy) + "</span>" : "") +
       '<span class="pill ' + pr[1] + '" title="' + esc(ozn ? "Ručne označil " + meno(ozn.oznacil) + " " + datum(ozn.oznacene) : (!ozn && z.predajca_typ !== "rk" && aiRk(z) ? "Skener: " + (z.predajca_dovod || "") + " · AI: realitka" : z.predajca_dovod || "")) + '">' + pr[0] + (!ozn && z.predajca_typ !== "rk" && aiRk(z) ? " podľa AI" : "") + (z.predajca ? " · " + esc(z.predajca) : "") + "</span>" +

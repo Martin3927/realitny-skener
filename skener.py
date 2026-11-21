@@ -1497,8 +1497,23 @@ def posli_email(predmet, html):
 
 # ---------------------------------------------------------------- ARCHÍV (popis + fotky, ostanú aj po zmazaní inzerátu)
 
-def _fotka_b64(url):
-    """Stiahne fotku, zmenší na max. 1000 px a vráti JPEG v base64 (alebo None)."""
+_ODTLACKY = {}   # inzerát → odtlačky fotiek (dHash) z tohto behu – na rozpoznanie už predávaného bytu (odtlacky.py, migrácia 146)
+
+
+def _dhash(im):
+    """64-bitový rozdielový odtlačok fotky (9×8 v odtieňoch sivej), v rozsahu bigint so znamienkom."""
+    from PIL import Image
+    g = im.convert("L").resize((9, 8), Image.LANCZOS)
+    px = list(g.getdata())
+    h = 0
+    for r_ in range(8):
+        for c in range(8):
+            h = (h << 1) | (1 if px[r_ * 9 + c] > px[r_ * 9 + c + 1] else 0)
+    return h - (1 << 64) if h >= (1 << 63) else h
+
+
+def _fotka_b64(url, odtlacky=None):
+    """Stiahne fotku, zmenší na max. 1000 px a vráti JPEG v base64 (alebo None). Do zoznamu odtlacky pridá jej odtlačok."""
     import base64, io
     try:
         r = SESSION.get(url, timeout=30)
@@ -1506,6 +1521,11 @@ def _fotka_b64(url):
             return None
         from PIL import Image
         im = Image.open(io.BytesIO(r.content)).convert("RGB")
+        if odtlacky is not None and len(odtlacky) < 6:
+            try:
+                odtlacky.append(str(_dhash(im)))
+            except Exception:  # noqa – odtlačok nie je nutný
+                pass
         im.thumbnail((900, 900))
         buf = io.BytesIO()
         im.save(buf, "JPEG", quality=72, optimize=True)
@@ -1634,11 +1654,14 @@ def archivuj(plny, rychly=False, obnova=False):
             if tel:
                 telo["telefon"] = tel
             if z.get("fotky"):
+                odt = []
                 for u in a["fotky_portal"][:MAX_FOTIEK]:
-                    f = _fotka_b64(u)
+                    f = _fotka_b64(u, odt)
                     if f:
                         telo["fotky"].append(f)
                     time.sleep(0.3)
+                if odt:
+                    _ODTLACKY[z["id"]] = odt
             r = requests.post(f"{DB_URL}/functions/v1/archiv", json=telo, timeout=120,
                               headers={"apikey": DB_KEY, "Authorization": f"Bearer {DB_KEY}", "x-kluc": SKENER_KLUC})
             if r.status_code == 200:
@@ -1649,6 +1672,15 @@ def archivuj(plny, rychly=False, obnova=False):
         except Exception as e:  # noqa
             log(f"  ! archív {z['id']}: {e}")
     log(f"Archív{' – nočná obnova' if obnova else ''}: uložených {hotovo} inzerátov, {fotiek} fotiek")
+    # odtlačky fotiek nových archívov → hneď sa prepočíta, či nejde o byt, ktorý sa už predával
+    if _ODTLACKY:
+        try:
+            _rpc("skener_ulozit_odtlacky", p_kluc=SKENER_KLUC, p=[{"id": k, "h": v} for k, v in _ODTLACKY.items()])
+            n = _rpc("skener_prepocitaj_predtym", p_kluc=SKENER_KLUC)
+            log(f"Odtlačky fotiek: {len(_ODTLACKY)} inzerátov, už predávaný byt pri {n}")
+        except Exception as ex:  # noqa – staršia databáza bez funkcie: nevadí
+            log(f"! odtlačky fotiek: {str(ex)[:200]}")
+        _ODTLACKY.clear()
 
 
 # ---------------------------------------------------------------- upozornenia do mobilu (Web Push)

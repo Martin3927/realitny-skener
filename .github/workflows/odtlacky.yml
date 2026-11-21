@@ -1,0 +1,45 @@
+name: Odtlačky fotiek (už predávaný byt)
+
+# Spočíta odtlačky fotiek z archívu skenera a prepočíta, ktoré aktívne inzeráty sú byty, čo sa už predávali
+# (odtlacky.py → skener_ulozit_odtlacky, skener_prepocitaj_predtym). Nové archívy rieši rovno skener; toto dopočíta staršie.
+# Fotky sa čítajú najprv z portálu (nemíňa prenos dát Supabase), naše úložisko len keď už na portáli nie sú. Nič sa nemaže.
+# Ručne: Actions → Odtlačky fotiek → Run workflow (vsetky = prepočítať zhody všetkých aktívnych inzerátov).
+
+on:
+  schedule:
+    - cron: "52 */2 * * *"
+  workflow_dispatch:
+    inputs:
+      vsetky:
+        description: "Prepočítať zhody všetkých aktívnych inzerátov"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: odtlacky
+  cancel-in-progress: false
+
+jobs:
+  odtlacky:
+    runs-on: ${{ vars.SKENER_BEZEC || 'ubuntu-latest' }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            odtlacky.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests "Pillow>=10"
+      - name: Odtlačky a zhody
+        env:
+          SUPABASE_URL: https://uwxziqapghlyktwpipjd.supabase.co
+          SUPABASE_KEY: sb_publishable_ukjo7DCX1FMYly7NU4gtxg_suIF66nf
+          SKENER_KLUC: ${{ secrets.SKENER_KLUC }}
+          ODTLACKY_LIMIT_S: "1080"
+        run: python odtlacky.py ${{ inputs.vsetky && '--vsetky' || '' }}
