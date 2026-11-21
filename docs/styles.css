@@ -3059,3 +3059,13 @@ html.bez-posuvu #toast { z-index: 210 }
 .hladaj-r:hover, .hladaj-r.vybrany { background: var(--gold-soft) }
 .hladaj-viac { justify-self: start; margin: 2px 6px; padding: 4px 10px; min-height: 0; font-size: 12px }
 @media (max-width: 640px) { .hladaj-karta { margin-top: 0; border-radius: 0 0 16px 16px } .hladaj-vysl { max-height: 78vh } }
+
+/* ---------- hovor jednou vetou (diktovanie + AI) */
+.hv-veta { display: grid; gap: 8px; background: var(--gold-soft); border-radius: 10px; padding: 10px; margin-bottom: 10px }
+.hv-veta-r { display: flex; gap: 8px; align-items: stretch }
+.hv-veta-r textarea { flex: 1; min-width: 0 }
+.hv-mic { font-size: 22px; padding: 0 14px; min-width: 52px }
+.hv-mic.nahrava { background: var(--bad); border-color: var(--bad); color: #fff; animation: zvon 1.2s ease-in-out infinite }
+.hv-veta-akcie { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap }
+.hv-stav { display: inline; font-size: 12px }
+.hv-prip { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; margin: 4px 0 }

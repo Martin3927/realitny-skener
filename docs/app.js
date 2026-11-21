@@ -3064,11 +3064,19 @@
     }
     if (otv === "ai-hovor" && ptyp(z) !== "rk" && maSekciu("asistent")) h += panelAiHovor(z);
     if (otv === "hovor" && mozeUpravit) {
-      h += '<form class="panel" data-form="hovor"><h4>Ako dopadol hovor</h4><div class="form-grid">' +
+      var hvP = S.hvPrip && S.hvPrip[z.id];
+      h += '<form class="panel" data-form="hovor"><h4>Ako dopadol hovor</h4>' +
+        (maSekciu("asistent") ? '<div class="hv-veta"><label class="field"><span>✨ Povedz alebo napíš jednou vetou, ako to dopadlo</span><div class="hv-veta-r">' +
+          '<textarea name="veta" rows="2" maxlength="600" placeholder="napr. nedvíhal, skúsim v pondelok poobede, chce 150 tisíc"></textarea>' +
+          (hlasDostupny() ? '<button type="button" class="btn hv-mic" data-hv="mic" title="Nadiktovať" aria-label="Nadiktovať">🎤</button>' : "") + "</div></label>" +
+          '<div class="hv-veta-akcie"><button type="button" class="btn" data-hv="ai">✨ Vyplniť za mňa</button><span class="meta hv-stav" aria-live="polite">' +
+          (hlasDostupny() ? "Ťukni na 🎤 a povedz to – vyplním výsledok, poznámku aj pripomienku." : "Na mobile môžeš použiť diktovanie na klávesnici. Vyplním výsledok, poznámku aj pripomienku.") + "</span></div></div>" : "") +
+        '<div class="form-grid">' +
         '<label class="field"><span>Výsledok</span><select name="vysledok" required><option value="">Vyberte…</option>' +
         VYSLEDKY.map(function (v) { return "<option>" + esc(v) + "</option>"; }).join("") + "</select></label></div>" +
         (ptyp(z) !== "rk" && !S.tel[z.id] ? '<label class="field"><span>Telefón predajcu <small class="meta">aby sa uložil medzi Predávajúcich v Klientoch</small></span><input type="tel" name="telefon" inputmode="tel" autocomplete="off" placeholder="0905 123 456"></label>' : "") +
         '<label class="field"><span>Poznámka (čo povedal, kedy znova volať…)</span><textarea name="poznamka" rows="2"></textarea></label>' +
+        (hvP ? '<label class="toggle hv-prip"><input type="checkbox" name="prip_zap"' + (hvP.zap ? " checked" : "") + '> 🔔 Pripomenúť <b>' + esc(datum(hvP.cas, true)) + "</b> – " + esc(hvP.text) + "</label>" : "") +
         '<div class="form-actions"><button class="btn primary" type="submit">Uložiť hovor</button><button class="btn ghost" type="button" data-act="zavriet">Zrušiť</button></div>' +
         (!maj ? '<small class="meta">Uložením hovoru si inzerát prevezmete.</small>' : "") + "</form>";
     }
@@ -3305,13 +3313,66 @@
     akcia(id, async function () {
       if (tel) { await rpc("ulozit_telefon", { p_inzerat: id, p_telefon: tel }); await nacitajTelefony(); }
       var vysl = await rpc("zapisat_hovor", { p_inzerat: id, p_vysledok: vys, p_poznamka: pozn });
+      var hvP = S.hvPrip && S.hvPrip[id], prip = hvP && f.prip_zap && f.prip_zap.checked;
+      if (S.hvPrip) delete S.hvPrip[id];
+      if (prip) await rpc("ulozit_pripomienku", { p_id: null, p_makler: null, p_inzerat: id, p_schrankovanie: null, p_cas: new Date(hvP.cas).toISOString(), p_poznamka: hvP.text });
       S.open[id] = null;
       if (vys === "Získaný do ponuky") { konfety({ pocet: 240 }); toast("🎉 Gratulujeme! Tím sa to dozvie v chate."); chatNove(); nacitajOslavy(); }
+      else if (prip) toast("Hovor je zapísaný. 🔔 " + datum(hvP.cas, true) + " ti pripomeniem: " + hvP.text);
       else if (vysl && vysl.volat_znova) toast("Hovor je zapísaný. 📞 " + textVolatZnova(vysl.volat_znova));
       else toast(vysl && vysl.telefon ? "Hovor je zapísaný. 📞 Číslo z poznámky som uložil ako telefón predajcu." : "Hovor je zapísaný.");
       if (vysl && vysl.telefon) await Promise.all([nacitajTelefony(), nacitajPredajcov().catch(function () {})]);
       nacitajPripomienky().then(popisZvoncek).catch(function () {});
     });
+  });
+
+  // ---------- hovor jednou vetou: diktovanie (rozpoznávanie reči v prehliadači) a AI, ktorá vyplní formulár hovoru
+  function hlasDostupny() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+  var hvRec = null;
+  async function hvVyplnit(f) {
+    var id = f.closest(".card").dataset.id, veta = f.veta.value.trim(), st = f.querySelector(".hv-stav"), b = f.querySelector('[data-hv="ai"]');
+    if (veta.length < 3) { st.textContent = "Najprv napíš alebo nadiktuj, ako hovor dopadol."; f.veta.focus(); return; }
+    b.disabled = true; st.textContent = "✨ Vypĺňam…";
+    try {
+      var d = await volajFunkciu("ai-skener", { veta: veta, inzerat: id });
+      var ff = document.querySelector('#obsah .card[data-id="' + CSS.escape(id) + '"] form[data-form="hovor"]') || f;
+      if (VYSLEDKY.indexOf(d.vysledok) >= 0) ff.vysledok.value = d.vysledok;
+      if (d.poznamka) ff.poznamka.value = ff.poznamka.value.trim() ? ff.poznamka.value.trim() + " " + d.poznamka : d.poznamka;
+      if (d.telefon && ff.telefon && !ff.telefon.value.trim()) ff.telefon.value = d.telefon;
+      S.hvPrip = S.hvPrip || {};
+      if (d.pripomienka) S.hvPrip[id] = { cas: d.pripomienka.datum + "T" + d.pripomienka.cas + ":00", text: d.pripomienka.text, zap: d.vysledok !== "Nedvíha" };
+      else delete S.hvPrip[id];
+      prekresliKartu(id);   // ukáže riadok s pripomienkou (rozpísané polia ostanú)
+      var nf2 = document.querySelector('#obsah .card[data-id="' + CSS.escape(id) + '"] form[data-form="hovor"]');
+      if (nf2) {
+        var s2 = nf2.querySelector(".hv-stav");
+        if (s2) s2.textContent = "✓ Vyplnené – skontroluj a ulož." + (d.pripomienka && d.vysledok === "Nedvíha" ? " Pri „Nedvíha“ ti Týpek pripomenie sám, vlastnú pripomienku si zapni, ak ju chceš navyše." : "");
+        var t = nf2.querySelector('button[type="submit"]'); if (t) t.focus({ preventScroll: true });
+      }
+    } catch (e) { st.textContent = ""; toast(chybaText(e), true); b.disabled = false; }
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-hv]"); if (!b) return;
+    var f = b.closest('form[data-form="hovor"]'); if (!f) return;
+    e.preventDefault();
+    if (b.dataset.hv === "ai") return hvVyplnit(f);
+    if (b.dataset.hv !== "mic") return;
+    if (hvRec) { try { hvRec.stop(); } catch (x) { /* */ } return; }
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return;
+    var st = f.querySelector(".hv-stav"), ta = f.veta, zaklad = ta.value.trim(), konecne = "";
+    hvRec = new SR(); hvRec.lang = "sk-SK"; hvRec.interimResults = true; hvRec.continuous = false;
+    b.classList.add("nahrava"); b.textContent = "⏹"; st.textContent = "🎤 Počúvam… povedz, ako hovor dopadol.";
+    hvRec.onresult = function (ev) {
+      var docasne = ""; konecne = "";
+      for (var i = 0; i < ev.results.length; i++) { if (ev.results[i].isFinal) konecne += ev.results[i][0].transcript; else docasne += ev.results[i][0].transcript; }
+      ta.value = (zaklad ? zaklad + " " : "") + (konecne + docasne).trim();
+    };
+    hvRec.onerror = function (ev) { st.textContent = ev.error === "not-allowed" ? "Prehliadač nemá povolený mikrofón – povoľ ho v nastaveniach stránky." : "Diktovanie sa nepodarilo, skús znova alebo napíš."; };
+    hvRec.onend = function () {
+      hvRec = null; b.classList.remove("nahrava"); b.textContent = "🎤";
+      if (konecne.trim()) hvVyplnit(f); else if (!/Prehliadač|nepodarilo/.test(st.textContent)) st.textContent = "Nič som nepočul – skús znova.";
+    };
+    try { hvRec.start(); } catch (x) { hvRec = null; b.classList.remove("nahrava"); b.textContent = "🎤"; }
   });
 
   // ------------------------------------------------------------ SCHRÁNKOVANIE

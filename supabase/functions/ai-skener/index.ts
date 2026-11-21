@@ -3,6 +3,8 @@
 //    posúdi inzeráty, ktoré skener nezaradil medzi realitky – súkromník, asi realitka, alebo neisté – a zapíše do inzeraty_ai.
 //    AI len označuje, inzerát nepresúva (o tom rozhoduje maklér).
 //  * NÁVRH HOVORU (volá aplikácia s prihlásením makléra): čo povedať v prvom telefonáte a SMS pre predajcu.
+//  * HOVOR JEDNOU VETOU (volá aplikácia s prihlásením makléra): z vety „nedvíhal, skúsim v pondelok, chce 150 tisíc“
+//    spraví výsledok hovoru, poznámku, cenu a pripomienku – formulár sa len predvyplní, uloží ho maklér.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
@@ -26,6 +28,22 @@ Vráť IBA JSON bez ďalšieho textu a bez \`\`\`: {"hovor": "…", "sms": "…"
 
 Ak predajca v inzeráte píše, že si neželá realitky, buď obzvlášť ohľaduplný: v hovore to hneď na začiatku rešpektuj a ponúkni len nezáväznú pomoc alebo kupujúceho.
 Nevymýšľaj fakty, ktoré v inzeráte nie sú. Píš po slovensky, bez anglicizmov.`;
+
+const VYSLEDKY = ["Nedvíha", "Volať neskôr", "Nemá záujem o RK", "Predáva cez inú RK", "Už predané", "Záujem – stretnutie dohodnuté", "Získaný do ponuky", "Iné"];
+const SYSTEM_VETA = `Si asistent realitného makléra. Maklér práve dotelefonoval s predajcom z inzerátu a jednou vetou (často nadiktovanou, bez interpunkcie a s chybami rozpoznávania reči) opísal, ako hovor dopadol. Prepíš to do záznamu.
+Vráť IBA JSON bez ďalšieho textu a bez \`\`\`: {"vysledok": "…", "poznamka": "…", "cena": null, "pripomienka": null, "telefon": null}
+
+"vysledok": presne jedna z možností: ${VYSLEDKY.map((v) => "„" + v + "“").join(", ")}.
+  Nedvíhal, nezdvihol, nebral, nedostupný → „Nedvíha“. Má zavolať inokedy, ozve sa sám, rozmýšľa, je na dovolenke → „Volať neskôr“. Nechce realitku → „Nemá záujem o RK“.
+  Už má inú realitku → „Predáva cez inú RK“. Už predal → „Už predané“. Dohodnuté stretnutie alebo obhliadka → „Záujem – stretnutie dohodnuté“.
+  Podpísaná zmluva, ide do našej ponuky → „Získaný do ponuky“. Inak „Iné“.
+"poznamka": stručná a gramaticky správna poznámka po slovensky (1 – 2 vety) so všetkým podstatným, čo maklér povedal (cena, dôvod, kedy volať, meno, dohoda). Opravené preklepy a rozpoznávanie reči. Nevymýšľaj nič, čo nepovedal. Ak povedal len „nedvíhal“, poznámka je prázdny reťazec.
+"cena": suma, ktorú chce predajca, ako celé číslo v eurách („150 tisíc“ → 150000, „stodvadsať“ → 120000), inak null.
+"pripomienka": ak maklér povedal, kedy znova volať, kedy je stretnutie alebo kedy sa má niečo stať: {"datum": "RRRR-MM-DD", "cas": "HH:MM", "text": "krátko, čo urobiť (napr. Zavolať znova)"}.
+  Dnešný dátum, deň v týždni a čas máš v správe. „v pondelok“ = najbližší budúci pondelok (ak je dnes pondelok, o týždeň), „zajtra“ = +1 deň, „o týždeň“ = +7 dní, „koncom mesiaca“ = posledný pracovný deň mesiaca.
+  Čas: „ráno“ 9:00, „dopoludnia“ 10:00, „na obed“ 12:00, „poobede“ 14:00, „podvečer“ 17:00, „večer“ 18:00, bez času 10:00. Inak null.
+"telefon": ak maklér nadiktoval telefónne číslo predajcu, v tvare 0905 123 456, inak null.
+Píš po slovensky, bez anglicizmov.`;
 
 async function sha256(t: string) {
   const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
@@ -76,6 +94,52 @@ Deno.serve(async (req) => {
   // deno-lint-ignore no-explicit-any
   let telo: any = {};
   try { telo = await req.json(); } catch { /* nič */ }
+
+  // ---------------------------------------------------------------- HOVOR JEDNOU VETOU (prihlásený maklér)
+  if (telo.veta !== undefined) {
+    const veta = String(telo.veta || "").replace(/\s+/g, " ").trim().slice(0, 600);
+    if (veta.length < 3) return json({ chyba: "Napíš alebo nadiktuj, ako hovor dopadol." }, 400);
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const { data: u } = await db.auth.getUser(token);
+    if (!u?.user) return json({ chyba: "Prihláste sa znova." }, 401);
+    const { data: m } = await db.from("makleri").select("id, meno, aktivny, rola, pristup, kancelaria_id").eq("id", u.user.id).maybeSingle();
+    if (!m?.aktivny || (m.rola !== "admin" && !(m.pristup || []).includes("inzeraty"))) return json({ chyba: "Nemáte prístup k Realitnému skeneru." }, 403);
+    if (m.rola !== "admin" && !(m.pristup || []).includes("asistent")) return json({ chyba: "AI vám administrátor zatiaľ nezapol." }, 403);
+    // inzerát len pre kontext (nadpis, obec, cena) – a len z okresov kancelárie volajúceho
+    let kancId = Number(m.kancelaria_id);
+    const { data: hs } = await db.from("hlavni_spravcovia").select("user_id").eq("user_id", m.id).maybeSingle();
+    if (hs) {
+      const { data: pod } = await db.from("spravca_podpora").select("kancelaria_id").eq("user_id", m.id).maybeSingle();
+      if (pod?.kancelaria_id) kancId = Number(pod.kancelaria_id);
+    }
+    const { data: kn } = await db.from("kancelarie").select("okresy").eq("id", kancId).maybeSingle();
+    const { data: z } = telo.inzerat ? await db.from("inzeraty").select("nazov, typ, izby, obec, okres, cena").eq("id", String(telo.inzerat)).maybeSingle() : { data: null };
+    const zOk = z && (kn?.okresy || []).includes(z.okres);
+    const limit = Math.max(1, Math.floor(Number(Deno.env.get("AI_DENNY_LIMIT"))) || 50);
+    const { data: vLimite, error: chybaLimitu } = await db.rpc("asistent_pocitaj", { p_makler: m.id, p_limit: limit });
+    if (!chybaLimitu && vLimite === false) return json({ chyba: "Dnes ste už AI použili " + limit + "-krát, čo je denný limit. Zajtra môžete pokračovať." }, 429);
+    const teraz = new Date();
+    const dnes = new Intl.DateTimeFormat("sk-SK", { timeZone: "Europe/Bratislava", weekday: "long", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(teraz);
+    const iso = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bratislava", year: "numeric", month: "2-digit", day: "2-digit" }).format(teraz);
+    const o = await claude(kluc, SYSTEM_VETA, [{ type: "text", text: "DNES: " + dnes + " (dátum " + iso + ", Slovensko)\n" +
+      (zOk ? "INZERÁT: " + (z.nazov || "") + " · " + (z.obec || "") + (z.cena ? " · " + z.cena + " €" : "") + "\n" : "") + "\nVETA MAKLÉRA: " + veta }], 600, "low");
+    console.log("ai-skener veta", JSON.stringify({ model: o.model, status: o.status, stop: o.stop, vstup: o.vstup, vystup: o.vystup }));
+    if (!o.ok || !o.v) return json({ chyba: "AI teraz neodpovedá (" + o.status + "). Skúste to o chvíľu." }, 502);
+    const v = o.v;
+    const vysledok = VYSLEDKY.includes(v.vysledok) ? v.vysledok : "Iné";
+    const cena = Number.isFinite(Number(v.cena)) && Number(v.cena) >= 100 && Number(v.cena) <= 100000000 ? Math.round(Number(v.cena)) : null;
+    let poznamka = String(v.poznamka || "").replace(/\s+/g, " ").trim().slice(0, 600);
+    const cenaText = cena ? new Intl.NumberFormat("sk-SK").format(cena) + " €" : "";
+    if (cena && !/\d/.test(poznamka)) poznamka = (poznamka ? poznamka.replace(/\.?$/, ". ") : "") + "Chce " + cenaText + ".";
+    let pripomienka = null;
+    const p = v.pripomienka;
+    if (p && /^\d{4}-\d{2}-\d{2}$/.test(String(p.datum || "")) && String(p.datum) >= iso && String(p.datum) <= String(Number(iso.slice(0, 4)) + 2) + iso.slice(4)) {
+      const cas = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(p.cas || "")) ? String(p.cas) : "10:00";
+      pripomienka = { datum: String(p.datum), cas, text: String(p.text || "Zavolať znova").replace(/\s+/g, " ").trim().slice(0, 200) };
+    }
+    const tel = String(v.telefon || "").replace(/[^\d+ ]/g, "").trim();
+    return json({ vysledok, poznamka, cena, pripomienka, telefon: tel.replace(/\D/g, "").length >= 9 ? tel.slice(0, 30) : null });
+  }
 
   // ---------------------------------------------------------------- NÁVRH HOVORU (prihlásený maklér)
   if (telo.hovor) {
