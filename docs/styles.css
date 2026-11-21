@@ -2923,3 +2923,70 @@ html.bez-posuvu #toast { z-index: 210 }
 .dd-zona-r .btn { margin-left: auto; min-height: 32px; padding: 4px 10px }
 .dd-zona-r small { flex: 1 1 100% }
 @media (max-width: 520px) { .kz-reakcia { grid-template-columns: minmax(0, 1fr) } }
+
+/* ---------- Tvoje poznámky (súkromný zoznam úloh) */
+.poz-box { gap: 14px }
+.poz-box h3 { margin: 0 }
+.poz-box .vykon-hlava .meta { margin: 2px 0 0 }
+.poz-suhrn { font-size: 14px; color: var(--muted) }
+.poz-suhrn b { font-size: 22px; color: var(--ink); margin-right: 2px }
+.poz-po-n { color: var(--bad); font-weight: 700 }
+.poz-rychla { display: flex; gap: 8px; flex-wrap: wrap }
+.poz-rychla input { flex: 1 1 260px; min-width: 0; font-size: 15px; padding: 11px 12px }
+.poz-form { display: grid; gap: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px }
+.poz-f-riadok { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 170px) auto; gap: 10px; align-items: end }
+.poz-dolezite { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; white-space: nowrap; padding-bottom: 9px; cursor: pointer }
+.poz-vyber { display: flex; gap: 8px 10px; flex-wrap: wrap; align-items: center }
+.poz-hladaj { flex: 1 1 200px; min-width: 0; max-width: 320px }
+.poz-skup-vyber { display: flex; gap: 6px; flex-wrap: wrap }
+.poz-sk { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 11px; font-size: 13px; cursor: pointer; color: var(--ink) }
+.poz-sk:hover { background: var(--surface-2) }
+.poz-sk[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface); font-weight: 700 }
+.poz-sk .n, .poz-skup summary .n { font-size: 12px; opacity: .7; margin-left: 2px }
+.poz-skup { border: 1px solid var(--line); border-radius: 10px; background: var(--surface) }
+.poz-skup summary { display: flex; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; list-style: none; font-size: 15px }
+.poz-skup summary::-webkit-details-marker { display: none }
+.poz-skup summary::before { content: "▸"; color: var(--muted); transition: transform .15s; display: inline-block }
+.poz-skup[open] summary::before { transform: rotate(90deg) }
+.poz-skup[open] summary { border-bottom: 1px solid var(--line) }
+.poz-skup .poz-zoznam { padding: 4px 8px 8px }
+.poz-zoznam { display: grid; gap: 2px }
+.poz-pol { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 9px 6px; border-radius: 8px; transition: opacity .35s, transform .35s }
+.poz-pol + .poz-pol { border-top: 1px solid var(--line) }
+.poz-pol:hover { background: var(--surface-2) }
+.poz-pol.poz-uprava { display: block; padding: 6px 0 }
+.poz-pol.poz-uprava:hover { background: none }
+.poz-pol.dolezite .poz-text { font-weight: 700 }
+.poz-pol.odchadza { opacity: 0; transform: translateX(18px) }
+.poz-check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--muted); background: var(--surface); display: grid; place-items: center; cursor: pointer; padding: 0; margin-top: 1px; flex: none }
+.poz-check svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; opacity: 0; color: var(--good) }
+.poz-check:hover { border-color: var(--good) }
+.poz-check:hover svg { opacity: .45 }
+.poz-check[aria-pressed="true"] { background: var(--good); border-color: var(--good) }
+.poz-check[aria-pressed="true"] svg { opacity: 1; color: #fff }
+.poz-pol.dolezite .poz-check { border-color: var(--gold-strong) }
+.poz-telo { display: grid; gap: 4px; min-width: 0 }
+.poz-text { font-size: 15px; line-height: 1.4; overflow-wrap: anywhere }
+.poz-hv { margin-right: 4px }
+.poz-detail { font-size: 13px; color: var(--muted); line-height: 1.45; overflow-wrap: anywhere }
+.poz-text a, .poz-detail a { color: var(--info); text-decoration: underline }
+.poz-pol.hotovo .poz-text { text-decoration: line-through; color: var(--muted) }
+.poz-meta { display: flex; gap: 6px; flex-wrap: wrap }
+.poz-chip { font-size: 12px; background: var(--surface-2); border-radius: 999px; padding: 2px 9px; color: var(--muted); white-space: nowrap }
+.poz-chip.dnes { background: var(--warn-soft); color: var(--warn); font-weight: 700 }
+.poz-chip.po { background: var(--bad-soft); color: var(--bad); font-weight: 700 }
+.poz-chip.ok { background: var(--good-soft); color: var(--good) }
+.poz-akcie { display: flex; gap: 2px; opacity: .55 }
+.poz-pol:hover .poz-akcie, .poz-akcie:focus-within { opacity: 1 }
+.poz-akcie .btn { padding: 4px 8px; min-height: 0 }
+.poz-prazdne { display: grid; gap: 4px; text-align: center; padding: 26px 10px; color: var(--muted); font-size: 14px }
+.poz-prazdne b { color: var(--ink); font-size: 16px }
+.poz-dole { display: flex; justify-content: flex-end }
+@media (max-width: 640px) {
+  .poz-f-riadok { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+  .poz-dolezite { grid-column: 1 / -1; padding-bottom: 0 }
+  .poz-rychla .btn { flex: 1 1 auto }
+  .poz-hladaj { max-width: none }
+  .poz-akcie { opacity: 1 }
+  .poz-check { width: 30px; height: 30px }
+}

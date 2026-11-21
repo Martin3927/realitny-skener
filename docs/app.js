@@ -1298,7 +1298,7 @@
   });
 
   // ---------- navigácia: každá sekcia je krok v histórii prehliadača (funguje tlačidlo Späť)
-  var TABY = ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "odhady", "kalendar", "chat", "matterport", "mapa", "kataster", "asistent", "web", "recenzie", "provizie", "vykon", "makleri", "vzhlad", "historia"];
+  var TABY = ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "odhady", "kalendar", "chat", "matterport", "mapa", "kataster", "asistent", "web", "recenzie", "provizie", "vykon", "makleri", "vzhlad", "historia", "poznamky"];
   var SEKCIE = [["inzeraty", "Realitný skener", "skener"], ["schrankovanie", "Schránkovanie", "sch"], ["nehnutelnosti", "Nehnuteľnosti", "nehn"], ["klienti", "Klienti", "klienti"],
     ["kalendar", "Kalendár", "kal"], ["chat", "Chat", "chat"], ["matterport", "Matterport", "matterport"], ["mapa", "Realitná mapa", "mapa"], ["kataster", "Kataster", "kataster"], ["asistent", "AI asistent", "ai"], ["web", "Osobný web", "web"], ["recenzie", "Recenzie", "hviezda"], ["provizie", "Provízie", "euro"], ["odhady", "Odhady", "odhad"]];
   var HLAVNE_SEKCIE = ["inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "kalendar", "chat"];
@@ -1310,7 +1310,7 @@
   function smieSiete() { return admin() || !!(S.me && (S.me.pristup || []).indexOf("siete") >= 0); }
   function tabPovoleny(t) {
     if (TABY.indexOf(t) < 0) return false;
-    if (t === "domov") return true;
+    if (t === "domov" || t === "poznamky") return true;   // poznámky má každý, sú súkromné
     if (t === "makleri") return admin() && !samostatny();   // samostatný maklér nemá tím
     if (t === "vykon" || t === "vzhlad" || t === "historia") return admin();
     return maSekciu(t);
@@ -1847,6 +1847,7 @@
     S.vykreslenaSekcia = S.tab;
     if (S.tab !== "vzhlad" && S.vzhladDraft) { S.vzhladDraft = null; aplikujVzhlad(vzhladPreMna()); }
     var tabs = SEKCIE.filter(function (x) { return maSekciu(x[0]); }).map(function (x) { return x[0] === "provizie" && !admin() ? ["provizie", "Moje provízie", "euro"] : x; });
+    tabs.push(["poznamky", "Tvoje poznámky", "poznamky"]);
     if (admin()) tabs.push(["vykon", "Výkon", "vykon"]);
     if (admin() && !samostatny()) tabs.push(["makleri", "Makléri", "makleri"]);
     if (admin()) tabs.push(["vzhlad", "Vzhľad", "farby"], ["historia", "História zmien", "historia"]);
@@ -1918,7 +1919,7 @@
   }
 
   // menu z dlaždíc – na počítači bočný panel, na mobile/tablete rozbaľovacia plocha
-  var SKUPINY_MENU = [["Práca", ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "odhady", "kalendar", "provizie"]], ["Tím", ["chat", "matterport", "recenzie"]],
+  var SKUPINY_MENU = [["Práca", ["domov", "inzeraty", "schrankovanie", "nehnutelnosti", "klienti", "odhady", "kalendar", "poznamky", "provizie"]], ["Tím", ["chat", "matterport", "recenzie"]],
     ["Nástroje", ["mapa", "kataster", "asistent", "web"]], ["Správa", ["vykon", "makleri", "vzhlad", "historia"]]];
   function menuDlazdice(tabs) {
     var podla = { domov: ["domov", "Prehľad", "domov"] }; tabs.forEach(function (t) { podla[t[0]] = t; });
@@ -1996,6 +1997,12 @@
     else if (S.tab === "asistent") { if (!$("#ai-spravy")) vykresliAsistenta(); }
     else if (S.tab === "web") { if (!$(".web-box")) vykresliWeb(); }
     else if (S.tab === "recenzie") { if (!S.recForm) vykresliRecenzie(); }
+    else if (S.tab === "poznamky") {
+      var bolo = !!S.poz;
+      if (!$(".poz-box")) vykresliPoznamky();
+      // z iného zariadenia mohli pribudnúť zmeny – načíta potichu, prekreslí len ak sa niečo zmenilo a nič sa práve nepíše
+      if (bolo && !pozZaneprazdnene()) nacitajPoznamky().then(function (zmena) { if (zmena && S.tab === "poznamky" && !pozZaneprazdnene()) vykresliPoznamky(); }, function () {});
+    }
     else if (S.tab === "odhady") { if (!S.odhadDetail || !$(".odh-detail")) vykresliOdhady(); }
     else if (S.tab === "chat") { if (!$("#chat-spravy")) vykresliChat(); else { oznacPrecitane(); kresliVidenie(); } }
     else if (S.tab === "matterport") { if (!$(".mp-box") || (!S.mpOkno && !$("#mp-okno"))) vykresliMatterport(); }
@@ -4050,6 +4057,7 @@
       vykon: '<path d="M3 21h18"/><rect x="5" y="11" width="3" height="7" rx=".5"/><rect x="10.5" y="5" width="3" height="13" rx=".5"/><rect x="16" y="13.5" width="3" height="4.5" rx=".5"/>',
       makleri: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20.5a6.5 6.5 0 0 1 13 0"/><circle cx="17.2" cy="9" r="2.6"/><path d="M16.5 14.3a5 5 0 0 1 5 5"/>',
       profil: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+      poznamky: '<rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="m7.6 9 1.6 1.6 2.8-3"/><path d="m7.6 15 1.6 1.6 2.8-3"/><path d="M14.4 9h2.6M14.4 15h2.6"/>',
       kal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17.5h2"/>',
       mapa: '<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>',
       kataster: '<path d="M4 4h16v16H4z"/><path d="M4 11h7v9M11 4v7h9M15 11v9"/>',
@@ -4197,6 +4205,8 @@
       ["chat", "chat", "Chat", "Správy celému tímu aj súkromne kolegovi", neprec ? neprec + (neprec === 1 ? " neprečítaná správa" : neprec <= 4 ? " neprečítané správy" : " neprečítaných správ") : "Všetko prečítané", "", ""],
       ["matterport", "matterport", "Matterport", "Rezervácia 3D kamery – klik na deň a hodinu", S.mp ? mpStavText() : "Rezervácia kamery", "", ""],
       ["kalendar", "kal", "Kalendár", "Stretnutia, obhliadky a pripomienky – aj v Google a Apple kalendári", (function () { var n = polozkyKalendara().filter(function (x) { return denKluc(x.od) === denKluc(new Date()); }).length; return n ? n + " dnes" : "Dnes voľno"; })(), "", ""],
+      ["poznamky", "poznamky", "Tvoje poznámky", "Tvoj súkromný zoznam úloh a nápadov – hotové odklikneš", S.poz ? (pozOtvorene().length ? pozOtvorene().length + " na spravenie" : "Všetko hotové") : "",
+        S.poz && pozOtvorene().filter(pozPoTermine).length ? pozOtvorene().filter(pozPoTermine).length + " po termíne" : "", ""],
       ["mapa", "mapa", "Realitná mapa", "Naše ponuky a súkromní predajcovia na mape", "", "", ""],
       ["kataster", "kataster", "Kataster", "Katastrálna mapa, list vlastníctva, parcela podľa GPS", "", "", ""],
       ["asistent", "ai", "AI asistent", "Popisy, príspevky, SMS a odpovede klientom", "", "", ""],
@@ -4205,7 +4215,10 @@
       ["zvon", "zvon", "Pripomienky", "Komu a kedy zavolať, upozornenia na zníženie ceny", prip ? prip + " čaká na vás" : pripVsetky ? pripVsetky + " naplánovaných" : "Nič nečaká", "", ""],
       ["profil", "profil", "Môj profil", "Fotka, text SMS, heslo, skener na ploche mobilu", "", "", ""],
     ];
-    dlazdice = dlazdice.filter(function (d) { return ["zvon", "profil"].indexOf(d[0]) >= 0 || maSekciu(d[0]); });
+    dlazdice = dlazdice.filter(function (d) { return ["zvon", "profil", "poznamky"].indexOf(d[0]) >= 0 || maSekciu(d[0]); });
+    var pozPo = S.poz ? pozOtvorene().filter(pozPoTermine).length : 0;
+    // počet poznámok na dlaždici – načíta sa raz potichu na pozadí
+    if (!S.poz && !S.pozNacitava) { S.pozNacitava = true; nacitajPoznamky().then(function () { if (S.tab === "domov" && !pozZaneprazdnene()) vykresliDomov(); }, function () { S.pozNacitava = false; }); }
     if (admin()) {
       dlazdice.push(["vykon", "vykon", "Výkon maklérov", "Hovory, SMS, výsledky a grafy – len pre vás", "", "", ""]);
       if (!samostatny()) dlazdice.push(["makleri", "makleri", "Makléri", "Účty, práva, heslá a texty SMS", S.makleri.filter(function (m) { return m.aktivny; }).length + " aktívnych", "", ""]);
@@ -4233,9 +4246,9 @@
         (odkaz.autor && S.mById[odkaz.autor] ? "<small>" + esc(S.mById[odkaz.autor].meno) + "</small>" : "") + reakcieBar("odkaz:" + hashTextu(odkaz.text)) + "</div></div>" : "") +
       kalendarDomovHtml() + mojDen +
       '<div class="dlazdice">' + dlazdice.map(function (d) {
-        var upozorni = (d[0] === "chat" && neprec) || (d[0] === "zvon" && pripNove) || (d[0] === "odhady" && odhadyNove);
+        var upozorni = (d[0] === "chat" && neprec) || (d[0] === "zvon" && pripNove) || (d[0] === "odhady" && odhadyNove) || (d[0] === "poznamky" && pozPo);
         return '<button type="button" class="dlazdica' + (upozorni ? " upozorni" : "") + '" data-domov="' + d[0] + '">' +
-          '<span class="dl-ikona">' + ikona(d[1]) + (upozorni ? '<span class="dl-bod">' + (d[0] === "chat" ? neprec : d[0] === "odhady" ? odhadyNove : pripNove) + "</span>" : "") + "</span>" +
+          '<span class="dl-ikona">' + ikona(d[1]) + (upozorni ? '<span class="dl-bod">' + (d[0] === "chat" ? neprec : d[0] === "odhady" ? odhadyNove : d[0] === "poznamky" ? pozPo : pripNove) + "</span>" : "") + "</span>" +
           '<span class="dl-text"><b>' + esc(d[2]) + "</b><small>" + esc(d[3]) + "</small>" +
           (d[4] || d[5] || d[6] ? '<span class="dl-stav">' + [d[4], d[5], d[6]].filter(Boolean).map(esc).join(" · ") + "</span>" : "") + "</span></button>";
       }).join("") + "</div>" + casKartaHtml() + "</div>";
@@ -4483,6 +4496,229 @@
     if (k === "profil") { S.pwdOpen = true; vykresliHeslo(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     prejdi(k);
   });
+
+  // ------------------------------------------------------------ TVOJE POZNÁMKY (súkromný zoznam úloh – vidí ich len majiteľ, ani administrátor nie)
+  var POZ_ZAVRETE = "typek-poz-zavrete";
+  function pozZavrete() { try { return JSON.parse(localStorage.getItem(POZ_ZAVRETE) || "{}") || {}; } catch (e) { return {}; } }
+  function pozUlozZavrete(z) { try { localStorage.setItem(POZ_ZAVRETE, JSON.stringify(z)); } catch (e) { /* bez úložiska */ } }
+  // vráti true, ak sa niečo zmenilo oproti tomu, čo už aplikácia mala
+  async function nacitajPoznamky() {
+    var r = await sb.from("poznamky").select("*").order("vytvorene", { ascending: false }).order("id", { ascending: true }).limit(2000);
+    if (r.error) throw r.error;
+    var stare = S.poz ? JSON.stringify(S.poz) : null;
+    S.poz = r.data || [];
+    return JSON.stringify(S.poz) !== stare;
+  }
+  function pozDnes() { return denKluc(new Date()); }
+  function pozTermin(d) {
+    if (!d) return "";
+    var p = String(d).split("-"), dnes = pozDnes();
+    if (d === dnes) return "dnes";
+    if (d === denKluc(Date.now() + 864e5)) return "zajtra";
+    if (d === denKluc(Date.now() - 864e5)) return "včera";
+    return Number(p[2]) + ". " + Number(p[1]) + "." + (p[0] !== dnes.slice(0, 4) ? " " + p[0] : "");
+  }
+  function pozPoTermine(x) { return !x.hotovo && !!x.termin && x.termin < pozDnes(); }
+  function pozOtvorene() { return (S.poz || []).filter(function (x) { return !x.hotovo; }); }
+  // poradie: nespravené pred hotovými; dôležité, potom podľa termínu (bez termínu na koniec), potom najnovšie
+  function pozPoradie(a, b) {
+    if (a.hotovo !== b.hotovo) return a.hotovo ? 1 : -1;
+    if (a.hotovo) return String(b.hotovo_kedy || "").localeCompare(String(a.hotovo_kedy || ""));
+    if (a.dolezite !== b.dolezite) return a.dolezite ? -1 : 1;
+    if ((a.termin || "") !== (b.termin || "")) { if (!a.termin) return 1; if (!b.termin) return -1; return a.termin < b.termin ? -1 : 1; }
+    return String(b.vytvorene).localeCompare(String(a.vytvorene));
+  }
+  function pozSkupiny() {
+    var m = {}; (S.poz || []).forEach(function (x) { if (x.skupina) m[x.skupina] = 1; });
+    return Object.keys(m).sort(function (a, b) { return a.localeCompare(b, "sk"); });
+  }
+  function pozZaneprazdnene() {
+    var a = document.activeElement;
+    return !!(S.pozEdit || S.pozNova || S.pozUklada || maNeulozene() || (a && a.closest && a.closest("#obsah") && /INPUT|TEXTAREA|SELECT/.test(a.tagName)));
+  }
+  // odkazy v texte poznámky sa dajú otvoriť
+  function pozText(t) {
+    return esc(t).replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]"'])/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>').replace(/\n/g, "<br>");
+  }
+  function pozFormHtml(x, nova) {
+    x = x || {};
+    var F = S.pozF, predSk = nova && F.skupina !== "*" && F.skupina !== "" ? F.skupina : "";
+    return '<form class="poz-form" data-strazit data-poz-form="' + (nova ? "nova" : x.id) + '">' +
+      '<label class="field"><span>' + (nova ? "Čo treba spraviť alebo si zapamätať" : "Poznámka") + '</span><input type="text" name="text" required maxlength="500" autocomplete="off" value="' +
+        esc(x.text || "") + '" placeholder="napr. Zavolať majiteľovi bytu"></label>' +
+      '<div class="poz-f-riadok">' +
+        '<label class="field"><span>Skupina</span><input type="text" name="skupina" maxlength="60" list="poz-skupiny" autocomplete="off" value="' + esc(x.skupina || predSk) + '" placeholder="napr. Týpek, Klienti, Súkromné"></label>' +
+        '<label class="field"><span>Termín</span><input type="date" name="termin" value="' + esc(x.termin || "") + '"></label>' +
+        '<label class="poz-dolezite"><input type="checkbox" name="dolezite"' + (x.dolezite ? " checked" : "") + "> ⭐ Dôležité</label>" +
+      "</div>" +
+      '<label class="field"><span>Podrobnosti</span><textarea name="detail" rows="3" maxlength="4000" placeholder="Nepovinné – čokoľvek navyše, aj odkaz">' + esc(x.detail || "") + "</textarea></label>" +
+      '<datalist id="poz-skupiny">' + pozSkupiny().map(function (s) { return '<option value="' + esc(s) + '">'; }).join("") + "</datalist>" +
+      '<div class="form-actions"><button class="btn primary" type="submit" data-ulozit>' + (nova ? "+ Pridať" : "Uložiť") + "</button>" +
+        '<button class="btn ghost" type="button" data-poz="zrus">Zrušiť</button></div></form>';
+  }
+  function pozPolozkaHtml(x, ukazSkupinu) {
+    if (S.pozEdit === x.id) return '<div class="poz-pol poz-uprava" data-id="' + x.id + '">' + pozFormHtml(x, false) + "</div>";
+    var po = pozPoTermine(x), meta = [];
+    if (x.termin && !x.hotovo) meta.push('<span class="poz-chip' + (po ? " po" : x.termin === pozDnes() ? " dnes" : "") + '">📅 ' + (po ? "po termíne · " : "") + esc(pozTermin(x.termin)) + "</span>");
+    if (ukazSkupinu && x.skupina) meta.push('<span class="poz-chip">' + esc(x.skupina) + "</span>");
+    if (x.hotovo && x.hotovo_kedy) meta.push('<span class="poz-chip ok">✓ hotovo ' + esc(pozTermin(denKluc(x.hotovo_kedy))) + "</span>");
+    return '<div class="poz-pol' + (x.hotovo ? " hotovo" : "") + (x.dolezite && !x.hotovo ? " dolezite" : "") + '" data-id="' + x.id + '">' +
+      '<button type="button" class="poz-check" data-poz="hotovo" aria-pressed="' + !!x.hotovo + '" title="' + (x.hotovo ? "Vrátiť medzi nespravené" : "Odkliknúť ako hotové") + '" aria-label="' +
+        (x.hotovo ? "Vrátiť medzi nespravené" : "Odkliknúť ako hotové") + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 12.5 4 4 8-9"/></svg></button>' +
+      '<div class="poz-telo"><div class="poz-text">' + (x.dolezite && !x.hotovo ? '<span class="poz-hv" title="Dôležité" aria-label="Dôležité">⭐</span>' : "") + pozText(x.text) + "</div>" +
+        (x.detail ? '<div class="poz-detail">' + pozText(x.detail) + "</div>" : "") +
+        (meta.length ? '<div class="poz-meta">' + meta.join("") + "</div>" : "") + "</div>" +
+      '<div class="poz-akcie"><button type="button" class="btn ghost" data-poz="uprav" title="Upraviť" aria-label="Upraviť">✎</button>' +
+        '<button type="button" class="btn ghost danger" data-poz="zmaz" title="Zmazať" aria-label="Zmazať">🗑</button></div></div>';
+  }
+  function vykresliPoznamky() {
+    var el = $("#obsah"); if (!el) return;
+    if (!S.poz) {
+      el.innerHTML = '<div class="box poz-box"><div class="meta">Načítavam poznámky…</div></div>';
+      nacitajPoznamky().then(function () { if (S.tab === "poznamky") vykresliPoznamky(); }, function (e) {
+        if (S.tab !== "poznamky") return;
+        el.innerHTML = '<div class="box poz-box"><p class="meta">Poznámky sa nepodarilo načítať: ' + esc(chybaText(e)) + '</p><div><button class="btn" type="button" id="poz-znova">Skúsiť znova</button></div></div>';
+        $("#poz-znova").onclick = vykresliPoznamky;
+      });
+      return;
+    }
+    var F = S.pozF = S.pozF || { stav: "otvorene", skupina: "*", q: "" };
+    var V = S.poz, otv = pozOtvorene(), hot = V.filter(function (x) { return x.hotovo; });
+    var poTermine = otv.filter(pozPoTermine).length, skupiny = pozSkupiny();
+    if (F.skupina !== "*" && F.skupina !== "" && skupiny.indexOf(F.skupina) < 0) F.skupina = "*";
+    var q = norm(F.q).trim();
+    var zoz = V.filter(function (x) {
+      if (F.stav === "otvorene" && x.hotovo) return false;
+      if (F.stav === "hotove" && !x.hotovo) return false;
+      if (F.skupina !== "*" && (x.skupina || "") !== F.skupina) return false;
+      return !q || norm(x.text + " " + (x.detail || "") + " " + (x.skupina || "")).indexOf(q) >= 0;
+    }).sort(pozPoradie);
+    var h = '<div class="box poz-box"><div class="vykon-hlava"><div><h3>📝 Tvoje poznámky</h3><p class="meta">Len pre teba – nikto iný ich nevidí, ani administrátor.</p></div>' +
+      '<div class="poz-suhrn"><b>' + otv.length + "</b> na spravenie" + (poTermine ? ' · <span class="poz-po-n">' + poTermine + " po termíne</span>" : "") + "</div></div>";
+    // pridanie: rýchly riadok alebo celý formulár
+    h += S.pozNova ? pozFormHtml({ text: S.pozNovaText || "" }, true) :
+      '<form class="poz-rychla" data-poz-form="rychla"><input type="text" name="text" maxlength="500" required autocomplete="off" placeholder="Pridaj poznámku a stlač Enter…" aria-label="Nová poznámka">' +
+        '<button class="btn primary" type="submit">+ Pridať</button><button class="btn ghost" type="button" data-poz="viac" title="Skupina, termín, dôležité, podrobnosti">Viac možností</button></form>';
+    // výber
+    h += '<div class="poz-vyber"><div class="seg" role="group" aria-label="Zobraziť">' + [["otvorene", "Na spravenie", otv.length], ["hotove", "Hotové", hot.length], ["vsetky", "Všetky", V.length]].map(function (x) {
+        return '<button type="button" data-pozstav="' + x[0] + '" aria-pressed="' + (F.stav === x[0]) + '">' + x[1] + ' <span class="n">' + x[2] + "</span></button>";
+      }).join("") + "</div>" +
+      '<input type="search" class="poz-hladaj" placeholder="Hľadať v poznámkach" aria-label="Hľadať v poznámkach" value="' + esc(F.q) + '"></div>';
+    if (skupiny.length) {
+      var bez = V.some(function (x) { return !x.skupina; });
+      h += '<div class="poz-skup-vyber">' + [["*", "Všetky skupiny"]].concat(skupiny.map(function (s) { return [s, s]; })).concat(bez ? [["", "Bez skupiny"]] : []).map(function (s) {
+        var n = s[0] === "*" ? otv.length : otv.filter(function (x) { return (x.skupina || "") === s[0]; }).length;
+        return '<button type="button" class="poz-sk" data-pozsk="' + esc(s[0]) + '" aria-pressed="' + (F.skupina === s[0]) + '">' + esc(s[1]) + (n ? ' <span class="n">' + n + "</span>" : "") + "</button>";
+      }).join("") + "</div>";
+    }
+    // zoznam
+    if (!V.length) h += '<div class="poz-prazdne"><b>Zatiaľ tu nič nie je.</b><span>Zapíš si prvú úlohu alebo nápad – uvidíš ich len ty. Keď ich spravíš, odklikneš ich krúžkom.</span></div>';
+    else if (!zoz.length) h += '<div class="poz-prazdne">' + (F.stav === "otvorene" && !q && F.skupina === "*" ? "<b>Všetko máš hotové 🎉</b>" : "<span>V tomto výbere nič nie je.</span>") + "</div>";
+    else if (F.skupina === "*" && skupiny.length) {
+      var pod = {}; zoz.forEach(function (x) { var k = x.skupina || ""; (pod[k] = pod[k] || []).push(x); });
+      var Z = pozZavrete();
+      // skupiny v poradí ich najdôležitejšej poznámky, bez skupiny na koniec
+      var kluce = Object.keys(pod).sort(function (a, b) { if (!a) return 1; if (!b) return -1; return pozPoradie(pod[a][0], pod[b][0]) || a.localeCompare(b, "sk"); });
+      h += kluce.map(function (k) {
+        var n = pod[k].length, nPo = pod[k].filter(pozPoTermine).length;
+        return '<details class="poz-skup" data-sk="' + esc(k) + '"' + (Z[k || "-"] && !q ? "" : " open") + '><summary><b>' + esc(k || "Bez skupiny") + '</b><span class="n">' + n + "</span>" +
+          (nPo ? '<span class="poz-chip po">' + nPo + " po termíne</span>" : "") + "</summary>" +
+          '<div class="poz-zoznam">' + pod[k].map(function (x) { return pozPolozkaHtml(x, false); }).join("") + "</div></details>";
+      }).join("");
+    } else h += '<div class="poz-zoznam">' + zoz.map(function (x) { return pozPolozkaHtml(x, F.skupina === "*"); }).join("") + "</div>";
+    if (hot.length && F.stav !== "otvorene") h += '<div class="poz-dole"><button type="button" class="btn ghost danger" data-poz="zmaz-hotove">Zmazať všetky hotové (' + hot.length + ")</button></div>";
+    el.innerHTML = h + "</div>";
+    var box = $(".poz-box");
+    box.querySelectorAll("details.poz-skup").forEach(function (d) {
+      d.addEventListener("toggle", function () { if (norm(F.q).trim()) return; var Z = pozZavrete(), k = d.dataset.sk || "-"; if (d.open) delete Z[k]; else Z[k] = 1; pozUlozZavrete(Z); });
+    });
+    var hl = box.querySelector(".poz-hladaj");
+    hl.addEventListener("input", function () {
+      F.q = hl.value; var pos = hl.selectionStart; vykresliPoznamky();
+      var n = $(".poz-hladaj"); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) { /* */ } }
+    });
+    box.addEventListener("click", pozKlik);
+    box.addEventListener("submit", pozUloz);
+  }
+  function pozNajdi(id) { return (S.poz || []).find(function (x) { return String(x.id) === String(id); }); }
+  async function pozKlik(e) {
+    var F = S.pozF;
+    var st = e.target.closest("[data-pozstav]");
+    if (st) { F.stav = st.dataset.pozstav; vykresliPoznamky(); return; }
+    var sk = e.target.closest("[data-pozsk]");
+    if (sk) { F.skupina = sk.dataset.pozsk; vykresliPoznamky(); return; }
+    var b = e.target.closest("[data-poz]"); if (!b) return;
+    var a = b.dataset.poz, riadok = b.closest("[data-id]"), x = riadok ? pozNajdi(riadok.dataset.id) : null;
+    if (a === "viac") {
+      var r = $(".poz-rychla input"); S.pozNovaText = r ? r.value : ""; S.pozNova = true; S.pozEdit = null; vykresliPoznamky();
+      var t = $('.poz-form [name="text"]'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
+      return;
+    }
+    if (a === "zrus") {
+      if (maNeulozene() && !window.confirm("Zahodiť rozpísané zmeny?")) return;
+      S.pozNova = false; S.pozNovaText = ""; S.pozEdit = null; vykresliPoznamky(); return;
+    }
+    if (a === "uprav" && x) {
+      if (maNeulozene() && !window.confirm("Zahodiť rozpísané zmeny?")) return;
+      S.pozEdit = x.id; S.pozNova = false; vykresliPoznamky();
+      var u = $('.poz-uprava [name="text"]'); if (u) u.focus();
+      return;
+    }
+    if (a === "hotovo" && x) {
+      var nove = !x.hotovo, predtym = { hotovo: x.hotovo, hotovo_kedy: x.hotovo_kedy };
+      x.hotovo = nove; x.hotovo_kedy = nove ? new Date().toISOString() : null;
+      // v zozname „Na spravenie“ hotová poznámka krátko zostane odškrtnutá a potom zmizne
+      if (nove && F.stav === "otvorene" && riadok) { riadok.classList.add("hotovo", "odchadza"); b.setAttribute("aria-pressed", "true"); setTimeout(function () { if (S.tab === "poznamky" && !S.pozEdit) vykresliPoznamky(); }, 450); }
+      else vykresliPoznamky();
+      var rh = await sb.from("poznamky").update({ hotovo: nove }).eq("id", x.id).select().maybeSingle();
+      if (rh.error || !rh.data) { x.hotovo = predtym.hotovo; x.hotovo_kedy = predtym.hotovo_kedy; toast(rh.error ? chybaText(rh.error) : "Poznámku sa nepodarilo zmeniť.", true); vykresliPoznamky(); return; }
+      Object.assign(x, rh.data);
+      if (nove) toast("Hotovo ✓ " + (pozOtvorene().length ? "Ostáva " + pozOtvorene().length + "." : "Všetko máš spravené."));
+      return;
+    }
+    if (a === "zmaz" && x) {
+      if (!window.confirm("Zmazať poznámku „" + (x.text.length > 80 ? x.text.slice(0, 80) + "…" : x.text) + "“?")) return;
+      var rz = await sb.from("poznamky").delete().eq("id", x.id);
+      if (rz.error) return toast(chybaText(rz.error), true);
+      S.poz = S.poz.filter(function (y) { return y !== x; }); if (S.pozEdit === x.id) S.pozEdit = null;
+      vykresliPoznamky(); toast("Poznámka je zmazaná."); return;
+    }
+    if (a === "zmaz-hotove") {
+      var n = S.poz.filter(function (y) { return y.hotovo; }).length;
+      if (!n || !window.confirm("Zmazať všetky hotové poznámky (" + n + ")? Nespravené ostanú.")) return;
+      b.disabled = true;
+      var rv = await sb.from("poznamky").delete().eq("hotovo", true);
+      if (rv.error) { b.disabled = false; return toast(chybaText(rv.error), true); }
+      S.poz = S.poz.filter(function (y) { return !y.hotovo; }); vykresliPoznamky(); toast("Hotové poznámky sú zmazané.");
+    }
+  }
+  async function pozUloz(e) {
+    var f = e.target.closest("[data-poz-form]"); if (!f) return;
+    e.preventDefault();
+    if (S.pozUklada) return;
+    var druh = f.dataset.pozForm, fd = new FormData(f), F = S.pozF;
+    var text = String(fd.get("text") || "").trim();
+    if (!text) { var ti = f.querySelector('[name="text"]'); if (ti) ti.focus(); return; }
+    var data = druh === "rychla" ? { text: text, skupina: F.skupina !== "*" && F.skupina !== "" ? F.skupina : null } : {
+      text: text, skupina: String(fd.get("skupina") || "").trim() || null, termin: fd.get("termin") || null,
+      dolezite: !!fd.get("dolezite"), detail: String(fd.get("detail") || "").trim() || null,
+    };
+    var tl = f.querySelector('[type="submit"]'); if (tl) tl.disabled = true;
+    S.pozUklada = true;
+    var r = druh === "rychla" || druh === "nova" ? await sb.from("poznamky").insert(data).select().single() : await sb.from("poznamky").update(data).eq("id", druh).select().maybeSingle();
+    S.pozUklada = false;
+    if (r.error || !r.data) { if (tl) tl.disabled = false; return toast(r.error ? chybaText(r.error) : "Poznámku sa nepodarilo uložiť.", true); }
+    f.removeAttribute("data-zmenene");
+    if (druh === "rychla" || druh === "nova") {
+      S.poz.unshift(r.data); S.pozNova = false; S.pozNovaText = "";
+      if (F.stav === "hotove") F.stav = "otvorene";
+      vykresliPoznamky(); toast("Pridané.");
+      var q = $(".poz-rychla input"); if (q) q.focus();   // hneď sa dá písať ďalšia
+    } else {
+      var x = pozNajdi(druh); if (x) Object.assign(x, r.data);
+      S.pozEdit = null; vykresliPoznamky(); toast("Uložené.");
+    }
+  }
 
   // ------------------------------------------------------------ NEHNUTEĽNOSTI (ponuka kancelárie)
   var KATEGORIE = [["byty", "Byt", "🏢"], ["domy", "Dom", "🏠"], ["chaty", "Chata / chalupa", "🏡"], ["pozemky", "Pozemok", "🌳"],
