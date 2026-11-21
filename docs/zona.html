@@ -77,6 +77,7 @@
     if ((h.typy || []).length) c = c.concat(h.typy); else (h.kategorie || []).forEach(function (k) { c.push(KAT[k] || k); });
     (h.obce || []).forEach(function (o) { c.push(o); });
     (h.okresy || []).forEach(function (o) { c.push("okres " + o); });
+    (h.stavy || []).forEach(function (o) { c.push(o); });
     if (h.cena_od != null || h.cena_do != null) c.push(h.cena_od != null && h.cena_do != null ? T.eur(h.cena_od) + " – " + T.eur(h.cena_do) : h.cena_do != null ? "do " + T.eur(h.cena_do) : "od " + T.eur(h.cena_od));
     if (h.plocha_od != null) c.push("od " + T.nf.format(h.plocha_od) + " m²");
     if (h.plocha_do != null) c.push("do " + T.nf.format(h.plocha_do) + " m²");

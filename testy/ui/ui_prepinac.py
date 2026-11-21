@@ -14,7 +14,7 @@ with sync_playwright() as p:
     check("predvolene Predávajúci", pg.locator(".pred-box").count()==1)
     check("Predávajúci sú prvý", tl.nth(0).get_attribute("data-kl-pohlad")=="predavajuci")
     check("prvý je zvolený", tl.nth(0).get_attribute("aria-pressed")=="true")
-    check("veľké tlačidlá ako v Schránkovaní (Predávajúci, Dopyty, Klientska zóna)", pg.locator(".sch-pohlad.kl-pohlad .sp-ik").count()==3)
+    check("veľké tlačidlá ako v Schránkovaní (Predávajúci, Dopyty, Mimo ponuky, Klientska zóna)", pg.locator(".sch-pohlad.kl-pohlad .sp-ik").count()==4)
     check("počet predávajúcich v tlačidle", "3 predávajúcich" in tl.nth(0).inner_text())
     pg.locator(".kl-pohlad").screenshot(path=SH+"prepinac_desk.png")
     pg.click('[data-kl-pohlad="dopyty"]'); pg.wait_for_timeout(800)

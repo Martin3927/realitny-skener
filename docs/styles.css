@@ -2923,3 +2923,19 @@ html.bez-posuvu #toast { z-index: 210 }
 .dd-zona-r .btn { margin-left: auto; min-height: 32px; padding: 4px 10px }
 .dd-zona-r small { flex: 1 1 100% }
 @media (max-width: 520px) { .kz-reakcia { grid-template-columns: minmax(0, 1fr) } }
+
+/* ---------- Klienti: štyri pohľady a rubrika Mimo ponuky */
+.kl-pohlad.styri { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: none }
+@media (max-width: 1180px) { .kl-pohlad.styri { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 760px } }
+.mimo-zoznam { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px }
+.mimo-karta { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 14px; display: grid; gap: 8px; align-content: start }
+.mimo-karta.zvyraznena { border-color: var(--gold-strong); box-shadow: 0 0 0 3px var(--gold-soft) }
+.mimo-kontakt { font-size: 13.5px; background: var(--gold-soft); border-radius: 8px; padding: 8px 10px }
+.mimo-zhody { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13.5px }
+.mimo-zhody b { flex: 1 1 100% }
+.mimo-akcie { display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px }
+.mimo-akcie .btn { min-height: 32px; padding: 4px 10px }
+.mimo-riadky { display: grid; gap: 6px }
+.mimo-riadok { display: flex; gap: 10px; align-items: center; text-align: left; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 8px 12px; font: inherit; color: var(--ink); cursor: pointer }
+.mimo-riadok:hover { border-color: var(--gold-strong) }
+.mimo-form #mlok-okres { margin: 6px 0 0 }
