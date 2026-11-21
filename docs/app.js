@@ -1308,9 +1308,12 @@
   function maSekciu(t) { return licDovoli(t) && (admin() || (S.me && (S.me.pristup || SEKCIE.map(function (x) { return x[0]; })).indexOf(t) >= 0)); }
   // právo zverejňovať na FB a IG kancelárie – admin vždy, ostatní len ak im ho admin zapne (nikdy predvolene)
   function smieSiete() { return admin() || !!(S.me && (S.me.pristup || []).indexOf("siete") >= 0); }
+  // ToDo List – administrátor vždy, maklér len keď mu ho administrátor zapne v Makléroch (predvolene vypnutý)
+  function smieTodo() { return admin() || !!(S.me && (S.me.pristup || []).indexOf("todo") >= 0); }
   function tabPovoleny(t) {
     if (TABY.indexOf(t) < 0) return false;
-    if (t === "domov" || t === "poznamky") return true;   // poznámky má každý, sú súkromné
+    if (t === "domov") return true;
+    if (t === "poznamky") return smieTodo();
     if (t === "makleri") return admin() && !samostatny();   // samostatný maklér nemá tím
     if (t === "vykon" || t === "vzhlad" || t === "historia") return admin();
     return maSekciu(t);
@@ -1847,7 +1850,7 @@
     S.vykreslenaSekcia = S.tab;
     if (S.tab !== "vzhlad" && S.vzhladDraft) { S.vzhladDraft = null; aplikujVzhlad(vzhladPreMna()); }
     var tabs = SEKCIE.filter(function (x) { return maSekciu(x[0]); }).map(function (x) { return x[0] === "provizie" && !admin() ? ["provizie", "Moje provízie", "euro"] : x; });
-    tabs.push(["poznamky", "ToDo List", "poznamky"]);
+    if (smieTodo()) tabs.push(["poznamky", "ToDo List", "poznamky"]);
     if (admin()) tabs.push(["vykon", "Výkon", "vykon"]);
     if (admin() && !samostatny()) tabs.push(["makleri", "Makléri", "makleri"]);
     if (admin()) tabs.push(["vzhlad", "Vzhľad", "farby"], ["historia", "História zmien", "historia"]);
@@ -3004,7 +3007,7 @@
         textOdpoctu(zostava) + "</b></span>" + (moj ? " do uvoľnenia, ak nič nezapíšete" : " do uvoľnenia"));
     }
     if (mojePrip.length > 2) znacky.push("🔔 +" + (mojePrip.length - 2) + " ďalšie");
-    var tdz = S.poz ? todoIndex()["inzerat:" + z.id] || [] : [];
+    var tdz = S.poz && smieTodo() ? todoIndex()["inzerat:" + z.id] || [] : [];
     if (tdz.length) znacky.push('<button type="button" class="todo-znacka" data-todo-zoznam="' + todoAttr({ t: "inzerat", id: z.id, n: todoNazovInz(z) }) + '" title="Tvoje úlohy k inzerátu v ToDo Liste">✅ ' +
       esc(todoKratko(tdz.sort(pozPoradie)[0].text, 60)) + (tdz.length > 1 ? " +" + (tdz.length - 1) : "") + "</button>");
     if (znacky.length) h += '<div class="marks">' + znacky.join(" · ") + "</div>";
@@ -3872,6 +3875,8 @@
           '<label class="toggle"><input type="checkbox" data-f="vidi"' + (m.vidi_podhodnotene || m.rola === "admin" ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Vidí podhodnotené</label>" +
           '<label class="toggle" data-nestrazit title="Môže zverejniť svoje ponuky na Facebook a Instagram kancelárie. Ukladá sa hneď."><input type="checkbox" data-pravo="siete"' + (m.rola === "admin" || (m.pristup || []).indexOf("siete") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Zverejňuje na FB a IG</label>" +
           '<label class="toggle" data-nestrazit title="AI asistent, ✨ Doladiť s AI pri príspevkoch a ✨ Návrh hovoru v skeneri. Hodnotenie AI v skeneri vidia všetci. Ukladá sa hneď."><input type="checkbox" data-pravo="asistent"' + (m.rola === "admin" || (m.pristup || []).indexOf("asistent") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Používa AI</label>" +
+          '<label class="toggle" data-nestrazit title="Súkromný zoznam úloh – aj k inzerátom, ponukám, obhliadkam a klientom. Úlohy vidí len on sám. Pri vypnutí sa nezmažú, len ich nevidí. Ukladá sa hneď."><input type="checkbox" data-pravo="todo"' +
+            (m.rola === "admin" || (m.pristup || []).indexOf("todo") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Používa ToDo List</label>" +
           (licDovoli("odhady") ? '<label class="toggle" data-nestrazit title="Môže preberať platené kontakty z odhadov hodnoty (Odhady → Kontakty na predaj) – platí sa z kreditu kancelárie. Dostáva aj upozornenia na nové kontakty. Ukladá sa hneď."><input type="checkbox" data-pravo="kontakty"' +
             (m.rola === "admin" || (m.pristup || []).indexOf("kontakty") >= 0 ? " checked" : "") + (m.rola === "admin" ? " disabled" : "") + "> Preberá platené kontakty</label>" : "") + "</div>" +
           '<div class="mk-pristup"><span class="meta">Vidí sekcie</span><div class="cipy">' + (m.rola === "admin" ? '<span class="meta">Administrátor vidí všetko vrátane Výkonu a Maklérov.</span>' :
@@ -3988,6 +3993,7 @@
     // práva makléra (FB a IG kancelárie, AI) – ukladajú sa hneď (ako sekcie), nie tlačidlom Uložiť
     var PRAVA = { siete: [" teraz môže zverejňovať svoje ponuky na Facebook a Instagram kancelárie.", " už nemôže zverejňovať na Facebook a Instagram kancelárie."],
       asistent: [" teraz môže používať AI (asistent, texty, návrhy hovorov).", " už nemôže používať AI (hodnotenie AI v skeneri vidí ďalej)."],
+      todo: [" teraz môže používať ToDo List.", " už nevidí ToDo List – jeho úlohy ostávajú uložené."],
       kontakty: [" teraz môže preberať platené kontakty z odhadov (platí sa z kreditu kancelárie) a dostáva upozornenia na nové.", " už nemôže preberať platené kontakty – vidí ich, ale prevziať ich musí administrátor."] };
     el.querySelectorAll("[data-pravo]").forEach(function (c) {
       c.onchange = async function () {
@@ -4220,7 +4226,7 @@
       ["zvon", "zvon", "Pripomienky", "Komu a kedy zavolať, upozornenia na zníženie ceny", prip ? prip + " čaká na vás" : pripVsetky ? pripVsetky + " naplánovaných" : "Nič nečaká", "", ""],
       ["profil", "profil", "Môj profil", "Fotka, text SMS, heslo, skener na ploche mobilu", "", "", ""],
     ];
-    dlazdice = dlazdice.filter(function (d) { return ["zvon", "profil", "poznamky"].indexOf(d[0]) >= 0 || maSekciu(d[0]); });
+    dlazdice = dlazdice.filter(function (d) { return ["zvon", "profil"].indexOf(d[0]) >= 0 || (d[0] === "poznamky" ? smieTodo() : maSekciu(d[0])); });
     var pozPo = S.poz ? pozOtvorene().filter(pozPoTermine).length : 0;
     // počet poznámok na dlaždici – načíta sa raz potichu na pozadí
     pozZaistiNacitanie();
@@ -4523,7 +4529,7 @@
   }
   // úlohy treba aj mimo ToDo Listu (dlaždica, skener, detaily) – načítajú sa raz potichu a doplnia sa tam, kde chýbali
   function pozZaistiNacitanie() {
-    if (S.poz || S.pozNacitava) return;
+    if (S.poz || S.pozNacitava || !smieTodo()) return;
     S.pozNacitava = true;
     nacitajPoznamky().then(function () {
       todoObnovSekcie();
@@ -4588,6 +4594,7 @@
   function todoNazovOdhadu(o) { return todoKratko((o.nazov || o.obec || "Odhad") + (o.meno ? " – " + o.meno : ""), 150); }
   function todoAttr(o) { return esc(JSON.stringify(o)); }
   function todoTlacidlo(o, text, trieda) {
+    if (!smieTodo()) return "";
     return '<button type="button" class="' + (trieda || "btn ghost") + '" data-todo-pridaj="' + todoAttr(o) + '" title="Pridať úlohu do ToDo Listu – uvidíš ju len ty">' + esc(text || "✅ Do ToDo") + "</button>";
   }
   function todoOdkazChip(o, trieda) {
@@ -4596,6 +4603,7 @@
   }
   // sekcia „✅ ToDo“ v detaile inzerátu, ponuky, klienta, predávajúceho a odhadu
   function todoSekcia(o, trieda) {
+    if (!smieTodo()) return "";
     pozZaistiNacitanie();
     return '<section class="' + (trieda || "pd-sekcia") + ' todo-pri" data-todo-sekcia="' + todoAttr(o) + '">' + todoSekciaVnutro(o) + "</section>";
   }
@@ -8985,7 +8993,7 @@
       '<div class="box"><h3>🏠 Nehnuteľnosť</h3><table class="odh-tab">' + riadky.join("") + "</table></div>" +
       (o.fotky_cesta ? '<div class="box"><h3>📷 Fotky od klienta</h3><div id="odh-fotky" class="odh-fotky"><span class="meta">Načítavam fotky…</span></div></div>' : "") +
       '<div class="box"><h3>🔎 Čo o klientovi vieme</h3><div id="odh-zhody">' + odhZhodyHtml(o) + "</div></div>" +
-      '<div class="box odh-todo">' + todoSekcia({ t: "odhad", id: String(o.id), n: todoNazovOdhadu(o) }, "todo-v-boxe") + "</div>" +
+      (smieTodo() ? '<div class="box odh-todo">' + todoSekcia({ t: "odhad", id: String(o.id), n: todoNazovOdhadu(o) }, "todo-v-boxe") + "</div>" : "") +
       '<div class="box"><h3>📝 Moja poznámka</h3><textarea id="odh-pozn" rows="3" maxlength="3000" placeholder="Len pre vás a administrátora – klient ju neuvidí">' + esc(o.poznamka_maklera || "") + "</textarea>" +
         '<div><button type="button" class="btn" data-odh-pozn>Uložiť poznámku</button></div></div>' +
       (admin() ? '<div class="box"><h3>↪ Odovzdať kolegovi</h3><div class="odh-priradit"><select id="odh-komu">' + S.makleri.filter(function (m) { return m.aktivny; }).map(function (m) {

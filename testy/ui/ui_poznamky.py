@@ -3,6 +3,9 @@ from playwright.sync_api import sync_playwright
 # Tvoje poznámky: súkromný zoznam úloh – pridať, odkliknúť hotovo, upraviť, skupiny, hľadanie, zmazať; kolega ich nevidí (migrácia 139).
 URL=os.environ.get("TYPEK_URL", "http://localhost:8000/index.html"); SH=os.environ.get("TYPEK_SNIMKY", "/tmp/typek-snimky/"); ok=[]; errs=[]
 def check(n,c): ok.append(("OK   " if c else "ZLE  ")+n)
+import subprocess
+def sql(q): return subprocess.run(["psql","-h","127.0.0.1","-p","54322","-U","postgres","-d","typek","-tAc",q],capture_output=True,text=True).stdout.strip()
+sql("update makleri set pristup = array_append(coalesce(pristup, '{}'), 'todo') where email = 'jana@test.sk'")   # ToDo List jej zapol administrátor (migrácia 141)
 def prihlas(b, vp, email):
     pg=b.new_context(viewport=vp).new_page(); pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("dialog", lambda d: d.accept())
     pg.goto(URL); pg.wait_for_selector("#l-email"); pg.fill("#l-email",email); pg.fill("#l-heslo","Test12345"); pg.click("#f-login button[type=submit]")

@@ -13,6 +13,7 @@ sql("""insert into obhliadky (nehnutelnost_id, makler_id, cas, klient_meno, vysl
 sql("insert into dopyty (makler_id, transakcia, kategorie, obce, cena_do) values ('%s', 'predaj', '{byty}', '{Smižany}', 130000)" % JANA)
 DOPYT=sql("select max(id) from dopyty")
 sql("insert into dopyty_kontakty (dopyt_id, meno, telefon) values (%s, 'Karol Kupec', '0905 123 456')" % DOPYT)
+sql("update makleri set pristup = array_append(coalesce(pristup, '{}'), 'todo') where email = 'jana@test.sk'")   # ToDo List jej zapol administrátor (migrácia 141)
 INZ=sql("select id from inzeraty where predajca_typ <> 'rk' and aktivny order by prvy_krat desc limit 1")
 
 def prihlas(b, vp, email):
@@ -76,8 +77,23 @@ with sync_playwright() as p:
     pg.locator(".poz-box").screenshot(path=SH+"todo_zoznam.png")
     pg.locator('.poz-pol', has_text="Poslať Karolovi").locator(".poz-odkaz").click(); pg.wait_for_selector(".dopyt-detail .todo-pri", timeout=10000)
     check("odkaz otvoril klienta a jeho úlohu", "Poslať Karolovi nové ponuky" in pg.inner_text(".dopyt-detail .todo-pri"))
-    # ---- kolega nevidí
+    # ---- Peter nemá ToDo List zapnutý: žiadne menu, dlaždica ani tlačidlá
+    pp=prihlas(b, {"width":1300,"height":900}, "peter@test.sk")
+    check("bez práva: ToDo List nie je v menu ani na prehľade", "ToDo List" not in pp.inner_text(".bocne") and pp.locator('[data-domov="poznamky"]').count() == 0)
+    pp.goto(URL+"#nehnutelnosti/"+BYT); pp.wait_for_selector(".ponuka-detail", timeout=15000); pp.wait_for_timeout(500)
+    check("bez práva: pri ponuke nie je ToDo ani tlačidlo", pp.locator(".todo-pri, [data-todo-pridaj]").count() == 0)
+    pp.goto(URL+"#poznamky"); pp.wait_for_timeout(1200)
+    check("bez práva: adresa #poznamky vráti na prehľad", pp.locator(".poz-box").count() == 0)
+    # ---- administrátor zapne Petrovi ToDo List v Makléroch
     pa=prihlas(b, {"width":1300,"height":900}, "admin@test.sk")
+    pa.goto(URL+"#makleri"); pa.wait_for_timeout(1500); pa.click('[data-mk-otvor="33333333-3333-3333-3333-333333333333"]'); pa.wait_for_timeout(1000)
+    t=pa.locator('[data-pravo="todo"]')
+    check("Makléri: prepínač Používa ToDo List (%d×), vypnutý" % t.count(), t.count() == 1 and not t.first.is_checked())
+    t.first.click(); pa.wait_for_timeout(1200)
+    check("prepínač uložil právo", sql("select 'todo' = any(pristup) from makleri where email = 'peter@test.sk'") == "t")
+    pp.goto(URL+"#domov"); pp.reload(); pp.wait_for_selector("#obsah", timeout=20000); pp.wait_for_timeout(2000)
+    check("po zapnutí má Peter ToDo List v menu", "ToDo List" in pp.inner_text(".bocne"))
+    # ---- kolega nevidí cudzie úlohy
     pa.goto(URL+"#nehnutelnosti/"+BYT); pa.wait_for_selector(".ponuka-detail .todo-pri", timeout=15000); pa.wait_for_timeout(600)
     check("administrátor nevidí Janine úlohy pri ponuke", "Žiadne otvorené úlohy" in pa.inner_text(".ponuka-detail .todo-pri"))
     # ---- mobil: okno sa zmestí
