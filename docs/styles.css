@@ -2939,3 +2939,7 @@ html.bez-posuvu #toast { z-index: 210 }
 .mimo-riadok { display: flex; gap: 10px; align-items: center; text-align: left; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 8px 12px; font: inherit; color: var(--ink); cursor: pointer }
 .mimo-riadok:hover { border-color: var(--gold-strong) }
 .mimo-form #mlok-okres { margin: 6px 0 0 }
+.dd-stary { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: var(--gold-soft); border: 1px solid var(--gold-strong); border-radius: 12px; padding: 12px 14px; margin: 12px 0 }
+.dd-stary span { flex: 1 1 260px; font-size: 14px }
+.odh-mimo { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; font-size: 14px }
+.odh-mimo span { flex: 1 1 220px }

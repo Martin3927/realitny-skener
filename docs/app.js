@@ -4981,6 +4981,8 @@
         var id = await rpc("ulozit_nehnutelnost", { p: data, p_int: E.i });
         await ulozWebKancelarie(id, E.p);
         zmazKoncept();
+        // ponuka založená z nehnuteľnosti mimo ponuky: karta ide do archívu (už je riadnou ponukou)
+        if (E.mimoId && !E.uprava) { try { await rpc("zmenit_stav_mimo", { p_id: E.mimoId, p_stav: "archiv" }); if (S.dopyty) await nacitajDopyty(); } catch (eM) { /* archív sa dá spraviť ručne */ } }
         await nacitajPonuky();
         S.ponukaEdit = null; S.ponukaDetail = id;
         var nova = S.ponuky.find(function (x) { return x.id === id; });
@@ -5483,6 +5485,26 @@
     return '<span class="chip ' + r[0] + '" title="' + esc(datum(x.reakcia_kedy, true)) + '">' + r[1] + "</span>";
   }
   // ---------- rubrika Mimo ponuky: nezverejnené nehnuteľnosti, ktoré sa párujú s dopytmi kancelárie
+  // odhad hodnoty → údaje pre kartu Mimo ponuky (majiteľ, ktorý si pýtal odhad, je nehnuteľnosť mimo ponuky)
+  function mimoZOdhadu(o) {
+    var kat = { byt: "byty", dom: "domy", pozemok: "pozemky" }[o.typ] || "", iz = parseInt(o.izby, 10), typ = "", st = String(o.stav_nehn || "").toLowerCase();
+    if (kat === "byty" && iz) typ = iz >= 5 ? "5 a viac izbový byt" : iz + "-izbový byt";
+    if (kat === "byty" && !iz && /gars/i.test(o.izby || "")) typ = "Garsónka";
+    var stav = /novostav/.test(st) ? "novostavba" : /výstavb/.test(st) ? "vo výstavbe" : /komplet/.test(st) ? "kompletná rekonštrukcia" : /čiasto/.test(st) ? "čiastočná rekonštrukcia" :
+      /pôvod/.test(st) ? "pôvodný stav" : /zbúr/.test(st) ? "na zbúranie" : /(na|vyžaduje) rekonštr/.test(st) ? "na rekonštrukciu" : "";
+    var cena = o.cena_od && o.cena_do ? Math.round((Number(o.cena_od) + Number(o.cena_do)) / 2000) * 1000 : (o.cena_do || o.cena_od || null);
+    return { m: { transakcia: "predaj", kategoria: kat, typ: typ, obec: o.obec || "", okres: o.okres || "", cena: cena, plocha: o.plocha != null ? Number(o.plocha) : null,
+        izby: iz || null, stav_objektu: stav, popis: "Z odhadu hodnoty " + datum(o.vytvorene) + (o.kedy_predat ? " · predaj: " + o.kedy_predat : ""), makler_id: o.makler_id || S.me.id, odhad_id: o.id },
+      k: { meno: o.meno || "", telefon: o.telefon || "", email: o.email || "", adresa: odhAdresa(o), poznamka: o.poznamka_maklera || "" } };
+  }
+  function odhadMimoHtml(o) {
+    if (!maSekciu("klienti") || S.mimo === null || !(admin() || o.makler_id === S.me.id)) return "";
+    if (!S.dopyty) return '<div class="odh-mimo meta">Zisťujem, či ju hľadajú vaši klienti…</div>';
+    var uz = (S.mimo || []).find(function (m) { return m.odhad_id === o.id; }), x = mimoZOdhadu(o).m, n = x.kategoria ? dopytyPreMimo(Object.assign({ stav: "aktivna" }, x)).length : 0;
+    return '<div class="odh-mimo"><span>' + (x.kategoria ? "🎯 <b>" + n + "</b> " + (n === 1 ? "klient kancelárie hľadá" : n >= 2 && n <= 4 ? "klienti kancelárie hľadajú" : "klientov kancelárie hľadá") + " takúto nehnuteľnosť." : "") +
+      (uz ? " Je v rubrike Mimo ponuky" + (uz.stav === "archiv" ? " (archív)." : ".") : "") + "</span>" +
+      (uz ? '<button class="btn ghost" type="button" data-odh-mimo="otvor">🤫 Otvoriť v Mimo ponuky</button>' : '<button class="btn" type="button" data-odh-mimo="pridaj">🤫 Pridať do Mimo ponuky</button>') + "</div>";
+  }
   function otvorMimo(id) {
     S.klPohlad = "mimo"; S.dopytDetail = null; S.dopytEdit = null; S.mimoEdit = null; S.mimoZvyrazni = id || null;
     var m = id && (S.mimo || []).find(function (x) { return x.id === id; });
@@ -5511,8 +5533,10 @@
           (K.email ? ' · <a href="mailto:' + esc(K.email) + '">' + esc(K.email) + "</a>" : "") + (K.adresa ? " · " + esc(K.adresa) : "") + (K.poznamka ? '<small class="meta d-block">' + esc(K.poznamka) + "</small>" : "") + "</div>" : "") +
         (m.stav === "aktivna" ? '<div class="mimo-zhody"><b>🎯 ' + (D.length ? "Hľadá ju " + D.length + " " + (D.length === 1 ? "klient" : D.length <= 4 ? "klienti" : "klientov") + ":" : "Zatiaľ ju nikto nehľadá") + "</b>" +
           D.map(function (d) { return '<button type="button" class="cip" data-dopyt-otvor="' + d.id + '">' + esc(menoKlienta(d)) + (d.cena_do != null ? " · do " + eur(d.cena_do) : "") + "</button>"; }).join("") + "</div>" : "") +
+        (m.odhad_id ? '<div class="meta">📐 Z odhadu hodnoty' + (maSekciu("odhady") && smiem ? ' · <a href="#" data-mimo-odhad="' + m.odhad_id + '">otvoriť odhad</a>' : "") + "</div>" : "") +
         (smiem ? '<div class="mimo-akcie"><button class="btn ghost" type="button" data-mimo-uprav="' + m.id + '">✏️ Upraviť</button>' +
-          (m.stav === "aktivna" ? '<button class="btn ghost" type="button" data-mimo-stav="archiv" data-id="' + m.id + '">Do archívu</button>' :
+          (m.stav === "aktivna" ? (maSekciu("nehnutelnosti") ? '<button class="btn ghost" type="button" data-mimo-ponuka="' + m.id + '" title="Majiteľ podpísal? Údaje sa prenesú do novej ponuky.">🏠 Založiť ponuku</button>' : "") +
+            '<button class="btn ghost" type="button" data-mimo-stav="archiv" data-id="' + m.id + '">Do archívu</button>' :
             '<button class="btn ghost" type="button" data-mimo-stav="aktivna" data-id="' + m.id + '">Vrátiť medzi aktívne</button><button class="btn ghost" type="button" data-mimo-stav="zmazat" data-id="' + m.id + '">Zmazať</button>') + "</div>" : "") + "</article>";
     }).join("") + "</div>";
     el.innerHTML = h + "</div>";
@@ -5524,6 +5548,21 @@
     el.querySelector("[data-mimo-nova]").onclick = function () {
       S.mimoEdit = { m: { transakcia: "predaj", kategoria: "", typ: "", obec: "", okres: "", makler_id: S.me.id }, k: {} }; vykresliFormMimo(); window.scrollTo(0, 0);
     };
+    el.querySelectorAll("[data-mimo-odhad]").forEach(function (b) { b.onclick = function (e) { e.preventDefault(); otvorOdhad(Number(b.dataset.mimoOdhad)); }; });
+    el.querySelectorAll("[data-mimo-ponuka]").forEach(function (b) {
+      b.onclick = function () {
+        var m = vsetky.find(function (x) { return x.id === Number(b.dataset.mimoPonuka); }), K = m && ((S.mimoK || {})[m.id] || {}); if (!m) return;
+        var kon = nacitajKoncept(); if (kon && !confirm2("Máte rozpracovanú ponuku. Začať novú a rozpracovanú zahodiť?")) return;
+        zmazKoncept();
+        var np = { transakcia: m.transakcia, kategoria: m.kategoria, typ: m.typ || "", obec: m.obec || "", okres: m.okres || "", cena: m.cena, izby: m.izby, stav_objektu: m.stav_objektu || "", makler_id: m.makler_id || S.me.id };
+        np[m.kategoria === "pozemky" ? "plocha_pozemku" : "plocha_uzitkova"] = m.plocha;
+        novaPonuka({ p: np, i: { majitel_meno: K.meno || "", majitel_telefon: K.telefon || "", majitel_email: K.email || "", ulica_interna: K.adresa || "",
+          poznamka: [m.popis, K.poznamka].filter(Boolean).join("\n") } });
+        S.ponukaEdit.mimoId = m.id;
+        S.tab = "nehnutelnosti"; history.pushState({ tab: "nehnutelnosti", form: 1, detail: null }, "", "#nehnutelnosti"); vykresli(); window.scrollTo(0, 0);
+        toast("Údaje sú prenesené do novej ponuky. Po uložení pôjde karta z Mimo ponuky do archívu.");
+      };
+    });
     el.querySelectorAll("[data-mimo-uprav]").forEach(function (b) {
       b.onclick = function () {
         var m = vsetky.find(function (x) { return x.id === Number(b.dataset.mimoUprav); }); if (!m) return;
@@ -5602,7 +5641,7 @@
         var tl = el.querySelectorAll(".pf-pata .btn"); tl.forEach(function (x) { x.disabled = true; });
         try {
           var id = await rpc("ulozit_mimo", { p: { id: m.id || null, makler_id: m.makler_id, transakcia: m.transakcia, kategoria: m.kategoria, typ: m.typ, obec: m.obec, okres: m.okres,
-            cena: m.cena == null ? "" : String(m.cena), plocha: m.plocha == null ? "" : String(m.plocha), izby: m.izby == null ? "" : String(m.izby), stav_objektu: m.stav_objektu || "", popis: m.popis || "" }, p_k: k });
+            cena: m.cena == null ? "" : String(m.cena), plocha: m.plocha == null ? "" : String(m.plocha), izby: m.izby == null ? "" : String(m.izby), stav_objektu: m.stav_objektu || "", popis: m.popis || "", odhad_id: m.odhad_id || null }, p_k: k });
           await nacitajDopyty();
           var ul = (S.mimo || []).find(function (x) { return x.id === id; }), n = ul ? dopytyPreMimo(ul).length : 0;
           S.mimoEdit = null; S.mimoZvyrazni = id; S.mimoF = S.mimoF || { kto: "vsetci", stav: "aktivna" }; S.mimoF.stav = ul ? ul.stav : "aktivna";
@@ -5668,6 +5707,9 @@
     if ((d.stavy || []).length && x.stav && d.stavy.indexOf(String(x.stav).trim().toLowerCase()) < 0) return false;
     return true;
   }
+  // dopyt 60 dní bez zmeny a bez potvrdenia – treba overiť, či klient ešte hľadá
+  function dopytNaposledy(d) { return [d.upravene, d.overene].filter(Boolean).sort().pop(); }
+  function dopytStary(d) { var t = dopytNaposledy(d); return d.stav === "aktivny" && !!t && Date.now() - new Date(t).getTime() > 60 * 86400000; }
   function xMimo(m) { return { transakcia: m.transakcia, kategoria: m.kategoria, typ: m.typ, obec: m.obec, okres: m.okres, cena: m.cena, plocha: m.plocha, izby: m.izby, stav: m.stav_objektu }; }
   function mimoPreDopyt(d) { return (S.mimo || []).filter(function (m) { return m.stav === "aktivna" && sediDopyt(d, xMimo(m)); }); }
   function dopytyPreMimo(m) { return (S.dopyty || []).filter(function (d) { return sediDopyt(d, xMimo(m)); }); }
@@ -6172,7 +6214,7 @@
       return '<button type="button" class="dopyt-karta" data-dopyt-otvor="' + d.id + '"><span class="dk-hl">' + avatar(d.makler_id, 30) + "<span><b>" + esc(menoKlienta(d)) + '</b><small class="meta d-block">' + esc(meno(d.makler_id)) + " · " + ago(d.upravene) + "</small></span></span>" +
         '<span class="dk-popis">' + esc(popisDopytu(d)) + "</span>" + (d.popis ? '<span class="meta dk-text">„' + esc(d.popis.slice(0, 120)) + "“</span>" : "") +
         '<span class="dk-zhody">' + (nP ? '<span class="chip won">🏠 ' + nP + " " + (nP === 1 ? "ponuka" : nP <= 4 ? "ponuky" : "ponúk") + "</span>" : "") +
-        (nI ? '<span class="chip maybe">🔎 ' + nI + " " + (nI === 1 ? "inzerát" : nI <= 4 ? "inzeráty" : "inzerátov") + "</span>" : "") + (nM ? '<span class="chip">🤫 ' + nM + " mimo ponuky</span>" : "") +
+        (nI ? '<span class="chip maybe">🔎 ' + nI + " " + (nI === 1 ? "inzerát" : nI <= 4 ? "inzeráty" : "inzerátov") + "</span>" : "") + (nM ? '<span class="chip">🤫 ' + nM + " mimo ponuky</span>" : "") + (dopytStary(d) ? '<span class="chip maybe">⏳ overiť, či ešte hľadá</span>' : "") +
         (!nP && !nI && !nM && d.stav === "aktivny" ? '<span class="chip na">zatiaľ nič nesedí</span>' : "") + "</span></button>";
     }).join("") + "</div>";
     el.innerHTML = h + "</div>";
@@ -6450,6 +6492,9 @@
     var zonaIde = !!S.kz && ZK.zapnute && !!zonaTok && d.stav === "aktivny", nVZone = P.filter(vZone).length;
     var zonaSprava = "Dobrý deň" + (K && K.meno ? " " + K.meno.split(" ")[0] : "") + ", " + (rodMaklera(S.me) === "zena" ? "pripravila" : "pripravil") + " som Vám stránku s ponukami, ktoré zodpovedajú tomu, čo hľadáte. " +
       "Pri každej môžete jedným klikom dať vedieť, či sa Vám páči" + (ZK.obhliadka ? ", alebo požiadať o obhliadku" : "") + ":\n" + zonaUrl + "\n\n" + podpis();
+    var hStary = dopytStary(d) && S.mimo !== null ? '<div class="dd-stary" id="dd-stary"><span><b>⏳ Hľadá klient ešte?</b> Dopyt je bez zmeny od ' + esc(datum(dopytNaposledy(d))) + ". " +
+      (mozem ? "Potvrďte ho, alebo ho hore prepnite na Vybavený či Zrušený – aby čísla o kupujúcich sedeli." : "Overiť ho má maklér klienta.") + "</span>" +
+      (mozem ? '<button class="btn primary" type="button" data-dd="potvrdit">✓ Stále hľadá</button>' : "") + "</div>" : "";
     var hZona = !S.kz ? "" : '<section class="pd-sekcia" id="dd-zona"><div class="pd-sek-hlava"><h4>🔑 Klientska zóna kupujúceho</h4></div>' +
       (!ZK.zapnute ? '<p class="meta">Zóna kupujúceho je v kancelárii vypnutá.' + (admin() ? " Zapnete ju v Klienti → Klientska zóna." : " Zapne ju administrátor.") + "</p>" :
        !mozem ? '<p class="meta">Odkaz do zóny vytvára maklér klienta alebo administrátor.</p>' :
@@ -6469,7 +6514,7 @@
       (K ? '<section class="pd-interne"><h4>🔒 Kontakt</h4><dl class="pd-par">' + (K.telefon ? '<dt>Telefón</dt><dd><a class="tel" href="tel:' + esc(telCislo(K.telefon)) + '">' + esc(K.telefon) + "</a></dd>" : "") +
         (K.email ? '<dt>Email</dt><dd><a href="mailto:' + esc(K.email) + '">' + esc(K.email) + "</a></dd>" : "") + (K.poznamka ? "<dt>Poznámka</dt><dd>" + esc(K.poznamka) + "</dd>" : "") + "</dl></section>" :
         '<p class="meta">🔒 Kontakt na klienta vidí len jeho maklér a administrátor.</p>') +
-      hZona +
+      hStary + hZona +
       '<section class="pd-sekcia"><div class="pd-sek-hlava"><h4>🏠 Ponuky kancelárie, ktoré sedia (' + P.length + ")</h4></div>" +
       (P.length ? '<div class="dd-ponuky">' + P.map(function (p) {
         var f = (p.fotky || [])[0];
@@ -6520,6 +6565,7 @@
       catch (err) { toast(chybaText(err), true); }
       if (S.dopytDetail === d.id && S.tab === "klienti") vykresliDetailDopytu();
     }
+    var pt = el.querySelector('[data-dd="potvrdit"]'); if (pt) pt.onclick = function () { zonaAkcia(pt, "potvrdit_dopyt", { p_id: d.id }, "✓ Potvrdené – klient stále hľadá."); };
     var zv = el.querySelector('[data-dd="zona-vytvor"]'); if (zv) zv.onclick = function () { zonaAkcia(zv, "zona_kupujuceho_odkaz", { p_dopyt: d.id }, "🔑 Odkaz pre klienta je pripravený."); };
     var zk = el.querySelector('[data-dd="zona-kopiruj"]'); if (zk) zk.onclick = function () { kopiruj(zonaUrl, "🔗 Odkaz do klientskej zóny je skopírovaný."); };
     var zz = el.querySelector('[data-dd="zona-zrus"]'); if (zz) zz.onclick = function () {
@@ -8678,7 +8724,7 @@
         (o.telefon ? '<a href="tel:' + esc(telCislo(o.telefon)) + '">' + esc(o.telefon) + "</a>" : "") + (o.email ? '<a href="mailto:' + esc(o.email) + '">' + esc(o.email) + "</a>" : "") + "</div>" +
         '<div class="prip-odp odh-odp">' + odp + (o.email && o.telefon ? '<a class="btn" data-odpoved="email" href="' + esc(odkazSpravy("email", "", "Dobrý deň, " + o.meno + ",\n\n", "Odhad hodnoty – " + (o.nazov || ""), o.email)) + '">E-mail</a>' : "") + "</div>" +
         '<div class="odh-nedviha" id="odh-nedviha">' + odhNedvihaHtml(o) + "</div></div>" +
-      '<div class="box"><h3>🏠 Nehnuteľnosť</h3><table class="odh-tab">' + riadky.join("") + "</table></div>" +
+      '<div class="box"><h3>🏠 Nehnuteľnosť</h3><table class="odh-tab">' + riadky.join("") + '</table><div id="odh-mimo">' + odhadMimoHtml(o) + "</div></div>" +
       (o.fotky_cesta ? '<div class="box"><h3>📷 Fotky od klienta</h3><div id="odh-fotky" class="odh-fotky"><span class="meta">Načítavam fotky…</span></div></div>' : "") +
       '<div class="box"><h3>🔎 Čo o klientovi vieme</h3><div id="odh-zhody">' + odhZhodyHtml(o) + "</div></div>" +
       '<div class="box"><h3>📝 Moja poznámka</h3><textarea id="odh-pozn" rows="3" maxlength="3000" placeholder="Len pre vás a administrátora – klient ju neuvidí">' + esc(o.poznamka_maklera || "") + "</textarea>" +
@@ -8703,6 +8749,23 @@
         '<p class="meta">E-mail odíde od vášho mena, odpoveď klienta príde na váš e-mail. Orientačná hodnota, odkaz na PDF a krátke podmienky odhadu sa pridajú samé.</p></form>' +
       "</div></div></div>";
     el.innerHTML = h;
+    // z odhadu do rubriky Mimo ponuky + koľko klientov kancelárie takúto nehnuteľnosť hľadá
+    (function viazMimo() {
+      var bx = $("#odh-mimo"); if (!bx) return;
+      if (!S.dopyty && maSekciu("klienti") && !S.odhMimoNacitava) {
+        S.odhMimoNacitava = true;
+        nacitajDopyty().catch(function () { S.mimo = null; }).then(function () { S.odhMimoNacitava = false; var b2 = $("#odh-mimo"); if (b2 && S.odhadDetail === o.id) { b2.innerHTML = odhadMimoHtml(o); viazMimo(); } });
+      }
+      bx.querySelectorAll("[data-odh-mimo]").forEach(function (b) {
+        b.onclick = function () {
+          var uz = (S.mimo || []).find(function (m) { return m.odhad_id === o.id; });
+          if (b.dataset.odhMimo === "otvor" && uz) return otvorMimo(uz.id);
+          var z = mimoZOdhadu(o);
+          S.mimoEdit = { m: z.m, k: z.k }; S.klPohlad = "mimo"; S.dopytDetail = null; S.dopytEdit = null; S.tab = "klienti";
+          history.pushState({ tab: "klienti", kl: "mimo" }, "", "#klienti"); vykresli(); window.scrollTo(0, 0);
+        };
+      });
+    })();
     napojPouzi();
     if (o.predane_ako === "nakup") {
       napojTrhRekl(o);

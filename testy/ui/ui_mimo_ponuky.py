@@ -90,5 +90,44 @@ with sync_playwright() as p:
     check("archív: zmizne z aktívnych a nepáruje", sql("select stav from mimo_ponuky") == "archiv" and j.locator(".mimo-karta").count() == 0)
     j.locator('[data-mimof-stav="archiv"]').click(); j.wait_for_timeout(500)
     check("archív: dá sa vrátiť alebo zmazať", j.locator('[data-mimo-stav="aktivna"]').count() == 1 and j.locator('[data-mimo-stav="zmazat"]').count() == 1)
+
+    # ---- z odhadu hodnoty do Mimo ponuky
+    sql("""insert into odhady_hodnoty (kancelaria_id, makler_id, typ, nazov, okres, obec, ulica, cislo, plocha, izby, stav_nehn, meno, telefon, email, stav)
+           values (1, '%s', 'byt', '3-izbový byt, Smižany', 'Spišská Nová Ves', 'Smižany', 'Tatranská', '5', 70, '3', 'Novostavba', 'Mária Odhadová', '0902 111 222', 'maria@test.sk', 'kontaktovany')""" % JANA)
+    j.goto(URL+"#odhady"); j.reload(); j.wait_for_selector(".odh-karta", timeout=20000)
+    j.locator(".odh-karta").first.click(); j.wait_for_selector("[data-odh-mimo]", timeout=10000)
+    check("odhad: koľko klientov takúto nehnuteľnosť hľadá", "1 klient kancelárie hľadá" in j.locator("#odh-mimo").inner_text() and j.locator('[data-odh-mimo="pridaj"]').count() == 1)
+    j.locator("#odh-mimo").scroll_into_view_if_needed(); j.screenshot(path=SH+"mimo_odhad.png")
+    j.locator('[data-odh-mimo="pridaj"]').click(); j.wait_for_selector(".mimo-form", timeout=8000)
+    check("z odhadu: formulár predvyplnený (byt, 3-izbový, novostavba, Smižany, majiteľ)",
+          j.locator('[data-mcip="kategoria"] .cip[data-hodnota="byty"]').get_attribute("aria-pressed") == "true" and
+          j.locator('[data-mcip="typ"] .cip[data-hodnota="3-izbový byt"]').get_attribute("aria-pressed") == "true" and
+          j.locator('[data-mcip="stav_objektu"] .cip[data-hodnota="novostavba"]').get_attribute("aria-pressed") == "true" and
+          j.locator("#mlok-q").input_value() == "Smižany" and j.locator('[data-mk="meno"]').input_value() == "Mária Odhadová" and "Tatranská 5" in j.locator('[data-mk="adresa"]').input_value())
+    j.locator('[data-mf="ulozit"]').click(); j.wait_for_timeout(2200)
+    check("z odhadu: uložené s odkazom na odhad (%s)" % sql("select count(*) from mimo_ponuky where odhad_id is not null and stav = 'aktivna'"),
+          sql("select count(*) from mimo_ponuky where odhad_id is not null and stav = 'aktivna'") == "1" and "Z odhadu hodnoty" in j.locator(".mimo-karta").first.inner_text())
+    j.locator("[data-mimo-odhad]").first.click(); j.wait_for_selector("[data-odh-mimo]", timeout=10000)
+    check("odhad: už je v Mimo ponuky", j.locator('[data-odh-mimo="otvor"]').count() == 1)
+    j.locator('[data-odh-mimo="otvor"]').click(); j.wait_for_selector(".mimo-karta", timeout=8000)
+
+    # ---- z Mimo ponuky riadna ponuka
+    j.locator("[data-mimo-ponuka]").first.click(); j.wait_for_selector(".ponuka-form:not(.dopyt-form)", timeout=8000); j.wait_for_timeout(500)
+    j.locator('[data-pf="koncept"]').first.click(); j.wait_for_timeout(2500)
+    np=sql("select n.kategoria || '|' || n.typ || '|' || n.obec || '|' || n.stav || '|' || coalesce(n.stav_objektu, '') || '|' || n.plocha_uzitkova::int || '|' || i.majitel_meno || '|' || i.majitel_telefon from nehnutelnosti n join nehnutelnosti_interne i on i.nehnutelnost_id = n.id where n.stav = 'koncept'")
+    check("Založiť ponuku: koncept s prenesenými údajmi (%s)" % np, np == "byty|3-izbový byt|Smižany|koncept|novostavba|70|Mária Odhadová|0902 111 222")
+    check("karta z Mimo ponuky je po založení ponuky v archíve", sql("select stav from mimo_ponuky where odhad_id is not null") == "archiv")
+
+    # ---- starý dopyt: výzva overiť, či klient ešte hľadá
+    sql("update dopyty set upravene = now() - interval '70 days'")
+    pe.reload(); pe.wait_for_selector("#obsah", timeout=20000); pe.wait_for_timeout(2500)
+    pe.goto(URL+"#klienti"); pe.wait_for_timeout(800)
+    pe.locator('[data-kl-pohlad="dopyty"]').click(); pe.wait_for_timeout(600)
+    check("starý dopyt: štítok v zozname", "overiť" in pe.locator(".dopyt-karta").first.inner_text())
+    pe.locator(".dopyt-karta").first.click(); pe.wait_for_timeout(800)
+    check("starý dopyt: výzva v detaile", pe.locator("#dd-stary").count() == 1 and pe.locator('[data-dd="potvrdit"]').count() == 1)
+    pe.locator("#dd-stary").screenshot(path=SH+"dopyt_stary.png")
+    pe.locator('[data-dd="potvrdit"]').click(); pe.wait_for_timeout(1800)
+    check("Stále hľadá: potvrdené, výzva zmizne", sql("select overene is not null from dopyty") == "t" and pe.locator("#dd-stary").count() == 0)
     b.close()
 print("\n".join(ok)); print(errs or "bez chýb JS")

@@ -132,3 +132,37 @@ begin
   assert not exists (select 1 from mimo_ponuky m where _sedi_mimo(d, m)), 'archivovaná nehnuteľnosť nepáruje';
   assert (select count(*) from mimo_ponuky) = 1 and (select count(*) from mimo_ponuky_kontakty) = 1, 'zmazanie zmaže aj kontakt';
 end $$;
+
+-- ---------- kontrola starých dopytov (migrácia 138)
+update dopyty set upravene = now() - interval '70 days' where cardinality(stavy) = 2;
+do $$
+declare n int; t text;
+begin
+  n := _dopyty_kontrola();
+  assert n = 1, 'jeden starý dopyt na pripomenutie, je ' || n;
+  select poznamka into t from pripomienky where makler_id = '33333333-3333-3333-3333-333333333333' and poznamka like '⏳ Hľadá ešte%';
+  assert t like '%Karol Kupec%', 'pripomienka maklérovi klienta: ' || coalesce(t, '-');
+  assert _dopyty_kontrola() = 0, 'druhý beh už nepripomína (raz za 30 dní)';
+end $$;
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}', true) \gset x_
+do $$
+begin
+  begin
+    perform potvrdit_dopyt((select id from dopyty where cardinality(stavy) = 2));
+    assert false, 'cudzí maklér potvrdil dopyt';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+commit;
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}', true) \gset x_
+select potvrdit_dopyt((select id from dopyty where cardinality(stavy) = 2)) \gset x_
+commit;
+select set_config('request.jwt.claims', '', false) \gset x_
+update dopyty set pripomenute = now() - interval '40 days' where cardinality(stavy) = 2;
+do $$ begin
+  assert _dopyty_kontrola() = 0, 'potvrdený dopyt sa nepripomína';
+end $$;
