@@ -7485,7 +7485,7 @@
     }
     var denP = poDnoch[vyb] || [], vd = new Date(vyb + "T12:00:00");
     var f = S.kalForm;
-    var h = '<div class="box kal"><div class="vykon-hlava"><h3>📅 Kalendár</h3><div class="nehn-akcie"><button class="btn" type="button" data-kal="synch">🔗 Google / Apple kalendár</button>' +
+    var h = '<div class="box kal"><div class="vykon-hlava"><h3>📅 Kalendár</h3><div class="nehn-akcie"><button class="btn" type="button" data-moj-den="dnes">🗺️ Môj deň na mape</button><button class="btn" type="button" data-kal="synch">🔗 Google / Apple kalendár</button>' +
       '<button class="btn primary" type="button" data-kal="nova">+ Nová udalosť</button></div></div>';
     if (S.kalSynch) h += panelSynchronizacie();
     if (f) h += formUdalosti(f);
@@ -7607,13 +7607,105 @@
     if (!maSekciu("kalendar")) return "";
     var dnes = denKluc(new Date()), zajtra = denKluc(new Date(Date.now() + 864e5));
     var P = polozkyKalendara().filter(function (x) { var k = denKluc(x.od); return (k === dnes || k === zajtra) && (x.celyDen || new Date(x.od).getTime() > Date.now() - 3600e3 || k === zajtra); });
-    return '<section class="box kal-domov"><div class="vykon-hlava"><h3>📅 Dnes a zajtra</h3><button class="btn ghost" type="button" data-domov="kalendar">Otvoriť kalendár →</button></div>' +
+    return '<section class="box kal-domov"><div class="vykon-hlava"><h3>📅 Dnes a zajtra</h3><div class="nehn-akcie"><button class="btn ghost" type="button" data-moj-den="dnes">🗺️ Môj deň na mape</button>' +
+      '<button class="btn ghost" type="button" data-domov="kalendar">Otvoriť kalendár →</button></div></div>' +
       (P.length ? P.slice(0, 6).map(function (x) {
         return '<div class="kal-pol kp-' + x.druh + (x.sAdminom ? " s-adminom" : "") + '"><div class="kal-cas">' + (denKluc(x.od) === zajtra ? "zajtra " : "") + esc(casPolozky(x)) + "</div><div><b>" + esc(x.ikona + " " + x.nazov) + "</b>" +
           (x.ludia && x.ludia.length > 1 ? '<div class="meta">👥 ' + esc(menaPolozky(x)) + "</div>" : "") +
           (x.miesto ? '<div class="meta">📍 ' + esc(x.miesto) + "</div>" : "") + "</div></div>";
       }).join("") : '<p class="meta">Dnes ani zajtra nemáte nič naplánované. Udalosti pridáte v Kalendári.</p>') + "</section>";
   }
+
+  // ------------------------------------------------------------ MÔJ DEŇ NA MAPE (dnešné / zajtrajšie obhliadky a stretnutia v poradí, navigácia)
+  function mdObec(text) {
+    // obec z textu miesta („Štúrova 5, Spišská Nová Ves“) – najdlhší názov, prednostne z okresov kancelárie
+    var t = " " + norm(text).replace(/[^a-z0-9]+/g, " ") + " ", najl = null, okr = okresyKancelarie ? okresyKancelarie() : [];
+    (window.LOKALITY || []).forEach(function (o) {
+      var n = " " + norm(o[0]).replace(/[^a-z0-9]+/g, " ") + " ";
+      if (n.length < 5 || t.indexOf(n) < 0) return;
+      var bodov = n.length + (okr.indexOf(o[1]) >= 0 ? 100 : 0);
+      if (!najl || bodov > najl.b) najl = { b: bodov, o: o };
+    });
+    return najl ? { lat: najl.o[3], lon: najl.o[4], obec: najl.o[0] } : null;
+  }
+  function mdZastavky(den) {
+    return polozkyKalendara().filter(function (x) {
+      return (x.druh === "obhliadka" || (x.druh === "udalost" && !x.cudzia && !x.u.zrusene)) && denKluc(x.od) === den;
+    }).map(function (x) {
+      var p = x.ponuka ? (S.ponuky || []).find(function (y) { return y.id === x.ponuka; }) : null, poloha = null, presne = false;
+      if (p && p.lat && p.lon) { poloha = { lat: Number(p.lat), lon: Number(p.lon) }; presne = true; }
+      var adresa = x.miesto || (p ? [p.ulica, p.obec].filter(Boolean).join(", ") : "");
+      if (!poloha && (adresa || (p && p.obec))) poloha = mdObec(adresa || p.obec);
+      var o = x.druh === "obhliadka" ? (S.obhliadky || []).find(function (y) { return y.id === x.id; }) : null;
+      return { x: x, p: p, poloha: poloha, presne: presne, adresa: adresa, tel: o && o.klient_telefon, klient: o && o.klient_meno };
+    }).sort(function (a, b) { return (a.x.celyDen ? 1 : 0) - (b.x.celyDen ? 1 : 0) || String(a.x.od).localeCompare(String(b.x.od)); });
+  }
+  function mdCiel(z) { return z.presne ? z.poloha.lat + "," + z.poloha.lon : (z.adresa || (z.poloha ? z.poloha.obec : "")) + ", Slovensko"; }
+  async function otvorMojDen(den) {
+    var st = $("#mojden-okno"); if (st) st.remove();
+    zavriMenu();
+    den = den || denKluc(new Date());
+    var w = document.createElement("div"); w.className = "mojden-okno"; w.id = "mojden-okno";
+    w.innerHTML = '<div class="md-hlava"><b>🗺️ Môj deň na mape</b><div class="seg" role="group" aria-label="Deň">' +
+      [[denKluc(new Date()), "Dnes"], [denKluc(Date.now() + 864e5), "Zajtra"]].map(function (d) { return '<button type="button" data-md-den="' + d[0] + '" aria-pressed="' + (d[0] === den) + '">' + d[1] + "</button>"; }).join("") +
+      '</div><button type="button" class="menu-sheet-x" data-md-zavri aria-label="Zavrieť">×</button></div><div class="md-telo"><div id="md-mapa" class="md-mapa"></div><div class="md-zoz"><p class="meta">Načítavam…</p></div></div>';
+    document.body.appendChild(w); document.body.classList.add("menu-otvorene");
+    function esc2(e) { if (e.key === "Escape") zavri(); }
+    function zavri() { w.remove(); document.body.classList.remove("menu-otvorene"); document.removeEventListener("keydown", esc2); }
+    document.addEventListener("keydown", esc2);
+    w.addEventListener("click", function (e) {
+      if (e.target.closest("[data-md-zavri]")) return zavri();
+      var d = e.target.closest("[data-md-den]"); if (d) { zavri(); return otvorMojDen(d.dataset.mdDen); }
+      var b = e.target.closest("[data-md-bod]"); if (b && w._mapa && w._body[b.dataset.mdBod]) { w._mapa.setView(w._body[b.dataset.mdBod].getLatLng(), 15); w._body[b.dataset.mdBod].openPopup(); w.querySelector(".md-mapa").scrollIntoView({ behavior: "smooth", block: "nearest" }); }
+      var pn = e.target.closest("[data-md-ponuka]"); if (pn) { zavri(); otvorPonuku(pn.dataset.mdPonuka); }
+    });
+    try {
+      await Promise.all([S.udalosti ? null : nacitajUdalosti(), S.ponuky && S.obhliadky ? null : nacitajPonuky(), nacitajLokality(), nacitajLeaflet()]);
+    } catch (e) { w.querySelector(".md-zoz").innerHTML = '<p class="meta">' + esc(chybaText(e)) + "</p>"; return; }
+    if (!document.body.contains(w)) return;
+    var Z = mdZastavky(den), sMiestom = Z.filter(function (z) { return z.poloha; });
+    var vd = new Date(den + "T12:00:00"), nazovDna = vd.toLocaleDateString("sk-SK", { weekday: "long", day: "numeric", month: "numeric" });
+    var trasa = sMiestom.length ? "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + encodeURIComponent(mdCiel(sMiestom[sMiestom.length - 1])) +
+      (sMiestom.length > 1 ? "&waypoints=" + encodeURIComponent(sMiestom.slice(0, -1).slice(0, 9).map(mdCiel).join("|")) : "") : "";
+    var n = 0;
+    w.querySelector(".md-zoz").innerHTML = '<div class="md-suhrn"><b>' + esc(nazovDna.charAt(0).toUpperCase() + nazovDna.slice(1)) + "</b> · " +
+      (Z.length ? Z.length + (Z.length === 1 ? " zastávka" : Z.length <= 4 ? " zastávky" : " zastávok") : "nič naplánované") + "</div>" +
+      (trasa ? '<a class="btn primary md-trasa" href="' + esc(trasa) + '" target="_blank" rel="noopener">🧭 Celá trasa v Google Mapách</a>' : "") +
+      (Z.length ? Z.map(function (z) {
+        var cislo = z.poloha ? ++n : 0, x = z.x;
+        z.n = cislo;
+        return '<div class="md-zast' + (new Date(x.od).getTime() < Date.now() - 3600e3 && !x.celyDen ? " minula" : "") + '">' +
+          '<span class="md-n' + (cislo ? "" : " bez") + '">' + (cislo || "–") + "</span>" +
+          '<div class="md-t"><div class="md-cas">' + esc(casPolozky(x)) + "</div><b>" + esc(x.ikona + " " + x.nazov) + "</b>" +
+            (z.klient || z.tel ? '<div class="meta">👤 ' + esc([z.klient, z.tel].filter(Boolean).join(" · ")) + "</div>" : "") +
+            '<div class="meta">📍 ' + (z.adresa ? esc(z.adresa) : "miesto nie je zadané") + (z.poloha && !z.presne ? " <i>(na mape približne – stred obce)</i>" : "") + "</div>" +
+            '<div class="md-akcie">' + (z.poloha ? '<a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=' + esc(encodeURIComponent(mdCiel(z))) + '" target="_blank" rel="noopener">🧭 Navigovať</a>' +
+              '<button type="button" class="btn ghost" data-md-bod="' + cislo + '">Na mape</button>' : "") +
+              (z.tel ? '<a class="btn ghost" href="tel:' + esc(telCislo(z.tel)) + '">📞 Zavolať</a>' : "") +
+              (z.p ? '<button type="button" class="btn ghost" data-md-ponuka="' + z.p.id + '">Ponuka</button>' : "") + "</div></div></div>";
+      }).join("") : '<p class="meta">Na tento deň nemáš v kalendári obhliadky ani stretnutia. Pridáš ich v Kalendári alebo pri ponuke (Zapísať obhliadku).</p>') +
+      (Z.length && !sMiestom.length ? '<p class="meta">Pri udalostiach doplň miesto (adresu alebo obec) – potom ich uvidíš na mape.</p>' : "");
+    // mapa
+    var el = w.querySelector("#md-mapa");
+    var stred = stredOkresov();
+    var mapa = L.map(el, { zoomControl: true }).setView(stred.c, stred.z);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(mapa);
+    w._mapa = mapa; w._body = {};
+    var ll = [];
+    Z.forEach(function (z) {
+      if (!z.poloha) return;
+      var p = [z.poloha.lat, z.poloha.lon]; ll.push(p);
+      var ik = L.divIcon({ className: "md-pin" + (z.presne ? "" : " pribl"), html: "<span>" + z.n + "</span>", iconSize: [30, 30], iconAnchor: [15, 15] });
+      w._body[z.n] = L.marker(p, { icon: ik }).addTo(mapa).bindPopup("<b>" + esc(casPolozky(z.x)) + "</b> " + esc(z.x.nazov) + (z.adresa ? "<br>" + esc(z.adresa) : ""));
+    });
+    if (ll.length > 1) L.polyline(ll, { color: "#BC8727", weight: 3, opacity: .8, dashArray: "6 6" }).addTo(mapa);
+    if (ll.length) mapa.fitBounds(ll, { padding: [40, 40], maxZoom: 15 });
+    setTimeout(function () { mapa.invalidateSize(); }, 80);
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-moj-den]"); if (!b) return;
+    e.preventDefault(); otvorMojDen(b.dataset.mojDen === "zajtra" ? denKluc(Date.now() + 864e5) : denKluc(new Date()));
+  });
 
   // ------------------------------------------------------------ REALITNÁ MAPA
   function nacitajCluster() {
