@@ -3185,3 +3185,9 @@ html.bez-posuvu #toast { z-index: 210 }
 @media (max-width: 640px) {
   .prot-merac + .prot-merac { border-top: 1px dashed var(--line); padding-top: 8px }
 }
+
+/* ---------- ToDo List: zdieľanie s kolegami */
+.poz-chip.zdiel { background: color-mix(in srgb, var(--gold-strong) 14%, transparent); color: var(--ink) }
+.poz-od { margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: 14px }
+.poz-zdiel .cipy { display: flex; flex-wrap: wrap; gap: 6px }
+.poz-zdiel-f { white-space: nowrap }
