@@ -3117,3 +3117,17 @@ html.bez-posuvu #toast { z-index: 210 }
 .rano-tab th, .rano-tab td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line) }
 .rano-tab th:not(:first-child), .rano-tab td:not(:first-child) { text-align: right; width: 80px }
 .vyrocie-text { width: 100%; font-size: 14px; background: var(--surface-2); resize: vertical }
+
+/* ---------- ponuka bez záujmu */
+.bez-zaujmu { background: var(--bad-soft); border-radius: 12px; padding: 14px; border-top: 0 }
+.bz-cisla { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px }
+.bz-cisla > div { background: var(--surface); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px }
+.bz-cisla b { font-size: 18px }
+.bz-cisla small { color: var(--muted); font-size: 12px }
+.bz-cisla .zle b { color: var(--bad) }
+.bz-cisla .dobre b { color: var(--good) }
+.bz-zoz summary { cursor: pointer; font-weight: 600; font-size: 14px }
+.bz-zoz a { display: flex; justify-content: space-between; gap: 10px; padding: 6px 2px; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: 13px }
+.bz-zoz a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.bz-zoz a b { white-space: nowrap }
+.bz-stitok { background: var(--bad-soft); color: var(--bad) }

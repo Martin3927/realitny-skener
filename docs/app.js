@@ -5317,7 +5317,7 @@
           '<span class="pr-telo"><span class="pk-tr">' + (p.transakcia === "prenajom" ? "Prenájom" : "Predaj") + (p.typ ? " · " + esc(p.typ) : "") + (p.cislo ? " · č. " + esc(p.cislo) : "") + "</span>" +
           "<b>" + esc(nazovPonuky(p)) + "</b>" +
           '<span class="meta">' + esc([[p.cast_obce, p.obec, p.okres ? "okr. " + p.okres : ""].filter(Boolean).join(", "), par].filter(Boolean).join(" · ")) + "</span>" +
-          '<span class="pr-stitky"><span class="chip ' + st[1] + '">' + st[0] + "</span>" + (p.exkluzivne ? '<span class="pk-exk">Exkluzívne</span>' : "") + zmluvaStitok(S.ponukyInt[p.id]) + "</span></span>" +
+          '<span class="pr-stitky"><span class="chip ' + st[1] + '">' + st[0] + "</span>" + (p.exkluzivne ? '<span class="pk-exk">Exkluzívne</span>' : "") + zmluvaStitok(S.ponukyInt[p.id]) + bzStitok(p) + "</span></span>" +
           '<span class="pr-vpravo"><span class="pk-cena">' + esc(cenaPonuky(p)) + "</span>" +
           '<span class="pk-makler">' + avatar(p.makler_id, 22) + "<span>" + esc(meno(p.makler_id)) + "</span><span class=\"meta\">· " + ago(p.upravene) + "</span></span></span></button>";
       }).join("") + "</div>";
@@ -5331,7 +5331,7 @@
           '<span class="pk-telo"><span class="pk-tr">' + (p.transakcia === "prenajom" ? "Prenájom" : "Predaj") + (p.typ ? " · " + esc(p.typ) : "") + "</span>" +
           "<b>" + esc(nazovPonuky(p)) + "</b>" +
           '<span class="meta">' + esc([p.cast_obce, p.obec, p.okres ? "okr. " + p.okres : ""].filter(Boolean).join(", ")) + "</span>" +
-          '<span class="pk-cena">' + esc(cenaPonuky(p)) + "</span>" + (par ? '<span class="meta">' + esc(par) + "</span>" : "") + zmluvaStitok(S.ponukyInt[p.id]) +
+          '<span class="pk-cena">' + esc(cenaPonuky(p)) + "</span>" + (par ? '<span class="meta">' + esc(par) + "</span>" : "") + zmluvaStitok(S.ponukyInt[p.id]) + bzStitok(p) +
           '<span class="pk-makler">' + avatar(p.makler_id, 22) + "<span>" + esc(meno(p.makler_id)) + "</span><span class=\"meta\">· " + ago(p.upravene) + "</span></span></span></button>";
       }).join("") + "</div>";
     }
@@ -5977,7 +5977,7 @@
         (I.poznamka ? "<dt>Poznámka</dt><dd>" + esc(I.poznamka) + "</dd>" : "") + "</dl>" +
         ((I.dokumenty || []).length ? '<div class="pf-dok">' + I.dokumenty.map(function (d) { return '<button type="button" class="chip-obec" data-dok-otvor="' + esc(d.cesta) + '">📄 ' + esc(d.nazov) + "</button>"; }).join("") + "</div>" : "") + "</section>" : "") +
       todoSekcia({ t: "ponuka", id: String(p.id), n: todoNazovPonuky(p) }) +
-      (mozem ? sekciaVyrocia(p, I) : "") +
+      (mozem ? sekciaVyrocia(p, I) + sekciaBezZaujmu(p) : "") +
       sekciaObhliadky(p, mozem) +
       ((p.historia_cien || []).length > 1 ? '<p class="meta">Vývoj ceny: ' + p.historia_cien.map(function (x) { return datum(x[0]) + " " + eur(x[1]); }).join(" → ") + "</p>" : "") +
       (mozem ? sekciaHistorie("nehnutelnosti", p.id) : "") +
@@ -6011,6 +6011,76 @@
     napojNastroje(p);
     var ap = el.querySelector("[data-act-profil]"); if (ap) ap.onclick = function (e) { e.preventDefault(); S.pwdOpen = true; vykresliHeslo(); window.scrollTo({ top: 0, behavior: "smooth" }); };
   }
+  // ---------- ponuka bez záujmu: 45 dní bez obhliadky → porovnanie s konkurenciou zo skenera a návrh rozhovoru o cene
+  var BZ_DNI = 45, BZ_TYP = { byty: "byt", domy: "dom", pozemky: "pozemok", chaty: "chata", garaze: "garaz" };
+  function bzPlocha(p) { return Number(p.kategoria === "pozemky" ? p.plocha_pozemku || p.plocha_uzitkova : p.plocha_uzitkova || p.plocha_zastavana) || 0; }
+  // dni bez obhliadky (od poslednej obhliadky alebo od zverejnenia), null = ponuka nie je bez záujmu
+  function bezZaujmuDni(p) {
+    if (p.stav !== "aktivne") return null;
+    var od = new Date(p.vytvorene).getTime();
+    (S.obhliadky || []).forEach(function (o) { if (o.nehnutelnost_id === p.id && !o.zrusena) { var t = new Date(o.cas).getTime(); if (t <= Date.now() && t > od) od = t; } });
+    var dni = Math.floor((Date.now() - od) / 864e5);
+    return dni >= BZ_DNI ? dni : null;
+  }
+  function median(a) { if (!a.length) return null; a = a.slice().sort(function (x, y) { return x - y; }); var m = Math.floor(a.length / 2); return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; }
+  // podobné aktívne inzeráty zo skenera: rovnaký druh, obec (ak je málo, celý okres), izby, plocha ±25 %
+  function bzKonkurencia(p) {
+    var typ = BZ_TYP[p.kategoria], pl = bzPlocha(p);
+    if (!typ || !S.inz) return null;
+    function vyber(lenObec) {
+      return S.inz.filter(function (z) {
+        if (!z.aktivny || z.typ !== typ || !z.cena || z.cena < 1000) return false;
+        if (lenObec ? z.obec !== p.obec : z.okres !== p.okres) return false;
+        if (typ === "byt" && p.izby && z.izby && Number(z.izby) !== Number(p.izby)) return false;
+        if (pl && z.plocha && (z.plocha < pl * 0.75 || z.plocha > pl * 1.25)) return false;
+        return true;
+      });
+    }
+    var Z = vyber(true), kde = p.obec;
+    if (Z.length < 3 && p.okres) { Z = vyber(false); kde = "okres " + p.okres; }
+    var m2 = Z.filter(function (z) { return z.plocha; }).map(function (z) { return z.cena / z.plocha; });
+    var medM2 = median(m2), medCena = median(Z.map(function (z) { return z.cena; }));
+    var nasM2 = pl && p.cena ? p.cena / pl : null;
+    var rozdiel = nasM2 && medM2 ? Math.round((nasM2 / medM2 - 1) * 100) : medCena && p.cena ? Math.round((p.cena / medCena - 1) * 100) : null;
+    var navrh = medM2 && pl ? Math.round(medM2 * pl / 1000) * 1000 : null;
+    return { zoz: Z.sort(function (a, b) { return (a.plocha ? a.cena / a.plocha : a.cena) - (b.plocha ? b.cena / b.plocha : b.cena); }), kde: kde, medM2: medM2, medCena: medCena, nasM2: nasM2, rozdiel: rozdiel, navrh: navrh };
+  }
+  function bzTextPreAi(p, dni, K) {
+    var Zo = (S.zobrazenia || {})[p.id] || { spolu: 0 };
+    return [dni + " dní bez obhliadky, " + Zo.spolu + " zobrazení stránky ponuky",
+      K && K.zoz.length ? K.zoz.length + " podobných ponúk (" + K.kde + ")" + (K.medM2 ? ", medián " + nf.format(Math.round(K.medM2)) + " €/m²" : "") +
+        (K.nasM2 ? ", naša " + nf.format(Math.round(K.nasM2)) + " €/m²" : "") + (K.rozdiel != null ? " (" + (K.rozdiel > 0 ? "+" : "") + K.rozdiel + " %)" : "") : "",
+      K && K.navrh ? "cena podľa mediánu okolo " + eur(K.navrh) : ""].filter(Boolean).join("; ");
+  }
+  function sekciaBezZaujmu(p) {
+    var dni = bezZaujmuDni(p); if (dni == null) return "";
+    var K = bzKonkurencia(p), Zo = (S.zobrazenia || {})[p.id] || { spolu: 0, d7: 0 };
+    var h = '<section class="pd-sekcia bez-zaujmu"><div class="pd-sek-hlava"><h4>📉 Ponuka bez záujmu</h4><span class="chip lost">' + dni + " dní bez obhliadky</span></div>" +
+      '<p class="meta">Stránku ponuky si za celý čas otvorili ' + nf.format(Zo.spolu) + "× (za 7 dní " + nf.format(Zo.d7) + "×). Čas prebrať s majiteľom cenu alebo prezentáciu.</p>";
+    if (K && K.zoz.length) {
+      h += '<div class="bz-cisla"><div><b>' + K.zoz.length + "</b><small>podobných ponúk (" + esc(K.kde) + ")</small></div>" +
+        (K.medM2 ? "<div><b>" + nf.format(Math.round(K.medM2)) + " €/m²</b><small>medián konkurencie</small></div>" : "<div><b>" + eur(K.medCena) + "</b><small>medián ceny</small></div>") +
+        (K.nasM2 ? "<div><b>" + nf.format(Math.round(K.nasM2)) + " €/m²</b><small>naša ponuka</small></div>" : "") +
+        (K.rozdiel != null ? '<div class="' + (K.rozdiel > 5 ? "zle" : "dobre") + '"><b>' + (K.rozdiel > 0 ? "+" : "") + K.rozdiel + " %</b><small>" + (K.rozdiel > 0 ? "nad trhom" : "pod alebo na trhu") + "</small></div>" : "") +
+        (K.navrh && K.rozdiel > 5 ? "<div><b>" + eur(K.navrh) + "</b><small>cena podľa mediánu</small></div>" : "") + "</div>" +
+        '<details class="bz-zoz"><summary>Najlacnejšie podobné ponuky</summary>' + K.zoz.slice(0, 6).map(function (z) {
+          return '<a href="' + esc(z.url) + '" target="_blank" rel="noopener"><span>' + esc(z.nazov) + "</span><b>" + eur(z.cena) + (z.plocha ? " · " + nf.format(Math.round(z.cena / z.plocha)) + " €/m²" : "") + "</b></a>";
+        }).join("") + '<p class="meta">Zo skenera – súkromné aj realitné ponuky, ktoré sú teraz na portáloch.</p></details>';
+    } else h += '<p class="meta">Podobné ponuky v skeneri teraz nie sú – porovnanie ceny nemám z čoho spraviť.</p>';
+    h += '<div class="form-actions">' + (maSekciu("asistent") ? '<button type="button" class="btn primary" data-bz-ai="' + p.id + '">✨ Pripraviť rozhovor s majiteľom</button>' : "") +
+      todoTlacidlo({ t: "ponuka", id: String(p.id), n: todoNazovPonuky(p) }, "✅ Do ToDo: prebrať cenu") + "</div></section>";
+    return h;
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-bz-ai]"); if (!b) return;
+    var p = (S.ponuky || []).find(function (x) { return String(x.id) === b.dataset.bzAi; }); if (!p) return;
+    var i = AI_ULOHY.findIndex(function (u) { return u.k === "cena"; }); if (i < 0) return;
+    S.aiPonuka = String(p.id); S.aiSpravy = []; S.aiRozhovorId = null;
+    S.aiKrok = { u: i, faza: "otazky", komu: "Majiteľ po mesiacoch bez záujmu", ciel: "Znížiť cenu", detail: bzTextPreAi(p, bezZaujmuDni(p) || BZ_DNI, bzKonkurencia(p)) };
+    prejdi("asistent");
+  });
+
+  function bzStitok(p) { var d = bezZaujmuDni(p); return d == null ? "" : '<span class="pk-zmluva bz-stitok" title="Ponuka nemala obhliadku ' + d + ' dní">📉 ' + d + " dní bez obhliadky</span>"; }
   function zmluvaStitok(I) {
     if (!I || !I.zmluva || !I.zmluva_do) return "";
     var dni = Math.ceil((new Date(I.zmluva_do) - new Date()) / 864e5);
