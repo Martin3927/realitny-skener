@@ -1173,6 +1173,7 @@
     S.odhlMin = vMobile() ? S.odhlMobil : S.odhlPc;
     S.odkaz = { text: n.odkaz_text || "", zapnuty: !!n.odkaz_zapnuty, autor: n.odkaz_autor || null };
     S.novinkyOkno = n.novinky_okno !== false;
+    rpc("vyrocia_zapnute").then(function (v) { S.vyrocia = !!v; }, function () { S.vyrocia = false; });
   }
   function poslednaAktivita() {
     var ls = 0;
@@ -3961,6 +3962,9 @@
       '<p class="meta">Každému maklérovi pri najbližšom otvorení vyskočí okno – ako pochvala (s konfetami) alebo dôležitý oznam.</p>' +
       '<textarea id="vsetkym-text" rows="2" maxlength="800" placeholder="napr. Tím, rekordný mesiac – 12 nových zmlúv! Ďakujem každému z vás 🙌"></textarea>' +
       '<div class="form-actions"><button class="btn primary" type="button" data-vsetkym="tim">⭐ Pochváliť celý tím</button><button class="btn" type="button" data-vsetkym="oznam">📣 Poslať oznam všetkým</button></div></form>' +
+      '<div class="box"><h3>🎂 Výročie obchodu</h3><p class="meta">Rok (a každý ďalší rok) po predaji pripomenie maklérovi ráno v zvončeku a v mobile, aby majiteľovi poslal pozdrav. ' +
+        "Pripravenú správu (WhatsApp, SMS, e-mail) nájde pri predanej ponuke.</p>" +
+        '<label class="toggle"><input type="checkbox" id="vyrocia-zap"' + (S.vyrocia ? " checked" : "") + "> <b>Pripomínať výročia predaja</b></label></div>" +
       '<div class="box mk-spr-vsetci"><div><h3>🧭 Prehliadka aplikácie pre všetkých</h3><p class="meta">Každému maklérovi sa pri najbližšom otvorení aplikácie znova spustí sprievodca. Jednotlivo ju zapnete v detaile makléra.</p></div>' +
         '<button class="btn primary" type="button" id="spr-vsetkym">Zapnúť prehliadku všetkým</button></div>' +
       '<div class="box"><h3>✨ Novinky v aplikácii</h3><p class="meta">Keď pribudne nová funkcia, napíšte ju sem. Každému maklérovi pri ďalšom otvorení vyskočí okno „Ahoj, máš nové funkcie“ s tlačidlom, ktoré ho na funkciu rovno zavedie.</p>' +
@@ -4096,6 +4100,13 @@
         b.disabled = false;
       };
     });
+    var vyrZap = $("#vyrocia-zap");
+    if (vyrZap) vyrZap.onchange = async function () {
+      var zap = vyrZap.checked; vyrZap.disabled = true;
+      try { await rpc("nastavit_vyrocia", { p_zap: zap }); S.vyrocia = zap; toast(zap ? "🎂 Výročia predaja sa budú pripomínať maklérom." : "Výročia predaja sa už nepripomínajú."); }
+      catch (err) { vyrZap.checked = !zap; toast(chybaText(err), true); }
+      vyrZap.disabled = false;
+    };
     var novZap = $("#novinky-okno-zap");
     if (novZap) novZap.onchange = async function () {
       var zap = novZap.checked; novZap.disabled = true;
@@ -5966,6 +5977,7 @@
         (I.poznamka ? "<dt>Poznámka</dt><dd>" + esc(I.poznamka) + "</dd>" : "") + "</dl>" +
         ((I.dokumenty || []).length ? '<div class="pf-dok">' + I.dokumenty.map(function (d) { return '<button type="button" class="chip-obec" data-dok-otvor="' + esc(d.cesta) + '">📄 ' + esc(d.nazov) + "</button>"; }).join("") + "</div>" : "") + "</section>" : "") +
       todoSekcia({ t: "ponuka", id: String(p.id), n: todoNazovPonuky(p) }) +
+      (mozem ? sekciaVyrocia(p, I) : "") +
       sekciaObhliadky(p, mozem) +
       ((p.historia_cien || []).length > 1 ? '<p class="meta">Vývoj ceny: ' + p.historia_cien.map(function (x) { return datum(x[0]) + " " + eur(x[1]); }).join(" → ") + "</p>" : "") +
       (mozem ? sekciaHistorie("nehnutelnosti", p.id) : "") +
@@ -6097,6 +6109,34 @@
     return "mailto:" + encodeURIComponent(email || "") + "?subject=" + encodeURIComponent(predmet || "") + "&body=" + encodeURIComponent(text);
   }
   function podpis() { return (S.me.meno || "") + ", " + nazovKancelarie() + (S.me.telefon ? "\n" + S.me.telefon : ""); }
+
+  // ---------- výročie obchodu (zapína administrátor; pri predanej ponuke pripravená správa majiteľovi)
+  function vyrocieSprava(p) {
+    var r = Math.max(1, new Date().getFullYear() - new Date(p.predane_kedy).getFullYear()), z = rodMaklera(S.me) === "zena";
+    return "Dobrý deň, " + (r === 1 ? "presne pred rokom" : "presne pred " + r + " rokmi") + " sme spolu predali Vašu nehnuteľnosť – " + nazovPonuky(p) + ". " +
+      "Chcel" + (z ? "a" : "") + " som sa Vám pripomenúť a ešte raz poďakovať za dôveru. Ak by ste Vy alebo niekto z Vašich blízkych potrebovali pomôcť s predajom či kúpou, " +
+      (z ? "rada" : "rád") + " pomôžem.\n\n" + podpis();
+  }
+  function sekciaVyrocia(p, I) {
+    if (!S.vyrocia || p.stav !== "predane" || !p.predane_kedy) return "";
+    var d = new Date(p.predane_kedy), dnes = new Date(); dnes.setHours(0, 0, 0, 0);
+    var dalsie = new Date(dnes.getFullYear(), d.getMonth(), d.getDate()); if (dalsie < dnes) dalsie.setFullYear(dalsie.getFullYear() + 1);
+    var dni = Math.round((dalsie - dnes) / 864e5), uzRok = (dnes - d) / 864e5 > 300;
+    var text = vyrocieSprava(p), tel = I && I.majitel_telefon, mail = I && I.majitel_email;
+    return '<section class="pd-sekcia vyrocie"><div class="pd-sek-hlava"><h4>🎂 Výročie predaja</h4><span class="chip' + (dni === 0 && uzRok ? " won" : "") + '">' +
+      (dni === 0 && uzRok ? "dnes!" : "o " + dni + (dni === 1 ? " deň" : dni <= 4 ? " dni" : " dní")) + "</span></div>" +
+      '<p class="meta">Predané ' + esc(datum(p.predane_kedy)) + ". V deň výročia ti Týpek ráno pripomenie poslať pozdrav majiteľovi" + (I && I.majitel_meno ? " (" + esc(I.majitel_meno) + ")" : "") +
+      ". Z takých správ prichádzajú odporúčania a ďalšie obchody.</p>" +
+      '<textarea class="vyrocie-text" rows="4" readonly>' + esc(text) + "</textarea>" +
+      '<div class="pd-zdiel-btns">' + (tel ? '<a class="btn wa" href="' + esc(odkazSpravy("wa", tel, text)) + '" target="_blank" rel="noopener">WhatsApp</a><a class="btn" href="' + esc(odkazSpravy("sms", tel, text)) + '">💬 SMS</a>' : "") +
+        (mail ? '<a class="btn" href="' + esc(odkazSpravy("email", "", text, "Pozdrav k výročiu – " + nazovKancelarie(), mail)) + '">✉️ E-mail</a>' : "") +
+        '<button type="button" class="btn ghost" data-kopiruj-vyrocie>Kopírovať text</button></div>' +
+      (!tel && !mail ? '<p class="meta">Pri majiteľovi nie je telefón ani e-mail – doplň ich v interných údajoch ponuky, alebo text skopíruj.</p>' : "") + "</section>";
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-kopiruj-vyrocie]"); if (!b) return;
+    var t = b.closest(".vyrocie").querySelector(".vyrocie-text"); kopiruj(t.value, "Text pozdravu je skopírovaný.");
+  });
 
   // ---------- prosba o recenziu: na web (Týpek), na Google alebo na Facebook (odkazy: migrácia 133)
   var REC_KDE = [["typek", "Na náš web"], ["google", "Na Google"], ["facebook", "Na Facebook"]];

@@ -3116,3 +3116,4 @@ html.bez-posuvu #toast { z-index: 210 }
 .rano-tab { width: 100%; border-collapse: collapse; font-size: 14px }
 .rano-tab th, .rano-tab td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line) }
 .rano-tab th:not(:first-child), .rano-tab td:not(:first-child) { text-align: right; width: 80px }
+.vyrocie-text { width: 100%; font-size: 14px; background: var(--surface-2); resize: vertical }
