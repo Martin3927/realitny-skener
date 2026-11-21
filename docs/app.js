@@ -882,6 +882,70 @@
       " krátky prehľad: " + co.join(", ") + ".</p>" +
       '<label class="toggle"><input type="checkbox" id="tyzden-zap"' + (zap ? " checked" : "") + "> Posielať pondelkový prehľad</label></div>";
   }
+  // ---------- ranný prehľad kancelárie (administrátor; o 7:30 do mobilu, v aplikácii #rano a na Prehľade do obeda)
+  function chceRano() { return admin() && !(S.me.upozornenia && S.me.upozornenia.rano === false); }
+  function boxRano() {
+    if (!admin()) return "";
+    return '<div class="box" id="box-rano"><h3>☀️ Ranný prehľad o 7:30</h3><p class="meta">Každé ráno ti do mobilu príde, čo sa včera v kancelárii udialo (hovory, prevzaté inzeráty, ' +
+      "nové kontakty a odhady) a čo dnes horí (obhliadky, pripomienky po termíne, končiace zmluvy, skener). Celý prehľad otvoríš ťuknutím alebo na Prehľade.</p>" +
+      '<label class="toggle"><input type="checkbox" id="rano-zap"' + (chceRano() ? " checked" : "") + '> Posielať ranný prehľad</label> <button type="button" class="btn ghost" data-rano>Pozrieť dnešný prehľad</button></div>';
+  }
+  function napojRano() {
+    var x = $("#rano-zap"); if (!x) return;
+    x.onchange = async function () {
+      var zap = x.checked; x.disabled = true;
+      try {
+        await rpc("nastavit_ranny_prehlad", { p_zap: zap });
+        S.me.upozornenia = Object.assign({}, S.me.upozornenia || {}, { rano: zap });
+        toast(zap ? "☀️ Ranný prehľad ti bude chodiť každé ráno o 7:30." : "Ranný prehľad je vypnutý.");
+      } catch (err) { x.checked = !zap; toast(chybaText(err), true); }
+      x.disabled = false;
+    };
+  }
+  function ranoKartaHtml() {
+    if (!chceRano() || new Date().getHours() >= 12) return "";
+    return '<button type="button" class="rano-karta" data-rano><span class="rano-ik" aria-hidden="true">☀️</span><span><b>Ranný prehľad kancelárie</b><small>Čo sa včera udialo a čo dnes horí</small></span><span aria-hidden="true">›</span></button>';
+  }
+  async function otvorRannyPrehlad() {
+    if (!admin()) return;
+    var st = $("#rano-okno"); if (st) st.remove();
+    zavriMenu();
+    var w = document.createElement("div"); w.className = "pochvala-var todo-var"; w.id = "rano-okno";
+    w.innerHTML = '<div class="todo-karta rano-telo" role="dialog" aria-modal="true" aria-label="Ranný prehľad"><div class="todo-karta-hl"><h3>☀️ Ranný prehľad</h3><button type="button" class="menu-sheet-x" data-rano-zavri aria-label="Zavrieť">×</button></div><p class="meta">Načítavam…</p></div>';
+    document.body.appendChild(w);
+    function zavri() { w.remove(); document.removeEventListener("keydown", esc2); }
+    function esc2(e) { if (e.key === "Escape") zavri(); }
+    document.addEventListener("keydown", esc2);
+    w.addEventListener("click", function (e) {
+      if (e.target === w || e.target.closest("[data-rano-zavri]")) return zavri();
+      var t = e.target.closest("[data-rano-tab]"); if (t) { zavri(); if (t.dataset.ranoTab === "zvoncek") { S.zvonOpen = true; S.pripForm = null; vykresliZvoncek(); window.scrollTo(0, 0); } else prejdi(t.dataset.ranoTab); }
+    });
+    var d;
+    try { d = await rpc("ranny_prehlad"); } catch (e) { w.querySelector(".meta").textContent = chybaText(e); return; }
+    if (!document.body.contains(w)) return;
+    var V = d.vcera || {}, D = d.dnes || {}, Sk = d.skener || {};
+    function cislo(n, tx, tab) { return '<button type="button" class="rano-c' + (n ? "" : " nula") + '"' + (tab ? ' data-rano-tab="' + tab + '"' : "") + "><b>" + nf.format(n || 0) + "</b><small>" + tx + "</small></button>"; }
+    var vcera = new Date(Date.now() - 864e5).toLocaleDateString("sk-SK", { weekday: "long", day: "numeric", month: "numeric" });
+    w.querySelector(".rano-telo").innerHTML = '<div class="todo-karta-hl"><h3>☀️ Ranný prehľad</h3><button type="button" class="menu-sheet-x" data-rano-zavri aria-label="Zavrieť">×</button></div>' +
+      (Sk.ok === false ? '<div class="note zle">⚠️ <b>Skener ' + (Sk.posledna_kontrola ? "naposledy kontroloval " + esc(datum(Sk.posledna_kontrola, true)) : "zatiaľ nekontroloval") + "</b> – nové inzeráty sa neobjavujú.</div>" : "") +
+      "<h4>Včera <small class=\"meta\">" + esc(vcera) + "</small></h4>" +
+      '<div class="rano-mriezka">' + cislo(V.hovory, "hovorov", "vykon") + cislo(V.prevzate, "prevzatých inzerátov", "inzeraty") + cislo(V.stretnutia, "dohodnutých stretnutí", "vykon") +
+        cislo(V.ziskane, "získaných do ponuky", "vykon") + cislo(V.nove_inzeraty, "nových súkromných inzerátov", "inzeraty") + cislo(V.web_kontakty, "kontaktov z webu", "klienti") +
+        cislo(V.odhady, "žiadostí o odhad", "odhady") + cislo(V.nove_ponuky, "nových ponúk", "nehnutelnosti") + cislo(V.obhliadky, "obhliadok", "kalendar") + "</div>" +
+      ((V.makleri || []).length ? '<table class="rano-tab"><thead><tr><th>Maklér</th><th>Hovory</th><th>Prevzaté</th></tr></thead><tbody>' + V.makleri.map(function (m) {
+        return "<tr><td>" + avatar(m.id, 20) + " " + esc(m.meno || "") + "</td><td>" + m.hovory + "</td><td>" + m.prevzate + "</td></tr>"; }).join("") + "</tbody></table>" :
+        '<p class="meta">Včera nikto nevolal ani neprevzal inzerát.</p>') +
+      "<h4>Dnes</h4>" +
+      '<div class="rano-mriezka">' + cislo(D.obhliadky, "obhliadok", "kalendar") + cislo(D.udalosti, "stretnutí a udalostí", "kalendar") + cislo(D.po_termine, "pripomienok po termíne", "zvoncek") +
+        cislo(D.zmluvy, "zmlúv končí do 7 dní", "nehnutelnosti") + cislo(D.odhady_caka, "odhadov čaká na odpoveď", "odhady") + "</div>" +
+      ((D.po_termine_makleri || []).length ? '<p class="meta">Po termíne: ' + D.po_termine_makleri.map(function (m) { return esc(m.meno || "") + " " + m.n; }).join(", ") + "</p>" : "") +
+      '<p class="meta">Ranný prehľad o 7:30 vypneš v Môj profil.</p>';
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-rano]"); if (!b) return;
+    e.preventDefault(); otvorRannyPrehlad();
+  });
+
   function napojTyzden() {
     var x = $("#tyzden-zap"); if (!x) return;
     x.onchange = async function () {
@@ -1337,6 +1401,7 @@
   function otvorOdkaz(h, ajSekciu) {
     if (!S.me) return false;
     h = h || "";
+    if (h === "#rano") { history.replaceState({ tab: S.tab }, "", "#" + S.tab); if (admin()) otvorRannyPrehlad(); return true; }
     if (h === "#zvoncek") {
       zavriMenu(); history.replaceState({ tab: S.tab }, "", "#" + S.tab);
       S.zvonOpen = true; S.pripForm = null; vykresliZvoncek(); window.scrollTo(0, 0); return true;
@@ -2120,7 +2185,7 @@
       '<div class="form-actions"><button class="btn primary" type="submit">Uložiť nové heslo</button></div></form>' +
       '<form class="box" id="f-tel"><h3>📞 Môj telefón</h3><p class="meta">Zobrazí sa klientom na stránke ponuky, na letáku a v reporte pre majiteľa.</p>' +
       '<div class="form-grid"><label class="field"><span>Telefón</span><input id="moj-tel" type="tel" inputmode="tel" maxlength="30" value="' + esc(S.me.telefon || "") + '" placeholder="napr. 0905 123 456"></label></div>' +
-      '<div class="form-actions"><button class="btn primary" type="submit">Uložiť telefón</button></div></form>' + boxUpozornenia() + boxTyzden() + boxObce() + formSms() + boxPlocha() +
+      '<div class="form-actions"><button class="btn primary" type="submit">Uložiť telefón</button></div></form>' + boxUpozornenia() + boxTyzden() + boxRano() + boxObce() + formSms() + boxPlocha() +
       '<div class="box spr-znova"><img src="typek-hlava.png" alt="" width="48" height="48"><div><h3>🧭 Sprievodca aplikáciou</h3><p class="meta">Realitný týpek vás znova prevedie hlavnými časťami aplikácie.</p></div>' +
         '<button class="btn" type="button" id="spr-znova">Spustiť sprievodcu</button></div>' +
       '<div class="prof-zavriet"><button class="btn ghost" type="button" id="pw-x">Zavrieť profil</button></div>';
@@ -2133,7 +2198,7 @@
     napojFormSms();
     napojObce();
     napojUpozornenia();
-    napojTyzden();
+    napojTyzden(); napojRano();
     if ($("#plocha-btn")) $("#plocha-btn").onclick = async function () {
       instalacia.prompt(); await instalacia.userChoice.catch(function () {}); instalacia = null; vykresliHeslo();
     };
@@ -4318,7 +4383,7 @@
       }).join("") + "</div>" : "") +
       (odkaz ? '<div class="odkaz-vsetci"><span class="odkaz-ikona" aria-hidden="true">📣</span><div class="odkaz-telo"><b>' + esc(odkaz.text) + "</b>" +
         (odkaz.autor && S.mById[odkaz.autor] ? "<small>" + esc(S.mById[odkaz.autor].meno) + "</small>" : "") + reakcieBar("odkaz:" + hashTextu(odkaz.text)) + "</div></div>" : "") +
-      kalendarDomovHtml() + mojDen +
+      ranoKartaHtml() + kalendarDomovHtml() + mojDen +
       '<div class="dlazdice">' + dlazdice.map(function (d) {
         var upozorni = (d[0] === "chat" && neprec) || (d[0] === "zvon" && pripNove) || (d[0] === "odhady" && odhadyNove) || (d[0] === "poznamky" && pozPo);
         return '<button type="button" class="dlazdica' + (upozorni ? " upozorni" : "") + '" data-domov="' + d[0] + '">' +

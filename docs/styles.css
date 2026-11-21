@@ -3097,3 +3097,22 @@ html.bez-posuvu #toast { z-index: 210 }
   .md-hlava > b { font-size: 15px }
 }
 .md-zoz a.btn { text-decoration: none }
+
+/* ---------- ranný prehľad kancelárie */
+.rano-karta { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 1px solid var(--gold-strong); background: var(--gold-soft); color: var(--ink);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; cursor: pointer; font: inherit }
+.rano-karta b { display: block; font-size: 15px }
+.rano-karta small { color: var(--muted) }
+.rano-karta > span:nth-child(2) { flex: 1 }
+.rano-ik { font-size: 26px }
+.rano-telo { width: min(620px, 100%) }
+.rano-telo h4 { margin: 6px 0 0 }
+.rano-mriezka { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px }
+.rano-c { display: grid; gap: 2px; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px; cursor: pointer; font: inherit; color: var(--ink) }
+.rano-c b { font-size: 24px; color: var(--gold-strong) }
+.rano-c small { color: var(--muted); font-size: 12px }
+.rano-c.nula b { color: var(--muted) }
+.rano-c:hover { border-color: var(--gold-strong) }
+.rano-tab { width: 100%; border-collapse: collapse; font-size: 14px }
+.rano-tab th, .rano-tab td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line) }
+.rano-tab th:not(:first-child), .rano-tab td:not(:first-child) { text-align: right; width: 80px }
