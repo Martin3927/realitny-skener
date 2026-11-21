@@ -202,7 +202,7 @@ tr:last-child td { border-bottom: 0 }
 .sch-cards { display: none }
 .sch-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 6px }
 .sch-card .top { display: flex; justify-content: space-between; gap: 10px; font-weight: 700 }
-.box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 12px; margin-bottom: 12px }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 12px }
 .box h3 { margin: 0; font-family: var(--display); font-size: 16px }
 /* ---------- prepínač zapnuté / vypnuté – rovnaký v celom Týpkovi (aplikácia, Správa zákazníkov, editory webu, leták) */
 :root { --sw-on: #2e7d5b }
@@ -975,12 +975,15 @@ a.brand:hover img { filter: drop-shadow(0 0 8px rgb(var(--accent-rgb) / .55)); t
 .pd-par { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 8px 0; font-size: 14px }
 .pd-par dt { color: var(--muted) } .pd-par dd { margin: 0; font-weight: 600 }
 .pd-intro { font-size: 16px; font-weight: 600; margin: 16px 0 6px }
-.pd-popis { white-space: pre-line; line-height: 1.6 }
+.pd-popis { white-space: pre-line; line-height: 1.6; overflow-wrap: anywhere }
 .pd-odkazy { display: flex; gap: 8px; margin: 12px 0 }
 .pd-interne { background: var(--gold-soft); border-radius: 14px; padding: 12px 16px; margin: 16px 0 }
 .pd-interne h4 { margin: 0 0 6px }
 .zle-text { color: var(--bad) }
-@media (max-width: 860px) { .pd-grid { grid-template-columns: 1fr } }
+/* minmax(0, 1fr): pás náhľadov fotiek (a dlhé slová) nesmú roztiahnuť stránku na mobile – inak ju telefón celú zmenší */
+@media (max-width: 860px) { .pd-grid { grid-template-columns: minmax(0, 1fr) } }
+/* nástroje ponuky na mobile menšie, aby fotka nebola až pod šiestimi riadkami tlačidiel */
+@media (max-width: 560px) { .pd-nastroje { gap: 6px } .pd-nastroje .btn { min-height: 34px; padding: 6px 10px; font-size: 13px } .pd-staty { gap: 4px 14px; font-size: 12.5px } }
 .pf-mapa { position: relative }
 .mapa-tip { position: absolute; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(15,17,20,.45); color: #fff; font-weight: 600; font-size: 15px; text-align: center; padding: 16px;
   opacity: 0; pointer-events: none; transition: opacity .2s ease }
