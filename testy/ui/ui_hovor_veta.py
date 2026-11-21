@@ -13,7 +13,7 @@ def ai(route):
         "pripomienka": {"datum": DEN, "cas": "14:00", "text": "Zavolať znova predajcovi"}, "telefon": None}))
 with sync_playwright() as p:
     b=p.chromium.launch()
-    pg=b.new_context(viewport={"width":1300,"height":900}).new_page(); pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("dialog", lambda d: d.accept())
+    pg=b.new_context(viewport={"width":1300,"height":900}, locale="sk-SK", timezone_id="Europe/Bratislava").new_page(); pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("dialog", lambda d: d.accept())
     pg.route("**/functions/v1/ai-skener", ai)
     pg.goto(URL); pg.wait_for_selector("#l-email"); pg.fill("#l-email","admin@test.sk"); pg.fill("#l-heslo","Test12345"); pg.click("#f-login button[type=submit]")
     pg.wait_for_selector("#obsah", timeout=20000); pg.wait_for_timeout(1500)
@@ -36,7 +36,7 @@ with sync_playwright() as p:
     check("pripomienka nastavená (%s)" % pr, pr.startswith(DEN + " 14:00") and "Zavolať znova" in pr)
     # bez práva na AI pole nie je
     sql("update makleri set pristup = array_remove(pristup, 'asistent') where email = 'jana@test.sk'")
-    pj=b.new_context(viewport={"width":390,"height":844}).new_page(); pj.on("pageerror", lambda e: errs.append(str(e)))
+    pj=b.new_context(viewport={"width":390,"height":844}, locale="sk-SK", timezone_id="Europe/Bratislava").new_page(); pj.on("pageerror", lambda e: errs.append(str(e)))
     pj.goto(URL); pj.wait_for_selector("#l-email"); pj.fill("#l-email","jana@test.sk"); pj.fill("#l-heslo","Test12345"); pj.click("#f-login button[type=submit]")
     pj.wait_for_selector("#obsah", timeout=20000); pj.wait_for_timeout(1500)
     INZ2=sql("select z.id from inzeraty z where z.predajca_typ <> 'rk' and z.aktivny and not exists (select 1 from prevzatia p where p.inzerat_id = z.id) order by z.prvy_krat desc limit 1")
