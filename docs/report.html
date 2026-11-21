@@ -30,6 +30,7 @@
 .r-cena { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 15px }
 .r-pozn { font-size: 13px; color: var(--muted) }
 @media (max-width: 640px) { .r-staty { grid-template-columns: repeat(2, minmax(0, 1fr)) } .r-hl img.r-f { width: 96px } .r-obh li { grid-template-columns: minmax(0, 1fr); gap: 2px } }
+.r-hod { color: #e0a51a; letter-spacing: 1px; font-weight: 700 } .r-hod i { color: #d8d2c4; font-style: normal }
 </style>
 </head>
 <body data-kanc-caka>
@@ -77,7 +78,9 @@
       }).join("") + "</ul></section>" : "") +
       (Z.obhliadky ? '<section class="v-box"><h2>' + (Z.spatna_vazba ? "Obhliadky a spätná väzba" : "Obhliadky") + "</h2>" + (minule.length ? '<ul class="r-obh">' + minule.map(function (o) {
         return '<li><span class="r-d">' + esc(T.datum(o.cas)) + "</span><span>" + (o.vysledok && VYS[o.vysledok] ? '<span class="r-vys ' + esc(o.vysledok) + '">' + VYS[o.vysledok] + "</span><br>" : "") +
-          (o.spatna_vazba ? esc(o.spatna_vazba) : Z.spatna_vazba ? '<span class="r-pozn">Bez spätnej väzby.</span>' : "Obhliadka so záujemcom" + (o.klient ? " " + esc(o.klient) : "") + '<br><span class="r-pozn">Dojmy z obhliadky vám povie ' + (m.pohlavie === "zena" ? "vaša maklérka" : "váš maklér") + ".</span>") + "</span></li>";
+          (o.hodnotenie ? '<span class="r-hod" title="Hodnotenie záujemcu">' + "★★★★★".slice(0, o.hodnotenie.hviezdy) + '<i>' + "★★★★★".slice(o.hodnotenie.hviezdy) + "</i></span> hodnotenie záujemcu" +
+            (o.hodnotenie.pacilo ? "<br>👍 " + esc(o.hodnotenie.pacilo) : "") + (o.hodnotenie.nepacilo ? "<br>👎 " + esc(o.hodnotenie.nepacilo) : "") + (o.spatna_vazba ? "<br>" : "") : "") +
+          (o.spatna_vazba ? esc(o.spatna_vazba) : o.hodnotenie ? "" : Z.spatna_vazba ? '<span class="r-pozn">Bez spätnej väzby.</span>' : "Obhliadka so záujemcom" + (o.klient ? " " + esc(o.klient) : "") + '<br><span class="r-pozn">Dojmy z obhliadky vám povie ' + (m.pohlavie === "zena" ? "vaša maklérka" : "váš maklér") + ".</span>") + "</span></li>";
       }).join("") + "</ul>" : '<p class="r-pozn">Zatiaľ neprebehla žiadna obhliadka. Ponuku aktívne ponúkame klientom a na portáloch.</p>') + "</section>" : "") +
       (hc.length > 1 ? '<section class="v-box"><h2>Vývoj ceny</h2><p class="r-cena">' + hc.map(function (x) { return esc(T.datum(x[0])) + " – <b>" + esc(T.eur(x[1])) + "</b>"; }).join(" → ") + "</p></section>" : "") +
       '<section class="v-box v-mk"><div class="v-mk-hl">' + T.avatar(m, 58) + "<div><b>" + esc(m.meno_cele || m.meno || T.kanc().nazov) + "</b><small>" + (m.pohlavie === "zena" ? "Vaša maklérka" : "Váš maklér") + ' · <span data-kanc="nazov">' + esc(T.kanc().nazov) + "</span></small></div></div>" +

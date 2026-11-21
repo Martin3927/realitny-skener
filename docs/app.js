@@ -6249,8 +6249,10 @@
       vsetkyRiadky("zobrazenia_ponuk", "*", "nehnutelnost_id").catch(function () { return []; }),
       nacitajDopyty().catch(function () {}),
       rpc("portal_statistika").catch(function () { return null; }),
+      vsetkyRiadky("obhliadky_hodnotenia", "*", "id").catch(function () { return []; }),
     ]);
     S.obhliadky = w[0];
+    var oh = {}; (w[4] || []).forEach(function (x) { oh[x.obhliadka_id] = x; }); S.obhHod = oh;
     S.portalStat = (w[3] && w[3].ponuky) || {};
     var z = {}, hranica = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
     w[1].forEach(function (r) { var o = z[r.nehnutelnost_id] = z[r.nehnutelnost_id] || { spolu: 0, d7: 0 }; o.spolu += r.pocet; if (r.den > hranica) o.d7 += r.pocet; });
@@ -6560,6 +6562,50 @@
   // ---------- obhliadky v detaile ponuky
   var VYS_OBH = [["naplanovana", "Naplánovaná"], ["zaujem", "Záujem"], ["zvazuje", "Zvažuje"], ["nezaujem", "Bez záujmu"], ["ponuka", "Dal ponuku"], ["nedostavil", "Nedostavil sa"]];
   var VYS_TRIEDA = { zaujem: "won", ponuka: "won", nezaujem: "lost", nedostavil: "lost", zvazuje: "maybe", naplanovana: "na" };
+  // ---------- hodnotenie obhliadky od kupujúceho (odkaz → hodnotenie.html; do reportu majiteľa až po schválení administrátorom)
+  function obhHodnotenieUrl(tok) { return new URL("hodnotenie.html?t=" + tok, location.href).href; }
+  function obhHodnotenieSprava(o, p, url) {
+    return "Dobrý deň" + (o.klient_meno ? " " + String(o.klient_meno).split(" ")[0] : "") + ", ďakujem, že ste prišli na obhliadku – " + nazovPonuky(p) + ". " +
+      "Ako sa Vám páčila? Budem vďačn" + (rodMaklera(S.me) === "zena" ? "á" : "ý") + " za krátke hodnotenie, zaberie pol minúty a je anonymné:\n" + url + "\n\n" + podpis();
+  }
+  function obhHodnotenieHtml(o, p, smiem) {
+    var h = (S.obhHod || {})[o.id], buduca = new Date(o.cas).getTime() > Date.now() + 7200e3;
+    if (buduca || (!h && !smiem)) return "";
+    if (h && h.vyplnene) {
+      var stav = h.schvalene ? '<span class="chip won">✓ v reporte majiteľa</span>' : h.zamietnute ? '<span class="chip">nezobrazuje sa majiteľovi</span>' : '<span class="chip maybe">čaká na schválenie administrátorom</span>';
+      return '<div class="obh-hod"><div><b>' + "★★★★★".slice(0, h.hviezdy) + '<span class="obh-hod-sive">' + "★★★★★".slice(h.hviezdy) + "</span></b> od kupujúceho " + stav + "</div>" +
+        (h.pacilo ? "<div>👍 " + esc(h.pacilo) + "</div>" : "") + (h.nepacilo ? "<div>👎 " + esc(h.nepacilo) + "</div>" : "") +
+        (admin() ? '<div class="obh-hod-akcie">' + (h.schvalene ? "" : '<button type="button" class="btn primary" data-obh-hod="schvalit" data-id="' + h.id + '">✓ Schváliť do reportu majiteľa</button>') +
+          (h.zamietnute ? "" : '<button type="button" class="btn ghost" data-obh-hod="zamietnut" data-id="' + h.id + '">' + (h.schvalene ? "Stiahnuť z reportu" : "Nezobrazovať majiteľovi") + "</button>") + "</div>" : "") + "</div>";
+    }
+    if (!smiem) return "";
+    if (!h) return '<button type="button" class="btn-link obh-hod-ziadost" data-obh-hod="odkaz" data-id="' + o.id + '">⭐ Poprosiť kupujúceho o hodnotenie</button>';
+    var url = obhHodnotenieUrl(h.token), sprava = obhHodnotenieSprava(o, p, url);
+    return '<div class="obh-hod"><div class="meta">⭐ Odkaz na hodnotenie je pripravený – kupujúci ho zatiaľ nevyplnil.</div><div class="pd-zdiel-btns">' +
+      (o.klient_telefon ? '<a class="btn wa" href="' + esc(odkazSpravy("wa", o.klient_telefon, sprava)) + '" target="_blank" rel="noopener">WhatsApp</a><a class="btn" href="' + esc(odkazSpravy("sms", o.klient_telefon, sprava)) + '">💬 SMS</a>' : "") +
+      '<button type="button" class="btn ghost" data-obh-hod="kopiruj" data-id="' + o.id + '">Kopírovať správu</button></div></div>';
+  }
+  document.addEventListener("click", async function (e) {
+    var b = e.target.closest && e.target.closest("[data-obh-hod]"); if (!b) return;
+    e.preventDefault();
+    var a = b.dataset.obhHod, id = Number(b.dataset.id);
+    try {
+      if (a === "odkaz") {
+        b.disabled = true;
+        var tok = await rpc("hodnotenie_obhliadky_odkaz", { p_obhliadka: id });
+        S.obhHod = S.obhHod || {}; S.obhHod[id] = { obhliadka_id: id, token: tok };
+        vykresliDetailPonuky(); toast("⭐ Odkaz je pripravený – pošli ho kupujúcemu cez WhatsApp alebo SMS.");
+      } else if (a === "kopiruj") {
+        var o = (S.obhliadky || []).find(function (x) { return x.id === id; }), p = o && (S.ponuky || []).find(function (x) { return x.id === o.nehnutelnost_id; });
+        if (o && p && S.obhHod[id]) kopiruj(obhHodnotenieSprava(o, p, obhHodnotenieUrl(S.obhHod[id].token)), "Správa s odkazom na hodnotenie je skopírovaná.");
+      } else if (a === "schvalit" || a === "zamietnut") {
+        b.disabled = true;
+        await rpc("hodnotenie_obhliadky_schvalit", { p_id: id, p_schvalit: a === "schvalit" });
+        var r = await vsetkyRiadky("obhliadky_hodnotenia", "*", "id"); var oh = {}; r.forEach(function (x) { oh[x.obhliadka_id] = x; }); S.obhHod = oh;
+        vykresliDetailPonuky(); toast(a === "schvalit" ? "✓ Hodnotenie uvidí majiteľ v reporte." : "Hodnotenie sa majiteľovi nezobrazí.");
+      }
+    } catch (err) { b.disabled = false; toast(chybaText(err), true); }
+  });
   function sekciaObhliadky(p, mozem) {
     var O = (S.obhliadky || []).filter(function (o) { return o.nehnutelnost_id === p.id && !o.zrusena; }).sort(function (a, b) { return String(b.cas).localeCompare(String(a.cas)); });
     var f = S.obhForm && S.obhForm.nehnutelnost_id === p.id ? S.obhForm : null;
@@ -6589,7 +6635,8 @@
         '<div class="obh-telo">' + (o.klient_meno || o.klient_telefon ? "<b>" + esc(o.klient_meno || "Klient") + "</b>" + (o.klient_telefon ? ' · <a class="tel" href="tel:' + esc(telCislo(o.klient_telefon)) + '">' + esc(o.klient_telefon) + "</a>" : "") : '<span class="meta">Klient neuvedený</span>') +
         (o.makler_id && o.makler_id !== p.makler_id ? ' <span class="meta">· ' + avatar(o.makler_id, 18) + " " + esc(meno(o.makler_id)) + "</span>" : "") +
         (o.ponuknuta_cena ? '<div>Ponúknutá cena: <b>' + eur(o.ponuknuta_cena) + "</b></div>" : "") +
-        (o.spatna_vazba ? '<div class="obh-vazba">💬 ' + esc(o.spatna_vazba) + "</div>" : "") + (o.poznamka ? '<div class="meta">🔒 ' + esc(o.poznamka) + "</div>" : "") + "</div>" +
+        (o.spatna_vazba ? '<div class="obh-vazba">💬 ' + esc(o.spatna_vazba) + "</div>" : "") + (o.poznamka ? '<div class="meta">🔒 ' + esc(o.poznamka) + "</div>" : "") +
+        obhHodnotenieHtml(o, p, smiem) + "</div>" +
         '<div class="obh-akcie">' + todoTlacidlo({ t: "obhliadka", id: String(o.id), p: String(p.id), n: todoKratko("Obhliadka " + datum(o.cas, true) + (o.klient_meno ? " – " + o.klient_meno : "") + " · " + todoNazovPonuky(p), 150) }, "✅ ToDo") +
           (smiem ? '<button class="btn ghost" type="button" data-obh="upravit" data-id="' + o.id + '">Upraviť</button><button class="btn ghost danger" type="button" data-obh="zrusit" data-id="' + o.id + '">Zrušiť</button>' : "") + "</div></div>";
     }).join("");

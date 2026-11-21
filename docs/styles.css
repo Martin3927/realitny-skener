@@ -3131,3 +3131,11 @@ html.bez-posuvu #toast { z-index: 210 }
 .bz-zoz a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .bz-zoz a b { white-space: nowrap }
 .bz-stitok { background: var(--bad-soft); color: var(--bad) }
+
+/* ---------- hodnotenie obhliadky od kupujúceho */
+.obh-hod { display: grid; gap: 4px; margin-top: 6px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: 13px }
+.obh-hod b { color: #e0a51a; letter-spacing: 1px }
+.obh-hod-sive { color: var(--line) }
+.obh-hod-akcie { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px }
+.obh-hod-akcie .btn, .obh-hod .pd-zdiel-btns .btn { padding: 5px 10px; min-height: 0; font-size: 13px }
+.obh-hod-ziadost { margin-top: 6px; font-size: 13px }
