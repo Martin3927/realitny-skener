@@ -12,6 +12,7 @@ import io
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from PIL import Image
@@ -54,9 +55,12 @@ def dhash(obsah):
     return h - (1 << 64) if h >= (1 << 63) else h   # do stĺpca bigint (so znamienkom)
 
 
+STAT = {"portal": 0, "ulozisko": 0, "nic": 0}
+
+
 def stiahni(url):
     try:
-        r = SESSION.get(url, timeout=30)
+        r = SESSION.get(url, timeout=20)
         if r.status_code == 200 and len(r.content) > 1000:
             return r.content
     except Exception:  # noqa – jedna zlá fotka nevadí
@@ -69,9 +73,14 @@ def odtlacky(fotky, portal):
     out = []
     for i in range(min(4, max(len(fotky or []), len(portal or [])))):
         obsah = stiahni(portal[i]) if portal and i < len(portal) else None
-        if obsah is None and fotky and i < len(fotky):
+        if obsah is not None:
+            STAT["portal"] += 1
+        elif fotky and i < len(fotky):
             obsah = stiahni(f"{DB_URL}/storage/v1/object/public/archiv/{fotky[i]}")
+            if obsah is not None:
+                STAT["ulozisko"] += 1
         if obsah is None:
+            STAT["nic"] += 1
             continue
         try:
             out.append(str(dhash(obsah)))
@@ -90,10 +99,13 @@ def main():
         davka = rpc("skener_fotky_na_odtlacky", p_kluc=KLUC, p_pocet=100) or []
         if not davka:
             break
-        vysledok = [{"id": x["id"], "h": odtlacky(x.get("fotky"), x.get("portal"))} for x in davka]
+        # 6 naraz – fotky sú z rôznych portálov, nikoho to nezahltí
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            hashe = list(ex.map(lambda x: odtlacky(x.get("fotky"), x.get("portal")), davka))
+        vysledok = [{"id": x["id"], "h": h} for x, h in zip(davka, hashe)]
         rpc("skener_ulozit_odtlacky", p_kluc=KLUC, p=vysledok)
         spolu += len(vysledok)
-        log(f"Odtlačky: {len(vysledok)} inzerátov (spolu {spolu})")
+        log(f"Odtlačky: {len(vysledok)} inzerátov (spolu {spolu}) · fotky z portálu {STAT['portal']}, z nášho úložiska {STAT['ulozisko']}, nedostupné {STAT['nic']}")
     # raz týždenne (nedeľa v noci) sa prepočítajú všetky aktívne – medzitým mohli pribudnúť odtlačky starších inzerátov
     t = time.gmtime()
     n = rpc("skener_prepocitaj_predtym", p_kluc=KLUC, p_vsetky="--vsetky" in sys.argv or (t.tm_wday == 6 and t.tm_hour == 0) or spolu > 300)
