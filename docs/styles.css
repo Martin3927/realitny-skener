@@ -3250,7 +3250,9 @@ html.bez-posuvu #toast { z-index: 210 }
     text-align: center; background: var(--gold-strong); color: #1e2a35 }
   .spodna .badge[hidden], .spodna .tab-n[hidden] { display: none }
   /* pri písaní (otvorená klávesnica) lišta uhne, aby nezaberala miesto nad klávesnicou */
-  body:has(input:not([type=checkbox]):not([type=radio]):not([type=range]):focus, textarea:focus, select:focus) .spodna { display: none }
+  body:has(input:not([type=checkbox]):not([type=radio]):not([type=range]):focus, textarea:focus, select:focus) .spodna { visibility: hidden; transform: translateY(110%); transition: none }
+  /* späť sa vráti až o chvíľu – ťuknutie na tlačidlo pri otvorenej klávesnici tak nezachytí lišta, ktorá by pod prst práve vyskočila */
+  .spodna { transition: visibility 0s .4s, transform .2s .4s }
   body.menu-otvorene .spodna { display: none }
   /* čo býva prilepené dole, sadne si nad lištu */
   #toast, #pruh-stav { bottom: calc(18px + var(--spodna)) }

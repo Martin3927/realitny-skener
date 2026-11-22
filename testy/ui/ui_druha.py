@@ -30,6 +30,10 @@ with sync_playwright() as p:
     check("stav karty Volané: Nedvíha", "Nedvíha" in pg.locator('.card[data-id="bazos:b2"] .status').inner_text())
     k=pg.locator('.card[data-id="bazos:b2"]')
     check("po hovore: tlačidlo Poslať SMS", k.locator('.sms-btn').count()==1 and "Najprv zavolaj" not in k.inner_text())
+    # mobil: ostatné filtre sú zbalené pod tlačidlom Filter
+    check("mobil: filtre zbalené pod tlačidlom Filter", pg.locator("#f-viac").is_visible() and not pg.locator('.seg[data-seg="predajca"]').is_visible())
+    pg.click("#f-viac"); pg.wait_for_timeout(200)
+    check("mobil: po ťuknutí na Filter sú filtre vidno", pg.locator('.seg[data-seg="predajca"]').is_visible() and pg.locator(".spodna").is_visible())
     # AI realitka
     pg.locator('.seg[data-seg="predajca"] button[data-v="rk"]').click(); pg.wait_for_timeout(400)
     c2=pg.locator('.card[data-id="bazos:c2"]')
