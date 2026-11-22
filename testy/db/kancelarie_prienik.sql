@@ -1,5 +1,6 @@
 -- Databázové testy: oddelenie kancelárií a ochrana účtu hlavného správcu. Spúšťa testy/spusti_testy.sh.
--- Pokusy o prienik zo supabase/test/scenar_kancelarie.sql, tu s assertmi: keď niektorý pokus prejde, test spadne.
+-- Pokusy o prienik z pôvodného ručného scenára (supabase/test/scenar_kancelarie.sql, zmazaný 22. 11. 2026),
+-- tu s assertmi: keď niektorý pokus prejde, test spadne.
 -- Osoby: Martin (admin Alpha, hlavný správca), Jana a Peter (makléri Alpha) sú zo seed.sql;
 --        A2 = druhý admin Alpha (nie hlavný správca), B = admin inej kancelárie.
 \set ON_ERROR_STOP on

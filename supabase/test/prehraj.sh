@@ -6,7 +6,8 @@
 # Spustenie (Postgres 16, port 54329, socket /tmp/pg):
 #   mkdir -p /tmp/pg && initdb -D /tmp/pg/data -U postgres -A trust && pg_ctl -D /tmp/pg/data -o '-p 54329 -k /tmp/pg' -l /tmp/pg/log start
 #   supabase/test/prehraj.sh            # databáza „typek"
-#   psql -h /tmp/pg -p 54329 -U postgres -d typek -f supabase/test/scenar_kancelarie.sql   # dve kancelárie, pokusy o prienik
+#   psql -h /tmp/pg -p 54329 -U postgres -d typek -f supabase/test/scenar_citanie.sql   # ručný scenár (iba vypisuje)
+# Pokusy o prienik medzi kanceláriami sú od 22. 11. 2026 automatický test s assertmi: testy/db/kancelarie_prienik.sql.
 # Prihlásený používateľ v teste: set role authenticated; set request.jwt.claim.sub = '<uuid makléra>';
 TU="$(cd "$(dirname "$0")" && pwd)"
 P="psql -h ${PGHOST:-/tmp/pg} -p ${PGPORT:-54329} -U postgres -q"
