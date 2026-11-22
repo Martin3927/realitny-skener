@@ -135,6 +135,10 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 .tnb-btn svg{transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
 .tnb:hover .tnb-btn svg{transform:translateX(4px)}
 @media (max-width: 760px){.tnb{flex-wrap:wrap;gap:14px;padding:14px;border-radius:24px}.tnb-ic{width:50px;height:50px;border-radius:15px}.tnb-ic::after{border-radius:15px}.tnb-ic svg{width:26px;height:26px}.tnb-tx{flex:1 1 200px;font-size:14.5px}.tnb-hl{gap:6px 8px}.tnb-hl strong{font-size:18px}.tnb-nove{order:0}.tnb-btn{flex:1 1 100%;justify-content:center;min-height:48px}}
+/* mobil: baner Týpkových nehnuteľností ako úzky pás na jeden riadok – úvodný nadpis je hneď na prvej obrazovke */
+@media (max-width: 640px){.tnb{flex-wrap:nowrap;gap:10px;padding:8px 12px 8px 8px;border-radius:18px;box-shadow:0 16px 30px -22px rgba(30,42,53,.8)}.tnb-ic{width:38px;height:38px;border-radius:12px}.tnb-ic::after{border-radius:12px}.tnb-ic svg{width:21px;height:21px}
+.tnb-tx{flex:1 1 0;font-size:0;gap:0}.tnb-hl{flex-wrap:nowrap;gap:8px}.tnb-hl strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tnb-nove{order:0;font-size:11.5px;padding:2px 7px}
+.tnb-btn{flex:none;min-height:38px;width:38px;padding:0;justify-content:center;font-size:0;gap:0}}
 .feat-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
 @media (min-width: 700px){.feat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.feat-w2{grid-column:span 2}}
 @media (min-width: 1020px){.feat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.feat-w3{grid-column:span 2}}
@@ -203,6 +207,17 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 @media (max-width: 640px){.hide-sm{display:none !important}.mwrap{left:12% !important;right:12% !important}}
 .ck{position:fixed;left:16px;bottom:16px;z-index:60;width:min(560px, calc(100% - 32px));max-height:calc(100vh - 32px);overflow-y:auto;box-sizing:border-box;background:#FFFDF8;border-radius:26px;padding:22px;box-shadow:0 1px 0 rgba(30,42,53,.06),0 30px 60px -24px rgba(30,42,53,.55);animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
 .ck a{color:#1E2A35;font-weight:600}
+/* mobil: súhlas s cookies ako nízka lišta dole (nezakryje úvod), po „Nastaviť“ sa rozbalí celý */
+@media (max-width: 640px){
+.ck{left:8px;bottom:8px;width:calc(100% - 16px);border-radius:20px;padding:14px 14px 12px}
+.ck > div:first-child > img{display:none !important}
+.ck #ck-t{font-size:16px !important}
+.ck #ck-d{font-size:13px !important;line-height:1.4 !important;margin-top:4px !important}
+.ck-dlhe{display:none}
+.ck .ck-tl{margin-top:10px !important;gap:8px !important}
+.ck-btn{min-height:44px;padding:0 12px;font-size:14px}
+.ck:has([data-ck="open"]:not([hidden])) .ck-dlhe{display:inline}
+}
 .ck-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border-radius:16px;background:#F7F2E8;cursor:pointer}
 .ck-row strong{display:block;font-size:15px;color:#1E2A35}
 .ck-sub{display:block;margin-top:2px;font-size:13.5px;line-height:1.45;color:#3A4B5A}
@@ -922,7 +937,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 <img src="typek-head.webp?v=202611071830" alt="" width="44" height="44" style="display: block; flex: none; width: 44px; height: 44px">
 <div style="min-width: 0">
 <h2 id="ck-t" style="margin: 0; font-size: 20px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 800">Pár slov o cookies</h2>
-<p id="ck-d" style="margin: 6px 0 0; font-size: 14.5px; line-height: 1.55; color: #3A4B5A">Nevyhnutné súbory cookies potrebujeme, aby web fungoval. Analytické a marketingové použijeme len vtedy, keď s nimi súhlasíš. Výber môžeš kedykoľvek zmeniť v pätičke stránky. Viac v <a href="ochrana-udajov.html">Ochrane osobných údajov</a>.</p>
+<p id="ck-d" style="margin: 6px 0 0; font-size: 14.5px; line-height: 1.55; color: #3A4B5A">Nevyhnutné súbory cookies potrebujeme, aby web fungoval. Analytické a marketingové použijeme len vtedy, keď s nimi súhlasíš. <span class="ck-dlhe">Výber môžeš kedykoľvek zmeniť v pätičke stránky. </span>Viac v <a href="ochrana-udajov.html">Ochrane osobných údajov</a>.</p>
 </div>
 </div>
 <div data-ck="open" style="display: contents" hidden>
@@ -941,7 +956,7 @@ a{color:#4A6074}a:hover{color:#1E2A35}
 </label>
 </div>
 </div>
-<div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px">
+<div class="ck-tl" style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px">
 <button type="button" class="btn btn-acc ck-btn" data-ck-act="all">Prijať všetky</button>
 <button type="button" class="btn btn-ink ck-btn" data-ck-act="none">Len nevyhnutné</button>
 <div data-ck="open" style="display: contents" hidden>

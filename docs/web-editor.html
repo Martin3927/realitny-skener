@@ -9,7 +9,7 @@
 <title>Môj web – Realitný týpek</title>
 <link rel="stylesheet" href="pisma/pisma.css?v=20261105">
 <link rel="stylesheet" href="web-sablony.css?v=202611221700">
-<link rel="stylesheet" href="web-editor.css?v=202611221930">
+<link rel="stylesheet" href="web-editor.css?v=202611222000">
 <link rel="icon" type="image/png" sizes="32x32" href="typek-favicon-32.png?v=202610251300">
 <script>try { var t = localStorage.getItem("alpha-skener-tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 </head>
@@ -122,6 +122,10 @@
     <div id="dash" hidden></div>
   </section>
 </main>
+<nav class="mob-prep" id="mobPrep" aria-label="Čo chceš vidieť" hidden>
+  <button type="button" data-mob="upravy" aria-pressed="true">Úpravy</button>
+  <button type="button" data-mob="ukazka" aria-pressed="false">Ukážka</button>
+</nav>
 <dialog class="dlg" id="predZverejnenim" aria-labelledby="pzNadpis">
   <h2 id="pzNadpis">Skôr než web zverejníš</h2>
   <p class="sub">Zverejniť ho môžeš aj hneď. Tieto veci by ho ale vylepšili:</p>
@@ -134,6 +138,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="web-sablony.js?v=202611221700"></script>
 <script src="odpoved.js?v=202610311900"></script>
-<script src="web-editor.js?v=202611221700"></script>
+<script src="web-editor.js?v=202611222000"></script>
 </body>
 </html>

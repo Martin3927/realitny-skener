@@ -915,3 +915,18 @@ sb.auth.getSession().then(function (r) {
   });
 }).catch(function (e) { stav("Chyba: " + chybaText(e), "chyba"); toast(chybaText(e), true); });
 })();
+
+// Mobil a tablet: namiesto úprav a ukážky pod sebou (veľmi dlhá stránka) prepínač dole – vždy vidno len jedno
+(function () {
+  var n = document.getElementById("mobPrep"), app = document.getElementById("appEd");
+  function nastav(v) {
+    document.body.dataset.mob = v; window.scrollTo(0, 0);
+    n.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mob === v)); });
+  }
+  n.addEventListener("click", function (e) { var b = e.target.closest("[data-mob]"); if (b) nastav(b.dataset.mob); });
+  document.body.dataset.mob = "upravy";
+  new MutationObserver(function () { n.hidden = app.hidden; }).observe(app, { attributes: true, attributeFilter: ["hidden"] });
+  n.hidden = app.hidden;
+  // Štatistiky sú v pravom stĺpci – po ťuknutí ich na mobile rovno ukáž
+  var st = document.getElementById("statBtn"); if (st) st.addEventListener("click", function () { if (window.matchMedia("(max-width: 1039px)").matches) nastav("ukazka"); });
+})();

@@ -317,3 +317,6 @@ dialog.lib::backdrop{background:rgba(30,42,53,.55)}
 
 /* Mobil: písmo polí aspoň 16 px – iPhone inak pri ťuknutí do poľa priblíži celú stránku */
 @media (max-width: 640px) { input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea { font-size: 16px !important } }
+
+/* Mobil: názvy farebných sád sa zalomia, neorežú sa („Alpha zla…“) */
+@media (max-width: 640px) { .set span:last-child { white-space: normal; line-height: 1.2 } }

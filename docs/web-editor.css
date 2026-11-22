@@ -366,3 +366,17 @@ input[type=range]{width:100%;accent-color:var(--c-gold)}
 
 /* Mobil: písmo polí aspoň 16 px – iPhone inak pri ťuknutí do poľa priblíži celú stránku */
 @media (max-width: 640px) { input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea { font-size: 16px !important } }
+
+/* Mobil a tablet (úpravy a ukážka pod sebou): prepínač Úpravy / Ukážka dole, vidno vždy len jedno */
+.mob-prep{display:none}
+@media (max-width:1039px){
+  body[data-mob="upravy"] .app > .frame{display:none}
+  body[data-mob="ukazka"] .app > .panel{display:none}
+  body[data-mob]{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  .mob-prep:not([hidden]){display:grid;grid-template-columns:1fr 1fr;gap:4px;position:fixed;z-index:30;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));
+    width:min(320px,calc(100% - 32px));padding:4px;border-radius:999px;background:#1e2a35;box-shadow:0 14px 30px -12px rgba(0,0,0,.55)}
+  .mob-prep button{min-height:44px;border:0;border-radius:999px;background:transparent;color:#c9d4dd;font:inherit;font-weight:700;font-size:15px;cursor:pointer}
+  .mob-prep button[aria-pressed="true"]{background:#db9522;color:#1e2a35}
+  body:has(dialog[open]) .mob-prep, body:has(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):focus, textarea:focus, [contenteditable]:focus) .mob-prep{display:none}
+}
+@media print{.mob-prep{display:none!important}}
