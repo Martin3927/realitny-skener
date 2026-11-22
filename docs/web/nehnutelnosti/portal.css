@@ -954,3 +954,8 @@ body:not(.v-predat) #predat,body:not(.v-predat) #ceny{display:none}
   html:not(.pohyb-vzdy) .js-pohyb [data-rv]{translate:none;transition:opacity .6s ease!important}
   html:not(.pohyb-vzdy) .detail,html:not(.pohyb-vzdy) .karta.nastup{animation:prelin .5s ease both!important}
 }
+
+/* Mobil: písmo polí aspoň 16 px – iPhone inak pri ťuknutí do poľa priblíži celú stránku */
+@media (max-width: 640px) { input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea { font-size: 16px !important } }
+/* Úzky mobil (do 380 px): nadpis úvodu sa zmestí aj so zvýrazneným slovným spojením */
+@media (max-width: 380px) { .uvod h1 { font-size: 34px } }

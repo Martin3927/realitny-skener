@@ -232,3 +232,6 @@ h1.v-nazov { font-family: var(--display); font-size: clamp(22px, 3.2vw, 30px); l
 .v-side .v-kluc { grid-template-columns: repeat(2, minmax(0, 1fr)) }
 .v-side .v-mapa { height: 240px }
 .v-main .v-mk, .v-main .v-zaujem { max-width: 640px; width: 100% }
+
+/* Mobil: písmo polí aspoň 16 px – iPhone inak pri ťuknutí do poľa priblíži celú stránku */
+@media (max-width: 640px) { input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea { font-size: 16px !important } }

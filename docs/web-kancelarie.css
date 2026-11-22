@@ -314,3 +314,6 @@ dialog.lib::backdrop{background:rgba(30,42,53,.55)}
 .src.new{background:var(--c-gold);color:#1E2A35}
 .prazdny{padding:26px;text-align:center;color:var(--c-slate);background:var(--c-bg);border-radius:12px;font-size:14px}
 .card2 .prazdny{background:var(--c-bg)}
+
+/* Mobil: písmo polí aspoň 16 px – iPhone inak pri ťuknutí do poľa priblíži celú stránku */
+@media (max-width: 640px) { input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea { font-size: 16px !important } }

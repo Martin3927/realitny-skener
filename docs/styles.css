@@ -3205,3 +3205,8 @@ html.bez-posuvu #toast { z-index: 210 }
   .todo-domov-r { flex-wrap: wrap }
   .todo-domov-t { flex-basis: 100% }
 }
+
+/* Mobil: písmo polí aspoň 16 px – iPhone inak pri ťuknutí do poľa priblíži celú stránku */
+@media (max-width: 640px) { input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea { font-size: 16px !important } }
+/* Mobil: tlačidlá v hornej lište (hľadať, zvonček, heslo, profil, téma, odhlásiť) vyššie – ľahšie sa trafia prstom */
+@media (max-width: 640px) { .user button, .user .sz-prepni { min-height: 36px } .user .odhl { min-height: 30px; align-items: center } }

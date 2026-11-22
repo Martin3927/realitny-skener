@@ -363,3 +363,6 @@ input[type=range]{width:100%;accent-color:var(--c-gold)}
 .vzh:hover{box-shadow:inset 0 0 0 1.5px var(--c-gold)}
 .vzh[aria-pressed="true"]{background:var(--c-ink);color:var(--c-paper);box-shadow:none}
 .vzh[aria-pressed="true"] small{color:color-mix(in srgb,var(--c-paper) 75%,transparent)}
+
+/* Mobil: písmo polí aspoň 16 px – iPhone inak pri ťuknutí do poľa priblíži celú stránku */
+@media (max-width: 640px) { input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea { font-size: 16px !important } }

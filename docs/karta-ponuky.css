@@ -134,3 +134,6 @@ button, input, select { font: inherit; color: inherit }
 .kp-farba input { width: 40px; height: 40px; padding: 0; border: 0; border-radius: 10px; background: none; cursor: pointer }
 .kp-farba b { display: block; font-size: 13.5px } .kp-farba small { display: block; font-size: 12px; color: var(--kp-slate) }
 @media (max-width: 420px) { .kp-rezim { grid-template-columns: minmax(0, 1fr) } }
+
+/* Mobil: lišta sa zmestí na šírku obrazovky, náhľad pre počítač sa posúva do strany vo vlastnom rámiku (nie celá stránka) */
+@media (max-width: 640px) { .kp-nahlad { grid-template-columns: minmax(0, 1fr) } .kp-lista { max-width: 100% } .kp-scena { overflow-x: auto; place-items: start } .kp-vyber { flex-basis: 100% } }
