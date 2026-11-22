@@ -205,7 +205,17 @@ function paneVzhlad() {
     grp("Hlavička", seg("head", [["svetla", "Svetlá"], ["tmava", "Tmavá"], ["priehladna", "Na fotke"]]) + '<p class="sub">Na fotke: hlavička je priehľadná cez titulné fotky a pri posúvaní stmavne. Pri šablóne Rozdelená sa použije svetlá.</p>') +
     grp("Tlačidlá", seg("btn", [["pill", "Pilulky"], ["round", "Zaoblené"], ["square", "Hranaté"]])) +
     grp("Zaoblenie rohov <output>" + s.r + " px</output>", '<input type="range" min="0" max="28" step="1" data-k="r" data-num value="' + s.r + '" aria-label="Zaoblenie rohov">') +
-    grp("Animácie", onoff("anim") + '<p class="sub">Pomalé priblíženie fotiek v úvode, nábeh textov a napočítanie čísel.</p>');
+    grp("Grafika", '<div class="lab">Karty ponúk a dlaždice</div>' + seg("gfx.karty", [["tien", "Jemný tieň"], ["linka", "Len linka"], ["vyrazny", "Výrazný tieň"]]) +
+      '<div class="lab">Predel medzi sekciami</div>' + seg("gfx.dv", [["rovny", "Rovný"], ["sikmy", "Šikmý"], ["vlna", "Vlna"]]) +
+      '<div class="lab">Vzor v pozadí sekcií</div>' + seg("gfx.vzor", [["off", "Žiadny"], ["bodky", "Bodky"], ["mriezka", "Mriežka"], ["linky", "Linky"]]) +
+      '<div class="lab">Ozdoba nadpisov</div>' + seg("gfx.nad", [["off", "Žiadna"], ["ciarka", "Čiarka"], ["zvyr", "Zvýraznenie"]]) +
+      '<p class="sub">Predel a vzor sa týkajú podfarbených sekcií (každá druhá). Prekrytie titulných fotiek nastavíš v záložke Úvod.</p>') +
+    grp("Animácie", onoff("anim") + (s.anim === "on" ? '<div class="lab">Nábeh sekcií pri posúvaní</div>' + seg("an.rev", [["off", "Žiadny"], ["jemny", "Jemný"], ["vyrazny", "Postupný"]]) +
+      '<div class="lab">Titulná fotka</div>' + seg("an.hero", [["zoom", "Oddialenie"], ["priblizenie", "Priblíženie"], ["parallax", "Posun"], ["off", "Bez pohybu"]]) +
+      '<div class="lab">Karty pri prejdení myšou</div>' + seg("an.hover", [["zdvih", "Zdvih"], ["zoom", "Priblíženie fotky"], ["ram", "Farebný rám"], ["off", "Nič"]]) +
+      '<div class="lab">Tlačidlá pri prejdení myšou</div>' + seg("an.btn", [["zdvih", "Zdvih"], ["lesk", "Lesk"], ["off", "Nič"]]) +
+      '<div class="lab">Rýchlosť</div>' + seg("an.speed", [["pomale", "Pomalá"], ["normalne", "Bežná"], ["rychle", "Rýchla"]]) : "") +
+      '<p class="sub">Vypnuté animácie zastavia každý pohyb na webe. Návštevníkovi, ktorý má v zariadení nastavené obmedzenie pohybu, sa animácie nespustia nikdy.</p>');
 }
 
 function paneUvod() {
@@ -227,6 +237,7 @@ function paneUvod() {
     grp("Titulné fotky a videá <output>" + sl.length + "</output>", '<p class="note">Fotky v úvode sa striedajú. Každá má vlastný nadpis, text a tlačidlo, napríklad <b>Viac informácií</b>. Namiesto fotky môže byť krátke video.</p><div class="items">' + list + '</div><button type="button" class="addb" data-act="sl-add">+ Pridať titulnú fotku</button>') +
     grp("Malý nápis nad nadpisom", '<div class="fields">' + fld("Nápis", "hero.eb", { ph: "napr. Realitná kancelária pre Spiš" }) + "</div>") +
     grp("Striedanie fotiek", onoff("hero.auto") + '<div class="lab">Každá fotka svieti <output id="intOut">' + s.hero.int + ' s</output></div><input type="range" min="3" max="12" step="1" data-k="hero.int" data-num value="' + s.hero.int + '" aria-label="Ako dlho svieti jedna fotka">') +
+    grp("Prekrytie fotiek", seg("hero.prekr", [["tmave", "Tmavé"], ["zdola", "Zdola"], ["farba", "Vo farbe značky"]]) + '<p class="sub">Zdola: fotka ostane hore jasná a stmavne pod textom. Vo farbe značky: cez fotku prejde doplnková farba.</p>') +
     grp("Stmavenie fotiek <output>" + s.hero.dim + " %</output>", '<input type="range" min="0" max="75" step="1" data-k="hero.dim" data-num value="' + s.hero.dim + '" aria-label="Stmavenie fotiek"><p class="sub">Biely text na fotke je čitateľný od zhruba 35 %.</p>') +
     grp("Zarovnanie textu", seg("hero.align", [["vlavo", "Vľavo"], ["stred", "Na stred"]])) +
     grp("Výška úvodu", seg("hero.hh", [["cela", "Celá obrazovka"], ["vysoka", "Vysoký"], ["stredna", "Nižší"]])) +

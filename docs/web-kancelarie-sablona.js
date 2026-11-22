@@ -157,8 +157,10 @@ var CLANKY_DEF = [
 
 var DEF = {
   v: 1, tpl: "klasicka", set: "alpha", color: "alpha", cc: "#DAB967", b2: "#1E2A35", hcol: "text", font: "moderne", bg: "svetle", head: "svetla", btn: "pill", r: 14, anim: "on",
+  gfx: { karty: "tien", dv: "rovny", vzor: "off", nad: "off" },
+  an: { rev: "jemny", hover: "zdvih", btn: "zdvih", hero: "zoom", speed: "normalne" },
   oznam: { on: "off", text: "Nové ponuky každý týždeň. Nechajte si ich posielať e-mailom.", b: "Strážca ponúk", go: "ponuky", u: "" },
-  hero: { eb: "Realitná kancelária pre Spiš", auto: "on", int: 6, dim: 45, align: "vlavo", hh: "vysoka", search: "on", slides: [
+  hero: { prekr: "tmave", eb: "Realitná kancelária pre Spiš", auto: "on", int: 6, dim: 45, align: "vlavo", hh: "vysoka", search: "on", slides: [
     { media: "foto", img: "dom-novostavba", video: "", t: "Predáme vašu nehnuteľnosť rýchlo a za dobrú cenu.", l: "Realitná kancelária pre Spišskú Novú Ves, Levoču a okolie. Od ocenenia až po odovzdanie kľúčov.", b: "Viac informácií", go: "o-nas", u: "", b2: "Pozrieť ponuky", go2: "ponuky", u2: "" },
     { media: "foto", img: "mesto-namestie", video: "", t: "Potrebujete predať hneď? Nehnuteľnosť od vás odkúpime.", l: "Byty, domy aj pozemky. Peniaze v hotovosti alebo na účet, papiere a kataster vybavíme za vás.", b: "Viac informácií", go: "vykup", u: "", b2: "", go2: "kontakt", u2: "" },
     { media: "foto", img: "luxus-obyvacka", video: "", t: "Koľko má hodnotu vaša nehnuteľnosť?", l: "Pošlite nám pár údajov a pripravíme vám odhad ceny podľa skutočných predajov v okolí. Zadarmo a nezáväzne.", b: "Zistiť hodnotu", go: "odhad", u: "", b2: "", go2: "kontakt", u2: "" }] },
@@ -375,7 +377,7 @@ function menuLink(x, cls) {
 
 /* ================================================================ časti stránky */
 function edBtn(k) { return K.editor ? '<button type="button" class="sec-ed" data-edsec="' + k + '">' + SV(IC.edit, 2.2) + "Upraviť sekciu</button>" : ""; }
-function sh(o, c) { return '<div class="sh' + (c ? " c" : "") + '">' + (o.eb ? '<span class="eb">' + esc(o.eb) + "</span>" : "") + '<h2 class="h2">' + esc(o.t) + "</h2>" + (o.l ? '<p class="lead">' + esc(o.l) + "</p>" : "") + "</div>"; }
+function sh(o, c) { return '<div class="sh' + (c ? " c" : "") + '">' + (o.eb ? '<span class="eb">' + esc(o.eb) + "</span>" : "") + '<h2 class="h2"><span>' + esc(o.t) + "</span></h2>" + (o.l ? '<p class="lead">' + esc(o.l) + "</p>" : "") + "</div>"; }
 function logoHtml() { var k = K.S.k; return k.logo ? '<img src="' + esc(/^(https?:|data:)/.test(k.logo) ? k.logo : BASE + k.logo) + '" alt="' + esc(k.name) + '">' : "<b>" + esc(k.name) + "</b>"; }
 function oznam() {
   var o = K.S.oznam; if (o.on !== "on" || !String(o.text || "").trim() || K.UI.oznamX) return "";
@@ -821,19 +823,27 @@ function render() {
   var fbg = P.dark ? "#0E1318" : (lum(P.b) < 0.06 ? mix(P.b, "#000000", 0.25) : "#151B21");
   var VARS = [["--bg", P.bg], ["--surf", P.surf], ["--fg", P.fg], ["--muted", P.muted], ["--line", P.line], ["--a", P.a], ["--on-a", P.onA], ["--at", P.at], ["--a-soft", P.soft], ["--b", P.b], ["--on-b", P.onB], ["--bt", P.bt], ["--b-soft", P.bsoft], ["--a-on-b", P.aOnB],
     ["--hc", P.hc], ["--err", P.err], ["--fh", Fn.h], ["--fb", Fn.b], ["--fhw", Fn.w], ["--fhls", Fn.ls], ["--r", S.r + "px"], ["--rb", rb], ["--hbg", hbg], ["--hfg", hfg], ["--hacc", head === "svetla" ? P.at : P.a], ["--hh", Math.max(460, hh) + "px"], ["--fbg", fbg],
-    ["--hero-acc", con(P.a, "#10161C") >= 4.5 ? P.a : mix(P.a, "#FFFFFF", 0.5)]];
+    ["--hero-acc", con(P.a, "#10161C") >= 4.5 ? P.a : mix(P.a, "#FFFFFF", 0.5)],
+    ["--an", S.an.speed === "pomale" ? "1.6" : S.an.speed === "rychle" ? "0.6" : "1"], ["--hov", lum(P.b) < 0.18 ? P.b : mix(P.b, "#000000", 0.62)]];
   VARS.forEach(function (x) { st.setProperty(x[0], x[1]); });
   st.colorScheme = P.dark ? "dark" : "light";
   var y = K.scroller === window ? window.scrollY : K.scroller.scrollTop;
   // na podstránke hlavička „na fotke“ prechádza cez tmavý pás s nadpisom
-  root.className = "site t-" + S.tpl + " h-" + head + " al-" + S.hero.align + (S.anim === "on" ? " anim" : "") + (y > 40 ? " scr" : "") + (K.page !== "domov" ? " podstr" : "");
+  // grafika a animácie: všetko sú triedy na koreni webu, vzhľad rieši CSS. Vypnuté „Animácie“ vypnú každý pohyb.
+  var hyb = S.anim === "on", A = S.an, G = S.gfx, malo = false;
+  try { malo = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch (e) { /* nič */ }
+  var rev = hyb && !malo && A.rev !== "off" && "IntersectionObserver" in window ? A.rev : "off";
+  if (K.UI.revMode !== rev + "|" + A.speed) { K.UI.revMode = rev + "|" + A.speed; K.UI.seen = {}; }
+  root.className = "site t-" + S.tpl + " h-" + head + " al-" + S.hero.align + (hyb ? " anim" : "") + (y > 40 ? " scr" : "") + (K.page !== "domov" ? " podstr" : "") +
+    (rev !== "off" ? " rev-" + rev : "") + " hv-" + (hyb ? A.hover : "off") + " bt-" + (hyb ? A.btn : "off") + " hm-" + (hyb ? A.hero : "off") +
+    " kt-" + G.karty + " dv-" + G.dv + " vz-" + G.vzor + " nd-" + G.nad + " ho-" + S.hero.prekr;
   zrusMapy();
   root.innerHTML = header() + "<main>" + stranky() + "</main>" + footer() + cookieBar();
   var host = K.ovlHost || document.body, ov = host.querySelector(":scope > .tk-ovl");
   if (!ov) { ov = document.createElement("div"); ov.className = "tk-ovl"; host.appendChild(ov); }
   ov.innerHTML = ovlHtml();
   VARS.forEach(function (x) { ov.style.setProperty(x[0], x[1]); });
-  watchCount(); sched(); mapy();
+  watchCount(); watchReveal(); sched(); mapy();
   if (K.hooks.poRender) K.hooks.poRender();
 }
 
@@ -885,6 +895,18 @@ function showSlide(i) {
   sched();
 }
 function sched() { clearTimeout(hT); var S = K.S; if (!S || K.page !== "domov" || S.hero.auto !== "on" || S.hero.slides.length < 2 || K.UI.pause || K.UI.hover) return; hT = setTimeout(function () { showSlide(K.UI.slide + 1); }, Math.max(3, S.hero.int) * 1000); }
+/* nábeh sekcií pri posúvaní: sekcia sa ukáže, keď príde do okna. Čo už návštevník videl, sa po prekreslení ukáže hneď. */
+var rio = null;
+function revKey(el) { return K.page + "/" + (K.sub || "") + "#" + el.id; }
+function watchReveal() {
+  if (rio) { rio.disconnect(); rio = null; }
+  var root = K.root; if (!/(^| )rev-/.test(root.className)) return;
+  var seen = K.UI.seen || (K.UI.seen = {});
+  rio = new IntersectionObserver(function (en) {
+    en.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add("in"); seen[revKey(x.target)] = 1; rio.unobserve(x.target); } });
+  }, { root: K.scroller === window ? null : K.scroller, rootMargin: "0px 0px -8% 0px", threshold: 0 });
+  root.querySelectorAll("main .sec[id]").forEach(function (el) { if (seen[revKey(el)]) el.classList.add("in"); else rio.observe(el); });
+}
 var io = null;
 function watchCount() {
   if (K.UI.counted || K.S.anim !== "on") { K.UI.counted = true; return; }
@@ -923,7 +945,11 @@ function go(page, sub, sec, bezHistorie) {
   if (sec) setTimeout(function () { goSec(sec); }, 60);
   else if (K.scroller === window) window.scrollTo(0, 0); else K.scroller.scrollTop = 0;
 }
-function onScroll() { var y = K.scroller === window ? window.scrollY : K.scroller.scrollTop, s = y > 40; if (K.root && K.root.classList.contains("scr") !== s) K.root.classList.toggle("scr", s); }
+var pyT = 0;
+function onScroll() { var y = K.scroller === window ? window.scrollY : K.scroller.scrollTop, s = y > 40; if (K.root && K.root.classList.contains("scr") !== s) K.root.classList.toggle("scr", s);
+  // posun titulnej fotky pri posúvaní (parallax): fotka ide pomalšie než stránka
+  if (K.root && !pyT && K.root.classList.contains("hm-parallax") && y < 1600) pyT = requestAnimationFrame(function () { pyT = 0; var y2 = K.scroller === window ? window.scrollY : K.scroller.scrollTop; K.root.style.setProperty("--py", Math.round(y2 * 0.3) + "px"); });
+}
 
 /* ---------------------------------------------------------------- formuláre */
 function hodnoty(form) { var v = {}; Array.prototype.forEach.call(form.elements, function (e) { if (!e.name) return; v[e.name] = e.type === "checkbox" ? e.checked : e.value; }); return v; }
