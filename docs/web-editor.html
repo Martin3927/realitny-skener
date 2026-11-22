@@ -8,8 +8,8 @@
 <meta name="theme-color" content="#1e2a35">
 <title>Môj web – Realitný týpek</title>
 <link rel="stylesheet" href="pisma/pisma.css?v=20261105">
-<link rel="stylesheet" href="web-sablony.css?v=202611172310">
-<link rel="stylesheet" href="web-editor.css?v=202610281400">
+<link rel="stylesheet" href="web-sablony.css?v=202611221700">
+<link rel="stylesheet" href="web-editor.css?v=202611221700">
 <link rel="icon" type="image/png" sizes="32x32" href="typek-favicon-32.png?v=202610251300">
 <script>try { var t = localStorage.getItem("alpha-skener-tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 </head>
@@ -39,6 +39,7 @@
 
     <div class="pane" data-pane="vzhlad">
       <section class="grp"><h2>Šablóna</h2><div class="tpls" id="tpls"></div><button type="button" class="b b-soft b-sm" id="mix">Zamiešať vzhľad</button></section>
+      <section class="grp"><h2>Hotové vzhľady</h2><div class="vzhlady" id="vzhlady"></div><p class="sub">Jeden klik nastaví písmo, tvary, grafiku aj pohyb. Šablóna a farby ostanú tvoje. Potom si všetko doladíš nižšie.</p></section>
       <section class="grp"><h2>Farebné sady</h2><div class="sets" id="sets"></div><p class="sub">Celý web zladený jedným klikom. Potom si môžeš každú farbu doladiť nižšie.</p></section>
       <section class="grp"><h2>Hlavná farba <output id="colName"></output></h2><div class="sw" id="colors"></div>
         <div id="logoCols"></div>
@@ -57,7 +58,8 @@
       <section class="grp"><h2>Tlačidlá</h2><div class="seg" id="btnShape"></div><div class="seg" id="btnFill"></div></section>
       <section class="grp"><h2>Fotky</h2><div class="seg" id="phStyle"></div><div class="lab" style="margin-top:12px">Bubliny na fotkách</div><div class="seg" id="bubSeg"></div><p class="sub">Popisy ponúk a úvodný text cez fotku. Pri Skle presvitá fotka najviac.</p></section>
       <section class="grp"><h2>Zaoblenie rohov <output id="rOut"></output></h2><input type="range" id="rad" min="0" max="28" step="1" aria-label="Zaoblenie rohov"></section>
-      <section class="grp"><h2>Animácie</h2><div class="seg" id="animSeg"></div><div id="animPozn"></div></section>
+      <section class="grp" id="gGfx"><h2>Grafika</h2><div class="fields" id="fGfx"></div></section>
+      <section class="grp"><h2>Animácie</h2><div class="seg" id="animSeg"></div><div id="animPozn"></div><div class="fields" id="fAn" style="margin-top:12px"></div></section>
     </div>
 
     <div class="pane" data-pane="sekcie" hidden>
@@ -130,8 +132,8 @@
 <script src="config.js?v=202610201100"></script>
 <script src="supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<script src="web-sablony.js?v=202611172310"></script>
+<script src="web-sablony.js?v=202611221700"></script>
 <script src="odpoved.js?v=202610311900"></script>
-<script src="web-editor.js?v=202611172310"></script>
+<script src="web-editor.js?v=202611221700"></script>
 </body>
 </html>

@@ -54,6 +54,10 @@ var DEF = { tpl: "susedska", color: "zlata", cc: "#1D6F8F", b2: "", hcol: "text"
   soc: { fb: "", ig: "", li: "", x: "", tt: "", yt: "" },
   stats: [], addr: "", hours: "", kava: true, online: false, mbar: true,
   hl: { max: 6, prenajom: true },
+  // grafika a pohyb: prázdna hodnota = podľa šablóny
+  gfx: { karty: "", dv: "rovny", vzor: "off", nad: "off", foto: "off", ziara: false, pas: false, pasTx: "" },
+  an: { rev: "jemny", hover: "naklon", btn: "magnet", speed: "normalne" },
+  heroRot: "", heroSipka: false,
   heroBtn: "", heroBtnTx: "", svcX: "", soldBand: false, footFirma: false, team: [],
   why: [{ t: "Férové ceny", d: "Cenu nastavíme podľa skutočných predajov v okolí, nie podľa prianí." }, { t: "Rýchlosť", d: "Ozvem sa vám v ten istý deň a veci nenechávam ležať." },
     { t: "Spoľahlivosť", d: "Čo sľúbim, to dodržím. O každom kroku viete vopred." }, { t: "Diskrétnosť", d: "Vaše údaje a zámery ostanú medzi nami." },
@@ -380,6 +384,70 @@ function facts(cls, bezRokov) {
   return '<div class="facts' + (cls ? " " + cls : "") + (f.length > 2 ? " f4" : "") + " n" + Math.min(4, f.length) + '">' + f.slice(0, 4).join("") + "</div>";
 }
 // pás s číslami hneď pod úvodom (roky, predaje, vlastné čísla)
+// grafické možnosti a pohyb ako triedy na koreni webu
+var GFX_OK = { karty: ["tien", "linka", "vyrazny"], dv: ["sikmy", "vlna", "obluk"], vzor: ["bodky", "mriezka", "linky"], nad: ["ciarka", "grad"], foto: ["farba", "vineta", "zrno"] };
+var AN_OK = { rev: ["zoom", "zboku", "off"], hover: ["zdvih", "ram", "off"], btn: ["lesk", "pulz", "off"], speed: ["pomale", "rychle"] };
+var GFX_PRE = { karty: "gk", dv: "dv", vzor: "vz", nad: "nd", foto: "hf" }, AN_PRE = { rev: "rv", hover: "hv", btn: "bt", speed: "sp" };
+function gfxTriedy() {
+  var g = W.S.gfx || {}, a = W.S.an || {}, c = [];
+  Object.keys(GFX_OK).forEach(function (k) { if (GFX_OK[k].indexOf(g[k]) >= 0) c.push(GFX_PRE[k] + "-" + g[k]); });
+  Object.keys(AN_OK).forEach(function (k) { if (AN_OK[k].indexOf(a[k]) >= 0) c.push(AN_PRE[k] + "-" + a[k]); });
+  if (g.ziara) c.push("zi");
+  return c.join(" ");
+}
+// hotové vzhľady na jeden klik (šablónu a farby nemenia)
+var VZHLADY = [
+  { id: "elegantny", name: "Elegantný", d: "serifové nadpisy, tenké linky, pokojný pohyb", s: { font: "luxusne", r: 4, btn: "square" }, gfx: { karty: "linka", dv: "rovny", vzor: "off", nad: "ciarka", foto: "vineta", ziara: false }, an: { rev: "jemny", hover: "zdvih", btn: "lesk", speed: "pomale" } },
+  { id: "zivy", name: "Živý", d: "vlny, bodky, farebné nadpisy a žiara", s: { font: "moderne", r: 20, btn: "pill" }, gfx: { karty: "tien", dv: "vlna", vzor: "bodky", nad: "grad", foto: "farba", ziara: true }, an: { rev: "zoom", hover: "naklon", btn: "pulz", speed: "normalne" } },
+  { id: "minimal", name: "Minimalistický", d: "čisté plochy, takmer bez ozdôb", s: { font: "jednoduche", r: 6, btn: "round" }, gfx: { karty: "linka", dv: "rovny", vzor: "off", nad: "off", foto: "off", ziara: false }, an: { rev: "jemny", hover: "off", btn: "off", speed: "rychle" } },
+  { id: "odvazny", name: "Odvážny", d: "šikmé predely, mriežka, výrazné tiene", s: { font: "vyrazne", r: 0, btn: "square" }, gfx: { karty: "vyrazny", dv: "sikmy", vzor: "mriezka", nad: "ciarka", foto: "farba", ziara: false }, an: { rev: "zboku", hover: "ram", btn: "lesk", speed: "rychle" } },
+  { id: "hravy", name: "Hravý", d: "oblé tvary, mäkké tiene, jemná žiara", s: { font: "priatelske", r: 26, btn: "pill" }, gfx: { karty: "tien", dv: "obluk", vzor: "bodky", nad: "grad", foto: "off", ziara: true }, an: { rev: "zoom", hover: "naklon", btn: "pulz", speed: "normalne" } }];
+function pouziVzhlad(id) {
+  var v = VZHLADY.find(function (x) { return x.id === id; }), s = W.S; if (!v) return false;
+  Object.keys(v.s).forEach(function (k) { s[k] = v.s[k]; });
+  s.gfx = Object.assign({}, s.gfx, v.gfx); s.an = Object.assign({}, s.an, v.an); s.anim = true;
+  return true;
+}
+function aktVzhlad() {
+  var s = W.S, v = VZHLADY.find(function (x) { return Object.keys(x.s).every(function (k) { return s[k] === x.s[k]; }) && Object.keys(x.gfx).every(function (k) { return s.gfx[k] === x.gfx[k]; }) && Object.keys(x.an).every(function (k) { return s.an[k] === x.an[k]; }); });
+  return v ? v.id : "";
+}
+// bežiaci pás pod úvodom
+function pasHtml() {
+  var s = W.S; if (!s.gfx.pas) return "";
+  var L = String(s.gfx.pasTx || "").split(/[,\n]/).map(function (x) { return x.trim(); }).filter(Boolean);
+  if (!L.length) L = ["Predaj", "Prenájom", "Ocenenie zdarma", s.on.vykup ? "Výkup nehnuteľností" : "Právny servis", "Profesionálne fotky", s.area].filter(Boolean);
+  var rad = L.map(function (t) { return "<span>" + esc(t) + '</span><i aria-hidden="true">✦</i>'; }).join("");
+  return '<div class="pas" role="marquee" aria-label="' + esc(L.join(", ")) + '"><div class="pas-in"><div>' + rad + '</div><div class="dup" aria-hidden="true">' + rad + "</div></div></div>";
+}
+// striedavé slová pod nadpisom v úvode
+function rotHtml() {
+  var L = String(W.S.heroRot || "").split(/[,\n]/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 6);
+  if (!L.length || W.EDIT) return "";
+  var i = (W.tik || 0) % L.length;
+  return '<p class="rotl" aria-label="' + esc(L.join(", ")) + '">' + L.map(function (t, k) { return '<span aria-hidden="true"' + (k === i ? ' class="on"' : "") + ">" + esc(t) + "</span>"; }).join("") + "</p>";
+}
+function sipkaHtml() { return W.S.heroSipka ? '<button type="button" class="hsip" data-dole aria-label="Posunúť nižšie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M6 9l6 6 6-6"/></svg></button>' : ""; }
+// fotky do striedania v úvode: prvé fotky aktívnych ponúk, v ukážke bez ponúk ilustračné
+function fotkyUvodu(kind) {
+  var F = [];
+  (W.CTX.ponuky || []).forEach(function (x) { if (x.foto && x.foto[0] && F.length < 5) F.push(x.foto[0]); });
+  if (F.length < 2 && (W.editor || W.CTX.ukazka)) F = (kind === "mesto" ? ["mesto-namestie", "byt-centrum", "mesto-letecky"] : W.S.tpl === "luxus" ? ["luxus-obyvacka", "dom-novostavba", "dom-obyvacka"] : ["dom-novostavba", "dom-zahrada", "byt-obyvacka"]).map(function (n) { return aiSrc(n); });
+  return F.length >= 2 ? F : null;
+}
+// jeden spoločný takt pre striedavé slová a fotky (pri prekreslení sa pokračuje tam, kde sa skončilo)
+function bezPohybu() { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
+function fxPouzi(root) {
+  var t = W.tik || 0;
+  root.querySelectorAll(".rotl, .hm-sl").forEach(function (b) { var K = b.children, n = K.length; for (var i = 0; i < n; i++) K[i].classList.toggle("on", i === t % n); });
+}
+function fxTakt() {
+  if (W.taktBezi) return; W.taktBezi = true;
+  setInterval(function () {
+    var r = W.root; if (!r || document.hidden || !W.S.anim || (bezPohybu() && !W.vzdyPohyb) || !r.querySelector(".rotl, .hm-sl")) return;
+    W.tik = (W.tik || 0) + 1; fxPouzi(r);
+  }, 3200);
+}
 function cislaPas() { var f = facts("cp"); return f ? '<div class="cisla"><div class="w">' + f + (W.editor && !W.EDIT && f.indexOf("facts-pr") < 0 ? '<button type="button" class="cisla-ed" data-edgo="makler|f-years">Upraviť čísla</button>' : "") + "</div></div>" : ""; }
 // hlavné tlačidlo v úvode podľa výberu makléra
 var HBTN = { ocenenie: ["Zistiť hodnotu zdarma", "ocenenie"], predat: ["Chcem predať", "ocenenie"], ponuky: ["Pozrieť ponuky", "ponuky"], zavolat: ["Zavolajte mi", "callback"], vykup: ["Chcem výkup", "vykup"], ebook: ["Stiahnuť e-book", "stiahnut"], kontakt: ["Napíšte mi", "kontakt"] };
@@ -400,6 +468,8 @@ function ohnisko() { var f = String(W.S.heroFoc || ""); return /^\d{1,3}(\.\d)?%
 function heroMedia(P, kind) {
   var s = W.S, f = ohnisko(), st = f ? ' style="object-position:' + f + ";transform-origin:" + f + '"' : "";
   if (s.heroMedia === "video") return '<div class="hm hm-vid"><video src="' + esc(s.heroVideo || aiVid(kind)) + '"' + (s.heroVideo ? "" : ' poster="' + aiSrc(heroAi(kind)) + '"') + st + ' autoplay muted loop playsinline aria-hidden="true"></video></div>';
+  if (s.heroMedia === "ponuky") { var FU = fotkyUvodu(kind); if (FU) { var ti = (W.tik || 0) % FU.length;
+    return '<div class="hm hm-sl">' + FU.map(function (u, i) { return '<img class="ph' + (i === ti ? " on" : "") + '" src="' + esc(u) + '" alt=""' + (i ? ' loading="lazy"' : "") + st + ">"; }).join("") + "</div>"; } }
   return '<div class="hm' + (s.heroMedia === "pohyb" ? " kb" : "") + '">' + (s.heroImg ? img(s.heroImg, "", false) : aiImg(heroAi(kind), "", false, false)).replace("<img ", "<img" + st + " ") + "</div>";
 }
 function days() { var out = [], d = new Date(); d.setHours(12, 0, 0, 0); while (out.length < 6) { d.setDate(d.getDate() + 1); var w = d.getDay(); if (w === 0 || (w === 6 && !W.S.book.sat)) continue; out.push(new Date(d)); } return out; }
@@ -423,19 +493,19 @@ function heroHladaj() {
     '<button type="button" data-go="' + (s.on.strazca ? "strazca" : "kontakt") + '"' + (kat.length ? "" : ' class="on"') + ">" + (kat.length ? "Hľadám" : "Hľadám nehnuteľnosť") + "</button></div>";
 }
 function hero(P) {
-  var s = W.S, T = heroTx(), h1 = "<h1 " + ed("heroTx." + s.tpl + ".t", 1) + ">" + esc(T.t) + "</h1>", lead = T.l || W.EDIT ? '<p class="lead" ' + ed("heroTx." + s.tpl + ".l") + ">" + esc(T.l) + "</p>" : "";
+  var s = W.S, T = heroTx(), h1 = "<h1 " + ed("heroTx." + s.tpl + ".t", 1) + ">" + esc(T.t) + "</h1>" + rotHtml(), lead = T.l || W.EDIT ? '<p class="lead" ' + ed("heroTx." + s.tpl + ".l") + ">" + esc(T.l) + "</p>" : "";
   var hb = hlavneTl(), hc = hlavnyCiel(), predat = '<button type="button" class="btn' + (hb ? " gh" : "") + '" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Chcem predať</button>', ponuky = '<button type="button" class="btn gh" data-go="ponuky">Pozrieť ponuky</button>';
   var btns = '<div class="btns">' + (hb ? hb + (hc === "ponuky" ? predat : ponuky) : predat + ponuky) + "</div>", hbRow = hb ? '<div class="btns">' + hb + "</div>" : "";
   var first = String(s.name || "").split(" ")[0];
   switch (s.tpl) {
     case "galeria": return '<div class="hero pos-' + pozicia() + '">' + heroMedia(P) + '<div class="box"><div class="who">' + av() + "<div><b>" + esc(s.name) + '</b><div class="muted" style="font-size:14px">' + esc(s.area) + "</div></div></div>" + h1 + lead +
-      heroHladaj() + hbRow + gBadge() + "</div></div>";
-    case "vizitka": return '<div class="w hero">' + av() + '<span class="eb">' + (zena() ? "Realitná maklérka" : "Realitný maklér") + (s.office ? " · " + esc(s.office) : "") + "</span><h1>" + esc(s.name) + "</h1>" + lead +
+      heroHladaj() + hbRow + gBadge() + "</div>" + sipkaHtml() + "</div>";
+    case "vizitka": return '<div class="w hero">' + av() + '<span class="eb">' + (zena() ? "Realitná maklérka" : "Realitný maklér") + (s.office ? " · " + esc(s.office) : "") + "</span><h1>" + esc(s.name) + "</h1>" + rotHtml() + lead +
       '<div class="pills">' + (s.phone ? '<a class="num" href="tel:' + esc(String(s.phone).replace(/[^\d+]/g, "")) + '">' + esc(s.phone) + "</a>" : "") + (s.email ? '<a href="mailto:' + esc(s.email) + '">' + esc(s.email) + "</a>" : "") + (s.wa ? '<a href="https://wa.me/' + waNum(s.wa) + '" target="_blank" rel="noopener">WhatsApp</a>' : "") + "</div>" + hbRow + gBadge() + socRow() + "</div>";
     case "luxus": return '<div class="hero pos-' + pozicia() + '">' + heroMedia(P) + '<div class="scrim"></div><div class="in"><span class="eb">' + esc(s.name) + " · " + esc(s.area) + "</span>" + h1 + lead +
-      '<div class="btns">' + (hb && hc !== "ponuky" ? hb + (hc === "ocenenie" ? '<button type="button" class="btn gh" data-go="ponuky">Pozrieť ponuky</button>' : '<button type="button" class="btn gh" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Ocenenie nehnuteľnosti</button>') : '<button type="button" class="btn" data-go="ponuky">' + (hb ? esc(String(s.heroBtnTx || "").trim() || "Pozrieť ponuky") : "Pozrieť ponuky") + '</button><button type="button" class="btn gh" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Ocenenie nehnuteľnosti</button>') + "</div>" + gBadge() + "</div></div>";
+      '<div class="btns">' + (hb && hc !== "ponuky" ? hb + (hc === "ocenenie" ? '<button type="button" class="btn gh" data-go="ponuky">Pozrieť ponuky</button>' : '<button type="button" class="btn gh" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Ocenenie nehnuteľnosti</button>') : '<button type="button" class="btn" data-go="ponuky">' + (hb ? esc(String(s.heroBtnTx || "").trim() || "Pozrieť ponuky") : "Pozrieť ponuky") + '</button><button type="button" class="btn gh" data-go="' + (s.on.ocenenie ? "ocenenie" : "kontakt") + '">Ocenenie nehnuteľnosti</button>') + "</div>" + gBadge() + "</div>" + sipkaHtml() + "</div>";
     case "rodinna": { var a = avg();
-      return '<div class="w hero"><div><span class="eb">Realitný maklér · ' + esc(s.area) + '</span><h1><span class="hl" ' + ed("heroTx.rodinna.t", 1) + ">" + esc(T.t) + "</span></h1>" + lead + btns + gBadge() + "</div>" +
+      return '<div class="w hero"><div><span class="eb">Realitný maklér · ' + esc(s.area) + '</span><h1><span class="hl" ' + ed("heroTx.rodinna.t", 1) + ">" + esc(T.t) + "</span></h1>" + rotHtml() + lead + btns + gBadge() + "</div>" +
         '<div class="blob"><div class="shape">' + av() + "</div>" + (a ? '<div class="badge2"><b class="num">' + a + " z 5</b><span>priemer hodnotení</span></div>" : "") + "</div></div>"; }
     case "mestska": return '<div class="hero"><div class="blk"><span class="eb">' + esc(s.name) + " · " + esc(s.area) + "</span><div>" + h1 + "</div><div>" + lead + '<div class="btns" style="margin-top:18px">' + (hb || '<button type="button" class="btn" data-go="ponuky">Pozrieť ponuky</button>') + "</div>" + gBadge() + '</div></div><div class="img">' + heroMedia(P, "mesto") + "</div></div>";
     default: return '<div class="w hero"><div><span class="eb">Realitn' + (zena() ? "á maklérka" : "ý maklér") + " · " + esc(s.area) + "</span>" + h1 + lead + btns + gBadge() + "</div>" +
@@ -773,12 +843,12 @@ function render() {
   [["--bg", P.bg], ["--surf", P.surf], ["--fg", P.fg], ["--muted", P.muted], ["--line", P.line], ["--a", P.a], ["--on-a", P.onA], ["--at", P.at], ["--a-soft", P.soft], ["--b", P.b], ["--on-b", P.onB], ["--bt", P.bt], ["--b-soft", P.bsoft],
     ["--hc", P.hc], ["--err", P.err], ["--on-fg", P.onFg], ["--fh", F.h], ["--fb", F.b], ["--fhw", F.w], ["--fhls", F.ls], ["--r", s.r + "px"], ["--rb", rb], ["--bub", bubBg(P)], ["--bub-blur", s.bub === "plne" ? "0px" : s.bub === "sklo" ? "16px" : "10px"], ["--bub-muted", s.bub === "plne" ? P.muted : P.fg], ["--hdim", stmavenie()]].forEach(function (x) { st.setProperty(x[0], x[1]); });
   st.colorScheme = P.dark ? "dark" : "light";
-  root.className = ["site", "t-" + s.tpl, "pg-" + W.PAGE.v, s.anim ? "anim" : "", s.anim && W.INTRO ? "intro" : "", s.btnFill === "outline" ? "bo" : "", s.ph === "frame" ? "pf" : s.ph === "shadow" ? "ps" : "", W.EDIT ? "editing" : ""].filter(Boolean).join(" ");
+  root.className = ["site", "t-" + s.tpl, "pg-" + W.PAGE.v, s.anim ? "anim" : "", s.anim && W.INTRO ? "intro" : "", s.btnFill === "outline" ? "bo" : "", gfxTriedy(), s.ph === "frame" ? "pf" : s.ph === "shadow" ? "ps" : "", W.EDIT ? "editing" : ""].filter(Boolean).join(" ");
   var out = "", vykreslene = [];
   if (W.PAGE.v === "detail") out += detail(W.PAGE.i, P);
   else if (W.PAGE.v === "gdpr") out += gdprPage();
   else {
-    out += hero(P) + cislaPas(); var i = 0;
+    out += hero(P) + pasHtml() + cislaPas(); var i = 0;
     s.order.forEach(function (k) {
       if (!s.on[k] || (!s.custom[k] && !R[k])) return;
       var html = s.custom[k] ? rCustom(k) : R[k](P); if (!html) return;
@@ -975,6 +1045,7 @@ function pohyb(root) {
   // úvodný nadpis po slovách (Rodinná má zvýraznenie, tam ostáva pôvodné vysunutie)
   if (W.INTRO && !W.EDIT && W.S.tpl !== "rodinna") { var h1 = root.querySelector(".hero h1"); if (h1) phSlova(h1); }
   phOznac(root);
+  fxPouzi(root); fxTakt();
   phCisla(root);
   PH.tilt = PH.mag = null;
   phTick(); phApplyMouse();
@@ -1034,6 +1105,7 @@ function napoj(root) {
     if (d.hladam !== undefined) { var hx = (W.HLAD || [])[+d.hladam]; if (hx) { var kam = W.S.on.kontakt ? "kontakt" : W.S.on.ocenenie ? "ocenenie" : "kontakt";
       W.FV.kontakt = Object.assign({}, W.FV.kontakt, { sprava: "Dobrý deň, mám nehnuteľnosť, ktorá by mohla zaujímať vášho klienta (" + hladTitul(hx) + ", " + hladLokalita(hx) + "): " }); W.DONE.kontakt = false;
       if (W.PAGE.v !== "home") W.PAGE = { v: "home" }; render(); requestAnimationFrame(function () { goSec(kam); var ta = W.root.querySelector('[data-form="kontakt"] textarea'); if (ta) { ta.focus({ preventScroll: true }); ta.setSelectionRange(ta.value.length, ta.value.length); } }); } return; }
+    if (d.dole !== undefined) { var hx0 = W.root.querySelector(".hero"), dalsi = hx0 && (hx0.nextElementSibling || hx0.parentElement.nextElementSibling); if (dalsi) dalsi.scrollIntoView({ behavior: bezPohybu() ? "auto" : "smooth", block: "start" }); return; }
     if (d.online !== undefined) { W.FV.kontakt = Object.assign({}, W.FV.kontakt, { sprava: "Dobrý deň, chcel(a) by som sa s vami spojiť cez online hovor. Vyhovuje mi: " }); W.DONE.kontakt = false; render();
       requestAnimationFrame(function () { var ta = W.root.querySelector('[data-form="kontakt"] textarea'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }); return; }
     if (d.book !== undefined) { W.BK.l = +d.book; W.DONE.obhliadka = false; W.PAGE = { v: "home" }; render(); setHash(""); requestAnimationFrame(function () { goSec("obhliadka"); }); return; }
@@ -1094,7 +1166,7 @@ function napoj(root) {
   root.addEventListener("change", function (e) { var t = e.target; if (t.dataset.bl !== undefined) W.BK.l = +t.value; var form = t.closest("[data-form]"); if (form && t.name) (W.FV[form.dataset.form] = W.FV[form.dataset.form] || {})[t.name] = t.type === "checkbox" ? (t.checked ? "áno" : "") : t.value; });
 }
 
-window.TYPEK_WEB = { W: W, trk: trk, bezPohybu: function () { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }, overenie: overenie, overeniePouzite: overeniePouzite, sha256Zaciatok: sha256Zaciatok, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, stmavenie: function () { return stmavenie(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
+window.TYPEK_WEB = { W: W, trk: trk, bezPohybu: bezPohybu, VZHLADY: VZHLADY, pouziVzhlad: pouziVzhlad, aktVzhlad: aktVzhlad, fotkyUvodu: function (k) { return fotkyUvodu(k); }, overenie: overenie, overeniePouzite: overeniePouzite, sha256Zaciatok: sha256Zaciatok, AI: AI, AI_LIB: AI_LIB, AI_VID_LIB: AI_VID_LIB, pozicia: function () { return pozicia(); }, stmavenie: function () { return stmavenie(); }, ohnisko: function () { return ohnisko(); }, AI_BASE: AI_BASE, AI_NOTE: AI_NOTE, aiSrc: aiSrc, heroAi: function (k) { return heroAi(k); }, TPLS: TPLS, HERO_IMG_TPLS: HERO_IMG_TPLS, HERO_DEF: HERO_DEF, COLORS: COLORS, SETS: SETS, FONTS: FONTS, FONTS_URL: FONTS_URL, BGS: BGS, SECS: SECS, SOC: SOC, DEF: DEF, UKAZKA: UKAZKA,
   fotoMaklera: function () { return fotoMaklera(); }, merge: merge, clone: clone, esc: esc, get: get, setDeep: setDeep, secName: secName, heroTx: heroTx, pal: pal, photo: photo, favSvg: favSvg, initials: initials, slugD: slugD, url: url, waNum: waNum, fmt: fmt,
   okHex: okHex, isHex: isHex, mix: mix, h2r: h2r, r2h: r2h, prevod: prevod, ZOZ: ZOZ, render: render, napoj: napoj, toast: toast, SV: SV, otvorDetail: otvorDetail };
 })();

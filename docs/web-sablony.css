@@ -719,6 +719,96 @@
 .site.bo.t-luxus .hero .btn:not(.gh),.site.bo.t-luxus.pg-home .nav .btn{color:#fff;box-shadow:inset 0 0 0 2px #fff;background:rgba(0,0,0,.25)}
 .site.bo.t-mestska .hero .btn:not(.gh){color:var(--on-a);box-shadow:inset 0 0 0 2px var(--on-a)}
 
+/* ===== grafické možnosti a pohyb na výber (Vzhľad → Grafika, Animácie, Hotové vzhľady) ===== */
+/* karty a dlaždice */
+.site.gk-tien :is(.preco>div,.hl-k,.clen,.rev,.svc>div,.loc,.cen-row,.cen-inc){box-shadow:0 14px 34px -22px rgba(0,0,0,.4)}
+.site.gk-tien :is(.card .media,.tile,.lux-row .media){box-shadow:0 18px 36px -24px rgba(0,0,0,.5)}
+.site.gk-linka :is(.preco>div,.hl-k,.clen,.rev,.svc>div,.loc,.cen-row,.cen-inc){background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.site.gk-vyrazny :is(.preco>div,.hl-k,.clen,.rev,.svc>div,.loc,.cen-row,.cen-inc){box-shadow:0 0 0 1px var(--line),0 26px 50px -24px rgba(0,0,0,.55)}
+.site.gk-vyrazny :is(.card .media,.tile,.lux-row .media){box-shadow:0 30px 54px -26px rgba(0,0,0,.65)}
+/* predel medzi sekciami (podfarbené sekcie) */
+.site.dv-sikmy .s.alt{clip-path:polygon(0 0,100% clamp(16px,3.2cqi,46px),100% 100%,0 calc(100% - clamp(16px,3.2cqi,46px)));padding-block:clamp(60px,9.5cqi,120px)}
+.site.dv-obluk .s.alt{border-radius:clamp(26px,6cqi,84px)}
+.site.dv-vlna .s.alt{position:relative}
+.site.dv-vlna .s.alt::before,.site.dv-vlna .s.alt::after{content:"";position:absolute;left:0;right:0;height:clamp(16px,3.6cqi,48px);background:var(--bg);pointer-events:none;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1200V22C1050 62 900 4 720 28S380 66 200 30C120 14 60 16 0 30Z'/%3E%3C/svg%3E") center/100% 100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1200V22C1050 62 900 4 720 28S380 66 200 30C120 14 60 16 0 30Z'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+.site.dv-vlna .s.alt::before{top:-1px}
+.site.dv-vlna .s.alt::after{bottom:-1px;rotate:180deg}
+.site.dv-vlna .s.alt{padding-block:clamp(60px,9.5cqi,120px)}
+/* vzor a žiara v pozadí podfarbených sekcií */
+.site:is(.vz-bodky,.vz-mriezka,.vz-linky,.zi) .s.alt{background-image:var(--vz1,none),var(--vz2,none),var(--zi1,none),var(--zi2,none);background-size:var(--vzs,auto),var(--vzs,auto),220% 220%,220% 220%}
+.site.vz-bodky .s.alt{--vz1:radial-gradient(color-mix(in srgb,var(--fg) 13%,transparent) 1.2px,transparent 1.7px);--vzs:22px 22px}
+.site.vz-mriezka .s.alt{--vz1:linear-gradient(color-mix(in srgb,var(--fg) 7%,transparent) 1px,transparent 1px);--vz2:linear-gradient(90deg,color-mix(in srgb,var(--fg) 7%,transparent) 1px,transparent 1px);--vzs:34px 34px}
+.site.vz-linky .s.alt{--vz1:repeating-linear-gradient(135deg,color-mix(in srgb,var(--fg) 6%,transparent) 0 1px,transparent 1px 13px)}
+.site.zi .s.alt{--zi1:radial-gradient(34% 46% at 30% 30%,color-mix(in srgb,var(--a) 20%,transparent),transparent 72%);--zi2:radial-gradient(30% 42% at 70% 70%,color-mix(in srgb,var(--b) 18%,transparent),transparent 72%)}
+.site.anim.zi .s.alt{animation:ziara 22s ease-in-out infinite alternate}
+@keyframes ziara{from{background-position:0 0,0 0,0% 10%,100% 90%}to{background-position:0 0,0 0,100% 80%,0% 20%}}
+/* ozdoba nadpisov sekcií */
+.site.nd-ciarka .hd h2::after{content:"";display:block;width:58px;height:4px;border-radius:9px;background:var(--a);margin-top:14px}
+.site.nd-ciarka:is(.t-luxus,.t-galeria,.t-vizitka) .hd h2::after{margin-inline:auto}
+.site.nd-ciarka.t-luxus .hd::after{display:none}
+.site.nd-grad .hd h2:not(:has(.sli)),.site.nd-grad .hd h2 .sli{background:linear-gradient(100deg,var(--hc) 10%,var(--at) 90%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+/* efekt nad fotkou alebo videom v úvode */
+.site:is(.hf-farba,.hf-vineta,.hf-zrno) .hero .hm::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none}
+.site.hf-farba .hero .hm::before{background:linear-gradient(125deg,color-mix(in srgb,var(--a) 58%,transparent),color-mix(in srgb,var(--b) 22%,transparent) 55%,transparent 80%)}
+.site.hf-vineta .hero .hm::before{background:radial-gradient(ellipse at center,transparent 42%,rgba(0,0,0,.6))}
+.site.hf-zrno .hero .hm::before{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");opacity:.3;mix-blend-mode:overlay}
+/* striedanie fotiek ponúk v úvode */
+.site .hm-sl img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.6s ease}
+.site .hm-sl img.on{opacity:1}
+/* striedavé slová pod nadpisom */
+.site .rotl{display:grid;margin:.12em 0 0;font-family:var(--fh);font-weight:var(--fhw);letter-spacing:var(--fhls);font-size:clamp(24px,4.4cqi,46px);line-height:1.12;color:var(--at);overflow:clip;padding-bottom:.1em}
+.site .rotl span{grid-area:1/1;opacity:0;translate:0 70%;transition:opacity .55s ease,translate .7s cubic-bezier(.2,.75,.15,1)}
+.site .rotl span.on{opacity:1;translate:none}
+.site:is(.t-luxus,.t-galeria) .hero .rotl{color:var(--a)}
+.t-luxus .hero .rotl{color:color-mix(in srgb,var(--a) 70%,#fff)}
+.t-mestska .hero .rotl{color:var(--on-a)}
+.t-vizitka .hero .rotl{justify-items:center;font-size:clamp(20px,3.4cqi,30px)}
+.t-luxus .hero:not(.pos-l):not(.pos-r) .rotl{justify-items:center}
+/* šípka nadol v úvode */
+.site .hsip{position:absolute;left:50%;bottom:clamp(12px,2.4cqi,26px);translate:-50% 0;z-index:3;width:46px;height:46px;border-radius:999px;border:0;cursor:pointer;display:grid;place-items:center;background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
+.site.anim .hsip svg{animation:hsip 1.8s ease-in-out infinite}
+@container (max-width:700px){.site .hsip{display:none}}
+@keyframes hsip{0%,100%{translate:0 -3px}50%{translate:0 4px}}
+/* bežiaci pás pod úvodom */
+.site .pas{overflow:hidden;background:var(--a);color:var(--on-a);padding-block:clamp(10px,1.6cqi,16px)}
+.site .pas-in{display:flex;width:max-content}
+.site .pas-in>div{display:flex;align-items:center;flex:none}
+.site .pas span{font-family:var(--fh);font-weight:var(--fhw);font-size:clamp(15px,2cqi,20px);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;padding-inline:clamp(14px,2.2cqi,26px)}
+.site .pas i{font-style:normal;opacity:.7;font-size:13px}
+.site.anim .pas-in{animation:pas 34s linear infinite}
+.site.anim .pas:hover .pas-in{animation-play-state:paused}
+.site:not(.anim) .pas-in{width:auto;justify-content:center}
+.site:not(.anim) .pas-in>div{flex-wrap:wrap;justify-content:center;row-gap:6px}
+.site:not(.anim) .pas .dup{display:none}
+@keyframes pas{to{transform:translateX(-50%)}}
+.t-mestska .pas{background:var(--fg);color:var(--bg)}
+/* nábeh sekcií pri posúvaní */
+.site.anim.rv-zoom [data-rv]:not([data-rv="obr"],[data-rv="slova"]){translate:none;scale:.92;transition:opacity .8s ease var(--rd,0ms),scale 1s cubic-bezier(.2,.7,.2,1) var(--rd,0ms)}
+.site.anim.rv-zoom [data-rv].rv-in:not([data-rv="obr"],[data-rv="slova"]){scale:none}
+.site.anim.rv-zboku [data-rv]:not([data-rv="obr"],[data-rv="slova"]){translate:-46px 0}
+.site.anim.rv-zboku [data-rv].rv-in:not([data-rv="obr"],[data-rv="slova"]){translate:none}
+.site.anim.rv-off [data-rv]{opacity:1;translate:none;scale:none;clip-path:none;transition:none}
+.site.anim.rv-off [data-rv] .sli{translate:none;rotate:none}
+.site.anim.rv-off [data-rv] .ph{scale:none}
+.site.anim.sp-rychle [data-rv],.site.anim.sp-rychle .sli{transition-duration:.45s}
+.site.anim.sp-pomale [data-rv],.site.anim.sp-pomale .sli{transition-duration:1.6s}
+.site.anim.sp-rychle .pas-in{animation-duration:22s}
+.site.anim.sp-pomale .pas-in{animation-duration:52s}
+/* karty pri prejdení myšou */
+.site.mys.hv-zdvih :is(.card:hover .media,.tile:hover,.lux-row:hover .media,.lrow:hover .media){transform:translateY(-7px);transition:transform .35s cubic-bezier(.2,.7,.2,1),box-shadow .4s}
+.site.mys.hv-ram :is(.card:hover .media,.tile:hover,.lux-row:hover .media,.lrow:hover .media){transform:none;box-shadow:0 0 0 3px var(--a),0 18px 34px -22px rgba(0,0,0,.5)}
+.site.mys.hv-off :is(.card:hover .media,.tile:hover,.lux-row:hover .media,.lrow:hover .media){transform:none;box-shadow:none}
+.site.mys:is(.hv-ram,.hv-off) :is(.card .media,.tile,.lux-row .media,.lrow .media)::after{display:none}
+.site.anim.hv-off :is(.card:hover .media .ph,.tile:hover .ph,.lux-row:hover .media .ph,.lrow:hover .media .ph){scale:none}
+/* tlačidlá pri prejdení myšou */
+.site.mys:is(.bt-lesk,.bt-pulz,.bt-off) .btn{translate:none}
+.site.bt-lesk .btn{position:relative;overflow:hidden}
+.site.bt-lesk .btn::after{content:"";position:absolute;top:0;bottom:0;left:-70%;width:50%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-18deg);pointer-events:none}
+.site.anim.bt-lesk .btn:hover::after{left:130%;transition:left .7s ease}
+.site.anim.bt-pulz .hero .btn:not(.gh),.site.anim.bt-pulz .mbar-hl{animation:pulz 2.6s ease-out infinite}
+@keyframes pulz{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--a) 60%,transparent)}70%,100%{box-shadow:0 0 0 16px transparent}}
+.site.bt-off .btn,.site.bt-off .btn:hover{transform:none;transition:none}
+
 /* ===== doplnky pre ostrý web ===== */
 .site .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @container (max-width:460px){.site .two{grid-template-columns:1fr}}

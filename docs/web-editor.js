@@ -132,6 +132,12 @@ function stmavPole(s) {
     (vlastne ? '<button type="button" class="chip" data-dimset="">Podľa šablóny</button>' : "") + "</div>" +
     '<p class="note">Stmavenie pomáha, aby bol text na fotke dobre čitateľný. Pri slabom stmavení skontroluj v ukážke, či sa text dá ľahko prečítať.</p>';
 }
+function uvodEfekty(s, hasImg) {
+  return (hasImg && s.heroMedia === "ponuky" ? '<p class="note">' + ((W.CTX.ponuky || []).filter(function (x) { return x.foto && x.foto[0]; }).length >= 2 ? "V úvode sa striedajú prvé fotky tvojich aktívnych ponúk (najviac 5)." : "Na striedanie treba aspoň 2 aktívne ponuky s fotkou. V ukážke vidíš ilustračné fotky, na webe ostane jedna fotka, kým ponuky nepribudnú.") + "</p>" : "") +
+    fld("Striedavé slová pod nadpisom (oddeľ čiarkou, nepovinné)", "heroRot", { ph: "napr. byt, rodinný dom, pozemok, chatu" }) +
+    '<p class="note">Slová sa pod nadpisom striedajú. Hodí sa k nadpisu ako „Predám váš“ alebo „Pomôžem vám predať“.</p>' +
+    (s.tpl === "luxus" || s.tpl === "galeria" ? '<label class="chk"><input type="checkbox" data-check="heroSipka"' + (s.heroSipka ? " checked" : "") + ">Šípka nadol v úvode</label>" : "");
+}
 function hlavneTlPole(s) {
   var cur = HBTN_E.find(function (x) { return x[0] === s.heroBtn; }) || HBTN_E[0];
   return '<label class="full" style="margin-top:6px">Hlavné tlačidlo v úvode<select data-bind="heroBtn">' + HBTN_E.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === s.heroBtn ? " selected" : "") + ">" + x[1] + "</option>"; }).join("") + "</select></label>" +
@@ -273,14 +279,31 @@ function renderPanel() {
     [["l", "Vľavo"], ["c", "V strede"], ["r", "Vpravo"]].map(function (x) { return '<button type="button" class="chip" data-hpos="' + x[0] + '" aria-pressed="' + (T.pozicia() === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" : "";
   $("fHero").innerHTML = (hasImg ? "" : '<p class="note">Šablóna ' + T.TPLS.find(function (t) { return t.id === s.tpl; }).name + " nemá veľkú fotku ani video v úvode. Prepni na šablónu s fotkou cez celý úvod:</p>" +
       '<div class="seg" style="grid-column:1/-1">' + T.HERO_IMG_TPLS.map(function (id) { return '<button type="button" class="chip" data-tpl="' + id + '">' + T.TPLS.find(function (t) { return t.id === id; }).name + "</button>"; }).join("") + "</div>") +
-    '<div class="seg" style="grid-column:1/-1">' + [["foto", "Fotka"], ["pohyb", "Pomaly sa približuje"], ["video", "Video"]].map(function (x) { return '<button type="button" class="chip" data-hm="' + x[0] + '" aria-pressed="' + (s.heroMedia === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" +
+    '<div class="seg" style="grid-column:1/-1">' + [["foto", "Fotka"], ["pohyb", "Pomaly sa približuje"], ["ponuky", "Striedať fotky ponúk"], ["video", "Video"]].map(function (x) { return '<button type="button" class="chip" data-hm="' + x[0] + '" aria-pressed="' + (s.heroMedia === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>" +
     (video ? upl("Vlastné video do úvodu", "heroVideo", { video: 1 }) + '<p class="note">Krátke video bez zvuku, napríklad prelet dronom, 10 až 30 sekúnd. Veľké video zmenším priamo v prehliadači, trvá to asi tak dlho ako samotné video.</p>' + aiVideo
-      : upl("Vlastná úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Najlepšie fungujú fotky na šírku. Pod ilustračnými fotkami od AI sa na webe ukáže poznámka, že sú vytvorené AI.</p>' + aiFoto) + pos + foc + (hasImg ? stmavPole(s) : "") + hlavneTlPole(s);
+      : upl("Vlastná úvodná fotka", "heroImg", { max: 2200 }) + '<p class="note">Najlepšie fungujú fotky na šírku. Pod ilustračnými fotkami od AI sa na webe ukáže poznámka, že sú vytvorené AI.</p>' + aiFoto) + pos + foc + (hasImg ? stmavPole(s) : "") + uvodEfekty(s, hasImg) + hlavneTlPole(s);
   seg("btnShape", [["pill", "Pilulka"], ["round", "Zaoblené"], ["square", "Hranaté"]], s.btn, "bs");
   seg("btnFill", [["fill", "Vyplnené"], ["outline", "Obrysové"]], s.btnFill, "bf");
   seg("phStyle", [["plain", "Bez rámika"], ["frame", "S rámikom"], ["shadow", "S tieňom"]], s.ph, "phs");
   seg("bubSeg", [["plne", "Plné"], ["polo", "Polopriehľadné"], ["sklo", "Sklo"]], s.bub, "bub");
   seg("animSeg", [["1", "Zapnuté"], ["0", "Vypnuté"]], s.anim ? "1" : "0", "an");
+  var akt = T.aktVzhlad();
+  $("vzhlady").innerHTML = T.VZHLADY.map(function (v) { return '<button type="button" class="vzh" data-vzhlad="' + v.id + '" aria-pressed="' + (akt === v.id) + '"><b>' + v.name + "</b><small>" + v.d + "</small></button>"; }).join("");
+  var segG = function (lab, path, items) { var cur = String(get(path) || items[0][0]); return '<div class="lab" style="grid-column:1/-1">' + lab + '</div><div class="seg" style="grid-column:1/-1">' + items.map(function (x) { return '<button type="button" class="chip" data-gx="' + path + "|" + x[0] + '" aria-pressed="' + (cur === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>"; };
+  $("fGfx").innerHTML = segG("Karty a dlaždice", "gfx.karty", [["", "Podľa šablóny"], ["tien", "Jemný tieň"], ["linka", "Len linka"], ["vyrazny", "Výrazný tieň"]]) +
+    segG("Predel medzi sekciami", "gfx.dv", [["rovny", "Rovný"], ["sikmy", "Šikmý"], ["vlna", "Vlna"], ["obluk", "Oblý"]]) +
+    segG("Vzor v pozadí sekcií", "gfx.vzor", [["off", "Žiadny"], ["bodky", "Bodky"], ["mriezka", "Mriežka"], ["linky", "Linky"]]) +
+    segG("Ozdoba nadpisov", "gfx.nad", [["off", "Žiadna"], ["ciarka", "Čiarka"], ["grad", "Farebný prechod"]]) +
+    (hasImg ? segG("Efekt na fotke v úvode", "gfx.foto", [["off", "Žiadny"], ["farba", "Vo farbe webu"], ["vineta", "Stmavené okraje"], ["zrno", "Filmové zrno"]]) : "") +
+    '<label class="chk"><input type="checkbox" data-check="gfx.ziara"' + (s.gfx.ziara ? " checked" : "") + '>Farebná žiara v pozadí sekcií' + (s.anim ? " (pomaly sa hýbe)" : "") + "</label>" +
+    '<label class="chk"><input type="checkbox" data-check="gfx.pas"' + (s.gfx.pas ? " checked" : "") + ">Bežiaci pás s heslami pod úvodom</label>" +
+    (s.gfx.pas ? fld("Heslá v páse (oddeľ čiarkou)", "gfx.pasTx", { ph: "Predaj, Prenájom, Ocenenie zdarma, Profesionálne fotky" }) : "") +
+    '<p class="note">Predel, vzor a žiara sa týkajú podfarbených sekcií (každá druhá).</p>';
+  $("fAn").innerHTML = s.anim ? segG("Nábeh sekcií pri posúvaní", "an.rev", [["jemny", "Zdola"], ["zoom", "Priblíženie"], ["zboku", "Zboku"], ["off", "Žiadny"]]) +
+    segG("Karty pri prejdení myšou", "an.hover", [["naklon", "Naklonenie"], ["zdvih", "Zdvih"], ["ram", "Farebný rám"], ["off", "Nič"]]) +
+    segG("Tlačidlá", "an.btn", [["magnet", "Idú za myšou"], ["lesk", "Lesk"], ["pulz", "Pulzujú"], ["off", "Nič"]]) +
+    segG("Rýchlosť", "an.speed", [["pomale", "Pomalá"], ["normalne", "Bežná"], ["rychle", "Rýchla"]]) +
+    '<p class="note">Efekty pri prejdení myšou vidno len na počítači. Na mobile ostáva nábeh sekcií, pás a pulzovanie.</p>' : "";
   // počítač s vypnutými animáciami v systéme ich v ukážke neukáže – vysvetlenie a možnosť pozrieť si ich aj tak
   $("animPozn").innerHTML = s.anim && T.bezPohybu() ? '<div class="anim-pozn">' + (W.vzdyPohyb
     ? "Animácie sa v ukážke zobrazujú, hoci ich máš v počítači vypnuté. Klienti ich uvidia podľa svojho nastavenia.<br><button type=\"button\" class=\"chip\" data-pohybvzdy=\"0\">Skryť animácie v ukážke</button>"
@@ -624,6 +647,8 @@ document.addEventListener("click", function (e) {
   else if (d.pohybvzdy !== undefined) { W.vzdyPohyb = d.pohybvzdy === "1"; try { localStorage.setItem("typek-web-pohyb", W.vzdyPohyb ? "1" : "0"); } catch (x) { /* nič */ } W.INTRO = W.vzdyPohyb; }
   else if (d.aiimg) { s.heroAiImg = d.aiimg; s.heroImg = ""; s.heroFoc = ""; } else if (d.aivid) { s.heroAiVid = d.aivid; s.heroVideo = ""; } else if (d.hpos) s.heroPos = d.hpos; else if (d.focreset !== undefined) s.heroFoc = "";
   else if (d.hm) s.heroMedia = d.hm;
+  else if (d.gx) { var gx = d.gx.split("|"); setDeep(gx[0], gx[1]); }
+  else if (d.vzhlad) { T.pouziVzhlad(d.vzhlad); W.INTRO = true; toast("Vzhľad „" + (T.VZHLADY.find(function (v) { return v.id === d.vzhlad; }) || {}).name + "“ je nastavený. Dolaď si ho nižšie."); }
   else if (d.dimset !== undefined) s.heroDim = d.dimset === "" ? "" : +d.dimset;
   else if (d.up !== undefined) { var i = +d.up, tmp = s.order[i - 1]; s.order[i - 1] = s.order[i]; s.order[i] = tmp; }
   else if (d.dn !== undefined) { var j = +d.dn, tmp2 = s.order[j + 1]; s.order[j + 1] = s.order[j]; s.order[j] = tmp2; }
@@ -666,7 +691,7 @@ $("panel").addEventListener("input", function (e) {
 $("panel").addEventListener("change", function (e) {
   var t = e.target, s = S();
   if (t.dataset.sec) { s.on[t.dataset.sec] = t.checked; all(); return; }
-  if (t.dataset.check) { setDeep(t.dataset.check, t.checked); soft(); return; }
+  if (t.dataset.check) { setDeep(t.dataset.check, t.checked); if (t.dataset.check === "gfx.pas") all(); else soft(); return; }
   if (!t.dataset.upload || !t.files[0]) return;
   var f = t.files[0], path = t.dataset.upload, lbl = t.closest(".up") && t.closest(".up").querySelector("label");
   if (lbl) lbl.textContent = "Nahrávam…";
