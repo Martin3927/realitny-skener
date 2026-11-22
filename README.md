@@ -36,8 +36,8 @@ Supabase na bezplatnom pláne nezálohuje nič, preto beží vlastná záloha (`
   pribúdajú a nemenia sa – celá kópia každý týždeň by zbytočne zapĺňala hosting.
   Stiahnuť sa dajú cez SFTP prístup k hostingu (ten istý ako pri nasadení).
 - Koľko zálohy na hostingu zaberajú: *Run workflow* so zaškrtnutým `len_miesto` (nič nezálohuje, len vypíše).
-- Voliteľne zašifrovaná kópia v GitHube: v *Settings → Secrets and variables → Actions* pridať `ZALOHA_HESLO`
-  (heslo si treba uložiť aj inde – bez neho sa kópia neotvorí). Otvára sa 7-Zipom.
+- Do GitHubu sa záloha nenahráva: repozitár je verejný a Artifacts si stiahne ktokoľvek s účtom GitHub.
+  Kópiu mimo hostingu rieši export nižšie (zašifrovaný verejným kľúčom age).
 - Súkromné priečinky (prílohy chatu, dokumenty ponúk) sa zálohujú, až keď kľúč `SUPABASE_ACCESS_TOKEN`
   dostane právo *API gateway keys: read*.
 - Ručne: *Actions → Záloha → Run workflow* (dá sa zaškrtnúť aj súbory a skúška obnovy).

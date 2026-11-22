@@ -15,9 +15,8 @@ name: Záloha
 #                      fotky v archíve pribúdajú a nemenia sa, celá kópia každý týždeň by zbytočne zapĺňala hosting
 #           kod/       2 posledné zálohy kódu (celý repozitár s históriou) – len v nedeľu a pri exporte
 #         Ručne s „len_miesto“ sa nič nezálohuje, len sa vypíše, koľko zálohy na hostingu zaberajú.
-#         Keď je v Settings → Secrets → Actions nastavené ZALOHA_HESLO, ide navyše kópia zašifrovaná
-#         týmto heslom (7z, AES-256) do GitHubu – beh v Actions → Artifacts, 90 dní.
-#         Nezašifrovaná záloha sa do GitHubu nikdy nenahráva (repozitár je verejný).
+#         Do GitHubu sa záloha nenahráva (repozitár je verejný a Artifacts si stiahne ktokoľvek s účtom GitHub) –
+#         jediná výnimka je export nižšie, zašifrovaný verejným kľúčom age.
 # Export:  Run workflow s „pre_kluc“ (verejný kľúč age) – záloha zašifrovaná týmto kľúčom ide na 1 deň do Artifacts
 #         (na stiahnutie do počítača; otvorí ju len držiteľ súkromného kľúča).
 # Obnova: postup je v README.txt v každej zálohe a v README.md (časť Záloha).
@@ -68,7 +67,6 @@ jobs:
       FTP_SERVER: ${{ secrets.FTP_SERVER }}
       FTP_USER: ${{ secrets.FTP_USER }}
       FTP_HESLO: ${{ secrets.FTP_HESLO }}
-      ZALOHA_HESLO: ${{ secrets.ZALOHA_HESLO }}
       DIR: ${{ vars.FTP_DIR_ZALOHY || '/realitnytypek.sk/zalohy' }}
       DOVOD: ${{ inputs.dovod || (github.event_name == 'schedule' && 'nocna') || (github.event_name == 'push' && 'skuska') || 'rucna' }}
       PLAN: ${{ github.event.schedule }}
@@ -84,15 +82,13 @@ jobs:
         run: |
           [ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "::error::Chýba SUPABASE_ACCESS_TOKEN – bez neho sa do databázy nedostanem."; exit 1; }
           [ -n "$FTP_HESLO" ] && echo "NA_WEBSUPPORT=1" >> "$GITHUB_ENV"
-          [ -n "$ZALOHA_HESLO" ] && echo "DO_GITHUBU=1" >> "$GITHUB_ENV"
           if [ "$LEN_MIESTO" = "true" ]; then
             [ -n "$FTP_HESLO" ] || { echo "::error::Bez SFTP prístupu (FTP_HESLO) sa miesto na hostingu zistiť nedá."; exit 1; }
             echo "PRESKOCIT=1" >> "$GITHUB_ENV"; echo "Len miesto na hostingu – nič nezálohujem."; exit 0
           fi
-          if [ -z "$FTP_HESLO" ] && [ -z "$ZALOHA_HESLO" ]; then
-            echo "::error::Nie je kam zálohu uložiť – chýba SFTP prístup na Websupport (FTP_HESLO) aj ZALOHA_HESLO."; exit 1
+          if [ -z "$FTP_HESLO" ]; then
+            echo "::error::Nie je kam zálohu uložiť – chýba SFTP prístup na Websupport (FTP_HESLO)."; exit 1
           fi
-          [ -z "$ZALOHA_HESLO" ] && echo "::notice::ZALOHA_HESLO nie je nastavené – záloha ide len na Websupport (bez kópie v GitHube)."
           # Skúška po zmene zálohovacieho skriptu (push) sťahuje všetky súbory a obnovuje databázu – cez deň spomaľuje
           # aplikáciu maklérom (17. 11. 2026 okolo 13:50 zlyhávali dotazy). V pracovnom čase (po–so 7:00–19:00) sa preto
           # nespustí: zmenu overí nočná záloha, alebo ju večer spusti ručne (Run workflow → „Aj skúška obnovy“).
@@ -124,7 +120,6 @@ jobs:
       - name: Nástroje
         run: |
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq lftp >/dev/null
-          command -v 7z >/dev/null || sudo apt-get install -y -qq 7zip >/dev/null || sudo apt-get install -y -qq p7zip-full >/dev/null
           cat > "$RUNNER_TEMP/ftp.lftp" <<EOF
           set sftp:auto-confirm yes; set net:max-retries 3; set net:timeout 30; set net:reconnect-interval-base 5
           EOF
@@ -363,24 +358,6 @@ jobs:
           done
           echo "ULOZENE_WS=1" >> "$GITHUB_ENV"
 
-      - name: Zašifrovať pre GitHub
-        if: env.PRESKOCIT != '1' && env.DO_GITHUBU == '1'
-        run: |
-          cd "$RUNNER_TEMP"
-          # archív skenera sem nejde (je na hostingu v archiv/ a v exporte)
-          7z a -t7z -mhe=on -mx=1 -p"$ZALOHA_HESLO" "typek-zaloha-$STAMP.7z" "$DB_SUBOR" ${SUB_SUBOR:+"$SUB_SUBOR"} ${KOD_SUBOR:+"$KOD_SUBOR"} >/dev/null
-          7z t -p"$ZALOHA_HESLO" "typek-zaloha-$STAMP.7z" >/dev/null && echo "Zašifrovaná kópia je v poriadku."
-          mkdir -p sifrovane && mv "typek-zaloha-$STAMP.7z" sifrovane/
-
-      - uses: actions/upload-artifact@v4
-        if: env.PRESKOCIT != '1' && env.DO_GITHUBU == '1'
-        with:
-          name: typek-zaloha-${{ env.STAMP }}-${{ env.DOVOD }}
-          path: ${{ runner.temp }}/sifrovane/*.7z
-          retention-days: 90
-          compression-level: 0
-          if-no-files-found: error
-
       # export na stiahnutie: zašifrovaný verejným kľúčom toho, kto o export požiadal (súkromný kľúč nikdy nie je v GitHube)
       - name: Export na stiahnutie (zašifrovaný kľúčom age)
         if: env.PRESKOCIT != '1' && env.EXPORT == '1'
@@ -495,7 +472,6 @@ jobs:
             [ -f z/nastavenia/nastavenia.sql ] && echo "- Nastavenia: plánovač, pravidlá súborov, rozšírenia, DNS"
             [ -n "$KOD_SUBOR" ] && echo "- Kód s históriou: \`$KOD_SUBOR\` – $(du -h "$KOD_SUBOR" | cut -f1)"
             [ "$ULOZENE_WS" = 1 ] && echo "- Uložené na Websupport: \`$DIR\`"
-            [ "$DO_GITHUBU" = 1 ] && echo "- Zašifrovaná kópia: Artifacts tohto behu (90 dní)"
             [ "$SKUSKA_OK" = 1 ] && echo "- Skúška obnovy do prázdnej databázy: **v poriadku**"
           } >> "$GITHUB_STEP_SUMMARY"
           cat "$GITHUB_STEP_SUMMARY"
