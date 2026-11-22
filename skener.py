@@ -1261,14 +1261,6 @@ def je_silne_rk(z):
     return z.get("predajca_typ") == "rk" and " inzeruje RK (" not in d and "inzerát" not in d
 
 
-def sukromnik_a_rk(a, b):
-    """Súkromník a realitka s tým istým bytom by sa nespájali (obe karty + odkaz na seba).
-    VYPNUTÉ 17. 11. 2026: v ostrej prevádzke boli takmer všetky „súkromné“ strany realitky, ktoré portál
-    neoznačil (TOP CITY, HT reality…) – spoľahlivejšie je spojiť ich a nechať vyhrať realitku ako doteraz.
-    Inzerát, s ktorým maklér pracuje, sa nezlúči nikdy (zoznam pracovane)."""
-    return False
-
-
 def je_duplikat_bez_ceny(a, b):
     """Ten istý inzerát, keď na jednom portáli chýba cena („dohodou“): rovnaká plocha, obec a takmer rovnaký názov.
     Prísnejšie než pri rovnakej cene – plochy ako 68 m² alebo 600 m² má veľa rôznych nehnuteľností."""
@@ -1372,38 +1364,56 @@ def vyhodnot_ceny(inzeraty):
         lo, hi = ROZSAH[z["typ"]]
         return z["typ"] == "garaz" or lo <= z["plocha"] <= hi
 
-    def skupiny(z):
+    def druh(z):
+        """Čo sa s čím porovnáva: byty podľa počtu izieb, pozemky podľa podtypu a veľkosti, ostatné podľa typu."""
         t = z["typ"]
         if t == "byt":
-            iz = izby_skupina(z)
-            return [(f"byt {iz}-izb, {z['obec']}", lambda x: x["typ"] == "byt" and izby_skupina(x) == iz and x["obec"] == z["obec"]),
-                    (f"byt {iz}-izb, okres {z['okres']}", lambda x: x["typ"] == "byt" and izby_skupina(x) == iz and x["okres"] == z["okres"]),
-                    (f"byty, okres {z['okres']}", lambda x: x["typ"] == "byt" and x["okres"] == z["okres"])]
+            return ("byt", izby_skupina(z))
         if t == "pozemok":
-            pt = z.get("podtyp") or "stavebny"
-            pas = velkost_pozemku(z["plocha"])
-            nazov = f"{PODTYP_NAZOV[pt]} {pas}"
-            rovnaky = lambda x: (x["typ"] == "pozemok" and (x.get("podtyp") or "stavebny") == pt
-                                 and velkost_pozemku(x["plocha"]) == pas)
+            return ("pozemok", z.get("podtyp") or "stavebny", velkost_pozemku(z["plocha"]))
+        return (t,)
+
+    # porovnateľné ponuky zoskupené vopred (raz za beh) – predtým sa pre každý inzerát prechádzal celý zoznam,
+    # takže dvojnásobok inzerátov znamenal štvornásobný čas
+    zaklad = [z for z in aktivne if platne(z)]
+    v_obci, v_okrese, typ_v_okrese = {}, {}, {}
+    for x in zaklad:
+        par = (x["id"], hodnota(x))
+        v_obci.setdefault((druh(x), x["obec"]), []).append(par)
+        v_okrese.setdefault((druh(x), x["okres"]), []).append(par)
+        typ_v_okrese.setdefault((x["typ"], x["okres"]), []).append(par)
+
+    v_okoli = {}   # (druh, okres) → ponuky z okresu a susedných okresov; skladá sa až pri prvom použití
+
+    def okolie(d, okres):
+        if (d, okres) not in v_okoli:
+            v_okoli[(d, okres)] = [par for o in susedne_okresy(okres) for par in v_okrese.get((d, o), [])]
+        return v_okoli[(d, okres)]
+
+    def skupiny(z):
+        t, d = z["typ"], druh(z)
+        if t == "byt":
+            return [(f"byt {d[1]}-izb, {z['obec']}", v_obci.get((d, z["obec"]), [])),
+                    (f"byt {d[1]}-izb, okres {z['okres']}", v_okrese.get((d, z["okres"]), [])),
+                    (f"byty, okres {z['okres']}", typ_v_okrese.get(("byt", z["okres"]), []))]
+        if t == "pozemok":
+            nazov = f"{PODTYP_NAZOV[d[1]]} {d[2]}"
         else:
             nazov = {"dom": "domy", "chata": "chaty", "garaz": "garáže"}[t]
-            rovnaky = lambda x: x["typ"] == t
-        okolie = susedne_okresy(z["okres"])
-        return [(f"{nazov}, {z['obec']}", lambda x: rovnaky(x) and x["obec"] == z["obec"]),
-                (f"{nazov}, okres {z['okres']}", lambda x: rovnaky(x) and x["okres"] == z["okres"]),
-                (f"{nazov}, okolie", lambda x: rovnaky(x) and x["okres"] in okolie)]
+        return [(f"{nazov}, {z['obec']}", v_obci.get((d, z["obec"]), [])),
+                (f"{nazov}, okres {z['okres']}", v_okrese.get((d, z["okres"]), [])),
+                (f"{nazov}, okolie", okolie(d, z["okres"]))]
 
-    zaklad = [z for z in aktivne if platne(z)]
     prahy = CONFIG.get("podhodnotene_o_percent_podla_typu", {})
     for z in inzeraty.values():
         z["odhad"] = None
         z["podhodnotene"] = False
         if not z.get("aktivny") or not platne(z):
             continue
-        for nazov, f in skupiny(z):
+        for nazov, podobne in skupiny(z):
             if nazov.endswith(", None"):
                 continue  # obec nie je známa – porovnaj s okresom
-            hodnoty = [hodnota(x) for x in zaklad if x["id"] != z["id"] and f(x)]
+            hodnoty = [h for i, h in podobne if i != z["id"]]
             if len(hodnoty) >= min_n:
                 med = statistics.median(hodnoty)
                 rozdiel = round((hodnota(z) - med) / med * 100, 1)
@@ -2099,11 +2109,12 @@ def main():
         except Exception as ex:  # noqa – staršia databáza bez funkcie: zlúčime ako doteraz
             log(f"! zoznam prevzatých inzerátov: {ex}")
     podla_kluca = {}
-    dvojice = []      # (súkromník, realitka) alebo naopak – ten istý byt, ale samostatné karty
     podla_typu = {}   # (typ, okres) → zoznam pôvodných – na porovnanie, keď na jednom portáli chýba cena
     skupiny = {}
     for e in inzeraty.values():
         e["dalsie_odkazy"] = []
+        # súkromník a realitka s tým istým bytom sa spájajú (samostatné karty s odkazom na seba boli vypnuté 17. 11. 2026:
+        # takmer všetky „súkromné“ strany boli realitky, ktoré portál neoznačil); stĺpec v databáze ostáva prázdny
         e["suvisiace"] = []
         # „RK“ prenesené z duplikátu sa vyhodnocuje pri každej kontrole znova (nesmie sa „prilepiť“)
         if e.get("predajca_typ") == "rk" and " inzeruje RK (" in (e.get("predajca_dovod") or ""):
@@ -2114,11 +2125,7 @@ def main():
         k = kluc_duplicity(e)
         e["duplikat_z"] = None
         zhody = [x for x in podla_kluca.get(k, []) if je_duplikat(x, e)] if k else []
-        # súkromník a realitka s tým istým bytom sa nespájajú – obe karty ostanú a navzájom sa spomenú
-        for x in zhody:
-            if sukromnik_a_rk(x, e):
-                dvojice.append((x, e))
-        povodny = next((x for x in zhody if not sukromnik_a_rk(x, e)), None)
+        povodny = zhody[0] if zhody else None
         if not povodny:
             # na jednom portáli chýba cena – spojíme, len ak sa hodí presne jeden inzerát (inak nevieme, ktorý to je)
             kandidati = [x for x in podla_typu.get((e["typ"], e["okres"]), [])
@@ -2164,16 +2171,6 @@ def main():
                 and datetime.fromisoformat(str(povodny["prvy_krat"])) < NOW - timedelta(days=3):
             povodny["obnovene"] = NOW_ISO
             obnovene.append(povodny)
-
-    for a, b in dvojice:
-        a = inzeraty.get(a.get("duplikat_z")) or a
-        b = inzeraty.get(b.get("duplikat_z")) or b
-        if a is b or (a.get("predajca_typ") == "rk") == (b.get("predajca_typ") == "rk"):
-            continue
-        for x, y in ((a, b), (b, a)):
-            if all(s_["id"] != y["id"] for s_ in x["suvisiace"]):
-                x["suvisiace"].append({"id": y["id"], "portal": y["portal"], "url": y.get("url"),
-                                       "predajca": (y.get("predajca") or "")[:80], "rk": y.get("predajca_typ") == "rk"})
 
     vyhodnot_ceny(inzeraty)
 

@@ -1,11 +1,11 @@
 name: Testy
 
 # Automatické testy: čistá databáza zo všetkých migrácií + testovacie dáta, potom testy databázy a rozhrania
-# (prehliadač na počítači aj v mobile). Bežia pri každej zmene aplikácie, databázy alebo testov.
+# (prehliadač na počítači aj v mobile). Bežia pri každej zmene aplikácie, databázy, skenera alebo testov.
 on:
   push:
     branches: [main]
-    paths: ["docs/**", "supabase/migrations/**", "testy/**", ".github/workflows/testy.yml"]
+    paths: ["docs/**", "supabase/migrations/**", "testy/**", "skener.py", "obce.py", "config.json", ".github/workflows/testy.yml"]
   workflow_dispatch:
 
 permissions:
@@ -21,6 +21,12 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+
+      # jadro skenera (duplicity, porovnanie cien) – bez databázy a bez sťahovania, preto ako prvé
+      - name: Testy skenera
+        run: |
+          pip install -q requests beautifulsoup4
+          python3 testy/skener_test.py
 
       - name: PostgreSQL, PostgREST a prehliadač
         run: |

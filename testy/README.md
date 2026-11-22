@@ -1,9 +1,10 @@
 # Testy
 
-Automatické testy Realitného týpka. Na GitHube bežia samé pri každej zmene aplikácie (`docs/`), databázy (`supabase/migrations/`) alebo testov – workflow **Testy**.
+Automatické testy Realitného týpka. Na GitHube bežia samé pri každej zmene aplikácie (`docs/`), databázy (`supabase/migrations/`), skenera (`skener.py`) alebo testov – workflow **Testy**.
 
 - `prostredie/` – lokálna náhrada Supabase: PostgreSQL + PostgREST + malá brána (`gateway.py`), ktorá podáva aplikáciu z `docs/` a prihlasuje testovacích maklérov. Všetky údaje sú vymyslené.
-- `db/*.sql` – testy databázy (upozornenia, strážca prevádzky, predĺženie prevzatia…).
+- `skener_test.py` – testy jadra skenera (duplicity medzi portálmi, porovnanie cien, typ predajcu); bez databázy: `python3 testy/skener_test.py`.
+- `db/*.sql` – testy databázy (upozornenia, strážca prevádzky, oddelenie kancelárií, predĺženie prevzatia…).
 - `ui/ui_*.py` – testy rozhrania v prehliadači (Playwright), na počítači aj v mobile.
 
 Každý test beží na čistej databáze: základ Supabase, všetky migrácie a `prostredie/seed.sql`.
