@@ -164,6 +164,11 @@ Deno.serve(async (req) => {
     if (!volajuciJeAdmin) return odpoved(403, { chyba: "Heslo môže zmeniť len administrátor." });
     const { data: ciel } = await admin.from("makleri").select("kancelaria_id").eq("id", String(telo.id)).maybeSingle();
     if (!ciel || ciel.kancelaria_id !== kancelaria) return odpoved(403, { chyba: "Heslo môžete zmeniť len maklérovi svojej kancelárie." });
+    // účet hlavného správcu Týpka: heslo mu mení len hlavný správca (nie iný administrátor tej istej kancelárie);
+    // pri chybe čítania sa heslo nemení (bezpečná predvoľba)
+    const { data: cielHlavny, error: eHlavny } = await admin.from("hlavni_spravcovia").select("user_id").eq("user_id", String(telo.id)).maybeSingle();
+    if (eHlavny) return odpoved(500, { chyba: "Heslo sa nepodarilo zmeniť, skúste to znova." });
+    if (cielHlavny && !hlavnySpravca) return odpoved(403, { chyba: "Heslo hlavného správcu môže zmeniť len hlavný správca." });
     const heslo = String(telo.heslo || "");
     if (heslo.length < 8) return odpoved(400, { chyba: "Heslo musí mať aspoň 8 znakov." });
     const { error } = await admin.auth.admin.updateUserById(String(telo.id), { password: heslo });
