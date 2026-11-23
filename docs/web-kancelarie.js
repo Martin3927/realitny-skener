@@ -210,12 +210,16 @@ function paneVzhlad() {
       '<div class="lab">Vzor v pozadí sekcií</div>' + seg("gfx.vzor", [["off", "Žiadny"], ["bodky", "Bodky"], ["mriezka", "Mriežka"], ["linky", "Linky"]]) +
       '<div class="lab">Ozdoba nadpisov</div>' + seg("gfx.nad", [["off", "Žiadna"], ["ciarka", "Čiarka"], ["zvyr", "Zvýraznenie"]]) +
       '<p class="sub">Predel a vzor sa týkajú podfarbených sekcií (každá druhá). Prekrytie titulných fotiek nastavíš v záložke Úvod.</p>') +
-    grp("Animácie", onoff("anim") + (s.anim === "on" ? '<div class="lab">Nábeh sekcií pri posúvaní</div>' + seg("an.rev", [["off", "Žiadny"], ["jemny", "Jemný"], ["vyrazny", "Postupný"]]) +
+    grp("Animácie", onoff("anim") + (s.anim === "on" ? '<div class="lab">Sila animácií</div>' + seg("an.sila", [["jemna", "Jemná"], ["vyrazna", "Výrazná"], ["silna", "Silná"]]) +
+      '<div class="lab">Nábeh sekcií pri posúvaní</div>' + seg("an.rev", [["off", "Žiadny"], ["jemny", "Celá sekcia"], ["vyrazny", "Prvok po prvku"]]) +
+      (s.an.rev !== "off" ? '<div class="lab">Odkiaľ nabiehajú</div>' + seg("an.typ", [["hore", "Zdola"], ["boky", "Zo strán"], ["zoom", "Priblížením"], ["ostrenie", "Zaostrením"]]) : "") +
+      '<button type="button" class="addb" data-act="an-replay">▶ Prehrať animácie v náhľade</button>' +
       '<div class="lab">Titulná fotka</div>' + seg("an.hero", [["zoom", "Oddialenie"], ["priblizenie", "Priblíženie"], ["parallax", "Posun"], ["off", "Bez pohybu"]]) +
-      '<div class="lab">Karty pri prejdení myšou</div>' + seg("an.hover", [["zdvih", "Zdvih"], ["zoom", "Priblíženie fotky"], ["ram", "Farebný rám"], ["off", "Nič"]]) +
+      '<div class="lab">Karty pri prejdení myšou</div>' + seg("an.hover", [["zdvih", "Zdvih"], ["naklon", "3D náklon"], ["zoom", "Fotka"], ["ram", "Rám"], ["off", "Nič"]]) +
       '<div class="lab">Tlačidlá pri prejdení myšou</div>' + seg("an.btn", [["zdvih", "Zdvih"], ["lesk", "Lesk"], ["off", "Nič"]]) +
-      '<div class="lab">Rýchlosť</div>' + seg("an.speed", [["pomale", "Pomalá"], ["normalne", "Bežná"], ["rychle", "Rýchla"]]) : "") +
-      '<p class="sub">Vypnuté animácie zastavia každý pohyb na webe. Návštevníkovi, ktorý má v zariadení nastavené obmedzenie pohybu, sa animácie nespustia nikdy.</p>');
+      '<div class="lab">Rýchlosť</div>' + seg("an.speed", [["pomale", "Pomalá"], ["normalne", "Bežná"], ["rychle", "Rýchla"]]) +
+      onoff("an.pulz", "Pulzujúce hlavné tlačidlo (Odhad ceny a tlačidlo v úvode)") + onoff("an.prog", "Ukazovateľ posunu stránky pod hlavičkou") : "") +
+      '<p class="sub">Náhľad prehrá nábeh každej sekcie len raz – tlačidlom Prehrať ho spustíš znova od začiatku. Vypnuté animácie zastavia každý pohyb na webe. Návštevníkovi, ktorý má v zariadení nastavené obmedzenie pohybu, sa animácie nespustia nikdy.</p>');
 }
 
 function paneUvod() {
@@ -568,6 +572,7 @@ function act(a, el) {
   if (n === "logo-up") { vyberSubory({ single: true, png: true, max: 800 }, function (l) { s.k.logo = l[0]; save(); renderPanel(true); KC.render(); }); return; }
   if (n === "logo-reset") { s.k.logo = KC.DEF.k.logo; save(); renderPanel(true); KC.render(); return; }
   if (n === "tm-foto") { vyberSubory({ single: true, max: 900 }, function (l) { (s.team[x] = s.team[x] || {}).foto = l[0]; save(); renderPanel(true); KC.render(); }); return; }
+  if (n === "an-replay") { KC.K.UI.seen = {}; KC.K.UI.revMode = null; KC.K.UI.strana = null; if (KC.K.page !== "domov") KC.go("domov"); else KC.render(); var sc = KC.K.scroller; if (sc && sc.scrollTo) sc.scrollTo({ top: 0 }); KC.showSlide && KC.showSlide(0); return; }
   if (n === "tm-fotox") { if (s.team[x]) delete s.team[x].foto; save(); renderPanel(true); KC.render(); return; }
   if (n === "tm-up" || n === "tm-down") {
     var ids = poradieMaklerov().map(function (m) { return m.id; }); move(ids, ids.indexOf(x), n === "tm-up" ? -1 : 1); s.teamOrder = ids; save(); renderPanel(true); KC.render(); return;

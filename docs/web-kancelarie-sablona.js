@@ -158,7 +158,7 @@ var CLANKY_DEF = [
 var DEF = {
   v: 1, tpl: "klasicka", set: "alpha", color: "alpha", cc: "#DAB967", b2: "#1E2A35", hcol: "text", font: "moderne", bg: "svetle", head: "svetla", btn: "pill", r: 14, anim: "on",
   gfx: { karty: "tien", dv: "rovny", vzor: "off", nad: "off" },
-  an: { rev: "jemny", hover: "zdvih", btn: "zdvih", hero: "zoom", speed: "normalne" },
+  an: { rev: "vyrazny", typ: "hore", sila: "vyrazna", hover: "zdvih", btn: "zdvih", hero: "zoom", speed: "normalne", pulz: "off", prog: "off" },
   oznam: { on: "off", text: "Nové ponuky každý týždeň. Nechajte si ich posielať e-mailom.", b: "Strážca ponúk", go: "ponuky", u: "" },
   hero: { prekr: "tmave", eb: "Realitná kancelária pre Spiš", auto: "on", int: 6, dim: 45, align: "vlavo", hh: "vysoka", search: "on", slides: [
     { media: "foto", img: "dom-novostavba", video: "", t: "Predáme vašu nehnuteľnosť rýchlo a za dobrú cenu.", l: "Realitná kancelária pre Spišskú Novú Ves, Levoču a okolie. Od ocenenia až po odovzdanie kľúčov.", b: "Viac informácií", go: "o-nas", u: "", b2: "Pozrieť ponuky", go2: "ponuky", u2: "" },
@@ -386,7 +386,7 @@ function oznam() {
 }
 function header() {
   var k = K.S.k, m = menuItems();
-  return oznam() + '<header class="s-head"><div class="w"><a class="logo" href="' + esc(href("domov")) + '" data-page="domov" aria-label="' + esc(k.name) + ', úvod">' + logoHtml() + "</a>" +
+  return oznam() + '<header class="s-head"><i class="sprog" aria-hidden="true"></i><div class="w"><a class="logo" href="' + esc(href("domov")) + '" data-page="domov" aria-label="' + esc(k.name) + ', úvod">' + logoHtml() + "</a>" +
     '<nav class="s-nav" aria-label="Hlavné menu">' + m.map(function (x) { return menuLink(x); }).join("") + "</nav>" +
     (k.tel ? '<a class="s-tel" href="tel:' + esc(k.tel.replace(/\s/g, "")) + '" data-klik="tel">' + SV(IC.tel, 2.1) + esc(k.tel) + "</a>" : "") +
     (oblNaWebe().length ? '<button type="button" class="s-fav" data-favshow aria-label="Obľúbené ponuky: ' + oblNaWebe().length + '" title="Obľúbené ponuky">' + SV(IC.srdce, 2) + "<b>" + oblNaWebe().length + "</b></button>" : "") +
@@ -824,7 +824,9 @@ function render() {
   var VARS = [["--bg", P.bg], ["--surf", P.surf], ["--fg", P.fg], ["--muted", P.muted], ["--line", P.line], ["--a", P.a], ["--on-a", P.onA], ["--at", P.at], ["--a-soft", P.soft], ["--b", P.b], ["--on-b", P.onB], ["--bt", P.bt], ["--b-soft", P.bsoft], ["--a-on-b", P.aOnB],
     ["--hc", P.hc], ["--err", P.err], ["--fh", Fn.h], ["--fb", Fn.b], ["--fhw", Fn.w], ["--fhls", Fn.ls], ["--r", S.r + "px"], ["--rb", rb], ["--hbg", hbg], ["--hfg", hfg], ["--hacc", head === "svetla" ? P.at : P.a], ["--hh", Math.max(460, hh) + "px"], ["--fbg", fbg],
     ["--hero-acc", con(P.a, "#10161C") >= 4.5 ? P.a : mix(P.a, "#FFFFFF", 0.5)],
-    ["--an", S.an.speed === "pomale" ? "1.6" : S.an.speed === "rychle" ? "0.6" : "1"], ["--hov", lum(P.b) < 0.18 ? P.b : mix(P.b, "#000000", 0.62)]];
+    ["--an", S.an.speed === "pomale" ? "1.6" : S.an.speed === "rychle" ? "0.6" : "1"],
+    ["--rd", S.an.sila === "silna" ? "120px" : S.an.sila === "jemna" ? "22px" : "64px"], ["--rz", S.an.sila === "silna" ? "0.8" : S.an.sila === "jemna" ? "0.97" : "0.9"],
+    ["--rt", S.an.sila === "silna" ? "1.15s" : S.an.sila === "jemna" ? "0.7s" : "0.95s"], ["--hov", lum(P.b) < 0.18 ? P.b : mix(P.b, "#000000", 0.62)]];
   VARS.forEach(function (x) { st.setProperty(x[0], x[1]); });
   st.colorScheme = P.dark ? "dark" : "light";
   var y = K.scroller === window ? window.scrollY : K.scroller.scrollTop;
@@ -833,9 +835,11 @@ function render() {
   var hyb = S.anim === "on", A = S.an, G = S.gfx, malo = false;
   try { malo = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch (e) { /* nič */ }
   var rev = hyb && !malo && A.rev !== "off" && "IntersectionObserver" in window ? A.rev : "off";
-  if (K.UI.revMode !== rev + "|" + A.speed) { K.UI.revMode = rev + "|" + A.speed; K.UI.seen = {}; }
+  var rk = [rev, A.speed, A.typ, A.sila].join("|"), strana = K.page + "/" + (K.sub || ""), nova = K.UI.strana !== strana;
+  if (K.UI.revMode !== rk) { K.UI.revMode = rk; K.UI.seen = {}; }
+  K.UI.strana = strana;
   root.className = "site t-" + S.tpl + " h-" + head + " al-" + S.hero.align + (hyb ? " anim" : "") + (y > 40 ? " scr" : "") + (K.page !== "domov" ? " podstr" : "") +
-    (rev !== "off" ? " rev-" + rev : "") + " hv-" + (hyb ? A.hover : "off") + " bt-" + (hyb ? A.btn : "off") + " hm-" + (hyb ? A.hero : "off") +
+    (rev !== "off" ? " rev-" + rev + " rt-" + A.typ : "") + (hyb ? " si-" + A.sila + (A.pulz === "on" ? " pulz" : "") + (A.prog === "on" ? " prog" : "") + (nova && !malo ? " pgin" : "") : "") + " hv-" + (hyb ? A.hover : "off") + " bt-" + (hyb ? A.btn : "off") + " hm-" + (hyb ? A.hero : "off") +
     " kt-" + G.karty + " dv-" + G.dv + " vz-" + G.vzor + " nd-" + G.nad + " ho-" + S.hero.prekr;
   zrusMapy();
   root.innerHTML = header() + "<main>" + stranky() + "</main>" + footer() + cookieBar();
@@ -905,7 +909,7 @@ function watchReveal() {
   rio = new IntersectionObserver(function (en) {
     en.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add("in"); seen[revKey(x.target)] = 1; rio.unobserve(x.target); } });
   }, { root: K.scroller === window ? null : K.scroller, rootMargin: "0px 0px -8% 0px", threshold: 0 });
-  root.querySelectorAll("main .sec[id]").forEach(function (el) { if (seen[revKey(el)]) el.classList.add("in"); else rio.observe(el); });
+  root.querySelectorAll("main .sec[id]").forEach(function (el) { if (seen[revKey(el)] || el.id === "s-detail") el.classList.add("in"); else rio.observe(el); }); // detail ponuky je obsah, ten sa ukáže hneď
 }
 var io = null;
 function watchCount() {
@@ -948,7 +952,10 @@ function go(page, sub, sec, bezHistorie) {
 var pyT = 0;
 function onScroll() { var y = K.scroller === window ? window.scrollY : K.scroller.scrollTop, s = y > 40; if (K.root && K.root.classList.contains("scr") !== s) K.root.classList.toggle("scr", s);
   // posun titulnej fotky pri posúvaní (parallax): fotka ide pomalšie než stránka
-  if (K.root && !pyT && K.root.classList.contains("hm-parallax") && y < 1600) pyT = requestAnimationFrame(function () { pyT = 0; var y2 = K.scroller === window ? window.scrollY : K.scroller.scrollTop; K.root.style.setProperty("--py", Math.round(y2 * 0.3) + "px"); });
+  if (K.root && !pyT && (K.root.classList.contains("prog") || (K.root.classList.contains("hm-parallax") && y < 1800))) pyT = requestAnimationFrame(function () { pyT = 0;
+    var sc = K.scroller === window ? document.documentElement : K.scroller, y2 = K.scroller === window ? window.scrollY : sc.scrollTop, max = sc.scrollHeight - (K.scroller === window ? window.innerHeight : sc.clientHeight);
+    if (K.root.classList.contains("hm-parallax") && y2 < 1800) K.root.style.setProperty("--py", Math.round(y2 * 0.45) + "px");
+    if (K.root.classList.contains("prog")) K.root.style.setProperty("--sp", max > 0 ? Math.min(1, Math.max(0, y2 / max)).toFixed(4) : "0"); });
 }
 
 /* ---------------------------------------------------------------- formuláre */
@@ -1039,6 +1046,18 @@ function bind() {
     if (d.ckopen !== undefined) { K.UI.ovl = "ck"; render(); return; }
     if (d.ck) { K.UI.ck = false; render(); if (K.hooks.suhlas) K.hooks.suhlas(d.ck); return; }
   });
+  // 3D náklon karty za myšou (len myš, nie dotyk)
+  var naklon = null;
+  function nakRovno() { if (naklon) { naklon.style.transform = ""; naklon = null; } }
+  root.addEventListener("pointermove", function (e) {
+    if (e.pointerType === "touch" || !root.classList.contains("hv-naklon")) return nakRovno();
+    var c = e.target.closest ? e.target.closest(".card") : null;
+    if (naklon && naklon !== c) nakRovno();
+    if (!c || !root.contains(c)) return;
+    var r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+    c.style.transform = "perspective(900px) rotateX(" + (-y * 8).toFixed(2) + "deg) rotateY(" + (x * 10).toFixed(2) + "deg) translateY(-6px)"; naklon = c;
+  });
+  root.addEventListener("pointerleave", nakRovno);
   root.addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("[data-uk],span[data-fav]")) { e.preventDefault(); e.target.click(); } });
   root.addEventListener("input", function (e) {
     var t = e.target, d = t.dataset || {};

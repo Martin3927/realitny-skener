@@ -713,24 +713,61 @@
 .site.ho-farba:not(.t-mestska) .ph-l::after{background:linear-gradient(120deg,color-mix(in srgb,var(--hov) calc((var(--dim) + .32) * 100%),transparent) 0%,color-mix(in srgb,var(--hov) calc(var(--dim) * 100%),transparent) 55%,rgba(8,12,16,calc(var(--dim) * .7)) 100%)}
 
 /* ================================================================ animácie (editor → Vzhľad → Animácie) */
-/* nábeh sekcií pri posúvaní */
-.site[class*=" rev-"] main .sec>.w{transition:opacity calc(.7s * var(--an)) ease,transform calc(.7s * var(--an)) cubic-bezier(.2,.7,.2,1)}
-.site[class*=" rev-"] main .sec:not(.in)>.w{opacity:0;transform:translateY(22px)}
-.site.rev-vyrazny main .sec>.w{transition:none}
-.site.rev-vyrazny main .sec:not(.in)>.w{opacity:1;transform:none}
-.site.rev-vyrazny main .sec>.w>*,.site.rev-vyrazny main .sec .pgrid>*{transition:opacity calc(.75s * var(--an)) ease,transform calc(.75s * var(--an)) cubic-bezier(.2,.7,.2,1)}
-.site.rev-vyrazny main .sec:not(.in)>.w>*,.site.rev-vyrazny main .sec:not(.in) .pgrid>*{opacity:0;transform:translateY(34px) scale(.985)}
-.site.rev-vyrazny main .sec.in>.w>*:nth-child(2),.site.rev-vyrazny main .sec.in .pgrid>*:nth-child(2){transition-delay:calc(.1s * var(--an))}
-.site.rev-vyrazny main .sec.in>.w>*:nth-child(3),.site.rev-vyrazny main .sec.in .pgrid>*:nth-child(3){transition-delay:calc(.2s * var(--an))}
-.site.rev-vyrazny main .sec.in>.w>*:nth-child(n+4),.site.rev-vyrazny main .sec.in .pgrid>*:nth-child(n+4){transition-delay:calc(.3s * var(--an))}
+/* nábeh sekcií pri posúvaní: --rd vzdialenosť, --rz zmenšenie, --rt trvanie (podľa sily), --rh počiatočný posun (podľa spôsobu) */
+.site.rt-hore{--rh:translateY(var(--rd))}
+.site.rt-zoom{--rh:scale(var(--rz))}
+.site.rt-ostrenie{--rh:scale(1.05);--rf:blur(14px)}
+.site.rt-boky main .sec{overflow-x:clip}
+.site.rt-boky main .sec:nth-of-type(odd){--rh:translateX(calc(-1 * var(--rd)))}
+.site.rt-boky main .sec:nth-of-type(even){--rh:translateX(var(--rd))}
+.site.rev-jemny main .sec>.w,
+.site.rev-vyrazny main .sec>.w>*,
+.site.rev-vyrazny main .sec :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*{transition:opacity calc(var(--rt) * var(--an)) ease,transform calc(var(--rt) * var(--an)) cubic-bezier(.16,.84,.3,1),filter calc(var(--rt) * var(--an)) ease}
+.site.rev-jemny main .sec:not(.in)>.w,
+.site.rev-vyrazny main .sec:not(.in)>.w>*,
+.site.rev-vyrazny main .sec:not(.in) :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*{opacity:0;transform:var(--rh,translateY(40px));filter:var(--rf,none)}
+.site.rev-vyrazny main .sec.in>.w>*:nth-child(2){transition-delay:calc(.12s * var(--an))}
+.site.rev-vyrazny main .sec.in>.w>*:nth-child(n+3){transition-delay:calc(.24s * var(--an))}
+.site.rev-vyrazny main .sec.in :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*:nth-child(1){transition-delay:calc(.15s * var(--an))}
+.site.rev-vyrazny main .sec.in :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*:nth-child(2){transition-delay:calc(.27s * var(--an))}
+.site.rev-vyrazny main .sec.in :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*:nth-child(3){transition-delay:calc(.39s * var(--an))}
+.site.rev-vyrazny main .sec.in :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*:nth-child(4){transition-delay:calc(.51s * var(--an))}
+.site.rev-vyrazny main .sec.in :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*:nth-child(5){transition-delay:calc(.63s * var(--an))}
+.site.rev-vyrazny main .sec.in :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*:nth-child(n+6){transition-delay:calc(.75s * var(--an))}
+/* čiarka pod nadpisom sa pri nábehu sekcie vykreslí */
+.site[class*=" rev-"].nd-ciarka .sh .h2::after{transition:width calc(.8s * var(--an)) cubic-bezier(.2,.7,.2,1) calc(.35s * var(--an))}
+.site[class*=" rev-"].nd-ciarka main .sec:not(.in) .sh .h2::after{width:0}
+/* titulný text: výraznejší nábeh podľa sily */
+.site.anim.si-vyrazna .tx-l .sl.on>*{animation:upv calc(1s * var(--an)) cubic-bezier(.16,.84,.3,1) both}
+.site.anim.si-silna .tx-l .sl.on>*{animation:ups calc(1.2s * var(--an)) cubic-bezier(.16,.84,.3,1) both}
+.site.anim:is(.si-vyrazna,.si-silna) .tx-l .sl.on>*:nth-child(2){animation-delay:calc(.16s * var(--an))}
+.site.anim:is(.si-vyrazna,.si-silna) .tx-l .sl.on>*:nth-child(3){animation-delay:calc(.32s * var(--an))}
+.site.anim:is(.si-vyrazna,.si-silna) .tx-l .sl.on>*:nth-child(4){animation-delay:calc(.48s * var(--an))}
+@keyframes upv{from{opacity:0;transform:translateY(48px)}to{opacity:1;transform:none}}
+@keyframes ups{from{opacity:0;transform:translateY(90px) scale(.94);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+/* prechod medzi stránkami webu */
+.site.pgin main{animation:pgin calc(.55s * var(--an)) ease both}
+@keyframes pgin{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+/* pulzujúce hlavné tlačidlo a ukazovateľ posunu stránky */
+.site.pulz .s-cta,.site.pulz .tx-l .sl.on .btn:not(.gh):not(.inv){animation:pulz 2.2s ease-out infinite}
+@keyframes pulz{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--a) 70%,transparent)}70%{box-shadow:0 0 0 18px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.site .sprog{display:none}
+.site.prog .sprog{display:block;position:absolute;left:0;right:0;bottom:-3px;height:3px;background:var(--a);transform:scaleX(var(--sp,0));transform-origin:0 50%;pointer-events:none}
 /* karty pri prejdení myšou */
 .site.hv-off .card:hover,.site.hv-zoom .card:hover,.site.hv-ram .card:hover{transform:none}
+.site.hv-zdvih .card{transition:transform calc(.3s * var(--an)) cubic-bezier(.2,.7,.2,1),box-shadow calc(.3s * var(--an))}
+.site.hv-zdvih .card:hover{transform:translateY(-10px);box-shadow:0 40px 70px -34px rgba(0,0,0,.6),0 0 0 1px var(--line)}
+.site.hv-zdvih .cph img{transition:transform calc(.7s * var(--an)) cubic-bezier(.2,.7,.2,1)}
+.site.hv-zdvih .card:hover .cph img{transform:scale(1.08)}
+.site.hv-naklon .card{transition:transform .16s ease-out,box-shadow .25s;will-change:transform}
+.site.hv-naklon .card:hover{box-shadow:0 40px 70px -34px rgba(0,0,0,.6),0 0 0 1px var(--line)}
+.site.hv-naklon .card:hover .cph img{transform:scale(1.06)}
 .site.hv-off .card:hover .cph img,.site.hv-ram .card:hover .cph img{transform:none}
 .site.hv-zoom .cph img{transition:transform calc(.8s * var(--an)) cubic-bezier(.2,.7,.2,1)}
-.site.hv-zoom .card:hover .cph img{transform:scale(1.1)}
+.site.hv-zoom .card:hover .cph img{transform:scale(1.16)}
 .site.hv-ram .card:hover{box-shadow:0 0 0 2px var(--a),0 18px 44px -30px rgba(0,0,0,.45)}
 .site.hv-zdvih .tm,.site.hv-ram .tm{transition:transform .2s,box-shadow .2s}
-.site.hv-zdvih .tm:hover{transform:translateY(-3px)}
+.site.hv-zdvih .tm:hover{transform:translateY(-6px)}
 .site.hv-ram .tm:hover{box-shadow:0 0 0 2px var(--a)}
 /* tlačidlá */
 .site.bt-off .btn:hover,.site.bt-lesk .btn:hover{transform:none;filter:none}
@@ -739,8 +776,11 @@
 .site.bt-lesk .btn:hover::after{left:130%;transition:left calc(.7s * var(--an)) ease}
 /* pohyb titulnej fotky */
 .site.hm-off .ph-l .sl.on img,.site.hm-parallax .ph-l .sl.on img{animation:none}
-.site.anim.hm-priblizenie .ph-l .sl.on img{animation:kbin 16s ease-out both}
-@keyframes kbin{from{transform:scale(1)}to{transform:scale(1.12)}}
+.site.anim.hm-zoom .ph-l .sl.on img{animation:kbv 9s ease-out both}
+@keyframes kbv{from{transform:scale(1.2)}to{transform:scale(1)}}
+.site.anim.hm-priblizenie .ph-l .sl.on img{animation:kbin 14s ease-out both}
+@keyframes kbin{from{transform:scale(1)}to{transform:scale(1.22)}}
+.site.anim.si-jemna.hm-zoom .ph-l .sl.on img{animation:kb 7s ease-out both}
 .site.hm-parallax .ph-l{transform:translate3d(0,var(--py,0px),0);will-change:transform}
-@media (prefers-reduced-motion:reduce){.site main .sec>.w,.site main .sec>.w>*,.site main .sec .pgrid>*{opacity:1!important;transform:none!important}.site.hm-parallax .ph-l{transform:none}}
-@media print{.site main .sec>.w,.site main .sec>.w>*,.site main .sec .pgrid>*{opacity:1!important;transform:none!important;transition:none!important}.site main .sec.alt{clip-path:none!important;-webkit-mask:none!important;mask:none!important;background-image:none!important}}
+@media (prefers-reduced-motion:reduce){.site main .sec>.w,.site main .sec>.w>*,.site main .sec :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*{opacity:1!important;transform:none!important;filter:none!important}.site.pulz .s-cta,.site.pulz .tx-l .btn{animation:none!important}.site.hm-parallax .ph-l{transform:none}}
+@media print{.site main .sec>.w,.site main .sec>.w>*,.site main .sec :is(.pgrid,.team,.svc,.posts,.faq,.awards,.revs)>*{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}.site main{animation:none!important}.site main .sec.alt{clip-path:none!important;-webkit-mask:none!important;mask:none!important;background-image:none!important}}
